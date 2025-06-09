@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Card } from "react-native-paper";
+import { Button, Card, MD3Colors, ProgressBar } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -30,16 +30,26 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
   const [note, setNote] = useState("");
   const [restTime, setRestTime] = useState("00:00");
   const [showPicker, setShowPicker] = useState(false);
+  const [progress, setProgress] = useState(1); // Start at 100% (full bar)
 
   const formatTime = ({
     minutes,
     seconds,
   }: {
+    hours?: number;
     minutes?: number;
     seconds?: number;
   }) => {
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${pad(minutes ?? 0)}:${pad(seconds ?? 0)}`;
+    const timeParts = [];
+
+    if (minutes !== undefined) {
+      timeParts.push(minutes.toString().padStart(2, "0"));
+    }
+    if (seconds !== undefined) {
+      timeParts.push(seconds.toString().padStart(2, "0"));
+    }
+
+    return timeParts.join(":");
   };
 
   const addSet = () => {
@@ -52,30 +62,39 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
 
   const startCountdown = (minutes: number, seconds: number) => {
     let totalSeconds = minutes * 60 + seconds;
-    let remaining = totalSeconds;
+    const initialTotalSeconds = totalSeconds;
 
     const interval = setInterval(() => {
-      if (remaining <= 0) {
+      if (totalSeconds <= 0) {
         clearInterval(interval);
-        Toast.hide();
 
         Toast.show({
           type: "customToast",
           text1: "¡Descanso terminado!",
+          position: "bottom",
+          props: {
+            progress: 0, // La barra desaparece al finalizar
+          },
         });
       } else {
+        const currentMinutes = Math.floor(totalSeconds / 60);
+        const currentSeconds = totalSeconds % 60;
+        const remainingProgress = totalSeconds / initialTotalSeconds;
+
+        setProgress(remainingProgress); // Actualiza el progreso dinámicamente
+
         Toast.show({
           type: "customToast",
-          text1: `Descansando: ${Math.floor(remaining / 60)
+          text1: `Cuenta atrás: ${currentMinutes
             .toString()
-            .padStart(2, "0")}:${(remaining % 60).toString().padStart(2, "0")}`,
-          props: {
-            totalTime: totalSeconds,
-            remainingTime: remaining,
-          },
+            .padStart(2, "0")}:${currentSeconds.toString().padStart(2, "0")}`,
           position: "bottom",
+          props: {
+            progress: remainingProgress,
+          },
         });
-        remaining -= 1;
+
+        totalSeconds -= 1;
       }
     }, 1000);
   };
@@ -94,6 +113,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         value={note}
         onChangeText={setNote}
       />
+      {/* Rest Timer */}
       <TouchableOpacity
         style={styles.timerContainer}
         onPress={() => setShowPicker(true)}
@@ -109,10 +129,13 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         hideHours
         minuteLabel="min"
         secondLabel="sec"
-        onConfirm={({ minutes = 0, seconds = 0 }) => {
-          setRestTime(formatTime({ minutes, seconds }));
+        onConfirm={(pickedDuration) => {
+          setRestTime(formatTime(pickedDuration));
           setShowPicker(false);
-          startCountdown(minutes, seconds);
+          startCountdown(
+            pickedDuration.minutes || 0,
+            pickedDuration.seconds || 0
+          );
         }}
         modalTitle="Seleccionar tiempo de descanso"
         onCancel={() => setShowPicker(false)}
@@ -120,9 +143,12 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         use12HourPicker={false}
         styles={{
           theme: "light",
-          pickerLabel: { right: -20 },
+          pickerLabel: {
+            right: -20,
+          },
         }}
       />
+      {/* Column Titles */}
       <View style={styles.columnTitles}>
         <Text style={[styles.columnTitle, { flex: 1 }]}>Serie</Text>
         <Text style={[styles.columnTitle, { flex: 2 }]}>Peso</Text>
@@ -142,9 +168,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
               onChangeText={(text) =>
                 setSets((prev) =>
                   prev.map((set) =>
-                    set.id === item.id
-                      ? { ...set, kg: parseInt(text) || 0 }
-                      : set
+                    set.id === item.id ? { ...set, kg: parseInt(text) } : set
                   )
                 )
               }
@@ -156,9 +180,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
               onChangeText={(text) =>
                 setSets((prev) =>
                   prev.map((set) =>
-                    set.id === item.id
-                      ? { ...set, reps: parseInt(text) || 0 }
-                      : set
+                    set.id === item.id ? { ...set, reps: parseInt(text) } : set
                   )
                 )
               }
@@ -267,6 +289,11 @@ const styles = StyleSheet.create({
   addButton: {
     marginTop: 16,
     backgroundColor: "#4CAF50",
+  },
+  toastProgressBar: {
+    height: 8,
+    width: "100%",
+    borderRadius: 4,
   },
 });
 

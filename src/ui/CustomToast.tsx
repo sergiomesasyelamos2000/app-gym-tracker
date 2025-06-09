@@ -1,78 +1,77 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
-import { ProgressBar } from "react-native-paper";
+import { View, Text, Animated, StyleSheet } from "react-native";
 
 interface CustomToastProps {
   text1: string;
-  progress?: number; // de 0 a 1
-  totalTime?: number; // opcional: en segundos
-  remainingTime?: number; // opcional: en segundos
+  progress?: number; // Progreso opcional (valor entre 0 y 1)
 }
 
-const CustomToast = ({
-  text1,
-  progress,
-  totalTime,
-  remainingTime,
-}: CustomToastProps) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+const CustomToast = ({ text1, progress = 1 }: CustomToastProps) => {
+  const animatedProgress = useRef(new Animated.Value(progress)).current;
 
   useEffect(() => {
-    // Fade in al aparecer el toast
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    // Sincroniza el valor inicial de la animación con el valor de `progress`
+    animatedProgress.setValue(progress);
 
-    // Fade out tras 1.5 segundos si no hay temporizador
-    if (!totalTime && !remainingTime) {
-      const timeout = setTimeout(() => {
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }, 1500);
-
-      return () => clearTimeout(timeout);
+    // Solo anima si el valor cambia
+    if (progress !== undefined) {
+      Animated.timing(animatedProgress, {
+        toValue: progress,
+        duration: 500, // Actualización rápida para reflejar cambios dinámicos
+        useNativeDriver: false,
+      }).start();
     }
-  }, [fadeAnim, totalTime, remainingTime]);
-
-  // Calcular progreso si no se pasa explícitamente
-  const computedProgress =
-    totalTime && remainingTime ? remainingTime / totalTime : progress ?? 1;
+  }, [progress]);
 
   return (
-    <Animated.View style={[styles.toastContainer, { opacity: fadeAnim }]}>
+    <View style={styles.toastContainer}>
       <Text style={styles.toastText}>{text1}</Text>
-      {computedProgress !== undefined && computedProgress < 1 && (
-        <ProgressBar
-          progress={computedProgress}
-          color="#4CAF50"
-          style={styles.progressBar}
-        />
+      {progress > 0 && ( // Solo muestra la barra si el progreso es mayor a 0
+        <View style={styles.progressBarContainer}>
+          <Animated.View
+            style={[
+              styles.progressBar,
+              {
+                width: animatedProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"], // La barra disminuye de derecha a izquierda
+                }),
+              },
+            ]}
+          />
+        </View>
       )}
-    </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   toastContainer: {
-    backgroundColor: "#333",
-    padding: 16,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 20,
+    height: 60,
+    width: "90%",
+    backgroundColor: "tomato",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
   },
   toastText: {
-    color: "#fff",
+    color: "white",
     fontSize: 16,
+    fontWeight: "bold",
     marginBottom: 8,
-    textAlign: "center",
+  },
+  progressBarContainer: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#ccc", // Fondo de la barra
+    borderRadius: 3,
+    overflow: "hidden", // Asegura que la barra no se desborde
   },
   progressBar: {
-    height: 6,
+    height: "100%",
+    backgroundColor: "white",
     borderRadius: 3,
   },
 });
