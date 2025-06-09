@@ -1,7 +1,5 @@
-import React from 'react';
-import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
-import SectionCard from '../components/SectionCard';
-import { Flame } from 'lucide-react-native';
+import React from "react";
+import { ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
   return (
@@ -21,20 +19,6 @@ export default function HomeScreen() {
           <Text className="text-sm">Calorías hoy</Text>
         </View>
       </View>
-
-      <SectionCard title="Entrenamiento de Hoy">
-        <Text className="mb-2">Push Day (Pecho, Hombros, Tríceps)</Text>
-        <Text className="mb-4 text-gray-500">Duración estimada: 75 min</Text>
-        <TouchableOpacity className="bg-blue-600 px-4 py-2 rounded-full">
-          <Text className="text-white text-center">Empezar Entreno</Text>
-        </TouchableOpacity>
-      </SectionCard>
-
-      <SectionCard title="Acciones Rápidas">
-        <Text>🍽 Registrar Comida</Text>
-        <Text>📈 Ver Progreso</Text>
-        <Text>⏱ Timer Rápido</Text>
-      </SectionCard>
     </ScrollView>
   );
 }
