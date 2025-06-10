@@ -15,7 +15,11 @@ import CustomToast from "./src/ui/CustomToast";
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (
-    <CustomToast text1={text1 ?? ""} progress={props?.progress} />
+    <CustomToast
+      text1={text1 ?? ""}
+      progress={props?.progress}
+      onCancel={props?.onCancel}
+    />
   ),
 };
 

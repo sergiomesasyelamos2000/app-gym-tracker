@@ -91,6 +91,11 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
           position: "bottom",
           props: {
             progress: remainingProgress,
+            onCancel: () => {
+              clearInterval(interval); // Detiene el temporizador
+              setProgress(0); // Resetea la barra de progreso
+              Toast.hide(); // Oculta el toast
+            },
           },
         });
 
