@@ -11,20 +11,26 @@ interface CustomToastProps {
   text1: string;
   progress?: number; // Progreso opcional (valor entre 0 y 1)
   onCancel?: () => void; // Función para cancelar el temporizador
+  onAddTime?: () => void; // Función para añadir tiempo
+  onSubtractTime?: () => void; // Función para restar tiempo
 }
 
-const CustomToast = ({ text1, progress = 1, onCancel }: CustomToastProps) => {
+const CustomToast = ({
+  text1,
+  progress = 1,
+  onCancel,
+  onAddTime,
+  onSubtractTime,
+}: CustomToastProps) => {
   const animatedProgress = useRef(new Animated.Value(progress)).current;
 
   useEffect(() => {
-    // Sincroniza el valor inicial de la animación con el valor de `progress`
     animatedProgress.setValue(progress);
 
-    // Solo anima si el valor cambia
     if (progress !== undefined) {
       Animated.timing(animatedProgress, {
         toValue: progress,
-        duration: 500, // Actualización rápida para reflejar cambios dinámicos
+        duration: 500,
         useNativeDriver: false,
       }).start();
     }
@@ -33,14 +39,24 @@ const CustomToast = ({ text1, progress = 1, onCancel }: CustomToastProps) => {
   return (
     <View style={styles.toastContainer}>
       <View style={styles.toastContent}>
+        {progress > 0 && ( // Renderiza el botón solo si el progreso es mayor a 0
+          <TouchableOpacity style={styles.timeButton} onPress={onSubtractTime}>
+            <Text style={styles.timeButtonText}>-15s</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.toastText}>{text1}</Text>
+        {progress > 0 && ( // Renderiza el botón solo si el progreso es mayor a 0
+          <TouchableOpacity style={styles.timeButton} onPress={onAddTime}>
+            <Text style={styles.timeButtonText}>+15s</Text>
+          </TouchableOpacity>
+        )}
         {onCancel && (
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         )}
       </View>
-      {progress > 0 && ( // Solo muestra la barra si el progreso es mayor a 0
+      {progress > 0 && (
         <View style={styles.progressBarContainer}>
           <Animated.View
             style={[
@@ -48,7 +64,7 @@ const CustomToast = ({ text1, progress = 1, onCancel }: CustomToastProps) => {
               {
                 width: animatedProgress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["0%", "100%"], // La barra disminuye de derecha a izquierda
+                  outputRange: ["0%", "100%"],
                 }),
               },
             ]}
@@ -81,6 +97,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  timeButton: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginHorizontal: 5,
+  },
+  timeButtonText: {
+    color: "tomato",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
   cancelButton: {
     backgroundColor: "white",
     borderRadius: 8,
@@ -95,9 +123,9 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     width: "100%",
     height: 6,
-    backgroundColor: "#ccc", // Fondo de la barra
+    backgroundColor: "#ccc",
     borderRadius: 3,
-    overflow: "hidden", // Asegura que la barra no se desborde
+    overflow: "hidden",
     marginTop: 8,
   },
   progressBar: {

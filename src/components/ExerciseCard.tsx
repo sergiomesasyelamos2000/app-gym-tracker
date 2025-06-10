@@ -73,7 +73,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
           text1: "¡Descanso terminado!",
           position: "bottom",
           props: {
-            progress: 0, // La barra desaparece al finalizar
+            progress: 0,
           },
         });
       } else {
@@ -81,7 +81,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         const currentSeconds = totalSeconds % 60;
         const remainingProgress = totalSeconds / initialTotalSeconds;
 
-        setProgress(remainingProgress); // Actualiza el progreso dinámicamente
+        setProgress(remainingProgress);
 
         Toast.show({
           type: "customToast",
@@ -92,9 +92,52 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
           props: {
             progress: remainingProgress,
             onCancel: () => {
-              clearInterval(interval); // Detiene el temporizador
-              setProgress(0); // Resetea la barra de progreso
-              Toast.hide(); // Oculta el toast
+              clearInterval(interval);
+              setProgress(0);
+              Toast.hide();
+            },
+            onAddTime: () => {
+              totalSeconds += 15; // Añade 15 segundos
+              const updatedMinutes = Math.floor(totalSeconds / 60);
+              const updatedSeconds = totalSeconds % 60;
+              const updatedProgress = totalSeconds / initialTotalSeconds;
+
+              setProgress(updatedProgress); // Actualiza el progreso
+              Toast.show({
+                type: "customToast",
+                text1: `Cuenta atrás: ${updatedMinutes
+                  .toString()
+                  .padStart(2, "0")}:${updatedSeconds
+                  .toString()
+                  .padStart(2, "0")}`,
+                position: "bottom",
+                props: {
+                  progress: updatedProgress,
+                },
+              });
+            },
+            onSubtractTime: () => {
+              totalSeconds -= 15; // Resta 15 segundos
+              if (totalSeconds < 0) {
+                totalSeconds = 0; // No permite valores negativos
+              }
+              const updatedMinutes = Math.floor(totalSeconds / 60);
+              const updatedSeconds = totalSeconds % 60;
+              const updatedProgress = totalSeconds / initialTotalSeconds;
+
+              setProgress(updatedProgress); // Actualiza el progreso
+              Toast.show({
+                type: "customToast",
+                text1: `Cuenta atrás: ${updatedMinutes
+                  .toString()
+                  .padStart(2, "0")}:${updatedSeconds
+                  .toString()
+                  .padStart(2, "0")}`,
+                position: "bottom",
+                props: {
+                  progress: updatedProgress,
+                },
+              });
             },
           },
         });

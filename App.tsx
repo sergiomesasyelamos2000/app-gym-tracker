@@ -19,6 +19,8 @@ const toastConfig = {
       text1={text1 ?? ""}
       progress={props?.progress}
       onCancel={props?.onCancel}
+      onAddTime={props?.onAddTime}
+      onSubtractTime={props?.onSubtractTime}
     />
   ),
 };
