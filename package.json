@@ -16,6 +16,7 @@
     "@react-navigation/native-stack": "^7.3.14",
     "@reduxjs/toolkit": "^2.8.2",
     "expo": "53.0.10",
+    "expo-linear-gradient": "^14.1.5",
     "expo-status-bar": "~2.2.3",
     "lucide-react-native": "^0.511.0",
     "nativewind": "^4.1.23",

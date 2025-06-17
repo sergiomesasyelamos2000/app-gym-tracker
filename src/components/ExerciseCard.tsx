@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Card, MD3Colors, ProgressBar } from "react-native-paper";
+import { Button, Card } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -30,7 +30,7 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
   const [note, setNote] = useState("");
   const [restTime, setRestTime] = useState("00:00");
   const [showPicker, setShowPicker] = useState(false);
-  const [progress, setProgress] = useState(1); // Start at 100% (full bar)
+  const [progress, setProgress] = useState(1);
 
   const formatTime = ({
     minutes,
@@ -41,14 +41,12 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
     seconds?: number;
   }) => {
     const timeParts = [];
-
     if (minutes !== undefined) {
       timeParts.push(minutes.toString().padStart(2, "0"));
     }
     if (seconds !== undefined) {
       timeParts.push(seconds.toString().padStart(2, "0"));
     }
-
     return timeParts.join(":");
   };
 
@@ -67,14 +65,11 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
     const interval = setInterval(() => {
       if (totalSeconds <= 0) {
         clearInterval(interval);
-
         Toast.show({
           type: "customToast",
           text1: "¡Descanso terminado!",
           position: "bottom",
-          props: {
-            progress: 0,
-          },
+          props: { progress: 0 },
         });
       } else {
         const currentMinutes = Math.floor(totalSeconds / 60);
@@ -85,9 +80,9 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
 
         Toast.show({
           type: "customToast",
-          text1: `Cuenta atrás: ${currentMinutes
+          text1: `${currentMinutes.toString().padStart(2, "0")}:${currentSeconds
             .toString()
-            .padStart(2, "0")}:${currentSeconds.toString().padStart(2, "0")}`,
+            .padStart(2, "0")}`,
           position: "bottom",
           props: {
             progress: remainingProgress,
@@ -97,46 +92,40 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
               Toast.hide();
             },
             onAddTime: () => {
-              totalSeconds += 15; // Añade 15 segundos
+              totalSeconds += 15;
               const updatedMinutes = Math.floor(totalSeconds / 60);
               const updatedSeconds = totalSeconds % 60;
               const updatedProgress = totalSeconds / initialTotalSeconds;
 
-              setProgress(updatedProgress); // Actualiza el progreso
+              setProgress(updatedProgress);
               Toast.show({
                 type: "customToast",
-                text1: `Cuenta atrás: ${updatedMinutes
+                text1: `${updatedMinutes
                   .toString()
                   .padStart(2, "0")}:${updatedSeconds
                   .toString()
                   .padStart(2, "0")}`,
                 position: "bottom",
-                props: {
-                  progress: updatedProgress,
-                },
+                props: { progress: updatedProgress },
               });
             },
             onSubtractTime: () => {
-              totalSeconds -= 15; // Resta 15 segundos
-              if (totalSeconds < 0) {
-                totalSeconds = 0; // No permite valores negativos
-              }
+              totalSeconds -= 15;
+              if (totalSeconds < 0) totalSeconds = 0;
               const updatedMinutes = Math.floor(totalSeconds / 60);
               const updatedSeconds = totalSeconds % 60;
               const updatedProgress = totalSeconds / initialTotalSeconds;
 
-              setProgress(updatedProgress); // Actualiza el progreso
+              setProgress(updatedProgress);
               Toast.show({
                 type: "customToast",
-                text1: `Cuenta atrás: ${updatedMinutes
+                text1: `${updatedMinutes
                   .toString()
                   .padStart(2, "0")}:${updatedSeconds
                   .toString()
                   .padStart(2, "0")}`,
                 position: "bottom",
-                props: {
-                  progress: updatedProgress,
-                },
+                props: { progress: updatedProgress },
               });
             },
           },
@@ -161,7 +150,6 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         value={note}
         onChangeText={setNote}
       />
-      {/* Rest Timer */}
       <TouchableOpacity
         style={styles.timerContainer}
         onPress={() => setShowPicker(true)}
@@ -191,12 +179,11 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         use12HourPicker={false}
         styles={{
           theme: "light",
-          pickerLabel: {
-            right: -20,
-          },
+          pickerLabel: { right: -20 },
+          modalTitle: { fontSize: 18, fontWeight: "600" },
+          container: { width: "80%" },
         }}
       />
-      {/* Column Titles */}
       <View style={styles.columnTitles}>
         <Text style={[styles.columnTitle, { flex: 1 }]}>Serie</Text>
         <Text style={[styles.columnTitle, { flex: 2 }]}>Peso</Text>
@@ -265,83 +252,95 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#f3f2ea",
+    backgroundColor: "#ffffff",
     marginVertical: 16,
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
     elevation: 4,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#000",
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#1A1A1A",
   },
   noteInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 16,
-    backgroundColor: "#FFF",
+    borderWidth: 0,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    backgroundColor: "#fafafc",
+    fontSize: 16,
+    color: "#333",
   },
   timerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    backgroundColor: "#f2f2f7",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
   },
   timerText: {
-    marginLeft: 8,
+    marginLeft: 10,
     fontSize: 16,
-    color: "#000",
+    color: "#333",
   },
   columnTitles: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 12,
     paddingHorizontal: 8,
   },
   columnTitle: {
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "600",
+    fontSize: 14,
+    color: "#777",
     textAlign: "center",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
-    backgroundColor: "#FFF",
-    padding: 8,
-    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: "#f9f9f9",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
     elevation: 2,
   },
   label: {
     textAlign: "center",
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "500",
+    color: "#444",
+    fontSize: 15,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 4,
-    marginHorizontal: 8,
+    backgroundColor: "#e8e8ed",
+    borderRadius: 12,
+    padding: 8,
+    marginHorizontal: 6,
     textAlign: "center",
-    backgroundColor: "#FFF",
+    fontSize: 15,
+    color: "#333",
   },
   addButton: {
-    marginTop: 16,
-    backgroundColor: "#4CAF50",
-  },
-  toastProgressBar: {
-    height: 8,
-    width: "100%",
-    borderRadius: 4,
+    marginTop: 20,
+    backgroundColor: "#6C63FF",
+    borderRadius: 14,
+    paddingVertical: 8,
   },
 });
 

@@ -5,14 +5,15 @@ import {
   Animated,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 
 interface CustomToastProps {
   text1: string;
-  progress?: number; // Progreso opcional (valor entre 0 y 1)
-  onCancel?: () => void; // Función para cancelar el temporizador
-  onAddTime?: () => void; // Función para añadir tiempo
-  onSubtractTime?: () => void; // Función para restar tiempo
+  progress?: number;
+  onCancel?: () => void;
+  onAddTime?: () => void;
+  onSubtractTime?: () => void;
 }
 
 const CustomToast = ({
@@ -23,51 +24,64 @@ const CustomToast = ({
   onSubtractTime,
 }: CustomToastProps) => {
   const animatedProgress = useRef(new Animated.Value(progress)).current;
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     animatedProgress.setValue(progress);
-
-    if (progress !== undefined) {
-      Animated.timing(animatedProgress, {
-        toValue: progress,
-        duration: 500,
-        useNativeDriver: false,
-      }).start();
-    }
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
   }, [progress]);
 
+  const interpolatedWidth = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
+
   return (
-    <View style={styles.toastContainer}>
-      <View style={styles.toastContent}>
-        {progress > 0 && ( // Renderiza el botón solo si el progreso es mayor a 0
-          <TouchableOpacity style={styles.timeButton} onPress={onSubtractTime}>
-            <Text style={styles.timeButtonText}>-15s</Text>
+    <View style={[styles.toastContainer, { width: width * 0.92 }]}>
+      <View style={styles.contentRow}>
+        {progress > 0 && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onSubtractTime}
+            accessibilityLabel="-15 segundos"
+          >
+            <Text style={styles.actionButtonText}>−15s</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.toastText}>{text1}</Text>
-        {progress > 0 && ( // Renderiza el botón solo si el progreso es mayor a 0
-          <TouchableOpacity style={styles.timeButton} onPress={onAddTime}>
-            <Text style={styles.timeButtonText}>+15s</Text>
+
+        <Text numberOfLines={2} style={styles.toastText}>
+          {text1}
+        </Text>
+
+        {progress > 0 && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onAddTime}
+            accessibilityLabel="+15 segundos"
+          >
+            <Text style={styles.actionButtonText}>+15s</Text>
           </TouchableOpacity>
         )}
+
         {onCancel && (
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onCancel}
+            accessibilityLabel="Cancelar"
+          >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         )}
       </View>
+
       {progress > 0 && (
         <View style={styles.progressBarContainer}>
           <Animated.View
-            style={[
-              styles.progressBar,
-              {
-                width: animatedProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["0%", "100%"],
-                }),
-              },
-            ]}
+            style={[styles.progressBar, { width: interpolatedWidth }]}
           />
         </View>
       )}
@@ -77,61 +91,65 @@ const CustomToast = ({
 
 const styles = StyleSheet.create({
   toastContainer: {
-    height: 80,
-    width: "90%",
-    backgroundColor: "tomato",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: "#7C3AED",
+    borderRadius: 14,
+    padding: 12,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
   },
-  toastContent: {
+  contentRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
     width: "100%",
   },
   toastText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+    flex: 1,
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
   },
-  timeButton: {
-    backgroundColor: "white",
-    borderRadius: 8,
+  actionButton: {
+    borderRadius: 10,
+    paddingVertical: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginHorizontal: 5,
   },
-  timeButtonText: {
-    color: "tomato",
+  actionButtonText: {
+    color: "#fff",
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 13,
   },
   cancelButton: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginLeft: 6,
   },
   cancelButtonText: {
-    color: "tomato",
-    fontWeight: "bold",
-    fontSize: 14,
+    color: "#7C3AED",
+    fontWeight: "600",
+    fontSize: 15,
   },
   progressBarContainer: {
     width: "100%",
     height: 6,
-    backgroundColor: "#ccc",
+    backgroundColor: "#f1f1f1",
     borderRadius: 3,
+    marginTop: 10,
     overflow: "hidden",
-    marginTop: 8,
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "white",
-    borderRadius: 3,
+    backgroundColor: "#fff",
   },
 });
 
