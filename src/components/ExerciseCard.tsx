@@ -7,6 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  GestureHandlerRootView,
+  Swipeable,
+} from "react-native-gesture-handler";
 import { Button, Card } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
@@ -33,7 +37,6 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
   const [showPicker, setShowPicker] = useState(false);
   const [progress, setProgress] = useState(1);
 
-  // Notificar cambios al padre
   useEffect(() => {
     if (onChangeSets) onChangeSets(sets);
   }, [sets]);
@@ -65,83 +68,24 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
     setSets(updatedSets);
   };
 
-  const startCountdown = (minutes: number, seconds: number) => {
-    let totalSeconds = minutes * 60 + seconds;
-    const initialTotalSeconds = totalSeconds;
-
-    const interval = setInterval(() => {
-      if (totalSeconds <= 0) {
-        clearInterval(interval);
-        Toast.show({
-          type: "customToast",
-          text1: "¡Descanso terminado!",
-          position: "bottom",
-          props: { progress: 0 },
-        });
-      } else {
-        const currentMinutes = Math.floor(totalSeconds / 60);
-        const currentSeconds = totalSeconds % 60;
-        const remainingProgress = totalSeconds / initialTotalSeconds;
-
-        setProgress(remainingProgress);
-
-        Toast.show({
-          type: "customToast",
-          text1: `${currentMinutes.toString().padStart(2, "0")}:${currentSeconds
-            .toString()
-            .padStart(2, "0")}`,
-          position: "bottom",
-          props: {
-            progress: remainingProgress,
-            onCancel: () => {
-              clearInterval(interval);
-              setProgress(0);
-              Toast.hide();
-            },
-            onAddTime: () => {
-              totalSeconds += 15;
-              const updatedMinutes = Math.floor(totalSeconds / 60);
-              const updatedSeconds = totalSeconds % 60;
-              const updatedProgress = totalSeconds / initialTotalSeconds;
-
-              setProgress(updatedProgress);
-              Toast.show({
-                type: "customToast",
-                text1: `${updatedMinutes
-                  .toString()
-                  .padStart(2, "0")}:${updatedSeconds
-                  .toString()
-                  .padStart(2, "0")}`,
-                position: "bottom",
-                props: { progress: updatedProgress },
-              });
-            },
-            onSubtractTime: () => {
-              totalSeconds -= 15;
-              if (totalSeconds < 0) totalSeconds = 0;
-              const updatedMinutes = Math.floor(totalSeconds / 60);
-              const updatedSeconds = totalSeconds % 60;
-              const updatedProgress = totalSeconds / initialTotalSeconds;
-
-              setProgress(updatedProgress);
-              Toast.show({
-                type: "customToast",
-                text1: `${updatedMinutes
-                  .toString()
-                  .padStart(2, "0")}:${updatedSeconds
-                  .toString()
-                  .padStart(2, "0")}`,
-                position: "bottom",
-                props: { progress: updatedProgress },
-              });
-            },
-          },
-        });
-
-        totalSeconds -= 1;
-      }
-    }, 1000);
-  };
+  const renderRightActions = (itemId: string) => (
+    <View style={styles.actionsContainer}>
+      <TouchableOpacity
+        style={[styles.button, styles.edit]}
+        onPress={() => console.log(`Edit item ${itemId}`)}
+      >
+        <Text style={styles.actionText}>Edit</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, styles.delete]}
+        onPress={() =>
+          setSets((prev) => prev.filter((set) => set.id !== itemId))
+        }
+      >
+        <Text style={styles.actionText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <Card style={styles.card}>
@@ -175,10 +119,6 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
         onConfirm={(pickedDuration) => {
           setRestTime(formatTime(pickedDuration));
           setShowPicker(false);
-          startCountdown(
-            pickedDuration.minutes || 0,
-            pickedDuration.seconds || 0
-          );
         }}
         modalTitle="Seleccionar tiempo de descanso"
         onCancel={() => setShowPicker(false)}
@@ -200,70 +140,74 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
         <Text style={[styles.columnTitle, { flex: 2 }]}>Reps</Text>
         <Text style={[styles.columnTitle, { flex: 1 }]}>✔</Text>
       </View>
-      <FlatList
-        data={sets}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={[styles.label, { flex: 1 }]}>{item.label}</Text>
-            <TextInput
-              style={[styles.input, { flex: 2 }]}
-              keyboardType="numeric"
-              value={item.kg.toString()}
-              onChangeText={(text) =>
-                setSets((prev) =>
-                  prev.map((set) =>
-                    set.id === item.id
-                      ? { ...set, kg: parseInt(text) || 0 }
-                      : set
-                  )
-                )
-              }
-            />
-            <TextInput
-              style={[styles.input, { flex: 2 }]}
-              keyboardType="numeric"
-              value={item.reps.toString()}
-              onChangeText={(text) =>
-                setSets((prev) =>
-                  prev.map((set) =>
-                    set.id === item.id
-                      ? { ...set, reps: parseInt(text) || 0 }
-                      : set
-                  )
-                )
-              }
-            />
-            <TouchableOpacity
-              style={{ flex: 1 }}
-              onPress={() =>
-                setSets((prev) =>
-                  prev.map((set) =>
-                    set.id === item.id
-                      ? { ...set, completed: !set.completed }
-                      : set
-                  )
-                )
-              }
-            >
-              <Icon
-                name={
-                  item.completed ? "check-circle" : "radio-button-unchecked"
-                }
-                size={24}
-                color={item.completed ? "#4CAF50" : "#9E9E9E"}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+
+      <GestureHandlerRootView>
+        <FlatList
+          data={sets}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Swipeable renderRightActions={() => renderRightActions(item.id)}>
+              <View style={styles.row}>
+                <Text style={[styles.label, { flex: 1 }]}>{item.label}</Text>
+                <TextInput
+                  style={[styles.input, { flex: 2 }]}
+                  keyboardType="numeric"
+                  value={item.kg.toString()}
+                  onChangeText={(text) =>
+                    setSets((prev) =>
+                      prev.map((set) =>
+                        set.id === item.id
+                          ? { ...set, kg: parseInt(text) || 0 }
+                          : set
+                      )
+                    )
+                  }
+                />
+                <TextInput
+                  style={[styles.input, { flex: 2 }]}
+                  keyboardType="numeric"
+                  value={item.reps.toString()}
+                  onChangeText={(text) =>
+                    setSets((prev) =>
+                      prev.map((set) =>
+                        set.id === item.id
+                          ? { ...set, reps: parseInt(text) || 0 }
+                          : set
+                      )
+                    )
+                  }
+                />
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() =>
+                    setSets((prev) =>
+                      prev.map((set) =>
+                        set.id === item.id
+                          ? { ...set, completed: !set.completed }
+                          : set
+                      )
+                    )
+                  }
+                >
+                  <Icon
+                    name={
+                      item.completed ? "check-circle" : "radio-button-unchecked"
+                    }
+                    size={24}
+                    color={item.completed ? "#4CAF50" : "#9E9E9E"}
+                  />
+                </TouchableOpacity>
+              </View>
+            </Swipeable>
+          )}
+        />
+      </GestureHandlerRootView>
       <Button mode="contained" onPress={addSet} style={styles.addButton}>
         + Añadir Serie
       </Button>
     </Card>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
@@ -355,6 +299,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#6C63FF",
     borderRadius: 14,
     paddingVertical: 8,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  button: {
+    width: 75,
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+  },
+  edit: {
+    backgroundColor: "#4CAF50",
+  },
+  delete: {
+    backgroundColor: "#F44336",
+  },
+  actionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
 
