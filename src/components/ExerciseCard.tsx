@@ -177,11 +177,14 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
         onCancel={() => setShowPicker(false)}
         closeOnOverlayPress
         use12HourPicker={false}
+        cancelButtonText="Cancelar"
+        confirmButtonText="Confirmar"
         styles={{
           theme: "light",
           pickerLabel: { right: -20 },
           modalTitle: { fontSize: 18, fontWeight: "600" },
           container: { width: "80%" },
+          confirmButton: { borderColor: "#6C63FF", color: "#6C63FF" },
         }}
       />
       <View style={styles.columnTitles}>
