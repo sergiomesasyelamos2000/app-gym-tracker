@@ -22,11 +22,11 @@ export default function HomeScreen() {
 
         {/* Stats Section */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statCard, styles.greenCard]}>
+          <View style={[styles.statCard, styles.purpleCard]}>
             <Text style={styles.statValue}>12</Text>
             <Text style={styles.statLabel}>Entrenamientos</Text>
           </View>
-          <View style={[styles.statCard, styles.redCard]}>
+          <View style={[styles.statCard, styles.lavenderCard]}>
             <Text style={styles.statValue}>1,847</Text>
             <Text style={styles.statLabel}>Calorías hoy</Text>
           </View>
@@ -51,14 +51,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f9fafb", // Fondo para toda la pantalla
+    backgroundColor: "#f9fafb",
   },
   container: {
     paddingHorizontal: 16,
     paddingVertical: 24,
   },
   header: {
-    backgroundColor: "#4caf50",
+    backgroundColor: "#6C3BAA", // morado corporativo
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   headerSubtitle: {
-    color: "#fff",
+    color: "#E0D7F5",
     fontSize: 16,
     marginTop: 4,
   },
@@ -85,16 +85,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     alignItems: "center",
   },
-  greenCard: {
-    backgroundColor: "#e8f5e9",
+  purpleCard: {
+    backgroundColor: "#ede7f6", // lila claro
   },
-  redCard: {
-    backgroundColor: "#ffebee",
+  lavenderCard: {
+    backgroundColor: "#f3e8ff", // más suave
   },
   statValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#4caf50",
+    color: "#6C3BAA",
   },
   statLabel: {
     fontSize: 14,
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   actionButton: {
-    backgroundColor: "#4caf50",
+    backgroundColor: "#6C3BAA",
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
@@ -119,10 +119,10 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#4caf50",
+    borderColor: "#6C3BAA",
   },
   secondaryButtonText: {
-    color: "#4caf50",
+    color: "#6C3BAA",
     fontSize: 16,
     fontWeight: "bold",
   },

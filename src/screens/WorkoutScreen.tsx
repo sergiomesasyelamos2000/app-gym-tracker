@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronRight } from "lucide-react-native";
@@ -36,10 +37,10 @@ const routines = [
 
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
+  const { width } = useWindowDimensions();
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
+    <ScrollView contentContainerStyle={[styles.container, { width }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Workout Routines</Text>
         <Text style={styles.headerSubtitle}>
@@ -47,7 +48,6 @@ export default function WorkoutScreen() {
         </Text>
       </View>
 
-      {/* Routine List */}
       {routines.map((routine) => (
         <TouchableOpacity
           key={routine.id}
@@ -58,7 +58,7 @@ export default function WorkoutScreen() {
             <Text style={styles.routineName}>{routine.name}</Text>
             <Text style={styles.routineDescription}>{routine.description}</Text>
           </View>
-          <ChevronRight color="#3B82F6" size={24} />
+          <ChevronRight color="#6C3BAA" size={24} />
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -67,16 +67,22 @@ export default function WorkoutScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-    paddingHorizontal: 16,
     paddingVertical: 24,
+    paddingHorizontal: 16,
+    backgroundColor: "#f9fafb",
+    alignItems: "center",
   },
   header: {
+    width: "100%",
     marginBottom: 16,
-    padding: 16,
-    backgroundColor: "#3B82F6",
-    borderRadius: 12,
+    padding: 20,
+    backgroundColor: "#6C3BAA", // royal purple :contentReference[oaicite:1]{index=1}
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
   headerTitle: {
     fontSize: 24,
@@ -85,30 +91,36 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "#e0f2fe",
-    marginTop: 4,
+    color: "#E0D7F5",
+    marginTop: 6,
   },
   routineCard: {
+    width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#e0f2fe",
+    backgroundColor: "#ede7f6", // lilac/light purple
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 12,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
   },
   routineInfo: {
     flex: 1,
+    marginRight: 8,
   },
   routineName: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#2563eb",
+    fontWeight: "600",
+    color: "#4E2A84", // deeper purple
   },
   routineDescription: {
     fontSize: 14,
-    color: "#64748b",
+    color: "#555",
     marginTop: 4,
   },
 });
