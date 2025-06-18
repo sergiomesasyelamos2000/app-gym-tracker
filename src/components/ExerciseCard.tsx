@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -23,14 +23,20 @@ export interface SetData {
 interface Props {
   title: string;
   initialSets: SetData[];
+  onChangeSets?: (updatedSets: SetData[]) => void;
 }
 
-const ExerciseCard = ({ title, initialSets }: Props) => {
+const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
   const [sets, setSets] = useState<SetData[]>(initialSets);
   const [note, setNote] = useState("");
   const [restTime, setRestTime] = useState("00:00");
   const [showPicker, setShowPicker] = useState(false);
   const [progress, setProgress] = useState(1);
+
+  // Notificar cambios al padre
+  useEffect(() => {
+    if (onChangeSets) onChangeSets(sets);
+  }, [sets]);
 
   const formatTime = ({
     minutes,
@@ -52,10 +58,11 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
 
   const addSet = () => {
     const newId = `${sets.length + 1}`;
-    setSets([
+    const updatedSets = [
       ...sets,
       { id: newId, label: newId, kg: 0, reps: 0, completed: false },
-    ]);
+    ];
+    setSets(updatedSets);
   };
 
   const startCountdown = (minutes: number, seconds: number) => {
@@ -206,7 +213,9 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
               onChangeText={(text) =>
                 setSets((prev) =>
                   prev.map((set) =>
-                    set.id === item.id ? { ...set, kg: parseInt(text) } : set
+                    set.id === item.id
+                      ? { ...set, kg: parseInt(text) || 0 }
+                      : set
                   )
                 )
               }
@@ -218,7 +227,9 @@ const ExerciseCard = ({ title, initialSets }: Props) => {
               onChangeText={(text) =>
                 setSets((prev) =>
                   prev.map((set) =>
-                    set.id === item.id ? { ...set, reps: parseInt(text) } : set
+                    set.id === item.id
+                      ? { ...set, reps: parseInt(text) || 0 }
+                      : set
                   )
                 )
               }
