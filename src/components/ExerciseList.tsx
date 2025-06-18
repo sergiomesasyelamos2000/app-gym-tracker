@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CustomToast from "../ui/CustomToast"; // Asegúrate de importar tu CustomToast
+import { WorkoutStackParamList } from "../screens/WorkoutStack";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 
 const exercises = [
   {
@@ -46,7 +48,12 @@ type Exercise = {
   image: string;
 };
 
+type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
+
 export default function ExerciseListScreen() {
+  const route = useRoute<ExerciseListRouteProp>();
+  const navigation = useNavigation();
+  const { onFinishSelection } = route.params;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
 
@@ -120,11 +127,16 @@ export default function ExerciseListScreen() {
 
         {/* Toast */}
         {selectedExercises.length > 0 && (
-          <CustomToast
-            text1={`Has seleccionado ${selectedExercises.length} ejercicio(s)`}
-            progress={-1}
-            onCancel={() => setSelectedExercises([])} // Limpia la selección
-          />
+          <>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={() => onFinishSelection(selectedExercises)}
+            >
+              <Text
+                style={styles.confirmButtonText}
+              >{`Has seleccionado ${selectedExercises.length} ejercicio(s)`}</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
     </SafeAreaView>
@@ -168,7 +180,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   selectedItem: {
-    backgroundColor: "#f3e8ff", // Fondo verde claro para elementos seleccionados
+    backgroundColor: "#f3e8ff",
     borderColor: "#6C3BAA",
     borderWidth: 2,
   },
@@ -193,5 +205,17 @@ const styles = StyleSheet.create({
   },
   redirectButton: {
     padding: 8,
+  },
+  confirmButton: {
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });

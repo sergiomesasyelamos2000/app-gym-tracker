@@ -40,28 +40,51 @@ export default function WorkoutScreen() {
   const { width } = useWindowDimensions();
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { width }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Workout Routines</Text>
-        <Text style={styles.headerSubtitle}>
-          Choose a routine to start your workout
-        </Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={[styles.container, { width }]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Workout Routines</Text>
+          <Text style={styles.headerSubtitle}>
+            Choose a routine to start your workout
+          </Text>
+        </View>
 
-      {routines.map((routine) => (
+        {routines.map((routine) => (
+          <TouchableOpacity
+            key={routine.id}
+            style={styles.routineCard}
+            onPress={() => navigation.navigate("RoutineDetail", { routine })}
+          >
+            <View style={styles.routineInfo}>
+              <Text style={styles.routineName}>{routine.name}</Text>
+              <Text style={styles.routineDescription}>
+                {routine.description}
+              </Text>
+            </View>
+            <ChevronRight color="#6C3BAA" size={24} />
+          </TouchableOpacity>
+        ))}
+
         <TouchableOpacity
-          key={routine.id}
-          style={styles.routineCard}
-          onPress={() => navigation.navigate("RoutineDetail", { routine })}
+          style={styles.addButton}
+          onPress={() => {
+            navigation.navigate("ExerciseList", {
+              onFinishSelection: (selectedExercises) => {
+                const newRoutine = {
+                  id: Date.now(), // o uuid
+                  name: "New Routine",
+                  description: selectedExercises.map((e) => e.title).join(", "),
+                  exercises: selectedExercises,
+                };
+                navigation.navigate("RoutineDetail", { routine: newRoutine });
+              },
+            });
+          }}
         >
-          <View style={styles.routineInfo}>
-            <Text style={styles.routineName}>{routine.name}</Text>
-            <Text style={styles.routineDescription}>{routine.description}</Text>
-          </View>
-          <ChevronRight color="#6C3BAA" size={24} />
+          <Text style={styles.addButtonText}>+ Crear nueva rutina</Text>
         </TouchableOpacity>
-      ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -76,7 +99,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 16,
     padding: 20,
-    backgroundColor: "#6C3BAA", // royal purple :contentReference[oaicite:1]{index=1}
+    backgroundColor: "#6C3BAA",
     borderRadius: 16,
     elevation: 3,
     shadowColor: "#000",
@@ -99,7 +122,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#ede7f6", // lilac/light purple
+    backgroundColor: "#ede7f6",
     padding: 16,
     borderRadius: 14,
     marginBottom: 12,
@@ -116,11 +139,23 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#4E2A84", // deeper purple
+    color: "#4E2A84",
   },
   routineDescription: {
     fontSize: 14,
     color: "#555",
     marginTop: 4,
+  },
+  addButton: {
+    backgroundColor: "#6C3BAA",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
