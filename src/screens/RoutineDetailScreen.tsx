@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  ScrollView,
+  FlatList,
   View,
   Text,
   StyleSheet,
@@ -57,6 +57,30 @@ export default function RoutineDetailScreen() {
     );
   };
 
+  const renderHeader = () => (
+    <View style={styles.header}>
+      {!started && (
+        <>
+          <Text style={styles.title}>{routine.name}</Text>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => setStarted(true)}
+          >
+            <Text style={styles.startButtonText}>Iniciar Rutina</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
+  const renderExerciseCard = () => (
+    <ExerciseCard
+      title={routine.name}
+      initialSets={sets}
+      onChangeSets={(updatedSets: SetData[]) => setSets(updatedSets)}
+    />
+  );
+
   return (
     <View style={{ flex: 1 }}>
       {started && (
@@ -69,46 +93,24 @@ export default function RoutineDetailScreen() {
           </View>
           <View style={styles.metrics}>
             <Text style={styles.metricText}>⏱ {formatTime(duration)}</Text>
-            <Text style={styles.metricText}>🏋️{volume} kg</Text>
+            <Text style={styles.metricText}>🏋️ {volume} kg</Text>
             <Text style={styles.metricText}>✅ {completedSets}</Text>
           </View>
         </View>
       )}
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingTop: started ? 100 : 0 }}
-      >
-        <View style={styles.header}>
-          {!started ? (
-            <>
-              <Text style={styles.title}>{routine.name}</Text>
-              <TouchableOpacity
-                style={styles.startButton}
-                onPress={() => setStarted(true)}
-              >
-                <Text style={styles.startButtonText}>Iniciar Rutina</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-        </View>
-
-        <ExerciseCard
-          title={routine.name}
-          initialSets={sets}
-          onChangeSets={(updatedSets: SetData[]) => setSets(updatedSets)}
-        />
-      </ScrollView>
+      <FlatList
+        data={[routine]}
+        keyExtractor={(item) => item.name}
+        ListHeaderComponent={renderHeader}
+        renderItem={renderExerciseCard}
+        contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#f9fafb",
-  },
   header: {
     marginBottom: 24,
   },
@@ -146,14 +148,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   metrics: {
-    flexDirection: "row", // Coloca los elementos en una fila
-    justifyContent: "space-around", // Espacia los elementos uniformemente
-    alignItems: "center", // Centra los elementos verticalmente
-    backgroundColor: "#fff", // Fondo blanco para destacar
-    paddingVertical: 8, // Espaciado vertical
-    elevation: 4, // Sombra para destacar la sección
-    borderBottomWidth: 1, // Línea inferior para separación visual
-    borderBottomColor: "#ddd", // Color de la línea inferior
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 8,
+    elevation: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   metricText: {
     fontSize: 14,

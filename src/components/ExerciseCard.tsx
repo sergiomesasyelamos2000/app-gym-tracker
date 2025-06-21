@@ -68,6 +68,84 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
     setSets(updatedSets);
   };
 
+  const startCountdown = (minutes: number, seconds: number) => {
+    let totalSeconds = minutes * 60 + seconds;
+    const initialTotalSeconds = totalSeconds;
+
+    const interval = setInterval(() => {
+      if (totalSeconds <= 0) {
+        clearInterval(interval);
+        Toast.show({
+          type: "customToast",
+          text1: "¡Descanso terminado!",
+          position: "bottom",
+          props: { progress: 0 },
+        });
+      } else {
+        const currentMinutes = Math.floor(totalSeconds / 60);
+        const currentSeconds = totalSeconds % 60;
+        const remainingProgress = totalSeconds / initialTotalSeconds;
+
+        setProgress(remainingProgress);
+
+        Toast.show({
+          type: "customToast",
+          text1: `${currentMinutes.toString().padStart(2, "0")}:${currentSeconds
+            .toString()
+            .padStart(2, "0")}`,
+          position: "bottom",
+          props: {
+            progress: remainingProgress,
+            onCancel: () => {
+              clearInterval(interval);
+              setProgress(0);
+              Toast.hide();
+            },
+            onAddTime: () => {
+              totalSeconds += 15;
+              const updatedMinutes = Math.floor(totalSeconds / 60);
+              const updatedSeconds = totalSeconds % 60;
+              const updatedProgress = totalSeconds / initialTotalSeconds;
+
+              setProgress(updatedProgress);
+              Toast.show({
+                type: "customToast",
+                text1: `${updatedMinutes
+                  .toString()
+                  .padStart(2, "0")}:${updatedSeconds
+                  .toString()
+                  .padStart(2, "0")}`,
+                position: "bottom",
+                props: { progress: updatedProgress },
+              });
+            },
+            onSubtractTime: () => {
+              totalSeconds -= 15;
+              if (totalSeconds < 0) totalSeconds = 0;
+              const updatedMinutes = Math.floor(totalSeconds / 60);
+              const updatedSeconds = totalSeconds % 60;
+              const updatedProgress = totalSeconds / initialTotalSeconds;
+
+              setProgress(updatedProgress);
+              Toast.show({
+                type: "customToast",
+                text1: `${updatedMinutes
+                  .toString()
+                  .padStart(2, "0")}:${updatedSeconds
+                  .toString()
+                  .padStart(2, "0")}`,
+                position: "bottom",
+                props: { progress: updatedProgress },
+              });
+            },
+          },
+        });
+
+        totalSeconds -= 1;
+      }
+    }, 1000);
+  };
+
   const renderRightActions = (itemId: string) => (
     <View style={styles.actionsContainer}>
       <TouchableOpacity
@@ -86,6 +164,14 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
       </TouchableOpacity>
     </View>
   );
+
+  const parseTime = (timeStr: string): { minutes: number; seconds: number } => {
+    const [minStr, secStr] = timeStr.split(":");
+    return {
+      minutes: parseInt(minStr) || 0,
+      seconds: parseInt(secStr) || 0,
+    };
+  };
 
   return (
     <Card style={styles.card}>
@@ -119,6 +205,10 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
         onConfirm={(pickedDuration) => {
           setRestTime(formatTime(pickedDuration));
           setShowPicker(false);
+          startCountdown(
+            pickedDuration.minutes || 0,
+            pickedDuration.seconds || 0
+          );
         }}
         modalTitle="Seleccionar tiempo de descanso"
         onCancel={() => setShowPicker(false)}
@@ -179,15 +269,29 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
                 />
                 <TouchableOpacity
                   style={{ flex: 1 }}
-                  onPress={() =>
-                    setSets((prev) =>
-                      prev.map((set) =>
+                  onPress={() => {
+                    setSets((prev) => {
+                      const updated = prev.map((set) =>
                         set.id === item.id
                           ? { ...set, completed: !set.completed }
                           : set
-                      )
-                    )
-                  }
+                      );
+
+                      const updatedItem = updated.find(
+                        (set) => set.id === item.id
+                      );
+
+                      if (updatedItem?.completed === true) {
+                        // si la serie va a pasar a "completada"
+                        const { minutes, seconds } = parseTime(restTime);
+                        if (minutes > 0 || seconds > 0) {
+                          startCountdown(minutes, seconds);
+                        }
+                      }
+
+                      return updated;
+                    });
+                  }}
                 >
                   <Icon
                     name={
