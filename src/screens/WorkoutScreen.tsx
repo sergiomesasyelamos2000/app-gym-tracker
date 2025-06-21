@@ -42,6 +42,28 @@ export default function WorkoutScreen() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.container, { width }]}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              navigation.navigate("ExerciseList", {
+                onFinishSelection: (selectedExercises) => {
+                  const newRoutine = {
+                    id: Date.now(),
+                    name: "New Routine",
+                    description: selectedExercises
+                      .map((e) => e.title)
+                      .join(", "),
+                    exercises: selectedExercises,
+                  };
+                  navigation.navigate("RoutineDetail", { routine: newRoutine });
+                },
+              });
+            }}
+          >
+            <Text style={styles.addButtonText}>+ Crear nueva rutina</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Workout Routines</Text>
           <Text style={styles.headerSubtitle}>
@@ -64,25 +86,6 @@ export default function WorkoutScreen() {
             <ChevronRight color="#6C3BAA" size={24} />
           </TouchableOpacity>
         ))}
-
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            navigation.navigate("ExerciseList", {
-              onFinishSelection: (selectedExercises) => {
-                const newRoutine = {
-                  id: Date.now(), // o uuid
-                  name: "New Routine",
-                  description: selectedExercises.map((e) => e.title).join(", "),
-                  exercises: selectedExercises,
-                };
-                navigation.navigate("RoutineDetail", { routine: newRoutine });
-              },
-            });
-          }}
-        >
-          <Text style={styles.addButtonText}>+ Crear nueva rutina</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );

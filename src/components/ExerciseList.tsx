@@ -53,7 +53,7 @@ type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 export default function ExerciseListScreen() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation();
-  const { onFinishSelection } = route.params;
+  const { onFinishSelection } = route.params || {};
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
 
