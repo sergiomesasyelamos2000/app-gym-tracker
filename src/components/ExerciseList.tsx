@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,70 +8,65 @@ import {
   Image,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import CustomToast from "../ui/CustomToast"; // Asegúrate de importar tu CustomToast
+import {
+  RouteProp,
+  useNavigation,
+  useRoute,
+  NavigationProp,
+} from "@react-navigation/native";
+import { fetchExercises, ExerciseDto } from "../services/exerciseService";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
-import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-
-const exercises = [
-  {
-    id: "1",
-    title: "Bench Press",
-    muscleGroup: "Chest",
-    image: "https://s3assets.skimble.com/assets/2289478/image_iphone.jpg",
-  },
-  {
-    id: "2",
-    title: "Squats",
-    muscleGroup: "Legs",
-    image: "https://via.placeholder.com/80",
-  },
-  {
-    id: "3",
-    title: "Deadlift",
-    muscleGroup: "Back",
-    image: "https://via.placeholder.com/80",
-  },
-  {
-    id: "4",
-    title: "Bicep Curl",
-    muscleGroup: "Arms",
-    image: "https://via.placeholder.com/80",
-  },
-];
-
-type Exercise = {
-  id: string;
-  title: string;
-  muscleGroup: string;
-  image: string;
-};
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
 export default function ExerciseListScreen() {
   const route = useRoute<ExerciseListRouteProp>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const { onFinishSelection } = route.params || {};
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<ExerciseDto[]>([]);
+  const [exercises, setExercises] = useState<ExerciseDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExercises = async () => {
+      try {
+        const data = await fetchExercises();
+        setExercises(data);
+      } catch (error) {
+        console.error("Error fetching exercises:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExercises();
+  }, []);
 
   const filteredExercises = exercises.filter((exercise) =>
     exercise.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSelectExercise = (exercise: Exercise) => {
+  const handleSelectExercise = (exercise: ExerciseDto) => {
     if (selectedExercises.some((item) => item.id === exercise.id)) {
-      // Si ya está seleccionado, lo eliminamos del array
       setSelectedExercises((prev) =>
         prev.filter((item) => item.id !== exercise.id)
       );
     } else {
-      // Si no está seleccionado, lo agregamos al array
       setSelectedExercises((prev) => [...prev, exercise]);
     }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" color="#6C3BAA" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -98,20 +93,19 @@ export default function ExerciseListScreen() {
 
             return (
               <TouchableOpacity
-                style={[
-                  styles.exerciseItem,
-                  isSelected && styles.selectedItem, // Cambia el estilo si está seleccionado
-                ]}
+                style={[styles.exerciseItem, isSelected && styles.selectedItem]}
                 onPress={() => handleSelectExercise(item)}
               >
                 <Image
-                  source={{ uri: item.image }}
+                  source={{
+                    uri: item.photoUrl || "https://via.placeholder.com/80",
+                  }}
                   style={styles.exerciseImage}
                 />
                 <View style={styles.exerciseInfo}>
                   <Text style={styles.exerciseTitle}>{item.title}</Text>
                   <Text style={styles.exerciseMuscleGroup}>
-                    {item.muscleGroup}
+                    Grupo muscular: {item.muscularGroup}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -125,18 +119,20 @@ export default function ExerciseListScreen() {
           }}
         />
 
-        {/* Toast */}
+        {/* Confirm Button */}
         {selectedExercises.length > 0 && (
-          <>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={() => onFinishSelection(selectedExercises)}
-            >
-              <Text
-                style={styles.confirmButtonText}
-              >{`Has seleccionado ${selectedExercises.length} ejercicio(s)`}</Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={() => {
+              navigation.navigate("RoutineDetail", {
+                exercises: selectedExercises,
+              });
+            }}
+          >
+            <Text style={styles.confirmButtonText}>
+              Has seleccionado {selectedExercises.length} ejercicio(s)
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>

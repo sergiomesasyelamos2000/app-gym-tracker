@@ -11,27 +11,32 @@ import { useNavigation } from "@react-navigation/native";
 import { ChevronRight } from "lucide-react-native";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ExerciseDto } from "../services/exerciseService";
+import { RoutineDto } from "../services/routineService";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
   "WorkoutList"
 >;
 
-const routines = [
+const routines: RoutineDto[] = [
   {
-    id: 1,
-    name: "Chest and Triceps",
-    description: "Bench Press, Chest Fly, Triceps Pushdown...",
+    id: "1",
+    title: "Chest and Triceps",
+    createdAt: new Date(),
+    exercises: [],
   },
   {
-    id: 2,
-    name: "Back and Biceps",
-    description: "Bent Over Row, Lat Pulldown, Cable Row...",
+    id: "2",
+    title: "Back and Biceps",
+    createdAt: new Date(),
+    exercises: [],
   },
   {
-    id: 3,
-    name: "Legs and Shoulders",
-    description: "Squats, Leg Press, Shoulder Press...",
+    id: "3",
+    title: "Legs and Shoulders",
+    createdAt: new Date(),
+    exercises: [],
   },
 ];
 
@@ -47,16 +52,16 @@ export default function WorkoutScreen() {
             style={styles.addButton}
             onPress={() => {
               navigation.navigate("ExerciseList", {
-                onFinishSelection: (selectedExercises) => {
-                  const newRoutine = {
-                    id: Date.now(),
-                    name: "New Routine",
-                    description: selectedExercises
-                      .map((e) => e.title)
-                      .join(", "),
+                onFinishSelection: (selectedExercises: ExerciseDto[]) => {
+                  console.log("Selected Exercises:", selectedExercises);
+
+                  /* const newRoutine: RoutineDto = {
+                    id: Date.now().toString(),
+                    title: "New Routine",
+                    createdAt: new Date(),
                     exercises: selectedExercises,
                   };
-                  navigation.navigate("RoutineDetail", { routine: newRoutine });
+                  navigation.navigate("RoutineDetail", { routine: newRoutine }); */
                 },
               });
             }}
@@ -78,10 +83,10 @@ export default function WorkoutScreen() {
             onPress={() => navigation.navigate("RoutineDetail", { routine })}
           >
             <View style={styles.routineInfo}>
-              <Text style={styles.routineName}>{routine.name}</Text>
-              <Text style={styles.routineDescription}>
+              <Text style={styles.routineName}>{routine.title}</Text>
+              {/* <Text style={styles.routineDescription}>
                 {routine.description}
-              </Text>
+              </Text> */}
             </View>
             <ChevronRight color="#6C3BAA" size={24} />
           </TouchableOpacity>

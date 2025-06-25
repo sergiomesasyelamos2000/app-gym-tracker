@@ -3,11 +3,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import RoutineDetailScreen from "./RoutineDetailScreen";
 import ExerciseListScreen from "../components/ExerciseList";
+import { ExerciseDto } from "../services/exerciseService";
+import { RoutineDto } from "../services/routineService";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;
-  RoutineDetail: { routine: any };
-  ExerciseList: { onFinishSelection: (exercises: any[]) => void };
+  RoutineDetail: { routine?: RoutineDto; exercises?: ExerciseDto[] };
+  ExerciseList: { onFinishSelection: (exercises: ExerciseDto[]) => void };
 };
 
 const Stack = createNativeStackNavigator<WorkoutStackParamList>();

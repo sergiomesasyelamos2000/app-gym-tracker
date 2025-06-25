@@ -15,6 +15,7 @@ import { Button, Card } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { ExerciseDto } from "../services/exerciseService";
 
 export interface SetData {
   id: string;
@@ -25,12 +26,12 @@ export interface SetData {
 }
 
 interface Props {
-  title: string;
+  exercise: ExerciseDto;
   initialSets: SetData[];
   onChangeSets?: (updatedSets: SetData[]) => void;
 }
 
-const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
+const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
   const [sets, setSets] = useState<SetData[]>(initialSets);
   const [note, setNote] = useState("");
   const [restTime, setRestTime] = useState("00:00");
@@ -176,7 +177,7 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{exercise.title}</Text>
         <TouchableOpacity>
           <Icon name="more-vert" size={24} color="#000" />
         </TouchableOpacity>
@@ -184,7 +185,7 @@ const ExerciseCard = ({ title, initialSets, onChangeSets }: Props) => {
       <TextInput
         style={styles.noteInput}
         placeholder="Añadir nota..."
-        value={note}
+        value={exercise.notes}
         onChangeText={setNote}
       />
       <TouchableOpacity

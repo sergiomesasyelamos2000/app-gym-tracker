@@ -9,12 +9,14 @@ import {
 import ExerciseCard, { SetData } from "../components/ExerciseCard";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { ExerciseDto } from "../services/exerciseService";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
 export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
-  const { routine } = route.params;
+  const { routine, exercises } = route.params;
+  const exerciseList = routine?.exercises || exercises || [];
 
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0); // segundos
@@ -61,7 +63,7 @@ export default function RoutineDetailScreen() {
     <View style={styles.header}>
       {!started && (
         <>
-          <Text style={styles.title}>{routine.name}</Text>
+          <Text style={styles.title}>{routine?.title}</Text>
           <TouchableOpacity
             style={styles.startButton}
             onPress={() => setStarted(true)}
@@ -73,9 +75,9 @@ export default function RoutineDetailScreen() {
     </View>
   );
 
-  const renderExerciseCard = () => (
+  const renderExerciseCard = ({ item }: { item: ExerciseDto }) => (
     <ExerciseCard
-      title={routine.name}
+      exercise={item}
       initialSets={sets}
       onChangeSets={(updatedSets: SetData[]) => setSets(updatedSets)}
     />
@@ -100,8 +102,8 @@ export default function RoutineDetailScreen() {
       )}
 
       <FlatList
-        data={[routine]}
-        keyExtractor={(item) => item.name}
+        data={exerciseList}
+        keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         renderItem={renderExerciseCard}
         contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
