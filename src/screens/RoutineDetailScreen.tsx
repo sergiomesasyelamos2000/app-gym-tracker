@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { RouteProp, useRoute } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
-  View,
-  Text,
   StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
+import uuid from "react-native-uuid";
 import ExerciseCard, { SetData } from "../components/ExerciseCard";
+import { ExerciseRequestDto } from "../models";
+import { saveRoutine } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { RouteProp, useRoute } from "@react-navigation/native";
-import { ExerciseDto } from "../services/exerciseService";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -20,12 +22,43 @@ export default function RoutineDetailScreen() {
 
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0); // segundos
-  const [sets, setSets] = useState<SetData[]>([
-    { id: "1", label: "1", kg: 80, reps: 10, completed: true },
-    { id: "2", label: "2", kg: 85, reps: 8, completed: true },
-    { id: "3", label: "3", kg: 90, reps: 6, completed: false },
-    { id: "4", label: "4", kg: 90, reps: 6, completed: false },
-  ]);
+  const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>(
+    exerciseList.reduce((acc, exercise) => {
+      acc[exercise.id] = [
+        {
+          id: uuid.v4() as string,
+          order: 1,
+          weight: 0,
+          reps: 0,
+          completed: false,
+        },
+      ]; // Sets inicializados a 0
+      return acc;
+    }, {} as { [exerciseId: string]: SetData[] })
+  );
+
+  const handleSaveRoutine = async () => {
+    try {
+      const routineData = {
+        title: routine?.title || "Nueva Rutina",
+        totalTime: routine?.totalTime || 0,
+        totalWeight: routine?.totalWeight || 0,
+        completedSets: routine?.completedSets || 0,
+        createdAt: routine?.createdAt
+          ? new Date(routine.createdAt)
+          : new Date(),
+        exercises: exerciseList.map((exercise) => ({
+          ...exercise,
+          sets: sets[exercise.id] || [],
+        })),
+      };
+      await saveRoutine(routineData);
+      alert("Rutina guardada exitosamente");
+    } catch (error) {
+      console.error("Error al guardar la rutina:", error);
+      alert("Error al guardar la rutina");
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -37,11 +70,12 @@ export default function RoutineDetailScreen() {
     return () => clearInterval(interval);
   }, [started]);
 
-  const volume = sets.reduce(
-    (sum, s) => (s.completed ? sum + s.kg * s.reps : sum),
+  const allSets = Object.values(sets).flat();
+  const volume = allSets.reduce(
+    (sum, s) => (s.completed ? sum + (s?.weight ?? 0) * (s?.reps ?? 0) : sum),
     0
   );
-  const completedSets = sets.filter((s) => s.completed).length;
+  const completedSets = allSets.filter((s) => s.completed).length;
 
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60)
@@ -54,9 +88,16 @@ export default function RoutineDetailScreen() {
   const handleFinishRoutine = () => {
     setStarted(false);
     setDuration(0);
-    setSets((prevSets) =>
-      prevSets.map((set) => ({ ...set, completed: false }))
-    );
+    setSets((prevSets) => {
+      const resetSets: { [exerciseId: string]: SetData[] } = {};
+      Object.keys(prevSets).forEach((exerciseId) => {
+        resetSets[exerciseId] = prevSets[exerciseId].map((set) => ({
+          ...set,
+          completed: false,
+        }));
+      });
+      return resetSets;
+    });
   };
 
   const renderHeader = () => (
@@ -75,11 +116,13 @@ export default function RoutineDetailScreen() {
     </View>
   );
 
-  const renderExerciseCard = ({ item }: { item: ExerciseDto }) => (
+  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => (
     <ExerciseCard
       exercise={item}
-      initialSets={sets}
-      onChangeSets={(updatedSets: SetData[]) => setSets(updatedSets)}
+      initialSets={sets[item.id] || []}
+      onChangeSets={(updatedSets: SetData[]) =>
+        setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
+      }
     />
   );
 
@@ -108,6 +151,9 @@ export default function RoutineDetailScreen() {
         renderItem={renderExerciseCard}
         contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
       />
+      <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
+        <Text style={styles.saveButtonText}>Guardar Rutina</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -173,5 +219,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  saveButton: {
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    margin: 16,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

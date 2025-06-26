@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  SafeAreaView,
-  ActivityIndicator,
-} from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import {
+  NavigationProp,
   RouteProp,
   useNavigation,
   useRoute,
-  NavigationProp,
 } from "@react-navigation/native";
-import { fetchExercises, ExerciseDto } from "../services/exerciseService";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { ExerciseRequestDto } from "../models";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
+import { fetchExercises } from "../services/exerciseService";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
@@ -27,8 +28,10 @@ export default function ExerciseListScreen() {
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const { onFinishSelection } = route.params || {};
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedExercises, setSelectedExercises] = useState<ExerciseDto[]>([]);
-  const [exercises, setExercises] = useState<ExerciseDto[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<
+    ExerciseRequestDto[]
+  >([]);
+  const [exercises, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function ExerciseListScreen() {
     exercise.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSelectExercise = (exercise: ExerciseDto) => {
+  const handleSelectExercise = (exercise: ExerciseRequestDto) => {
     if (selectedExercises.some((item) => item.id === exercise.id)) {
       setSelectedExercises((prev) =>
         prev.filter((item) => item.id !== exercise.id)

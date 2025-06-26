@@ -1,25 +1,24 @@
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ChevronRight } from "lucide-react-native";
 import React from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   useWindowDimensions,
+  View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { ChevronRight } from "lucide-react-native";
+import { ExerciseRequestDto } from "../models";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ExerciseDto } from "../services/exerciseService";
-import { RoutineDto } from "../services/routineService";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
   "WorkoutList"
 >;
 
-const routines: RoutineDto[] = [
+const routines: any[] = [
   {
     id: "1",
     title: "Chest and Triceps",
@@ -52,9 +51,9 @@ export default function WorkoutScreen() {
             style={styles.addButton}
             onPress={() => {
               navigation.navigate("ExerciseList", {
-                onFinishSelection: (selectedExercises: ExerciseDto[]) => {
-                  console.log("Selected Exercises:", selectedExercises);
-
+                onFinishSelection: (
+                  selectedExercises: ExerciseRequestDto[]
+                ) => {
                   /* const newRoutine: RoutineDto = {
                     id: Date.now().toString(),
                     title: "New Routine",

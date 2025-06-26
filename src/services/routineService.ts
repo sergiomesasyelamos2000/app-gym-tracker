@@ -1,12 +1,11 @@
-import { ExerciseDto } from "./exerciseService";
+import { RoutineRequestDto } from "../models";
+import { apiFetch } from "./api";
 
-export interface RoutineDto {
-  id: string;
-  title: string;
-  totalTime?: number;
-  totalWeight?: number;
-  completedSets?: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  exercises: ExerciseDto[];
+export async function saveRoutine(
+  routineRequestDto: RoutineRequestDto
+): Promise<void> {
+  await apiFetch("routines", {
+    method: "POST",
+    body: JSON.stringify(routineRequestDto),
+  });
 }

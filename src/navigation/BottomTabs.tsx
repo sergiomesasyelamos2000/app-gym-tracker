@@ -32,7 +32,6 @@ export const BottomTabs = () => {
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
       <Tab.Screen name="Entreno" component={WorkoutStack} />
-      <Tab.Screen name="Nutrasdición" component={ExerciseList} />
       <Tab.Screen name="Nutrición" component={NutritionScreen} />
       <Tab.Screen name="Progreso" component={ProgressScreen} />
     </Tab.Navigator>

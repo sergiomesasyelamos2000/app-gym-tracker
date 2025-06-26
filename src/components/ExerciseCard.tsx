@@ -15,18 +15,18 @@ import { Button, Card } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseDto } from "../services/exerciseService";
+import { ExerciseRequestDto } from "../models";
 
 export interface SetData {
   id: string;
-  label: string;
-  kg: number;
-  reps: number;
+  order: number;
+  weight?: number;
+  reps?: number;
   completed: boolean;
 }
 
 interface Props {
-  exercise: ExerciseDto;
+  exercise: ExerciseRequestDto;
   initialSets: SetData[];
   onChangeSets?: (updatedSets: SetData[]) => void;
 }
@@ -60,13 +60,21 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
     return timeParts.join(":");
   };
 
+  let globalId = 0;
+
   const addSet = () => {
-    const newId = `${sets.length + 1}`;
+    const newId = `${Date.now()}-${globalId++}`;
     const updatedSets = [
       ...sets,
-      { id: newId, label: newId, kg: 0, reps: 0, completed: false },
+      {
+        id: newId,
+        order: sets.length + 1, // El nuevo set se añade al final
+        weight: 0,
+        reps: 0,
+        completed: false,
+      } as SetData,
     ];
-    setSets(updatedSets);
+    setSets(updatedSets.map((set, index) => ({ ...set, order: index + 1 }))); // Recalcula el orden
   };
 
   const startCountdown = (minutes: number, seconds: number) => {
@@ -150,18 +158,17 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
   const renderRightActions = (itemId: string) => (
     <View style={styles.actionsContainer}>
       <TouchableOpacity
-        style={[styles.button, styles.edit]}
-        onPress={() => console.log(`Edit item ${itemId}`)}
-      >
-        <Text style={styles.actionText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.button, styles.delete]}
+        style={[styles.button]}
         onPress={() =>
-          setSets((prev) => prev.filter((set) => set.id !== itemId))
+          setSets(
+            (prev) =>
+              prev
+                .filter((set) => set.id !== itemId) // Elimina el set
+                .map((set, index) => ({ ...set, order: index + 1 })) // Recalcula el orden
+          )
         }
       >
-        <Text style={styles.actionText}>Delete</Text>
+        <Icon name="delete" color="#F44336" size={24} />
       </TouchableOpacity>
     </View>
   );
@@ -239,16 +246,16 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
           renderItem={({ item }) => (
             <Swipeable renderRightActions={() => renderRightActions(item.id)}>
               <View style={styles.row}>
-                <Text style={[styles.label, { flex: 1 }]}>{item.label}</Text>
+                <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
                 <TextInput
                   style={[styles.input, { flex: 2 }]}
                   keyboardType="numeric"
-                  value={item.kg.toString()}
+                  value={item.weight?.toString()}
                   onChangeText={(text) =>
                     setSets((prev) =>
                       prev.map((set) =>
                         set.id === item.id
-                          ? { ...set, kg: parseInt(text) || 0 }
+                          ? { ...set, weight: parseInt(text) || 0 }
                           : set
                       )
                     )
@@ -257,7 +264,7 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
                 <TextInput
                   style={[styles.input, { flex: 2 }]}
                   keyboardType="numeric"
-                  value={item.reps.toString()}
+                  value={item.reps?.toString()}
                   onChangeText={(text) =>
                     setSets((prev) =>
                       prev.map((set) =>
@@ -414,17 +421,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     height: "100%",
-  },
-  edit: {
-    backgroundColor: "#4CAF50",
-  },
-  delete: {
-    backgroundColor: "#F44336",
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
   },
 });
 
