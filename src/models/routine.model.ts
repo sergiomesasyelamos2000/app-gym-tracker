@@ -1,6 +1,7 @@
 import { ExerciseRequestDto } from "./exercise.model";
 
 export interface RoutineRequestDto {
+  id: string;
   title: string;
   totalTime?: number;
   totalWeight?: number;

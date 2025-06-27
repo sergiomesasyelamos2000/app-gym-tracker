@@ -2,8 +2,10 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
+  SafeAreaView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -18,7 +20,13 @@ type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const { routine, exercises } = route.params;
-  const exerciseList = routine?.exercises || exercises || [];
+  const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
+  const [exercisesState, setExercises] = useState(
+    exercises || routine?.exercises || []
+  );
+  const exerciseList = routine?.exercises || exercisesState || [];
+
+  console.log("RoutineDetailScreen - routine:", routine, exercises);
 
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0); // segundos
@@ -32,7 +40,7 @@ export default function RoutineDetailScreen() {
           reps: 0,
           completed: false,
         },
-      ]; // Sets inicializados a 0
+      ];
       return acc;
     }, {} as { [exerciseId: string]: SetData[] })
   );
@@ -40,7 +48,8 @@ export default function RoutineDetailScreen() {
   const handleSaveRoutine = async () => {
     try {
       const routineData = {
-        title: routine?.title || "Nueva Rutina",
+        id: routine?.id || (uuid.v4() as string),
+        title: routine?.title ?? routineTitle,
         totalTime: routine?.totalTime || 0,
         totalWeight: routine?.totalWeight || 0,
         completedSets: routine?.completedSets || 0,
@@ -102,7 +111,7 @@ export default function RoutineDetailScreen() {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      {!started && (
+      {!started && routine?.id && (
         <>
           <Text style={styles.title}>{routine?.title}</Text>
           <TouchableOpacity
@@ -112,6 +121,16 @@ export default function RoutineDetailScreen() {
             <Text style={styles.startButtonText}>Iniciar Rutina</Text>
           </TouchableOpacity>
         </>
+      )}
+      {!routine?.id && (
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Introduce el nombre de la rutina"
+            value={routineTitle}
+            onChangeText={setRoutineTitle}
+          />
+        </View>
       )}
     </View>
   );
@@ -123,11 +142,18 @@ export default function RoutineDetailScreen() {
       onChangeSets={(updatedSets: SetData[]) =>
         setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
       }
+      onChangeExercise={(updatedExercise: ExerciseRequestDto) => {
+        setExercises((prev) =>
+          prev.map((exercise) =>
+            exercise.id === updatedExercise.id ? updatedExercise : exercise
+          )
+        );
+      }}
     />
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea}>
       {started && (
         <View style={styles.fixedHeader}>
           <View style={styles.trainingHeader}>
@@ -151,14 +177,32 @@ export default function RoutineDetailScreen() {
         renderItem={renderExerciseCard}
         contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
       />
-      <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
-        <Text style={styles.saveButtonText}>Guardar Rutina</Text>
-      </TouchableOpacity>
-    </View>
+      {!routine?.id && (
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
+          <Text style={styles.saveButtonText}>Guardar Rutina</Text>
+        </TouchableOpacity>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+  },
+  inputContainer: {
+    marginTop: 20,
+  },
+  titleInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    elevation: 2,
+    fontSize: 16,
+    color: "#333",
+  },
   header: {
     marginBottom: 24,
   },

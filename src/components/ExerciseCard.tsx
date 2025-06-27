@@ -14,6 +14,7 @@ import {
 import { Button, Card } from "react-native-paper";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
+import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto } from "../models";
 
@@ -29,11 +30,17 @@ interface Props {
   exercise: ExerciseRequestDto;
   initialSets: SetData[];
   onChangeSets?: (updatedSets: SetData[]) => void;
+  onChangeExercise?: (updatedExercise: ExerciseRequestDto) => void;
 }
 
-const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
+const ExerciseCard = ({
+  exercise,
+  initialSets,
+  onChangeSets,
+  onChangeExercise,
+}: Props) => {
   const [sets, setSets] = useState<SetData[]>(initialSets);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(exercise.notes || "");
   const [restTime, setRestTime] = useState("00:00");
   const [showPicker, setShowPicker] = useState(false);
   const [progress, setProgress] = useState(1);
@@ -41,6 +48,19 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
   useEffect(() => {
     if (onChangeSets) onChangeSets(sets);
   }, [sets]);
+
+  useEffect(() => {
+    if (onChangeExercise) {
+      onChangeExercise({
+        ...exercise,
+        notes: note,
+        restSeconds: (
+          parseTime(restTime).minutes * 60 +
+          parseTime(restTime).seconds
+        ).toString(),
+      });
+    }
+  }, [note, restTime]);
 
   const formatTime = ({
     minutes,
@@ -60,15 +80,13 @@ const ExerciseCard = ({ exercise, initialSets, onChangeSets }: Props) => {
     return timeParts.join(":");
   };
 
-  let globalId = 0;
-
   const addSet = () => {
-    const newId = `${Date.now()}-${globalId++}`;
+    const newId = uuid.v4() as string; // Generar un UUID válido
     const updatedSets = [
       ...sets,
       {
         id: newId,
-        order: sets.length + 1, // El nuevo set se añade al final
+        order: sets.length + 1,
         weight: 0,
         reps: 0,
         completed: false,

@@ -63,81 +63,86 @@ export default function ExerciseListScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar ejercicio..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C3BAA" />
         </View>
+      ) : (
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar ejercicio..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
 
-        {/* Exercise List */}
-        <FlatList
-          data={filteredExercises}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const isSelected = selectedExercises.some(
-              (exercise) => exercise.id === item.id
-            );
+          {/* Exercise List */}
+          <FlatList
+            data={filteredExercises}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const isSelected = selectedExercises.some(
+                (exercise) => exercise.id === item.id
+              );
 
-            return (
-              <TouchableOpacity
-                style={[styles.exerciseItem, isSelected && styles.selectedItem]}
-                onPress={() => handleSelectExercise(item)}
-              >
-                <Image
-                  source={{
-                    uri: item.photoUrl || "https://via.placeholder.com/80",
-                  }}
-                  style={styles.exerciseImage}
-                />
-                <View style={styles.exerciseInfo}>
-                  <Text style={styles.exerciseTitle}>{item.title}</Text>
-                  <Text style={styles.exerciseMuscleGroup}>
-                    Grupo muscular: {item.muscularGroup}
-                  </Text>
-                </View>
+              return (
                 <TouchableOpacity
-                  style={styles.redirectButton}
-                  onPress={() => console.log("Redirigir a otra pantalla")}
+                  style={[
+                    styles.exerciseItem,
+                    isSelected && styles.selectedItem,
+                  ]}
+                  onPress={() => handleSelectExercise(item)}
                 >
-                  <Icon name="arrow-forward" size={24} color="#6C3BAA" />
+                  <Image
+                    source={
+                      item.photoUrl
+                        ? { uri: item.photoUrl }
+                        : require("../../assets/not-image.png")
+                    }
+                    style={styles.exerciseImage}
+                  />
+                  <View style={styles.exerciseInfo}>
+                    <Text style={styles.exerciseTitle}>{item.title}</Text>
+                    <Text style={styles.exerciseMuscleGroup}>
+                      Grupo muscular: {item.muscularGroup}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.redirectButton}
+                    onPress={() => console.log("Redirigir a otra pantalla")}
+                  >
+                    <Icon name="arrow-forward" size={24} color="#6C3BAA" />
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          }}
-        />
-
-        {/* Confirm Button */}
-        {selectedExercises.length > 0 && (
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={() => {
-              navigation.navigate("RoutineDetail", {
-                exercises: selectedExercises,
-              });
+              );
             }}
-          >
-            <Text style={styles.confirmButtonText}>
-              Has seleccionado {selectedExercises.length} ejercicio(s)
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          />
+
+          {/* Confirm Button */}
+          {selectedExercises.length > 0 && (
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={() => {
+                console.log("Ejercicios seleccionados:", selectedExercises);
+
+                navigation.navigate("RoutineDetail", {
+                  exercises: selectedExercises,
+                });
+              }}
+            >
+              <Text style={styles.confirmButtonText}>
+                Has seleccionado {selectedExercises.length} ejercicio(s)
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -146,6 +151,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#f9fafb",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   container: {
     flex: 1,
