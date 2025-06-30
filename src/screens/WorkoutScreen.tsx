@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { ExerciseRequestDto } from "../models";
+import { ExerciseRequestDto } from "../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<

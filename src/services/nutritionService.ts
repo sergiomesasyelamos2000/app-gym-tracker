@@ -1,8 +1,15 @@
-import { ENV } from "../environments/environment";
+import { apiFetch } from "./api";
 
-const BASE_URL = ENV.API_URL;
+export async function postText(text: string): Promise<any> {
+  return apiFetch("nutrition", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
 
-export async function handleSend(
-  text: string,
-  setMessages: React.Dispatch<React.SetStateAction<any[]>>
-) {}
+export async function postPhoto(formData: FormData): Promise<any> {
+  return apiFetch("nutrition/photo", {
+    method: "POST",
+    body: formData,
+  });
+}

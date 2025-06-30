@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import React from "react";
-import { StatusBar, View, Text, StyleSheet } from "react-native";
+import { StatusBar } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
@@ -9,8 +9,10 @@ import { BottomTabs } from "./src/navigation";
 import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 
+import { Provider as PaperProvider } from "react-native-paper";
 import { ToastConfigParams } from "react-native-toast-message";
-import { ProgressBar } from "react-native-paper";
+import { Provider as ReduxProvider } from "react-redux";
+import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
 
 const toastConfig = {
@@ -27,12 +29,16 @@ const toastConfig = {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar barStyle="dark-content" />
-        <BottomTabs />
-      </NavigationContainer>
-      <Toast config={toastConfig} />
-    </SafeAreaProvider>
+    <ReduxProvider store={store}>
+      <PaperProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar barStyle="dark-content" />
+            <BottomTabs />
+          </NavigationContainer>
+          <Toast config={toastConfig} />
+        </SafeAreaProvider>
+      </PaperProvider>
+    </ReduxProvider>
   );
 }

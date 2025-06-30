@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseRequestDto } from "../models";
+import { ExerciseRequestDto } from "../models/index.js";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 import { fetchExercises } from "../services/exerciseService";
 

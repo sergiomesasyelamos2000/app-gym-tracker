@@ -16,7 +16,7 @@ import { TimerPickerModal } from "react-native-timer-picker";
 import Toast from "react-native-toast-message";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseRequestDto } from "../models";
+import { ExerciseRequestDto } from "../models/index.js";
 
 export interface SetData {
   id: string;
