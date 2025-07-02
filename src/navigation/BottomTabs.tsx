@@ -1,11 +1,12 @@
-import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { BarChart3, Dumbbell, Heart, Home } from "lucide-react-native";
+import React from "react";
+import MacrosScreen from "../screens/NutritionScreen/MacrosScreen";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
-import ProgressScreen from "../screens/ProgressScreen";
-import { Home, Dumbbell, Heart, BarChart3 } from "lucide-react-native";
 import WorkoutStack from "../screens/WorkoutStack";
-import ExerciseList from "../components/ExerciseList";
+import ProductListScreen from "../screens/NutritionScreen/ProductListScrenn";
+import NutritionStack from "../screens/NutritionScreen/NutritionStack";
 
 const Tab = createBottomTabNavigator();
 
@@ -21,7 +22,7 @@ export const BottomTabs = () => {
               return <Dumbbell color={color} size={size} />;
             case "Nutrición":
               return <Heart color={color} size={size} />;
-            case "Progreso":
+            case "Macros":
               return <BarChart3 color={color} size={size} />;
           }
         },
@@ -33,7 +34,7 @@ export const BottomTabs = () => {
       <Tab.Screen name="Inicio" component={HomeScreen} />
       <Tab.Screen name="Entreno" component={WorkoutStack} />
       <Tab.Screen name="Nutrición" component={NutritionScreen} />
-      <Tab.Screen name="Progreso" component={ProgressScreen} />
+      <Tab.Screen name="Macros" component={NutritionStack} />
     </Tab.Navigator>
   );
 };
