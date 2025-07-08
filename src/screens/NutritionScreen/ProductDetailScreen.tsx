@@ -1,15 +1,15 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
   FlatList,
+  Image,
   Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
@@ -20,7 +20,7 @@ export default function ProductDetailScreen({
   route: any;
   navigation: any;
 }) {
-  const { id } = route.params;
+  const { producto } = route.params;
   const [quantity, setQuantity] = useState("133");
   const [unit, setUnit] = useState("gramo / ml");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -29,7 +29,7 @@ export default function ProductDetailScreen({
   const [modalData, setModalData] = useState<
     Array<{ label: string; value: string }>
   >([]);
-  const [modalType, setModalType] = useState<"units" | "meals" | null>(null); // Estado para identificar el tipo de datos
+  const [modalType, setModalType] = useState<"units" | "meals" | null>(null);
 
   const units = [
     { label: "gramo / ml", value: "gramo / ml" },
@@ -46,28 +46,6 @@ export default function ProductDetailScreen({
     { label: "Merienda", value: "Merienda" },
   ];
 
-  const allValues = [
-    "Azúcasdares, total: 0 g",
-    "Alcohol: 0 g",
-    "Fibra: 0 g",
-    "Hierro: 0 mg",
-    "Fósforo: 0 mg",
-    "Sodio: 0 mg",
-    "Cobre: 0 mg",
-    "Azúcasdares, total: 0 g",
-    "Alcohol: 0 g",
-    "Fibra: 0 g",
-    "Hierro: 0 mg",
-    "Fósforo: 0 mg",
-    "Sodio: 0 mg",
-    "Cobre: 0 mg",
-  ];
-
-  const openModal = (data: Array<{ label: string; value: string }>) => {
-    setModalData(data);
-    setIsModalVisible(true);
-  };
-
   const handleSelectUnit = (value: string) => {
     setUnit(value);
     setIsModalVisible(false); // Cerrar el modal
@@ -77,6 +55,26 @@ export default function ProductDetailScreen({
     setMeal(value);
     setIsModalVisible(false); // Cerrar el modal
   };
+
+  if (!producto) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <Text style={{ color: "red" }}>
+            No se encontró información del producto.
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ marginTop: 20 }}
+          >
+            <Text style={{ color: "#409CFF" }}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -105,24 +103,31 @@ export default function ProductDetailScreen({
             <Icon name="more-vert" size={24} color="#000" style={styles.icon} />
           </View>
         </View>
-
         {/* Imagen del producto */}
         <Image
-          source={require("../../../assets/not-image.png")} // Reemplazar con la imagen del producto
+          source={
+            producto?.image
+              ? { uri: producto.image }
+              : require("../../../assets/not-image.png")
+          }
           style={styles.productImage}
         />
-
         {/* Nombre del producto */}
-        <Text style={styles.productName}>Xtreme mass gainer</Text>
-
+        <Text style={styles.productName}>{producto.name}</Text>
         {/* Valores nutricionales */}
         <View style={styles.nutritionRow}>
-          <Text style={[styles.nutritionValue, { color: "#6FCF97" }]}>516</Text>
-          <Text style={[styles.nutritionValue, { color: "#FFB74D" }]}>
-            100,2
+          <Text style={[styles.nutritionValue, { color: "#6FCF97" }]}>
+            {producto.calories}
           </Text>
-          <Text style={[styles.nutritionValue, { color: "#409CFF" }]}>24</Text>
-          <Text style={[styles.nutritionValue, { color: "#FF6F61" }]}>2</Text>
+          <Text style={[styles.nutritionValue, { color: "#FFB74D" }]}>
+            {producto.carbohydrates}
+          </Text>
+          <Text style={[styles.nutritionValue, { color: "#409CFF" }]}>
+            {producto.protein}
+          </Text>
+          <Text style={[styles.nutritionValue, { color: "#FF6F61" }]}>
+            {producto.fat}
+          </Text>
         </View>
         <View style={styles.nutritionLabels}>
           <Text style={styles.nutritionLabel}>Calorías</Text>
@@ -130,7 +135,6 @@ export default function ProductDetailScreen({
           <Text style={styles.nutritionLabel}>Proteína (g)</Text>
           <Text style={styles.nutritionLabel}>Grasa (g)</Text>
         </View>
-
         {/* Cantidad y unidad */}
         <View style={styles.pickerRow}>
           <TextInput
@@ -151,7 +155,6 @@ export default function ProductDetailScreen({
             <Text style={styles.unitText}>{unit}</Text>
           </TouchableOpacity>
         </View>
-
         {/* Comida */}
         <View style={styles.pickerRow}>
           <TouchableOpacity
@@ -165,31 +168,28 @@ export default function ProductDetailScreen({
             <Text style={styles.unitText}>{meal}</Text>
           </TouchableOpacity>
         </View>
-
         {/* Valores adicionales */}
         <View style={styles.additionalValues}>
-          <FlatList
-            data={showMore ? allValues : allValues.slice(0, 10)} // Mostrar dinámicamente hasta 10 elementos
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.additionalValueContainer}>
-                <Text style={styles.additionalValue}>{item}</Text>
-              </View>
-            )}
-            numColumns={2} // Mostrar en dos columnas
-          />
+          {(showMore
+            ? producto.others ?? []
+            : (producto.others ?? []).slice(0, 10)
+          ).map((item: any, index: number) => (
+            <View key={index} style={styles.additionalValueContainer}>
+              <Text style={styles.additionalValue}>
+                {item.label}: {item.value}
+              </Text>
+            </View>
+          ))}
           <TouchableOpacity onPress={() => setShowMore(!showMore)}>
             <Text style={styles.showMore}>
               {showMore ? "Mostrar menos" : "Mostrar más"}
             </Text>
           </TouchableOpacity>
         </View>
-
         {/* Botón flotante */}
         <TouchableOpacity style={styles.addButton}>
           <Text style={styles.addButtonText}>Añadir al diario</Text>
         </TouchableOpacity>
-
         {/* Modal para seleccionar unidad */}
         <Modal
           visible={isModalVisible}
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   container: {
-    flex: 1,
+    //flex: 1,
     padding: 16,
     backgroundColor: "#fff",
   },
@@ -275,23 +275,29 @@ const styles = StyleSheet.create({
   },
   nutritionRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
+    alignItems: "center",
     width: "100%",
     marginBottom: 10,
   },
-  nutritionValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
   nutritionLabels: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
+    alignItems: "center",
     width: "100%",
     marginBottom: 20,
   },
+  nutritionValue: {
+    width: 100, // <-- ancho fijo
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
   nutritionLabel: {
+    width: 100, // <-- ancho fijo
     fontSize: 12,
     color: "#808080",
+    textAlign: "center",
   },
   pickerRow: {
     flexDirection: "row",
@@ -370,13 +376,13 @@ const styles = StyleSheet.create({
   },
   additionalValueContainer: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "stretch",
     marginBottom: 10, // Espaciado entre filas
   },
   additionalValue: {
     fontSize: 14,
     color: "#808080",
-    textAlign: "center",
+    textAlign: "left",
   },
   showMore: {
     fontSize: 14,

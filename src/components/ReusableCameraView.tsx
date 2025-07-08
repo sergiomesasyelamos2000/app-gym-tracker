@@ -5,24 +5,25 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 type ReusableCameraViewProps = {
   onPhotoTaken?: (photo: { uri: string }) => void; // Callback para manejar la foto tomada
+  onBarCodeScanned?: (data: string) => void; // Callback para manejar el código escaneado
   onCloseCamera?: () => void; // Callback para cerrar la cámara
 };
 
 export default function ReusableCameraView({
   onPhotoTaken,
+  onBarCodeScanned,
   onCloseCamera,
 }: ReusableCameraViewProps) {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const [scanned, setScanned] = useState(false);
 
   if (!permission) {
-    // Camera permissions are still loading.
     return <View />;
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet.
     return (
       <View style={styles.container}>
         <Icon name="camera-off" size={50} color="gray" />
@@ -45,26 +46,36 @@ export default function ReusableCameraView({
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
       if (onPhotoTaken) {
-        onPhotoTaken(photo); // Llama al callback con la foto tomada
+        onPhotoTaken(photo);
+      }
+    }
+  };
+
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    if (!scanned) {
+      setScanned(true);
+      if (onBarCodeScanned) {
+        onBarCodeScanned(data);
       }
     }
   };
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        {/* Botón para cerrar la cámara */}
+      <CameraView
+        style={styles.camera}
+        facing={facing}
+        ref={cameraRef}
+        onBarcodeScanned={handleBarCodeScanned}
+      >
         <TouchableOpacity style={styles.closeButton} onPress={onCloseCamera}>
           <Icon name="close" size={30} color="white" />
         </TouchableOpacity>
 
         <View style={styles.buttonContainer}>
-          {/* Botón circular centrado */}
           <TouchableOpacity style={styles.circularButton} onPress={takePhoto}>
             <View style={styles.innerCircle} />
           </TouchableOpacity>
-
-          {/* Icono para cambiar la cámara */}
           <TouchableOpacity
             style={styles.flipButton}
             onPress={toggleCameraFacing}

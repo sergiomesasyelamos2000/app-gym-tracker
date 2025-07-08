@@ -5,7 +5,7 @@ import MacrosScreen from "../screens/NutritionScreen/MacrosScreen";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
 import WorkoutStack from "../screens/WorkoutStack";
-import ProductListScreen from "../screens/NutritionScreen/ProductListScrenn";
+import ProductListScreen from "../screens/NutritionScreen/ProductListScreen";
 import NutritionStack from "../screens/NutritionScreen/NutritionStack";
 
 const Tab = createBottomTabNavigator();

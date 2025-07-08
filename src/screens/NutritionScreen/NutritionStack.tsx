@@ -1,5 +1,5 @@
 import React from "react";
-import ProductListScreen from "./ProductListScrenn";
+import ProductListScreen from "./ProductListScreen";
 import MacrosScreen from "./MacrosScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import ProductDetailScreen from "./ProductDetailScreen";
