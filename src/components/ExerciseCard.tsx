@@ -23,7 +23,7 @@ export interface SetData {
   order: number;
   weight?: number;
   reps?: number;
-  completed: boolean;
+  completed?: boolean;
 }
 
 interface Props {
@@ -41,9 +41,20 @@ const ExerciseCard = ({
 }: Props) => {
   const [sets, setSets] = useState<SetData[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
-  const [restTime, setRestTime] = useState("00:00");
   const [showPicker, setShowPicker] = useState(false);
   const [progress, setProgress] = useState(1);
+
+  const initialRestTime = exercise.restSeconds
+    ? (() => {
+        const seconds = parseInt(exercise.restSeconds, 10) || 0;
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes.toString().padStart(2, "0")}:${secs
+          .toString()
+          .padStart(2, "0")}`;
+      })()
+    : "00:00";
+  const [restTime, setRestTime] = useState(initialRestTime);
 
   useEffect(() => {
     if (onChangeSets) onChangeSets(sets);

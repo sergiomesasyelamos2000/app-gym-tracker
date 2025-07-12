@@ -9,3 +9,25 @@ export async function saveRoutine(
     body: JSON.stringify(routineRequestDto),
   });
 }
+
+export async function findRoutines(): Promise<any[]> {
+  return await apiFetch("routines", {
+    method: "GET",
+  });
+}
+
+export async function getRoutineById(id: string): Promise<any> {
+  return await apiFetch(`routines/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function updateRoutineById(
+  id: string,
+  routineRequestDto: any
+): Promise<any> {
+  return await apiFetch(`routines/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(routineRequestDto),
+  });
+}

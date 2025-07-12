@@ -1,4 +1,9 @@
-import { RouteProp, useRoute } from "@react-navigation/native";
+import {
+  NavigationProp,
+  RouteProp,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
@@ -12,7 +17,7 @@ import {
 import uuid from "react-native-uuid";
 import ExerciseCard, { SetData } from "../components/ExerciseCard";
 import { ExerciseRequestDto } from "../models";
-import { saveRoutine } from "../services/routineService";
+import { getRoutineById, saveRoutine } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
@@ -20,55 +25,74 @@ type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const { routine, exercises } = route.params;
+  const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
+
+  const [loading, setLoading] = useState(!!routine?.id);
+  const [routineData, setRoutineData] = useState<any>(routine || null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
-  const [exercisesState, setExercises] = useState(
-    exercises || routine?.exercises || []
-  );
-  const exerciseList = routine?.exercises || exercisesState || [];
-
-  console.log("RoutineDetailScreen - routine:", routine, exercises);
-
   const [started, setStarted] = useState(false);
-  const [duration, setDuration] = useState(0); // segundos
-  const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>(
-    exerciseList.reduce((acc, exercise) => {
-      acc[exercise.id] = [
-        {
-          id: uuid.v4() as string,
-          order: 1,
-          weight: 0,
-          reps: 0,
-          completed: false,
-        },
-      ];
-      return acc;
-    }, {} as { [exerciseId: string]: SetData[] })
-  );
+  const [duration, setDuration] = useState(0);
+  const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
+  const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>({});
 
-  const handleSaveRoutine = async () => {
-    try {
-      const routineData = {
-        id: routine?.id || (uuid.v4() as string),
-        title: routine?.title ?? routineTitle,
-        totalTime: routine?.totalTime || 0,
-        totalWeight: routine?.totalWeight || 0,
-        completedSets: routine?.completedSets || 0,
-        createdAt: routine?.createdAt
-          ? new Date(routine.createdAt)
-          : new Date(),
-        exercises: exerciseList.map((exercise) => ({
-          ...exercise,
-          sets: sets[exercise.id] || [],
-        })),
-      };
-      await saveRoutine(routineData);
-      alert("Rutina guardada exitosamente");
-    } catch (error) {
-      console.error("Error al guardar la rutina:", error);
-      alert("Error al guardar la rutina");
-    }
-  };
+  // Cargar rutina si tiene ID
+  useEffect(() => {
+    const fetchRoutine = async () => {
+      if (routine?.id) {
+        try {
+          const data = await getRoutineById(routine.id);
+          console.log("Fetched routine data:", data);
+          setRoutineData(data);
+        } catch (err) {
+          console.error("Error fetching routine by id", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchRoutine();
+  }, [routine?.id]);
 
+  // Mapear ejercicios cuando cambia la rutina
+  useEffect(() => {
+    const mappedExercises: ExerciseRequestDto[] =
+      exercises ||
+      (routineData?.routineExercises
+        ? routineData.routineExercises.map((re: any) => ({
+            ...re.exercise,
+            sets: re.sets || [],
+            notes: re.notes,
+            restSeconds: re.restSeconds,
+          }))
+        : routineData?.exercises || []);
+
+    setExercises(mappedExercises);
+    setRoutineTitle(routineData?.title || "");
+
+    const initialSets: { [exerciseId: string]: SetData[] } = {};
+    mappedExercises.forEach((exercise) => {
+      initialSets[exercise.id] =
+        exercise.sets && exercise.sets.length > 0
+          ? exercise.sets.map((set: any) => ({
+              ...set,
+              completed:
+                typeof set.completed === "boolean" ? set.completed : false,
+            }))
+          : [
+              {
+                id: uuid.v4() as string,
+                order: 1,
+                weight: 0,
+                reps: 0,
+                completed: false,
+              },
+            ];
+    });
+    setSets(initialSets);
+  }, [routineData]);
+
+  // Timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (started) {
@@ -79,19 +103,28 @@ export default function RoutineDetailScreen() {
     return () => clearInterval(interval);
   }, [started]);
 
-  const allSets = Object.values(sets).flat();
-  const volume = allSets.reduce(
-    (sum, s) => (s.completed ? sum + (s?.weight ?? 0) * (s?.reps ?? 0) : sum),
-    0
-  );
-  const completedSets = allSets.filter((s) => s.completed).length;
-
-  const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${mins}:${secs}`;
+  const handleSaveRoutine = async () => {
+    try {
+      const routineToSave = {
+        id: routineData?.id || (uuid.v4() as string),
+        title: routineTitle,
+        totalTime: duration,
+        totalWeight: volume,
+        completedSets,
+        createdAt: routineData?.createdAt
+          ? new Date(routineData.createdAt)
+          : new Date(),
+        exercises: exercisesState.map((exercise) => ({
+          ...exercise,
+          sets: sets[exercise.id] || [],
+        })),
+      };
+      await saveRoutine(routineToSave);
+      alert("Rutina guardada exitosamente");
+    } catch (error) {
+      console.error("Error al guardar la rutina:", error);
+      alert("Error al guardar la rutina");
+    }
   };
 
   const handleFinishRoutine = () => {
@@ -109,20 +142,45 @@ export default function RoutineDetailScreen() {
     });
   };
 
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
+  const allSets = Object.values(sets).flat();
+  const volume = allSets.reduce(
+    (sum, s) => (s.completed ? sum + (s?.weight ?? 0) * (s?.reps ?? 0) : sum),
+    0
+  );
+  const completedSets = allSets.filter((s) => s.completed).length;
+
   const renderHeader = () => (
     <View style={styles.header}>
-      {!started && routine?.id && (
+      {!started && routineData?.id && (
         <>
-          <Text style={styles.title}>{routine?.title}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>{routineTitle}</Text>
+          </View>
           <TouchableOpacity
             style={styles.startButton}
             onPress={() => setStarted(true)}
           >
             <Text style={styles.startButtonText}>Iniciar Rutina</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editLink}
+            onPress={() => {
+              goToEditRoutine();
+            }}
+          >
+            <Text style={styles.editLinkText}>Editar rutina</Text>
+          </TouchableOpacity>
         </>
       )}
-      {!routine?.id && (
+      {!routineData?.id && (
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.titleInput}
@@ -139,10 +197,10 @@ export default function RoutineDetailScreen() {
     <ExerciseCard
       exercise={item}
       initialSets={sets[item.id] || []}
-      onChangeSets={(updatedSets: SetData[]) =>
+      onChangeSets={(updatedSets) =>
         setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
       }
-      onChangeExercise={(updatedExercise: ExerciseRequestDto) => {
+      onChangeExercise={(updatedExercise) => {
         setExercises((prev) =>
           prev.map((exercise) =>
             exercise.id === updatedExercise.id ? updatedExercise : exercise
@@ -151,6 +209,32 @@ export default function RoutineDetailScreen() {
       }}
     />
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Text style={{ textAlign: "center", marginTop: 40 }}>
+          Cargando rutina...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const goToEditRoutine = () => {
+    const exercisesForEdit = exercisesState.map((exercise) => ({
+      ...exercise,
+      sets: sets[exercise.id] || [],
+    }));
+
+    navigation.navigate("RoutineEdit", {
+      id: routineData?.id,
+      title: routineData.title,
+      exercises: exercisesForEdit,
+      onUpdate: (newTitle: string) => {
+        console.log("Updating routine title:", newTitle);
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -171,13 +255,14 @@ export default function RoutineDetailScreen() {
       )}
 
       <FlatList
-        data={exerciseList}
+        data={exercisesState}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         renderItem={renderExerciseCard}
         contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
       />
-      {!routine?.id && (
+
+      {!routineData?.id && (
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
           <Text style={styles.saveButtonText}>Guardar Rutina</Text>
         </TouchableOpacity>
@@ -191,26 +276,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb",
   },
-  inputContainer: {
-    marginTop: 20,
-  },
-  titleInput: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    elevation: 2,
-    fontSize: 16,
-    color: "#333",
-  },
   header: {
     marginBottom: 24,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#6C3BAA",
     marginBottom: 12,
+  },
+  editLink: {
+    justifyContent: "flex-start",
+  },
+  editLinkText: {
+    color: "#6C3BAA",
+    fontWeight: "bold",
+    textDecorationLine: "underline",
+    fontSize: 16,
   },
   startButton: {
     backgroundColor: "#6C3BAA",
@@ -223,6 +310,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  inputContainer: {
+    marginTop: 20,
+  },
+  titleInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    elevation: 2,
+    fontSize: 16,
+    color: "#333",
+  },
+  saveButton: {
+    backgroundColor: "#6C3BAA",
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  fixedHeader: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    elevation: 3,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   trainingHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -232,48 +355,21 @@ const styles = StyleSheet.create({
   metricsTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#6C3BAA",
+    color: "#333",
   },
   finishButton: {
-    fontSize: 14,
-    color: "#6C3BAA",
+    color: "#D32F2F",
     fontWeight: "bold",
+    fontSize: 16,
   },
   metrics: {
     flexDirection: "row",
     justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 8,
-    elevation: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    paddingVertical: 4,
   },
   metricText: {
     fontSize: 14,
-    color: "#333",
     fontWeight: "bold",
-  },
-  fixedHeader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: "#f9fafb",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  saveButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    margin: 16,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#555",
   },
 });

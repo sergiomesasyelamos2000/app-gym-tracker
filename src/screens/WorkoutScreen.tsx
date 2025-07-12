@@ -1,7 +1,7 @@
+import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ChevronRight } from "lucide-react-native";
-import React from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -12,36 +12,34 @@ import {
 } from "react-native";
 import { ExerciseRequestDto } from "../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { findRoutines } from "../services/routineService"; // Asegúrate de importar tu función
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
   "WorkoutList"
 >;
 
-const routines: any[] = [
-  {
-    id: "1",
-    title: "Chest and Triceps",
-    createdAt: new Date(),
-    exercises: [],
-  },
-  {
-    id: "2",
-    title: "Back and Biceps",
-    createdAt: new Date(),
-    exercises: [],
-  },
-  {
-    id: "3",
-    title: "Legs and Shoulders",
-    createdAt: new Date(),
-    exercises: [],
-  },
-];
-
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { width } = useWindowDimensions();
+
+  const [routines, setRoutines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRoutines = async () => {
+      try {
+        const data = await findRoutines();
+        setRoutines(data);
+        console.log("listado de rutinas", data);
+      } catch (err) {
+        console.error("Error fetching routines", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRoutines();
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
@@ -75,21 +73,25 @@ export default function WorkoutScreen() {
           </Text>
         </View>
 
-        {routines.map((routine) => (
-          <TouchableOpacity
-            key={routine.id}
-            style={styles.routineCard}
-            onPress={() => navigation.navigate("RoutineDetail", { routine })}
-          >
-            <View style={styles.routineInfo}>
-              <Text style={styles.routineName}>{routine.title}</Text>
-              {/* <Text style={styles.routineDescription}>
-                {routine.description}
-              </Text> */}
-            </View>
-            <ChevronRight color="#6C3BAA" size={24} />
-          </TouchableOpacity>
-        ))}
+        {loading ? (
+          <Text>Cargando rutinas...</Text>
+        ) : (
+          routines.map((routine) => (
+            <TouchableOpacity
+              key={routine.id}
+              style={styles.routineCard}
+              onPress={() => navigation.navigate("RoutineDetail", { routine })}
+            >
+              <View style={styles.routineInfo}>
+                <Text style={styles.routineName}>{routine.title}</Text>
+                {/* <Text style={styles.routineDescription}>
+                  {routine.description}
+                </Text> */}
+              </View>
+              <ChevronRight color="#6C3BAA" size={24} />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
