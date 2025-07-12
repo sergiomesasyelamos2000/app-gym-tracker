@@ -14,7 +14,7 @@ import {
 import ExerciseCard, { SetData } from "../components/ExerciseCard";
 import { ExerciseRequestDto } from "../models";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { updateRoutineById } from "../services/routineService";
+import { getRoutineById, updateRoutineById } from "../services/routineService";
 
 export default function RoutineEditScreen() {
   const route = useRoute();
@@ -23,8 +23,9 @@ export default function RoutineEditScreen() {
   const { id, title, exercises, onUpdate } =
     route.params as WorkoutStackParamList["RoutineEdit"];
   const [editTitle, setEditTitle] = React.useState(title);
-  const [exercisesState, setExercises] =
-    useState<ExerciseRequestDto[]>(exercises);
+  const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>(
+    exercises || []
+  );
   const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>(() => {
     const initial: { [exerciseId: string]: SetData[] } = {};
     (exercises || []).forEach((exercise) => {
@@ -32,10 +33,43 @@ export default function RoutineEditScreen() {
     });
     return initial;
   });
+  useEffect(() => {
+    const fetchRoutine = async () => {
+      if (id) {
+        const data = await getRoutineById(id);
+        console.log("Fetched routine data:", data);
+
+        // Mapea los ejercicios desde routineExercises
+        const exercises: ExerciseRequestDto[] = Array.isArray(
+          data.routineExercises
+        )
+          ? data.routineExercises.map((re: any) => ({
+              ...re.exercise,
+              sets: re.sets || [],
+              notes: re.notes,
+              restSeconds: re.restSeconds,
+            }))
+          : [];
+
+        setEditTitle(data.title || "");
+        setExercises(exercises);
+
+        // Inicializa los sets para cada ejercicio
+        const initialSets: { [exerciseId: string]: SetData[] } = {};
+        exercises.forEach((exercise) => {
+          initialSets[exercise.id] = Array.isArray(exercise.sets)
+            ? exercise.sets
+            : [];
+        });
+        setSets(initialSets);
+      }
+    };
+    fetchRoutine();
+  }, [id]);
 
   useEffect(() => {
     setEditTitle(title);
-    setExercises(exercises);
+    setExercises(exercises || []);
     const initial: { [exerciseId: string]: SetData[] } = {};
     (exercises || []).forEach((exercise) => {
       initial[exercise.id] = exercise.sets || [];
@@ -100,7 +134,7 @@ export default function RoutineEditScreen() {
         />
         <Text style={styles.subTitle}>Ejercicios asociados:</Text>
         <FlatList
-          data={exercises}
+          data={exercisesState} // <-- usa el estado correcto
           keyExtractor={(item) => item.id}
           renderItem={renderExerciseCard}
           contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16 }}

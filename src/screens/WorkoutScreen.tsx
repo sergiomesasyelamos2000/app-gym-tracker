@@ -10,9 +10,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { ExerciseRequestDto } from "../models/index.js";
+import { ExerciseRequestDto, RoutineResponseDto } from "../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { findRoutines } from "../services/routineService"; // Asegúrate de importar tu función
+import { findRoutines } from "../services/routineService";
+import { MaterialIcons } from "@expo/vector-icons";
+import Modal from "react-native-modal";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -25,6 +27,19 @@ export default function WorkoutScreen() {
 
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRoutine, setSelectedRoutine] =
+    useState<RoutineResponseDto | null>(null);
+  const [isActionModalVisible, setActionModalVisible] = useState(false);
+
+  const openRoutineOptions = (routine: RoutineResponseDto) => {
+    setSelectedRoutine(routine);
+    setActionModalVisible(true);
+  };
+
+  const closeRoutineOptions = () => {
+    setSelectedRoutine(null);
+    setActionModalVisible(false);
+  };
 
   useEffect(() => {
     const fetchRoutines = async () => {
@@ -43,6 +58,58 @@ export default function WorkoutScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Modal
+        isVisible={isActionModalVisible}
+        onBackdropPress={closeRoutineOptions}
+        onSwipeComplete={closeRoutineOptions}
+        swipeDirection="down"
+        style={styles.modalContainer}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHandle} />
+
+          {/* <Text style={styles.modalTitle}>{selectedRoutine?.title}</Text> */}
+
+          <TouchableOpacity style={styles.modalItem}>
+            <MaterialIcons name="share" size={20} color="#4E2A84" />
+            <Text style={styles.modalItemText}>Compartir rutina</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.modalItem}>
+            <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
+            <Text style={styles.modalItemText}>Duplicar rutina</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={() => {
+              console.log("selectedRoutine", selectedRoutine);
+
+              if (selectedRoutine) {
+                navigation.navigate("RoutineEdit", { id: selectedRoutine.id });
+                closeRoutineOptions();
+              }
+            }}
+          >
+            <MaterialIcons name="edit" size={20} color="#4E2A84" />
+            <Text style={styles.modalItemText}>Editar rutina</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={() => {
+              // lógica de borrado
+              closeRoutineOptions();
+            }}
+          >
+            <MaterialIcons name="delete" size={20} color="red" />
+            <Text style={[styles.modalItemText, { color: "red" }]}>
+              Borrar rutina
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      ;
       <ScrollView contentContainerStyle={[styles.container, { width }]}>
         <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
           <TouchableOpacity
@@ -77,19 +144,37 @@ export default function WorkoutScreen() {
           <Text>Cargando rutinas...</Text>
         ) : (
           routines.map((routine) => (
-            <TouchableOpacity
-              key={routine.id}
-              style={styles.routineCard}
-              onPress={() => navigation.navigate("RoutineDetail", { routine })}
-            >
-              <View style={styles.routineInfo}>
+            <View key={routine.id} style={styles.routineCard}>
+              {/* Botón de opciones */}
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() => openRoutineOptions(routine)}
+              >
+                <MaterialIcons name="more-vert" size={20} color="#6C3BAA" />
+              </TouchableOpacity>
+
+              {/* Contenido de la tarjeta */}
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate("RoutineDetail", { routine })
+                }
+              >
                 <Text style={styles.routineName}>{routine.title}</Text>
-                {/* <Text style={styles.routineDescription}>
-                  {routine.description}
-                </Text> */}
-              </View>
-              <ChevronRight color="#6C3BAA" size={24} />
-            </TouchableOpacity>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.startRoutineButton}
+                onPress={() =>
+                  navigation.navigate("RoutineDetail", { routine, start: true })
+                }
+              >
+                <Text style={styles.startRoutineButtonText}>
+                  Iniciar rutina
+                </Text>
+              </TouchableOpacity>
+            </View>
           ))
         )}
       </ScrollView>
@@ -128,33 +213,32 @@ const styles = StyleSheet.create({
   },
   routineCard: {
     width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#ede7f6",
+    backgroundColor: "#f5f3fc",
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 14,
-    marginBottom: 12,
+    marginBottom: 16,
+    position: "relative",
     elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
   routineInfo: {
     flex: 1,
-    marginRight: 8,
   },
   routineName: {
     fontSize: 18,
     fontWeight: "600",
     color: "#4E2A84",
+    marginBottom: 6,
   },
-  routineDescription: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 4,
+  routineActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
+
   addButton: {
     backgroundColor: "#6C3BAA",
     padding: 16,
@@ -166,5 +250,63 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  startRoutineButton: {
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  startRoutineButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  moreButton: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    padding: 6,
+    zIndex: 10,
+  },
+  modalContainer: {
+    justifyContent: "flex-end",
+    margin: 0,
+  },
+
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+
+  modalHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: "#ccc",
+    alignSelf: "center",
+    borderRadius: 2.5,
+    marginBottom: 10,
+  },
+
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#4E2A84",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 12,
+  },
+
+  modalItemText: {
+    fontSize: 16,
+    color: "#333",
   },
 });

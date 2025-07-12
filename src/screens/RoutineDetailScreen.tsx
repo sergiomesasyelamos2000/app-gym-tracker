@@ -36,6 +36,12 @@ export default function RoutineDetailScreen() {
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>({});
 
+  useEffect(() => {
+  if (route.params?.start) {
+    setStarted(true);
+  }
+}, [route.params?.start]);
+
   // Cargar rutina si tiene ID
   useEffect(() => {
     const fetchRoutine = async () => {

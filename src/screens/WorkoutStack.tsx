@@ -11,15 +11,16 @@ export type WorkoutStackParamList = {
   RoutineDetail: {
     routine?: RoutineRequestDto;
     exercises?: ExerciseRequestDto[];
+    start?: boolean;
   };
   ExerciseList: {
     onFinishSelection: (exercises: ExerciseRequestDto[]) => void;
   };
   RoutineEdit: {
     id: string;
-    title: string;
-    exercises: ExerciseRequestDto[];
-    onUpdate: (newTitle: string) => void;
+    title?: string;
+    exercises?: ExerciseRequestDto[];
+    onUpdate?: (newTitle: string) => void;
   };
 };
 
