@@ -242,10 +242,10 @@ const ExerciseCard = ({
         onConfirm={(pickedDuration) => {
           setRestTime(formatTime(pickedDuration));
           setShowPicker(false);
-          startCountdown(
+          /* startCountdown(
             pickedDuration.minutes || 0,
             pickedDuration.seconds || 0
-          );
+          ); */
         }}
         modalTitle="Seleccionar tiempo de descanso"
         onCancel={() => setShowPicker(false)}
