@@ -82,71 +82,42 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <Modal
-        isVisible={isActionModalVisible}
-        onBackdropPress={closeRoutineOptions}
-        onSwipeComplete={closeRoutineOptions}
-        swipeDirection="down"
-        style={styles.modalContainer}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHandle} />
+    <View style={{ flex: 1, backgroundColor: "#F4F4F8" }}>
+      {/* Encabezado */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Rutinas de entrenamiento</Text>
+        <Text style={styles.headerSubtitle}>
+          Selecciona una rutina para comenzar o crea una nueva
+        </Text>
+      </View>
 
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleRoutineAction("duplicate")}
-          >
-            <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Duplicar rutina</Text>
-          </TouchableOpacity>
+      {/* Botón principal */}
+      <View style={styles.topActions}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => {
+            navigation.navigate("ExerciseList", {
+              onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
+                // lógica para crear nueva rutina
+              },
+            });
+          }}
+        >
+          <MaterialIcons name="add" size={22} color="#fff" />
+          <Text style={styles.addButtonText}>Crear nueva rutina</Text>
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleRoutineAction("edit")}
-          >
-            <MaterialIcons name="edit" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Editar rutina</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleRoutineAction("delete")}
-          >
-            <MaterialIcons name="delete" size={20} color="red" />
-            <Text style={[styles.modalItemText, { color: "red" }]}>
-              Borrar rutina
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      <ScrollView contentContainerStyle={[styles.container, { width }]}>
-        <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              navigation.navigate("ExerciseList", {
-                onFinishSelection: (
-                  selectedExercises: ExerciseRequestDto[]
-                ) => {
-                  // lógica para crear nueva rutina
-                },
-              });
-            }}
-          >
-            <Text style={styles.addButtonText}>+ Crear nueva rutina</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Workout Routines</Text>
-          <Text style={styles.headerSubtitle}>
-            Choose a routine to start your workout
-          </Text>
-        </View>
-
+      {/* Listado de rutinas */}
+      <ScrollView contentContainerStyle={styles.listContainer}>
         {loading ? (
-          <Text>Cargando rutinas...</Text>
+          <Text style={{ textAlign: "center", marginTop: 40 }}>
+            Cargando rutinas...
+          </Text>
+        ) : routines.length === 0 ? (
+          <Text style={{ textAlign: "center", marginTop: 40, color: "#888" }}>
+            No tienes rutinas guardadas.
+          </Text>
         ) : (
           routines.map((routine) => (
             <View key={routine.id} style={styles.routineCard}>
@@ -181,94 +152,125 @@ export default function WorkoutScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Modal de acciones */}
+      <Modal
+        isVisible={isActionModalVisible}
+        onBackdropPress={closeRoutineOptions}
+        onSwipeComplete={closeRoutineOptions}
+        swipeDirection="down"
+        style={styles.modalContainer}
+      >
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Acciones de rutina</Text>
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={() => handleRoutineAction("duplicate")}
+          >
+            <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
+            <Text style={styles.modalItemText}>Duplicar rutina</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={() => handleRoutineAction("edit")}
+          >
+            <MaterialIcons name="edit" size={20} color="#4E2A84" />
+            <Text style={styles.modalItemText}>Editar rutina</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={() => handleRoutineAction("delete")}
+          >
+            <MaterialIcons name="delete" size={20} color="red" />
+            <Text style={[styles.modalItemText, { color: "red" }]}>
+              Borrar rutina
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    backgroundColor: "#f9fafb",
-    alignItems: "center",
-  },
   header: {
-    width: "100%",
-    marginBottom: 16,
-    padding: 20,
-    backgroundColor: "#6C3BAA",
-    borderRadius: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    paddingTop: 32,
+    paddingBottom: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "#F4F4F8",
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#4E2A84",
+    marginBottom: 4,
   },
   headerSubtitle: {
+    fontSize: 15,
+    color: "#666",
+  },
+  topActions: {
+    paddingHorizontal: 24,
+    marginBottom: 10,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    marginTop: 8,
+  },
+  addButtonText: {
+    color: "#fff",
     fontSize: 16,
-    color: "#E0D7F5",
-    marginTop: 6,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
   routineCard: {
-    width: "100%",
-    backgroundColor: "#f5f3fc",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 18,
     marginBottom: 16,
-    position: "relative",
-    elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.04,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-  },
-  routineInfo: {
-    flex: 1,
+    elevation: 2,
+    position: "relative",
   },
   routineName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#4E2A84",
-    marginBottom: 6,
-  },
-  routineActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  addButton: {
-    backgroundColor: "#6C3BAA",
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 20,
-    alignItems: "center",
-  },
-  addButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#222",
+    marginBottom: 10,
   },
   startRoutineButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 10,
-    borderRadius: 10,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginTop: 4,
   },
   startRoutineButtonText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 15,
+    marginLeft: 4,
   },
   moreButton: {
     position: "absolute",
-    right: 12,
-    top: 12,
+    right: 10,
+    top: 10,
     padding: 6,
     zIndex: 10,
   },
@@ -276,38 +278,25 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     margin: 0,
   },
-
   modalContent: {
     backgroundColor: "#fff",
-    padding: 20,
+    padding: 24,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-
-  modalHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: "#ccc",
-    alignSelf: "center",
-    borderRadius: 2.5,
-    marginBottom: 10,
-  },
-
   modalTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#4E2A84",
-    marginBottom: 16,
+    marginBottom: 18,
     textAlign: "center",
   },
-
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 12,
   },
-
   modalItemText: {
     fontSize: 16,
     color: "#333",

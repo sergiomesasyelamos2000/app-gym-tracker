@@ -29,7 +29,6 @@ export default function RoutineDetailScreen() {
 
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -37,18 +36,14 @@ export default function RoutineDetailScreen() {
   const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>({});
 
   useEffect(() => {
-  if (route.params?.start) {
-    setStarted(true);
-  }
-}, [route.params?.start]);
+    if (route.params?.start) setStarted(true);
+  }, [route.params?.start]);
 
-  // Cargar rutina si tiene ID
   useEffect(() => {
     const fetchRoutine = async () => {
       if (routine?.id) {
         try {
           const data = await getRoutineById(routine.id);
-          console.log("Fetched routine data:", data);
           setRoutineData(data);
         } catch (err) {
           console.error("Error fetching routine by id", err);
@@ -60,7 +55,6 @@ export default function RoutineDetailScreen() {
     fetchRoutine();
   }, [routine?.id]);
 
-  // Mapear ejercicios cuando cambia la rutina
   useEffect(() => {
     const mappedExercises: ExerciseRequestDto[] =
       exercises ||
@@ -98,7 +92,6 @@ export default function RoutineDetailScreen() {
     setSets(initialSets);
   }, [routineData]);
 
-  // Timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (started) {
@@ -163,38 +156,53 @@ export default function RoutineDetailScreen() {
   );
   const completedSets = allSets.filter((s) => s.completed).length;
 
+  const goToEditRoutine = () => {
+    const exercisesForEdit = exercisesState.map((exercise) => ({
+      ...exercise,
+      sets: sets[exercise.id] || [],
+    }));
+
+    navigation.navigate("RoutineEdit", {
+      id: routineData?.id,
+      title: routineData.title,
+      exercises: exercisesForEdit,
+      onUpdate: (newTitle: string) => {
+        setRoutineTitle(newTitle);
+      },
+    });
+  };
+
   const renderHeader = () => (
     <View style={styles.header}>
-      {!started && routineData?.id && (
+      {!started && (
         <>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{routineTitle}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={() => setStarted(true)}
-          >
-            <Text style={styles.startButtonText}>Iniciar Rutina</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.editLink}
-            onPress={() => {
-              goToEditRoutine();
-            }}
-          >
-            <Text style={styles.editLinkText}>Editar rutina</Text>
-          </TouchableOpacity>
+          <Text style={styles.title}>{routineTitle || "Nueva rutina"}</Text>
+          {routineData?.id ? (
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={() => setStarted(true)}
+              >
+                <Text style={styles.startButtonText}>Iniciar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={goToEditRoutine}
+              >
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.titleInput}
+                placeholder="Nombre de la rutina"
+                value={routineTitle}
+                onChangeText={setRoutineTitle}
+              />
+            </View>
+          )}
         </>
-      )}
-      {!routineData?.id && (
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="Introduce el nombre de la rutina"
-            value={routineTitle}
-            onChangeText={setRoutineTitle}
-          />
-        </View>
       )}
     </View>
   );
@@ -226,36 +234,17 @@ export default function RoutineDetailScreen() {
     );
   }
 
-  const goToEditRoutine = () => {
-    const exercisesForEdit = exercisesState.map((exercise) => ({
-      ...exercise,
-      sets: sets[exercise.id] || [],
-    }));
-
-    navigation.navigate("RoutineEdit", {
-      id: routineData?.id,
-      title: routineData.title,
-      exercises: exercisesForEdit,
-      onUpdate: (newTitle: string) => {
-        console.log("Updating routine title:", newTitle);
-      },
-    });
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       {started && (
         <View style={styles.fixedHeader}>
-          <View style={styles.trainingHeader}>
-            <Text style={styles.metricsTitle}>Entrenando</Text>
+          <View style={styles.metricsRow}>
+            <Text style={styles.metricItem}>⏱ {formatTime(duration)}</Text>
+            <Text style={styles.metricItem}>🏋️ {volume} kg</Text>
+            <Text style={styles.metricItem}>✅ {completedSets}</Text>
             <TouchableOpacity onPress={handleFinishRoutine}>
               <Text style={styles.finishButton}>Terminar</Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.metrics}>
-            <Text style={styles.metricText}>⏱ {formatTime(duration)}</Text>
-            <Text style={styles.metricText}>🏋️ {volume} kg</Text>
-            <Text style={styles.metricText}>✅ {completedSets}</Text>
           </View>
         </View>
       )}
@@ -265,12 +254,12 @@ export default function RoutineDetailScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         renderItem={renderExerciseCard}
-        contentContainerStyle={{ paddingTop: started ? 100 : 0, padding: 16 }}
+        contentContainerStyle={{ paddingTop: started ? 80 : 0, padding: 16 }}
       />
 
       {!routineData?.id && (
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
-          <Text style={styles.saveButtonText}>Guardar Rutina</Text>
+          <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -280,102 +269,123 @@ export default function RoutineDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#F7F8FA",
   },
   header: {
-    marginBottom: 24,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 8,
+    paddingTop: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#6C3BAA",
-    marginBottom: 12,
+    color: "#222",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.5,
   },
-  editLink: {
-    justifyContent: "flex-start",
-  },
-  editLinkText: {
-    color: "#6C3BAA",
-    fontWeight: "bold",
-    textDecorationLine: "underline",
-    fontSize: 16,
+  headerActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom: 8,
   },
   startButton: {
     backgroundColor: "#6C3BAA",
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
     alignItems: "center",
+    elevation: 2,
   },
   startButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
+  editButton: {
+    backgroundColor: "#EDEAF6",
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    alignItems: "center",
+    elevation: 2,
+  },
+  editButtonText: {
+    color: "#6C3BAA",
+    fontWeight: "bold",
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
   inputContainer: {
-    marginTop: 20,
+    marginTop: 12,
+    alignItems: "center",
   },
   titleInput: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     elevation: 2,
     fontSize: 16,
     color: "#333",
+    width: "95%",
+    borderWidth: 1,
+    borderColor: "#EDEAF6",
   },
   saveButton: {
     backgroundColor: "#6C3BAA",
     padding: 16,
     margin: 16,
-    borderRadius: 8,
+    borderRadius: 20,
     alignItems: "center",
+    elevation: 2,
   },
   saveButtonText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+    letterSpacing: 0.5,
   },
   fixedHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingVertical: 10,
     elevation: 3,
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EDEAF6",
   },
-  trainingHeader: {
+  metricsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    justifyContent: "space-between",
+    gap: 10,
   },
-  metricsTitle: {
-    fontSize: 18,
+  metricItem: {
+    fontSize: 15,
     fontWeight: "bold",
-    color: "#333",
+    color: "#6C3BAA",
+    backgroundColor: "#F4F4F8",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 70,
+    textAlign: "center",
   },
   finishButton: {
     color: "#D32F2F",
     fontWeight: "bold",
-    fontSize: 16,
-  },
-  metrics: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 4,
-  },
-  metricText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#555",
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: "#FDECEC",
+    borderRadius: 12,
+    elevation: 1,
   },
 });
