@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { ExerciseRequestDto, RoutineResponseDto } from "../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { findRoutines } from "../services/routineService";
+import { duplicateRoutine, findRoutines } from "../services/routineService";
 import { MaterialIcons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 
@@ -68,14 +68,18 @@ export default function WorkoutScreen() {
         <View style={styles.modalContent}>
           <View style={styles.modalHandle} />
 
-          {/* <Text style={styles.modalTitle}>{selectedRoutine?.title}</Text> */}
-
-          <TouchableOpacity style={styles.modalItem}>
-            <MaterialIcons name="share" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Compartir rutina</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.modalItem}>
+          <TouchableOpacity
+            style={styles.modalItem}
+            onPress={async () => {
+              if (selectedRoutine) {
+                await duplicateRoutine(selectedRoutine.id);
+                closeRoutineOptions();
+                // Opcional: refresca la lista de rutinas
+                const data = await findRoutines();
+                setRoutines(data);
+              }
+            }}
+          >
             <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
             <Text style={styles.modalItemText}>Duplicar rutina</Text>
           </TouchableOpacity>
@@ -109,7 +113,7 @@ export default function WorkoutScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-      ;
+
       <ScrollView contentContainerStyle={[styles.container, { width }]}>
         <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
           <TouchableOpacity

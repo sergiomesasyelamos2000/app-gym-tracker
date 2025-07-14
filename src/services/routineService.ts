@@ -31,3 +31,9 @@ export async function updateRoutineById(
     body: JSON.stringify(routineRequestDto),
   });
 }
+
+export async function duplicateRoutine(id: string): Promise<void> {
+  await apiFetch(`routines/${id}/duplicate`, {
+    method: "POST",
+  });
+}
