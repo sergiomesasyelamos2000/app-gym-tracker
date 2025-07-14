@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ChevronRight } from "lucide-react-native";
 import {
   ScrollView,
   StyleSheet,
@@ -35,6 +34,22 @@ export default function WorkoutScreen() {
     useState<RoutineResponseDto | null>(null);
   const [isActionModalVisible, setActionModalVisible] = useState(false);
 
+  const fetchRoutines = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await findRoutines();
+      setRoutines(data);
+    } catch (err) {
+      console.error("Error fetching routines", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoutines();
+  }, [fetchRoutines]);
+
   const openRoutineOptions = (routine: RoutineResponseDto) => {
     setSelectedRoutine(routine);
     setActionModalVisible(true);
@@ -45,19 +60,26 @@ export default function WorkoutScreen() {
     setActionModalVisible(false);
   };
 
-  useEffect(() => {
-    const fetchRoutines = async () => {
-      try {
-        const data = await findRoutines();
-        setRoutines(data);
-      } catch (err) {
-        console.error("Error fetching routines", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRoutines();
-  }, []);
+  // Centraliza las acciones del modal
+  const handleRoutineAction = async (
+    action: "duplicate" | "delete" | "edit"
+  ) => {
+    if (!selectedRoutine) return;
+    if (action === "duplicate") {
+      await duplicateRoutine(selectedRoutine.id);
+      await fetchRoutines();
+      closeRoutineOptions();
+    }
+    if (action === "delete") {
+      await deleteRoutine(selectedRoutine.id);
+      await fetchRoutines();
+      closeRoutineOptions();
+    }
+    if (action === "edit") {
+      navigation.navigate("RoutineEdit", { id: selectedRoutine.id });
+      closeRoutineOptions();
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -73,15 +95,7 @@ export default function WorkoutScreen() {
 
           <TouchableOpacity
             style={styles.modalItem}
-            onPress={async () => {
-              if (selectedRoutine) {
-                await duplicateRoutine(selectedRoutine.id);
-                closeRoutineOptions();
-                // Opcional: refresca la lista de rutinas
-                const data = await findRoutines();
-                setRoutines(data);
-              }
-            }}
+            onPress={() => handleRoutineAction("duplicate")}
           >
             <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
             <Text style={styles.modalItemText}>Duplicar rutina</Text>
@@ -89,12 +103,7 @@ export default function WorkoutScreen() {
 
           <TouchableOpacity
             style={styles.modalItem}
-            onPress={() => {
-              if (selectedRoutine) {
-                navigation.navigate("RoutineEdit", { id: selectedRoutine.id });
-                closeRoutineOptions();
-              }
-            }}
+            onPress={() => handleRoutineAction("edit")}
           >
             <MaterialIcons name="edit" size={20} color="#4E2A84" />
             <Text style={styles.modalItemText}>Editar rutina</Text>
@@ -102,15 +111,7 @@ export default function WorkoutScreen() {
 
           <TouchableOpacity
             style={styles.modalItem}
-            onPress={async () => {
-              if (selectedRoutine) {
-                await deleteRoutine(selectedRoutine.id);
-
-                closeRoutineOptions();
-                const data = await findRoutines();
-                setRoutines(data);
-              }
-            }}
+            onPress={() => handleRoutineAction("delete")}
           >
             <MaterialIcons name="delete" size={20} color="red" />
             <Text style={[styles.modalItemText, { color: "red" }]}>
@@ -129,13 +130,7 @@ export default function WorkoutScreen() {
                 onFinishSelection: (
                   selectedExercises: ExerciseRequestDto[]
                 ) => {
-                  /* const newRoutine: RoutineDto = {
-                    id: Date.now().toString(),
-                    title: "New Routine",
-                    createdAt: new Date(),
-                    exercises: selectedExercises,
-                  };
-                  navigation.navigate("RoutineDetail", { routine: newRoutine }); */
+                  // lógica para crear nueva rutina
                 },
               });
             }}
@@ -155,7 +150,6 @@ export default function WorkoutScreen() {
         ) : (
           routines.map((routine) => (
             <View key={routine.id} style={styles.routineCard}>
-              {/* Botón de opciones */}
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={() => openRoutineOptions(routine)}
@@ -163,7 +157,6 @@ export default function WorkoutScreen() {
                 <MaterialIcons name="more-vert" size={20} color="#6C3BAA" />
               </TouchableOpacity>
 
-              {/* Contenido de la tarjeta */}
               <TouchableOpacity
                 style={{ flex: 1 }}
                 activeOpacity={0.8}
