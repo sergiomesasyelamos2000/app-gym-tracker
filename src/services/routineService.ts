@@ -37,3 +37,9 @@ export async function duplicateRoutine(id: string): Promise<void> {
     method: "POST",
   });
 }
+
+export async function deleteRoutine(id: string): Promise<void> {
+  await apiFetch(`routines/${id}`, {
+    method: "DELETE",
+  });
+}

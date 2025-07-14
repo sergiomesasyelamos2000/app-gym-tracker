@@ -19,5 +19,16 @@ export async function apiFetch<T = any>(
     throw new Error(`Error ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  // ✅ Si es 204 (sin contenido), no intentes hacer .json()
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  // ✅ También si el body está vacío, evitar parsear
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text);
 }

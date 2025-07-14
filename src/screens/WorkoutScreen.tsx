@@ -12,7 +12,11 @@ import {
 } from "react-native";
 import { ExerciseRequestDto, RoutineResponseDto } from "../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { duplicateRoutine, findRoutines } from "../services/routineService";
+import {
+  deleteRoutine,
+  duplicateRoutine,
+  findRoutines,
+} from "../services/routineService";
 import { MaterialIcons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 
@@ -46,7 +50,6 @@ export default function WorkoutScreen() {
       try {
         const data = await findRoutines();
         setRoutines(data);
-        console.log("listado de rutinas", data);
       } catch (err) {
         console.error("Error fetching routines", err);
       } finally {
@@ -87,8 +90,6 @@ export default function WorkoutScreen() {
           <TouchableOpacity
             style={styles.modalItem}
             onPress={() => {
-              console.log("selectedRoutine", selectedRoutine);
-
               if (selectedRoutine) {
                 navigation.navigate("RoutineEdit", { id: selectedRoutine.id });
                 closeRoutineOptions();
@@ -101,9 +102,14 @@ export default function WorkoutScreen() {
 
           <TouchableOpacity
             style={styles.modalItem}
-            onPress={() => {
-              // lógica de borrado
-              closeRoutineOptions();
+            onPress={async () => {
+              if (selectedRoutine) {
+                await deleteRoutine(selectedRoutine.id);
+
+                closeRoutineOptions();
+                const data = await findRoutines();
+                setRoutines(data);
+              }
             }}
           >
             <MaterialIcons name="delete" size={20} color="red" />
