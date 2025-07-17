@@ -50,7 +50,7 @@ export default function ExerciseListScreen() {
   }, []);
 
   const filteredExercises = exercises.filter((exercise) =>
-    exercise.title.toLowerCase().includes(searchQuery.toLowerCase())
+    exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
@@ -101,16 +101,16 @@ export default function ExerciseListScreen() {
                 >
                   <Image
                     source={
-                      item.photoUrl
-                        ? { uri: item.photoUrl }
+                      item.imageUrl
+                        ? { uri: `data:image/png;base64,${item.imageUrl}` }
                         : require("../../assets/not-image.png")
                     }
                     style={styles.exerciseImage}
                   />
                   <View style={styles.exerciseInfo}>
-                    <Text style={styles.exerciseTitle}>{item.title}</Text>
+                    <Text style={styles.exerciseTitle}>{item.name}</Text>
                     <Text style={styles.exerciseMuscleGroup}>
-                      Grupo muscular: {item.muscularGroup}
+                      Grupo muscular: {item.bodyParts.join(", ")}
                     </Text>
                   </View>
                   <TouchableOpacity

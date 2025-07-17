@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import {
   GestureHandlerRootView,
@@ -213,7 +214,29 @@ const ExerciseCard = ({
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{exercise.title}</Text>
+        <Image
+          source={
+            exercise.imageUrl
+              ? { uri: `data:image/png;base64,${exercise.imageUrl}` }
+              : require("../../assets/not-image.png")
+          }
+          style={styles.exerciseImage}
+        />
+        {/* <Image
+          source={
+            exercise.giftUrl
+              ? { uri: exercise.giftUrl }
+              : require("../../assets/not-image.png")
+          }
+          style={styles.exerciseImage}
+        /> */}
+        <Text
+          style={styles.title}
+          numberOfLines={3} // Permite hasta 3 líneas
+          ellipsizeMode="tail"
+        >
+          {exercise.name}
+        </Text>
         <TouchableOpacity>
           <Icon name="more-vert" size={24} color="#000" />
         </TouchableOpacity>
@@ -371,6 +394,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "600",
     color: "#1A1A1A",
+    flexShrink: 1,
+  },
+  exerciseImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
   },
   noteInput: {
     borderWidth: 0,
