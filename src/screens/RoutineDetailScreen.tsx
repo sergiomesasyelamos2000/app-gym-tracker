@@ -15,10 +15,10 @@ import {
   View,
 } from "react-native";
 import uuid from "react-native-uuid";
-import ExerciseCard, { SetData } from "../components/ExerciseCard";
-import { ExerciseRequestDto } from "../models";
+import { ExerciseRequestDto, SetRequestDto } from "../models";
 import { getRoutineById, saveRoutine } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -33,7 +33,9 @@ export default function RoutineDetailScreen() {
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
-  const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>({});
+  const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
+    {}
+  );
 
   useEffect(() => {
     if (route.params?.start) setStarted(true);
@@ -70,7 +72,7 @@ export default function RoutineDetailScreen() {
     setExercises(mappedExercises);
     setRoutineTitle(routineData?.title || "");
 
-    const initialSets: { [exerciseId: string]: SetData[] } = {};
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
     mappedExercises.forEach((exercise) => {
       initialSets[exercise.id] =
         exercise.sets && exercise.sets.length > 0
@@ -130,7 +132,7 @@ export default function RoutineDetailScreen() {
     setStarted(false);
     setDuration(0);
     setSets((prevSets) => {
-      const resetSets: { [exerciseId: string]: SetData[] } = {};
+      const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
       Object.keys(prevSets).forEach((exerciseId) => {
         resetSets[exerciseId] = prevSets[exerciseId].map((set) => ({
           ...set,

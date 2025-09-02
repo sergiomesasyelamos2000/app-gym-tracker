@@ -1,23 +1,46 @@
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
-type ReusableCameraViewProps = {
-  onPhotoTaken?: (photo: { uri: string }) => void; // Callback para manejar la foto tomada
-  onBarCodeScanned?: (data: string) => void; // Callback para manejar el código escaneado
-  onCloseCamera?: () => void; // Callback para cerrar la cámara
+type Photo = { uri: string };
+
+type Props = {
+  onPhotoTaken?: (photo: Photo) => void;
+  onBarCodeScanned?: (data: string) => void;
+  onCloseCamera?: () => void;
 };
 
 export default function ReusableCameraView({
   onPhotoTaken,
   onBarCodeScanned,
   onCloseCamera,
-}: ReusableCameraViewProps) {
+}: Props) {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [scanned, setScanned] = useState(false);
+
+  // Cambiar cámara (frontal/trasera)
+  const toggleCameraFacing = useCallback(() => {
+    setFacing((prev) => (prev === "back" ? "front" : "back"));
+  }, []);
+
+  // Tomar foto
+  const takePhoto = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync();
+      onPhotoTaken?.(photo);
+    }
+  };
+
+  // Escanear código de barras
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    if (!scanned) {
+      setScanned(true);
+      onBarCodeScanned?.(data);
+    }
+  };
 
   if (!permission) {
     return <View />;
@@ -37,29 +60,6 @@ export default function ReusableCameraView({
     );
   }
 
-  function toggleCameraFacing() {
-    const newFacing = facing === "back" ? "front" : "back";
-    setFacing(newFacing);
-  }
-
-  const takePhoto = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
-      if (onPhotoTaken) {
-        onPhotoTaken(photo);
-      }
-    }
-  };
-
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (!scanned) {
-      setScanned(true);
-      if (onBarCodeScanned) {
-        onBarCodeScanned(data);
-      }
-    }
-  };
-
   return (
     <View style={styles.container}>
       <CameraView
@@ -68,14 +68,19 @@ export default function ReusableCameraView({
         ref={cameraRef}
         onBarcodeScanned={handleBarCodeScanned}
       >
+        {/* Botón cerrar */}
         <TouchableOpacity style={styles.closeButton} onPress={onCloseCamera}>
           <Icon name="close" size={30} color="white" />
         </TouchableOpacity>
 
+        {/* Controles inferiores */}
         <View style={styles.buttonContainer}>
+          {/* Botón captura */}
           <TouchableOpacity style={styles.circularButton} onPress={takePhoto}>
             <View style={styles.innerCircle} />
           </TouchableOpacity>
+
+          {/* Botón flip cámara */}
           <TouchableOpacity
             style={styles.flipButton}
             onPress={toggleCameraFacing}

@@ -1,35 +1,54 @@
+import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 
-interface Message {
+export type Message = {
   id: number;
   text: string;
   sender: "user" | "bot";
   imageUri?: string;
-}
+};
 
-export const MessageBubble: React.FC<{
+type Props = {
   message: Message;
-  onImagePress: (uri: string) => void;
-}> = ({ message, onImagePress }) => (
-  <View
-    style={[
-      styles.messageBubble,
-      message.sender === "user" ? styles.userBubble : styles.botBubble,
-    ]}
-  >
-    {message.imageUri ? (
-      <TouchableOpacity onPress={() => onImagePress(message.imageUri!)}>
-        <Text style={styles.messageText}>{message.text}</Text>
-        <Image source={{ uri: message.imageUri }} style={styles.imagePreview} />
-      </TouchableOpacity>
-    ) : message.sender === "bot" ? (
-      <Markdown>{message.text}</Markdown>
-    ) : (
-      <Text style={styles.messageText}>{message.text}</Text>
-    )}
-  </View>
-);
+  onImagePress?: (uri: string) => void;
+};
+
+export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
+  const isUser = message.sender === "user";
+  const isBot = message.sender === "bot";
+
+  const renderContent = () => {
+    if (message.imageUri) {
+      return (
+        <TouchableOpacity onPress={() => onImagePress?.(message.imageUri!)}>
+          <Text style={styles.messageText}>{message.text}</Text>
+          <Image
+            source={{ uri: message.imageUri }}
+            style={styles.imagePreview}
+          />
+        </TouchableOpacity>
+      );
+    }
+
+    if (isBot) {
+      return <Markdown>{message.text}</Markdown>;
+    }
+
+    return <Text style={styles.messageText}>{message.text}</Text>;
+  };
+
+  return (
+    <View
+      style={[
+        styles.messageBubble,
+        isUser ? styles.userBubble : styles.botBubble,
+      ]}
+    >
+      {renderContent()}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   messageBubble: {

@@ -8,7 +8,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -16,17 +15,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseRequestDto } from "../models/index.js";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 import { fetchExercises } from "../services/exerciseService";
+import ExerciseItem from "../components/ExerciseItem";
+import { ExerciseRequestDto } from "../models";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
-export default function ExerciseListScreen() {
+export default function ExerciseList() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const { onFinishSelection } = route.params || {};
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseRequestDto[]
@@ -45,7 +45,6 @@ export default function ExerciseListScreen() {
         setLoading(false);
       }
     };
-
     loadExercises();
   }, []);
 
@@ -54,13 +53,11 @@ export default function ExerciseListScreen() {
   );
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
-    if (selectedExercises.some((item) => item.id === exercise.id)) {
-      setSelectedExercises((prev) =>
-        prev.filter((item) => item.id !== exercise.id)
-      );
-    } else {
-      setSelectedExercises((prev) => [...prev, exercise]);
-    }
+    setSelectedExercises((prev) =>
+      prev.some((item) => item.id === exercise.id)
+        ? prev.filter((item) => item.id !== exercise.id)
+        : [...prev, exercise]
+    );
   };
 
   return (
@@ -86,42 +83,16 @@ export default function ExerciseListScreen() {
           <FlatList
             data={filteredExercises}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-              const isSelected = selectedExercises.some(
-                (exercise) => exercise.id === item.id
-              );
-
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.exerciseItem,
-                    isSelected && styles.selectedItem,
-                  ]}
-                  onPress={() => handleSelectExercise(item)}
-                >
-                  <Image
-                    source={
-                      item.imageUrl
-                        ? { uri: `data:image/png;base64,${item.imageUrl}` }
-                        : require("../../assets/not-image.png")
-                    }
-                    style={styles.exerciseImage}
-                  />
-                  <View style={styles.exerciseInfo}>
-                    <Text style={styles.exerciseTitle}>{item.name}</Text>
-                    <Text style={styles.exerciseMuscleGroup}>
-                      Grupo muscular: {item.bodyParts.join(", ")}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.redirectButton}
-                    onPress={() => console.log("Redirigir a otra pantalla")}
-                  >
-                    <Icon name="arrow-forward" size={24} color="#6C3BAA" />
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              );
-            }}
+            renderItem={({ item }) => (
+              <ExerciseItem
+                item={item}
+                isSelected={selectedExercises.some((ex) => ex.id === item.id)}
+                onSelect={handleSelectExercise}
+                onRedirect={() =>
+                  console.log("Redirigir a otra pantalla con:", item.name)
+                }
+              />
+            )}
           />
 
           {/* Confirm Button */}
@@ -130,7 +101,7 @@ export default function ExerciseListScreen() {
               style={styles.confirmButton}
               onPress={() => {
                 console.log("Ejercicios seleccionados:", selectedExercises);
-
+                onFinishSelection?.(selectedExercises);
                 navigation.navigate("RoutineDetail", {
                   exercises: selectedExercises,
                 });
@@ -178,42 +149,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     elevation: 2,
     fontSize: 16,
-  },
-  exerciseItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  selectedItem: {
-    backgroundColor: "#f3e8ff",
-    borderColor: "#6C3BAA",
-    borderWidth: 2,
-  },
-  exerciseImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  exerciseMuscleGroup: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 4,
-  },
-  redirectButton: {
-    padding: 8,
   },
   confirmButton: {
     backgroundColor: "#6C3BAA",

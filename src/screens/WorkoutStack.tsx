@@ -3,8 +3,8 @@ import React from "react";
 import ExerciseListScreen from "../components/ExerciseList";
 import { ExerciseRequestDto, RoutineRequestDto } from "../models";
 import WorkoutScreen from "../screens/WorkoutScreen";
-import RoutineDetailScreen from "./RoutineDetailScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
+import RoutineDetailScreen from "./RoutineScreen/RoutineDetailScreen";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;

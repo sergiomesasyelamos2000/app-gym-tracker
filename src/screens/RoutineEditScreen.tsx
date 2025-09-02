@@ -11,10 +11,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ExerciseCard, { SetData } from "../components/ExerciseCard";
-import { ExerciseRequestDto } from "../models";
+import { ExerciseRequestDto, SetRequestDto } from "../models";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { getRoutineById, updateRoutineById } from "../services/routineService";
+import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 
 export default function RoutineEditScreen() {
   const route = useRoute();
@@ -26,13 +26,15 @@ export default function RoutineEditScreen() {
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>(
     exercises || []
   );
-  const [sets, setSets] = useState<{ [exerciseId: string]: SetData[] }>(() => {
-    const initial: { [exerciseId: string]: SetData[] } = {};
-    (exercises || []).forEach((exercise) => {
-      initial[exercise.id] = exercise.sets || [];
-    });
-    return initial;
-  });
+  const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
+    () => {
+      const initial: { [exerciseId: string]: SetRequestDto[] } = {};
+      (exercises || []).forEach((exercise) => {
+        initial[exercise.id] = exercise.sets || [];
+      });
+      return initial;
+    }
+  );
   useEffect(() => {
     const fetchRoutine = async () => {
       if (id) {
@@ -55,7 +57,7 @@ export default function RoutineEditScreen() {
         setExercises(exercises);
 
         // Inicializa los sets para cada ejercicio
-        const initialSets: { [exerciseId: string]: SetData[] } = {};
+        const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
         exercises.forEach((exercise) => {
           initialSets[exercise.id] = Array.isArray(exercise.sets)
             ? exercise.sets
@@ -70,7 +72,7 @@ export default function RoutineEditScreen() {
   useEffect(() => {
     setEditTitle(title);
     setExercises(exercises || []);
-    const initial: { [exerciseId: string]: SetData[] } = {};
+    const initial: { [exerciseId: string]: SetRequestDto[] } = {};
     (exercises || []).forEach((exercise) => {
       initial[exercise.id] = exercise.sets || [];
     });
