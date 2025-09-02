@@ -1,10 +1,10 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import ExerciseListScreen from "../components/ExerciseList";
-import { ExerciseRequestDto, RoutineRequestDto } from "../models";
+import { ExerciseRequestDto, RoutineRequestDto } from "../../../models";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
-import RoutineDetailScreen from "./RoutineScreen/RoutineDetailScreen";
+import RoutineDetailScreen from "./RoutineDetailScreen";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;

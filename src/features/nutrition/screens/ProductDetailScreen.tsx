@@ -108,7 +108,7 @@ export default function ProductDetailScreen({
           source={
             producto?.image
               ? { uri: producto.image }
-              : require("../../../assets/not-image.png")
+              : require("./../../../../assets/not-image.png")
           }
           style={styles.productImage}
         />

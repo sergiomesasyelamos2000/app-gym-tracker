@@ -1,5 +1,5 @@
 import uuid from "react-native-uuid";
-import { SetRequestDto } from "../../models";
+import { SetRequestDto } from "../../../models";
 
 export const initializeSets = (exerciseSets?: SetRequestDto[]) => {
   if (exerciseSets && exerciseSets.length > 0) {

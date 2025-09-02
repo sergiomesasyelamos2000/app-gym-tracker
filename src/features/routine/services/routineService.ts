@@ -1,5 +1,5 @@
-import { RoutineRequestDto } from "../models/index.js";
-import { apiFetch } from "./api";
+import { RoutineRequestDto } from "../../../models/index.js";
+import { apiFetch } from "../../../api/index";
 
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto

@@ -7,16 +7,19 @@ import {
   View,
   ActivityIndicator,
 } from "react-native";
-import { ChatInput } from "../components/ChatInput";
-import ImageModal from "../components/ImageModal";
-import { MessageBubble } from "../components/MessageBubble";
-import ReusableCameraView from "../components/ReusableCameraView";
+import ImageModal from "../features/common/components/ImageModal";
+import { MessageBubble } from "../features/chat/components/MessageBubble";
+import ReusableCameraView from "../features/common/components/ReusableCameraView";
 import {
   addMessage,
   sendMessageThunk,
   sendPhotoThunk,
 } from "../store/chatSlice";
-import { useAppDispatch, useAppSelector } from "../hooks/useStore";
+import {
+  useAppDispatch,
+  useAppSelector,
+} from "../features/common/hooks/useStore";
+import { ChatInput } from "../features/chat/components/ChatInput";
 
 export default function NutritionScreen() {
   const [chatInput, setChatInput] = useState("");

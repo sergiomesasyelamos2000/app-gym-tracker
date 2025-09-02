@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { formatTime } from "./routineHelpers";
+import { formatTime } from "../utils/routineHelpers";
 
 type Props = {
   duration: number;

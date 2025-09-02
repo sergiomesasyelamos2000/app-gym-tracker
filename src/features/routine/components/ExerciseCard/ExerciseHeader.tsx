@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseRequestDto } from "../../models";
+import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -13,7 +13,7 @@ const ExerciseHeader = ({ exercise }: Props) => (
       source={
         exercise.imageUrl
           ? { uri: `data:image/png;base64,${exercise.imageUrl}` }
-          : require("../../../assets/not-image.png")
+          : require("./../../../../../assets/not-image.png")
       }
       style={styles.exerciseImage}
     />

@@ -10,8 +10,8 @@ import {
   SafeAreaView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import ReusableCameraView from "../../components/ReusableCameraView";
-import { scanBarcode, getProducts } from "../../services/nutritionService"; // Asegúrate de importar getProducts
+import { getProducts, scanBarcode } from "../services/nutritionService";
+import ReusableCameraView from "../../common/components/ReusableCameraView";
 
 interface Producto {
   code: string;
@@ -104,7 +104,7 @@ const ProductListScreen = ({ navigation }: { navigation: any }) => {
         source={
           item.image
             ? { uri: item.image }
-            : require("../../../assets/not-image.png")
+            : require("./../../../../assets/not-image.png")
         }
         style={styles.image}
       />

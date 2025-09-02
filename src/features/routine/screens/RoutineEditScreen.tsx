@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ExerciseRequestDto, SetRequestDto } from "../models";
+import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { getRoutineById, updateRoutineById } from "../services/routineService";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";

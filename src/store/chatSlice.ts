@@ -1,5 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { postPhoto, postText } from "../services/nutritionService";
+import {
+  postPhoto,
+  postText,
+} from "../features/nutrition/services/nutritionService";
 
 export interface Message {
   id: number;

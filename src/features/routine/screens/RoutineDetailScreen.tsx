@@ -13,13 +13,13 @@ import {
   RouteProp,
   useRoute,
 } from "@react-navigation/native";
-import { WorkoutStackParamList } from "../WorkoutStack";
-import { ExerciseRequestDto, SetRequestDto } from "../../models";
-import { getRoutineById, saveRoutine } from "../../services/routineService";
-import { calculateVolume, initializeSets } from "./routineHelpers";
-import ExerciseCard from "../../components/ExerciseCard/ExerciseCard";
-import { RoutineMetrics } from "./RoutineMetrics";
-import { RoutineHeader } from "./RoutineHeader";
+import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import { getRoutineById, saveRoutine } from "../services/routineService";
+import { calculateVolume, initializeSets } from "../utils/routineHelpers";
+import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
+import { RoutineMetrics } from "../components/RoutineMetrics";
+import { RoutineHeader } from "../components/RoutineHeader";
+import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -101,7 +101,7 @@ export default function RoutineDetailScreen() {
     setSets((prev) => {
       const reset: { [id: string]: SetRequestDto[] } = {};
       Object.keys(prev).forEach((id) => {
-        reset[id] = prev[id].map((s) => ({ ...s, completed: false }));
+        reset[id] = prev[id]?.map((s) => ({ ...s, completed: false })) || [];
       });
       return reset;
     });

@@ -9,15 +9,19 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { ExerciseRequestDto, RoutineResponseDto } from "../models/index.js";
+import {
+  ExerciseRequestDto,
+  RoutineResponseDto,
+} from "../../../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
+
+import { MaterialIcons } from "@expo/vector-icons";
+import Modal from "react-native-modal";
 import {
   deleteRoutine,
   duplicateRoutine,
   findRoutines,
 } from "../services/routineService";
-import { MaterialIcons } from "@expo/vector-icons";
-import Modal from "react-native-modal";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
