@@ -57,12 +57,31 @@ export default function RoutineDetailScreen() {
     fetchRoutine();
   }, [routine?.id]);
 
+  // 🔹 Si vienen ejercicios por params → prioridad absoluta
   useEffect(() => {
+    if (exercises && exercises.length > 0) {
+      console.log("Ejercicios desde ExerciseList:", exercises);
+      setExercises(exercises);
+
+      const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
+      exercises.forEach((exercise) => {
+        initialSets[exercise.id] = initializeSets(exercise.sets);
+      });
+      setSets(initialSets);
+
+      // Si es nueva rutina (sin title), ponemos uno por defecto
+      setRoutineTitle(routine?.title || "Nueva rutina");
+    }
+  }, [exercises]);
+
+  // 🔹 Si NO hay ejercicios seleccionados y sí hay routineData → cargar desde la rutina guardada
+  useEffect(() => {
+    if (exercises && exercises.length > 0) return; // 🚫 no pisar lo anterior
     if (!routineData) return;
+
     console.log("Routine data loaded:", routineData);
 
     const mappedExercises: ExerciseRequestDto[] =
-      exercises ||
       routineData.routineExercises?.map((re: any) => ({
         ...re.exercise,
         sets: re.sets || [],

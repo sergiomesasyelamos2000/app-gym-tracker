@@ -8,7 +8,7 @@ import ExerciseNotes from "./ExerciseNotes";
 import ExerciseRestTimer from "./ExerciseRestTimer";
 import ExerciseSetList from "./ExerciseSetList";
 import { parseTime } from "./helpers";
-import { ExerciseRequestDto, SetRequestDto } from "../../models";
+import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 
 interface Props {
   exercise: ExerciseRequestDto;

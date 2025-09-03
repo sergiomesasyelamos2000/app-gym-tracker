@@ -15,10 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { WorkoutStackParamList } from "../../../screens/WorkoutStack";
 import { fetchExercises } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { ExerciseRequestDto } from "../../../models";
+import { WorkoutStackParamList } from "../screens/WorkoutStack";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 

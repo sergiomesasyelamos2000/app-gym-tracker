@@ -6,7 +6,7 @@ import {
 } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ExerciseSetRow from "./ExerciseSetRow";
-import { SetRequestDto } from "../../models";
+import { SetRequestDto } from "../../../../models";
 
 interface Props {
   sets: SetRequestDto[];
