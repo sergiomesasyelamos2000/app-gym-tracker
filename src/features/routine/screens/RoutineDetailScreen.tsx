@@ -87,8 +87,14 @@ export default function RoutineDetailScreen() {
         sets: re.sets || [],
         notes: re.notes,
         restSeconds: re.restSeconds,
+        weightUnit: re.weightUnit || "kg",
+        repsType: re.repsType || "reps",
       })) ||
-      routineData.exercises ||
+      routineData.exercises?.map((ex: any) => ({
+        ...ex,
+        weightUnit: ex.weightUnit || "kg",
+        repsType: ex.repsType || "reps",
+      })) ||
       [];
 
     setExercises(mappedExercises);
@@ -140,6 +146,8 @@ export default function RoutineDetailScreen() {
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
           sets: sets[exercise.id] || [],
+          weightUnit: exercise.weightUnit || "kg",
+          repsType: exercise.repsType || "reps",
         })),
       };
       await saveRoutine(routineToSave);

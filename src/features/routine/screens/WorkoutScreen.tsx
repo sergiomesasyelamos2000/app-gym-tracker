@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ScrollView,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  RefreshControl,
 } from "react-native";
 import {
   ExerciseRequestDto,
@@ -37,9 +38,10 @@ export default function WorkoutScreen() {
   const [selectedRoutine, setSelectedRoutine] =
     useState<RoutineResponseDto | null>(null);
   const [isActionModalVisible, setActionModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Función para cargar rutinas
   const fetchRoutines = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await findRoutines();
       setRoutines(data);
@@ -47,10 +49,20 @@ export default function WorkoutScreen() {
       console.error("Error fetching routines", err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
+  // Cargar rutinas cuando se enfoca la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      fetchRoutines();
+    }, [fetchRoutines])
+  );
+
+  // Función para el pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchRoutines();
   }, [fetchRoutines]);
 
@@ -112,8 +124,18 @@ export default function WorkoutScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Listado de rutinas */}
-      <ScrollView contentContainerStyle={styles.listContainer}>
+      {/* Listado de rutinas con RefreshControl */}
+      <ScrollView
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#6C3BAA"]}
+            tintColor="#6C3BAA"
+          />
+        }
+      >
         {loading ? (
           <Text style={{ textAlign: "center", marginTop: 40 }}>
             Cargando rutinas...

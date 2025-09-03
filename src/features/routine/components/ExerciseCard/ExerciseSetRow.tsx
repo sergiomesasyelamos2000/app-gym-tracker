@@ -1,10 +1,10 @@
 import React from "react";
 import {
-  View,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
+  View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SetRequestDto } from "../../../../models";

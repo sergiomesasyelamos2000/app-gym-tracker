@@ -13,8 +13,8 @@ import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 interface Props {
   exercise: ExerciseRequestDto;
   initialSets: SetRequestDto[];
-  onChangeSets?: (updatedSets: SetRequestDto[]) => void;
-  onChangeExercise?: (updatedExercise: ExerciseRequestDto) => void;
+  onChangeSets: (sets: SetRequestDto[]) => void;
+  onChangeExercise: (exercise: ExerciseRequestDto) => void;
 }
 
 const ExerciseCard = ({
@@ -71,12 +71,34 @@ const ExerciseCard = ({
     );
   };
 
+  const handleWeightUnitChange = (unit: "kg" | "lbs") => {
+    onChangeExercise({
+      ...exercise,
+      weightUnit: unit,
+    });
+  };
+
+  const handleRepsTypeChange = (type: "reps" | "range") => {
+    onChangeExercise({
+      ...exercise,
+      repsType: type,
+    });
+  };
+
   return (
     <Card style={styles.card}>
       <ExerciseHeader exercise={exercise} />
       <ExerciseNotes value={note} onChange={setNote} />
       <ExerciseRestTimer restTime={restTime} setRestTime={setRestTime} />
-      <ExerciseSetList sets={sets} onUpdate={updateSet} onDelete={deleteSet} />
+      <ExerciseSetList
+        sets={sets}
+        onUpdate={updateSet}
+        onDelete={deleteSet}
+        weightUnit={exercise.weightUnit || "kg"}
+        repsType={exercise.repsType || "reps"}
+        onWeightUnitChange={handleWeightUnitChange}
+        onRepsTypeChange={handleRepsTypeChange}
+      />
       <Button mode="contained" onPress={addSet} style={styles.addButton}>
         + Añadir Serie
       </Button>
