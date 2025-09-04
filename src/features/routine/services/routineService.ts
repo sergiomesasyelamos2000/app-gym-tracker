@@ -1,10 +1,13 @@
-import { RoutineRequestDto } from "../../../models/index.js";
+import {
+  RoutineRequestDto,
+  RoutineResponseDto,
+} from "../../../models/index.js";
 import { apiFetch } from "../../../api/index";
 
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto
-): Promise<void> {
-  await apiFetch("routines", {
+): Promise<RoutineResponseDto> {
+  return await apiFetch<RoutineResponseDto>("routines", {
     method: "POST",
     body: JSON.stringify(routineRequestDto),
   });

@@ -40,11 +40,26 @@ export default function WorkoutScreen() {
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Función para cargar rutinas
+  // Función para cargar y ordenar rutinas
   const fetchRoutines = useCallback(async () => {
     try {
       const data = await findRoutines();
-      setRoutines(data);
+
+      // Ordenar rutinas por fecha de creación (más recientes primero)
+      const sortedRoutines = data.sort((a, b) => {
+        // Convertir las fechas a timestamps para comparar
+        const dateA = new Date(
+          a.createdAt || a.creationDate || Date.now()
+        ).getTime();
+        const dateB = new Date(
+          b.createdAt || b.creationDate || Date.now()
+        ).getTime();
+
+        // Orden descendente (más recientes primero)
+        return dateB - dateA;
+      });
+
+      setRoutines(sortedRoutines);
     } catch (err) {
       console.error("Error fetching routines", err);
     } finally {
@@ -83,12 +98,12 @@ export default function WorkoutScreen() {
     if (!selectedRoutine) return;
     if (action === "duplicate") {
       await duplicateRoutine(selectedRoutine.id);
-      await fetchRoutines();
+      await fetchRoutines(); // Se recargarán y ordenarán automáticamente
       closeRoutineOptions();
     }
     if (action === "delete") {
       await deleteRoutine(selectedRoutine.id);
-      await fetchRoutines();
+      await fetchRoutines(); // Se recargarán y ordenarán automáticamente
       closeRoutineOptions();
     }
     if (action === "edit") {
@@ -162,6 +177,12 @@ export default function WorkoutScreen() {
                 }
               >
                 <Text style={styles.routineName}>{routine.title}</Text>
+                {/* Opcional: Mostrar fecha de creación */}
+                {routine.createdAt && (
+                  <Text style={styles.routineDate}>
+                    Creada: {new Date(routine.createdAt).toLocaleDateString()}
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -275,7 +296,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#222",
-    marginBottom: 10,
+    marginBottom: 6,
+  },
+  routineDate: {
+    fontSize: 12,
+    color: "#888",
+    fontStyle: "italic",
   },
   startRoutineButton: {
     flexDirection: "row",
@@ -285,7 +311,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     alignSelf: "flex-start",
-    marginTop: 4,
+    marginTop: 8,
   },
   startRoutineButtonText: {
     color: "#fff",

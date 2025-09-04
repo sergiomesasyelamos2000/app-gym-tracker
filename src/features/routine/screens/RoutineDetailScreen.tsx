@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useMemo } from "react";
+import {
+  NavigationProp,
+  RouteProp,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   SafeAreaView,
-  TouchableOpacity,
-  Text,
   StyleSheet,
+  Text,
+  TouchableOpacity,
 } from "react-native";
 import uuid from "react-native-uuid";
-import {
-  NavigationProp,
-  useNavigation,
-  RouteProp,
-  useRoute,
-} from "@react-navigation/native";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
+import { RoutineHeader } from "../components/RoutineHeader";
+import { RoutineMetrics } from "../components/RoutineMetrics";
 import { getRoutineById, saveRoutine } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
-import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
-import { RoutineMetrics } from "../components/RoutineMetrics";
-import { RoutineHeader } from "../components/RoutineHeader";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
@@ -150,8 +150,17 @@ export default function RoutineDetailScreen() {
           repsType: exercise.repsType || "reps",
         })),
       };
-      await saveRoutine(routineToSave);
+      const savedRoutine = await saveRoutine(routineToSave);
+
       alert("Rutina guardada exitosamente");
+
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: "WorkoutList" },
+          { name: "RoutineDetail", params: { routine: savedRoutine } },
+        ],
+      });
     } catch {
       alert("Error al guardar la rutina");
     }

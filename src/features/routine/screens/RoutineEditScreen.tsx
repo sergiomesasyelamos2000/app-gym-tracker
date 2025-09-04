@@ -95,13 +95,24 @@ export default function RoutineEditScreen() {
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
           sets: sets[exercise.id] || [],
+          weightUnit: exercise.weightUnit || "kg",
+          repsType: exercise.repsType || "reps",
         })),
       };
 
-      await updateRoutineById(routineToUpdate.id, routineToUpdate);
+      const updatedRoutine = await updateRoutineById(
+        routineToUpdate.id,
+        routineToUpdate
+      );
 
       alert("Rutina actualizada exitosamente");
-      navigation.goBack();
+      navigation.reset({
+        index: 1, // La pantalla activa será RoutineDetail
+        routes: [
+          { name: "WorkoutList" }, // Siempre en la base
+          { name: "RoutineDetail", params: { routine: updatedRoutine } }, // Arriba
+        ],
+      });
     } catch (error) {
       console.error("Error al actualizar la rutina:", error);
       alert("Error al actualizar la rutina");
