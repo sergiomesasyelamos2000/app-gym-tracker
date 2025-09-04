@@ -26,7 +26,7 @@ export const BottomTabs = () => {
               return <BarChart3 color={color} size={size} />;
           }
         },
-        tabBarActiveTintColor: "#3B82F6",
+        tabBarActiveTintColor: "#6C3BAA",
         tabBarInactiveTintColor: "gray",
         headerShown: false,
       })}
