@@ -4,14 +4,16 @@ import { TextInput, StyleSheet } from "react-native";
 interface Props {
   value: string;
   onChange: (text: string) => void;
+  readonly?: boolean;
 }
 
-const ExerciseNotes = ({ value, onChange }: Props) => (
+const ExerciseNotes = ({ value, onChange, readonly = false }: Props) => (
   <TextInput
     style={styles.noteInput}
     placeholder="Añadir nota..."
     value={value}
     onChangeText={onChange}
+    editable={!readonly}
   />
 );
 

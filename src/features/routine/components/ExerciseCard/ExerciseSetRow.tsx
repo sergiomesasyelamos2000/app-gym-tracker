@@ -16,10 +16,16 @@ interface Props {
     field: keyof SetRequestDto,
     value: number | boolean
   ) => void;
-  repsType: "reps" | "range"; // 👈 agregar
+  repsType: "reps" | "range";
+  readonly?: boolean;
 }
 
-const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
+const ExerciseSetRow = ({
+  item,
+  onUpdate,
+  repsType,
+  readonly = false,
+}: Props) => {
   const handleMinRepsChange = (text: string) => {
     const repsMin = Number(text);
     onUpdate(item.id, "repsMin", isNaN(repsMin) ? 0 : repsMin);
@@ -55,6 +61,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
           const weight = Number(text);
           onUpdate(item.id, "weight", isNaN(weight) ? 0 : weight);
         }}
+        editable={!readonly}
       />
 
       {/* Repeticiones */}
@@ -67,6 +74,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
             placeholder="8"
             placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
             onChangeText={handleMinRepsChange}
+            editable={!readonly}
           />
           <Text style={styles.rangeSeparator}>-</Text>
           <TextInput
@@ -76,6 +84,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
             placeholder="10"
             placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
             onChangeText={handleMaxRepsChange}
+            editable={!readonly}
           />
         </View>
       ) : (
@@ -86,6 +95,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
           placeholder="Reps"
           placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
           onChangeText={handleSingleRepsChange}
+          editable={!readonly}
         />
       )}
 
@@ -93,6 +103,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
       <TouchableOpacity
         style={{ flex: 1 }}
         onPress={() => onUpdate(item.id, "completed", !item.completed)}
+        disabled={readonly}
       >
         <Icon
           name={item.completed ? "check-circle" : "radio-button-unchecked"}

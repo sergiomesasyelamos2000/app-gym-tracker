@@ -15,6 +15,7 @@ interface Props {
   initialSets: SetRequestDto[];
   onChangeSets: (sets: SetRequestDto[]) => void;
   onChangeExercise: (exercise: ExerciseRequestDto) => void;
+  readonly?: boolean;
 }
 
 const ExerciseCard = ({
@@ -22,6 +23,7 @@ const ExerciseCard = ({
   initialSets,
   onChangeSets,
   onChangeExercise,
+  readonly = false,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -98,8 +100,12 @@ const ExerciseCard = ({
   return (
     <Card style={styles.card}>
       <ExerciseHeader exercise={exercise} />
-      <ExerciseNotes value={note} onChange={setNote} />
-      <ExerciseRestTimer restTime={restTime} setRestTime={setRestTime} />
+      <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
+      <ExerciseRestTimer
+        restTime={restTime}
+        setRestTime={setRestTime}
+        readonly={readonly}
+      />
       <ExerciseSetList
         sets={sets}
         onUpdate={updateSet}
@@ -108,10 +114,13 @@ const ExerciseCard = ({
         repsType={exercise.repsType || "reps"}
         onWeightUnitChange={handleWeightUnitChange}
         onRepsTypeChange={handleRepsTypeChange}
+        readonly={readonly} // ✅ pasamos a ExerciseSetList
       />
-      <Button mode="contained" onPress={addSet} style={styles.addButton}>
-        + Añadir Serie
-      </Button>
+      {!readonly && (
+        <Button mode="contained" onPress={addSet} style={styles.addButton}>
+          + Añadir Serie
+        </Button>
+      )}
     </Card>
   );
 };

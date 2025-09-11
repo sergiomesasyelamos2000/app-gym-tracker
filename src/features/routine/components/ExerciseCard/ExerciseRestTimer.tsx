@@ -13,9 +13,14 @@ import { formatTime } from "./helpers";
 interface Props {
   restTime: string;
   setRestTime: (time: string) => void;
+  readonly?: boolean;
 }
 
-const ExerciseRestTimer = ({ restTime, setRestTime }: Props) => {
+const ExerciseRestTimer = ({
+  restTime,
+  setRestTime,
+  readonly = false,
+}: Props) => {
   const [showPicker, setShowPicker] = useState(false);
   const { width } = useWindowDimensions();
 
@@ -40,6 +45,7 @@ const ExerciseRestTimer = ({ restTime, setRestTime }: Props) => {
         style={[styles.timerContainer, { padding: dynamicStyles.padding }]}
         onPress={() => setShowPicker(true)}
         activeOpacity={0.8}
+        disabled={readonly}
       >
         <Icon name="timer" size={dynamicStyles.iconSize} color="#000" />
         <Text style={[styles.timerText, { fontSize: dynamicStyles.fontSize }]}>

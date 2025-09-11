@@ -32,6 +32,7 @@ export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const { routine, exercises } = route.params;
+  const [readonly, setReadonly] = useState(true);
 
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
@@ -83,8 +84,6 @@ export default function RoutineDetailScreen() {
   useEffect(() => {
     if (exercises && exercises.length > 0) return; // 🚫 no pisar lo anterior
     if (!routineData) return;
-
-    console.log("Routine data loaded:", routineData);
 
     const mappedExercises: ExerciseRequestDto[] =
       routineData.routineExercises?.map((re: any) => ({
@@ -232,6 +231,7 @@ export default function RoutineDetailScreen() {
           )
         )
       }
+      readonly={!started}
     />
   );
 

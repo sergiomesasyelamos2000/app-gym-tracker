@@ -30,6 +30,7 @@ interface Props {
   repsType: "reps" | "range";
   onWeightUnitChange: (unit: "kg" | "lbs") => void;
   onRepsTypeChange: (type: "reps" | "range") => void;
+  readonly?: boolean;
 }
 
 const ExerciseSetList = ({
@@ -40,6 +41,7 @@ const ExerciseSetList = ({
   repsType,
   onWeightUnitChange,
   onRepsTypeChange,
+  readonly = false,
 }: Props) => {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
@@ -247,11 +249,16 @@ const ExerciseSetList = ({
           data={sets}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <Swipeable renderRightActions={() => renderRightActions(item.id)}>
+            <Swipeable
+              renderRightActions={() =>
+                !readonly ? renderRightActions(item.id) : null
+              }
+            >
               <ExerciseSetRow
                 item={item}
                 onUpdate={onUpdate}
                 repsType={repsType}
+                readonly={readonly}
               />
             </Swipeable>
           )}
