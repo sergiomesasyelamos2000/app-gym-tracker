@@ -158,6 +158,27 @@ export default function RoutineEditScreen() {
           renderItem={renderExerciseCard}
           contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16 }}
         />
+        <TouchableOpacity
+          style={styles.addExerciseButton}
+          onPress={() => {
+            navigation.navigate("ExerciseList", {
+              routineId: id, // <--- pasamos el id de la rutina
+              onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
+                // Actualizamos los ejercicios en la edición
+                setExercises((prev) => {
+                  // Evitamos duplicados
+                  const newExercises = selectedExercises.filter(
+                    (ex) => !prev.some((p) => p.id === ex.id)
+                  );
+                  return [...prev, ...newExercises];
+                });
+              },
+            });
+          }}
+        >
+          <Text style={styles.addExerciseButtonText}>+ Añadir ejercicio</Text>
+        </TouchableOpacity>
+
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -231,6 +252,20 @@ const styles = StyleSheet.create({
   },
   updateButtonText: {
     color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  addExerciseButton: {
+    backgroundColor: "#e0e0e0",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  addExerciseButtonText: {
+    color: "#333",
     fontWeight: "bold",
     fontSize: 16,
   },

@@ -15,6 +15,7 @@ export type WorkoutStackParamList = {
   };
   ExerciseList: {
     onFinishSelection: (exercises: ExerciseRequestDto[]) => void;
+    routineId?: string;
   };
   RoutineEdit: {
     id: string;

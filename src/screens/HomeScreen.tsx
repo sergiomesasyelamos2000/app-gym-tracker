@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
+  Image,
 } from "react-native";
 import {
   findAllRoutineSessions,
-  findRoutineSessions,
   getGlobalStats,
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
@@ -20,13 +20,20 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Función para cargar datos
+  // Cargar datos
   const fetchData = useCallback(async () => {
     try {
       const globalStats = await getGlobalStats();
+      console.log("Global stats:", globalStats);
+
       setStats(globalStats);
 
       const sessionsData = await findAllRoutineSessions();
+      console.log("Routine sessions:", sessionsData);
+
+      sessionsData.map((s) => {
+        console.log("Exercises in session:", s.routine?.routineExercises);
+      });
       setSessions(sessionsData);
     } catch (error) {
       console.error("Error fetching data", error);
@@ -35,12 +42,10 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Función para el pull-to-refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchData();
@@ -59,7 +64,7 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header Section */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>¡Hola, Atleta! 💪</Text>
           <Text style={styles.headerSubtitle}>
@@ -67,7 +72,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* Stats Section */}
+        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, styles.purpleCard]}>
             <Text style={styles.statValue}>
@@ -98,20 +103,41 @@ export default function HomeScreen() {
             </Text>
           ) : (
             sessions.map((s) => (
-              <View key={s.id} style={styles.historyItem}>
-                <Text style={styles.historyText}>
+              <View key={s.id} style={styles.sessionCard}>
+                {/* Fecha y Título */}
+                <Text style={styles.sessionDate}>
                   📅 {new Date(s.createdAt).toLocaleDateString()}
                 </Text>
-                <Text style={styles.historyText}>
+                <Text style={styles.sessionTitle}>{s.routine?.title}</Text>
+
+                {/* Tiempo y Volumen */}
+                <Text style={styles.sessionInfo}>
                   ⏱ {formatTime(s.totalTime)} • 🏋️ {s.totalWeight} kg • ✅{" "}
-                  {s.completedSets}
+                  {s.completedSets} series
                 </Text>
+
+                {/* Ejercicios */}
+                <View style={styles.exercisesPreview}>
+                  {s.routine?.routineExercises?.slice(0, 3).map((re: any) => (
+                    <View key={re.id} style={styles.exerciseRow}>
+                      <Image
+                        source={{
+                          uri: re.exercise.imageUrl || re.exercise.giftUrl,
+                        }}
+                        style={styles.exerciseImage}
+                      />
+                      <Text style={styles.exerciseText}>
+                        {re.sets?.length || 0}x {re.exercise.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               </View>
             ))
           )}
         </View>
 
-        {/* Action Section */}
+        {/* Acciones */}
         <View style={styles.actionContainer}>
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionButtonText}>Iniciar Entrenamiento</Text>
@@ -137,7 +163,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   header: {
-    backgroundColor: "#6C3BAA", // morado corporativo
+    backgroundColor: "#6C3BAA",
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -165,10 +191,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   purpleCard: {
-    backgroundColor: "#ede7f6", // lila claro
+    backgroundColor: "#ede7f6",
   },
   lavenderCard: {
-    backgroundColor: "#f3e8ff", // más suave
+    backgroundColor: "#f3e8ff",
   },
   statValue: {
     fontSize: 24,
@@ -179,6 +205,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#757575",
     marginTop: 4,
+  },
+  historyContainer: {
+    marginTop: 20,
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#6C3BAA",
+  },
+  sessionCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  sessionDate: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 4,
+  },
+  sessionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  sessionInfo: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 8,
+  },
+  exercisesPreview: {
+    marginTop: 4,
+  },
+  exerciseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  exerciseImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    marginRight: 8,
+    backgroundColor: "#eee",
+  },
+  exerciseText: {
+    fontSize: 14,
+    color: "#333",
   },
   actionContainer: {
     marginTop: 16,
@@ -204,25 +284,6 @@ const styles = StyleSheet.create({
     color: "#6C3BAA",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  historyContainer: {
-    marginTop: 20,
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-  },
-  historyTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#6C3BAA",
-  },
-  historyItem: {
-    marginBottom: 10,
-  },
-  historyText: {
-    fontSize: 14,
-    color: "#333",
   },
   noSessionsText: {
     textAlign: "center",

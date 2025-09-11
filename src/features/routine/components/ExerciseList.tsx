@@ -25,7 +25,8 @@ type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 export default function ExerciseList() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
-  const { onFinishSelection } = route.params || {};
+
+  const { onFinishSelection, routineId } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
@@ -60,6 +61,20 @@ export default function ExerciseList() {
     );
   };
 
+  const handleConfirm = () => {
+    if (!onFinishSelection) return;
+
+    onFinishSelection(selectedExercises);
+
+    if (routineId) {
+      // Editando rutina existente: solo regresamos a la pantalla anterior
+      navigation.goBack();
+    } else {
+      // Creando nueva rutina: vamos a la pantalla de detalle con los ejercicios seleccionados
+      navigation.navigate("RoutineDetail", { exercises: selectedExercises });
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {loading ? (
@@ -88,9 +103,6 @@ export default function ExerciseList() {
                 item={item}
                 isSelected={selectedExercises.some((ex) => ex.id === item.id)}
                 onSelect={handleSelectExercise}
-                onRedirect={() =>
-                  console.log("Redirigir a otra pantalla con:", item.name)
-                }
               />
             )}
           />
@@ -99,13 +111,7 @@ export default function ExerciseList() {
           {selectedExercises.length > 0 && (
             <TouchableOpacity
               style={styles.confirmButton}
-              onPress={() => {
-                console.log("Ejercicios seleccionados:", selectedExercises);
-                onFinishSelection?.(selectedExercises);
-                navigation.navigate("RoutineDetail", {
-                  exercises: selectedExercises,
-                });
-              }}
+              onPress={handleConfirm}
             >
               <Text style={styles.confirmButtonText}>
                 Has seleccionado {selectedExercises.length} ejercicio(s)
