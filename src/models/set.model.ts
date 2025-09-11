@@ -3,5 +3,7 @@ export interface SetRequestDto {
   order: number;
   weight?: number;
   reps?: number;
+  repsMin?: number;
+  repsMax?: number;
   completed?: boolean;
 }

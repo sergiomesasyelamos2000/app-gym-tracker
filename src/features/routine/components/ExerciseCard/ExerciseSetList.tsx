@@ -248,7 +248,11 @@ const ExerciseSetList = ({
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Swipeable renderRightActions={() => renderRightActions(item.id)}>
-              <ExerciseSetRow item={item} onUpdate={onUpdate} />
+              <ExerciseSetRow
+                item={item}
+                onUpdate={onUpdate}
+                repsType={repsType}
+              />
             </Swipeable>
           )}
         />

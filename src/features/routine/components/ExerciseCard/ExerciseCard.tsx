@@ -43,13 +43,23 @@ const ExerciseCard = ({
   }, [note, restTime]);
 
   const addSet = () => {
-    const newSet: SetRequestDto = {
-      id: uuid.v4() as string,
-      order: sets.length + 1,
-      weight: 0,
-      reps: 0,
-      completed: false,
-    };
+    const newSet: SetRequestDto =
+      exercise.repsType === "range"
+        ? {
+            id: uuid.v4() as string,
+            order: sets.length + 1,
+            weight: 0,
+            repsMin: 0,
+            repsMax: 0,
+            completed: false,
+          }
+        : {
+            id: uuid.v4() as string,
+            order: sets.length + 1,
+            weight: 0,
+            reps: 0,
+            completed: false,
+          };
     setSets([...sets, newSet]);
   };
 
