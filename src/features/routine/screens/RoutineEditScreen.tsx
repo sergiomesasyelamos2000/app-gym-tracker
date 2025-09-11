@@ -50,6 +50,8 @@ export default function RoutineEditScreen() {
               sets: re.sets || [],
               notes: re.notes,
               restSeconds: re.restSeconds,
+              weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
+              repsType: re.repsType || re.exercise.repsType || "reps",
             }))
           : [];
 
@@ -71,7 +73,14 @@ export default function RoutineEditScreen() {
 
   useEffect(() => {
     setEditTitle(title);
-    setExercises(exercises || []);
+    setExercises(
+      (exercises || []).map((ex) => ({
+        ...ex,
+        weightUnit: ex.weightUnit || "kg",
+        repsType: ex.repsType || "reps",
+      }))
+    );
+
     const initial: { [exerciseId: string]: SetRequestDto[] } = {};
     (exercises || []).forEach((exercise) => {
       initial[exercise.id] = exercise.sets || [];
