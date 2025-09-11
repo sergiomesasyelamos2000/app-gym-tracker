@@ -20,11 +20,13 @@ export const initializeSets = (exerciseSets?: SetRequestDto[]) => {
   ];
 };
 
-export const calculateVolume = (allSets: SetRequestDto[]) =>
-  allSets.reduce(
-    (sum, s) => (s.completed ? sum + (s.weight ?? 0) * (s.reps ?? 0) : sum),
-    0
-  );
+export function calculateVolume(sets: SetRequestDto[]): number {
+  return sets.reduce((acc, s) => {
+    const weight = Number(s.weight) || 0;
+    const reps = Number(s.reps) || 0;
+    return acc + weight * reps;
+  }, 0);
+}
 
 export const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60)

@@ -89,9 +89,6 @@ export default function RoutineEditScreen() {
       const routineToUpdate = {
         id: id, // Usa el id existente
         title: editTitle,
-        totalTime: 0, // Puedes ajustar estos valores si tienes datos
-        totalWeight: 0,
-        completedSets: 0,
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
           sets: sets[exercise.id] || [],

@@ -17,7 +17,12 @@ import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
-import { getRoutineById, saveRoutine } from "../services/routineService";
+import {
+  getRoutineById,
+  saveRoutine,
+  saveRoutineSession,
+  updateRoutineById,
+} from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
@@ -115,21 +120,58 @@ export default function RoutineDetailScreen() {
 
   const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
+
   const completedSets = useMemo(
     () => allSets.filter((s) => s.completed).length,
     [allSets]
   );
 
-  const handleFinishRoutine = () => {
-    setStarted(false);
-    setDuration(0);
-    setSets((prev) => {
-      const reset: { [id: string]: SetRequestDto[] } = {};
-      Object.keys(prev).forEach((id) => {
-        reset[id] = prev[id]?.map((s) => ({ ...s, completed: false })) || [];
+  const handleFinishAndSaveRoutine = async () => {
+    try {
+      setStarted(false);
+
+      const routineToSave = {
+        ...routineData,
+        id: routineData?.id || (uuid.v4() as string),
+        title: routineTitle,
+        createdAt: routineData?.createdAt
+          ? new Date(routineData.createdAt)
+          : new Date(),
+        exercises: exercisesState.map((exercise) => ({
+          ...exercise,
+          sets: sets[exercise.id] || [],
+          weightUnit: exercise.weightUnit || "kg",
+          repsType: exercise.repsType || "reps",
+        })),
+      };
+
+      let updatedRoutine;
+
+      if (routineData?.id) {
+        updatedRoutine = await updateRoutineById(routineData.id, routineToSave);
+      } else {
+        updatedRoutine = await saveRoutine(routineToSave);
+      }
+
+      // 👇 Guardar histórico de la sesión
+      await saveRoutineSession(updatedRoutine.id, {
+        totalTime: duration,
+        totalWeight: volume,
+        completedSets,
       });
-      return reset;
-    });
+
+      alert("Rutina y sesión guardadas exitosamente");
+
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: "WorkoutList" },
+          { name: "RoutineDetail", params: { routine: updatedRoutine } },
+        ],
+      });
+    } catch {
+      alert("Error al guardar la rutina");
+    }
   };
 
   const handleSaveRoutine = async () => {
@@ -137,9 +179,6 @@ export default function RoutineDetailScreen() {
       const routineToSave = {
         id: routineData?.id || (uuid.v4() as string),
         title: routineTitle,
-        totalTime: duration,
-        totalWeight: volume,
-        completedSets,
         createdAt: routineData?.createdAt
           ? new Date(routineData.createdAt)
           : new Date(),
@@ -212,9 +251,10 @@ export default function RoutineDetailScreen() {
           duration={duration}
           volume={volume}
           completedSets={completedSets}
-          onFinish={handleFinishRoutine}
+          onFinish={handleFinishAndSaveRoutine}
         />
       )}
+
       <FlatList
         data={exercisesState}
         keyExtractor={(item) => item.id}

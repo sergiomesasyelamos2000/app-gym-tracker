@@ -1,17 +1,64 @@
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
-  ScrollView,
-  Text,
-  View,
-  StyleSheet,
-  TouchableOpacity,
   SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  RefreshControl,
 } from "react-native";
+import {
+  findAllRoutineSessions,
+  findRoutineSessions,
+  getGlobalStats,
+} from "../features/routine/services/routineService";
+import { formatTime } from "../features/routine/utils/routineHelpers";
 
 export default function HomeScreen() {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Función para cargar datos
+  const fetchData = useCallback(async () => {
+    try {
+      const globalStats = await getGlobalStats();
+      setStats(globalStats);
+
+      const sessionsData = await findAllRoutineSessions();
+      setSessions(sessionsData);
+    } catch (error) {
+      console.error("Error fetching data", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Función para el pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, [fetchData]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#6C3BAA"]}
+            tintColor="#6C3BAA"
+          />
+        }
+      >
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>¡Hola, Atleta! 💪</Text>
@@ -23,13 +70,45 @@ export default function HomeScreen() {
         {/* Stats Section */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, styles.purpleCard]}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Entrenamientos</Text>
+            <Text style={styles.statValue}>
+              {stats ? Math.round(stats.totalTime / 60) : 0} min
+            </Text>
+            <Text style={styles.statLabel}>Tiempo total</Text>
           </View>
           <View style={[styles.statCard, styles.lavenderCard]}>
-            <Text style={styles.statValue}>1,847</Text>
-            <Text style={styles.statLabel}>Calorías hoy</Text>
+            <Text style={styles.statValue}>
+              {stats ? stats.completedSets : 0}
+            </Text>
+            <Text style={styles.statLabel}>Series completadas</Text>
           </View>
+          <View style={[styles.statCard, styles.purpleCard]}>
+            <Text style={styles.statValue}>
+              {stats ? stats.totalWeight : 0} kg
+            </Text>
+            <Text style={styles.statLabel}>Peso movido</Text>
+          </View>
+        </View>
+
+        {/* Histórico */}
+        <View style={styles.historyContainer}>
+          <Text style={styles.historyTitle}>Histórico</Text>
+          {sessions.length === 0 ? (
+            <Text style={styles.noSessionsText}>
+              No hay sesiones registradas.
+            </Text>
+          ) : (
+            sessions.map((s) => (
+              <View key={s.id} style={styles.historyItem}>
+                <Text style={styles.historyText}>
+                  📅 {new Date(s.createdAt).toLocaleDateString()}
+                </Text>
+                <Text style={styles.historyText}>
+                  ⏱ {formatTime(s.totalTime)} • 🏋️ {s.totalWeight} kg • ✅{" "}
+                  {s.completedSets}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Action Section */}
@@ -125,5 +204,30 @@ const styles = StyleSheet.create({
     color: "#6C3BAA",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  historyContainer: {
+    marginTop: 20,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#6C3BAA",
+  },
+  historyItem: {
+    marginBottom: 10,
+  },
+  historyText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  noSessionsText: {
+    textAlign: "center",
+    color: "#888",
+    fontStyle: "italic",
+    marginVertical: 16,
   },
 });

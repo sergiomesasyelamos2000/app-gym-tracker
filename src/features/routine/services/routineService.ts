@@ -13,7 +13,7 @@ export async function saveRoutine(
   });
 }
 
-export async function findRoutines(): Promise<any[]> {
+export async function findAllRoutines(): Promise<any[]> {
   return await apiFetch("routines", {
     method: "GET",
   });
@@ -44,5 +44,29 @@ export async function duplicateRoutine(id: string): Promise<void> {
 export async function deleteRoutine(id: string): Promise<void> {
   await apiFetch(`routines/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function saveRoutineSession(
+  id: string,
+  session: any
+): Promise<any> {
+  return await apiFetch(`routines/${id}/sessions`, {
+    method: "POST",
+    body: JSON.stringify(session),
+  });
+}
+
+export async function findAllRoutineSessions(): Promise<any[]> {
+  return await apiFetch("routines/sessions", { method: "GET" });
+}
+
+export async function findRoutineSessions(id: string): Promise<any[]> {
+  return await apiFetch(`routines/${id}/sessions`, { method: "GET" });
+}
+
+export async function getGlobalStats(): Promise<any> {
+  return await apiFetch("routines/stats/global", {
+    method: "GET",
   });
 }

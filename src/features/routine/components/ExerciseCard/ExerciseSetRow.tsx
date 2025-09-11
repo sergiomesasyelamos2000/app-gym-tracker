@@ -26,14 +26,20 @@ const ExerciseSetRow = ({ item, onUpdate }: Props) => (
       style={[styles.input, { flex: 2 }]}
       keyboardType="numeric"
       value={item.weight?.toString()}
-      onChangeText={(text) => onUpdate(item.id, "weight", parseInt(text) || 0)}
+      onChangeText={(text) => {
+        const weight = Number(text);
+        onUpdate(item.id, "weight", isNaN(weight) ? 0 : weight);
+      }}
     />
 
     <TextInput
       style={[styles.input, { flex: 2 }]}
       keyboardType="numeric"
       value={item.reps?.toString()}
-      onChangeText={(text) => onUpdate(item.id, "reps", parseInt(text) || 0)}
+      onChangeText={(text) => {
+        const reps = Number(text);
+        onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
+      }}
     />
 
     <TouchableOpacity

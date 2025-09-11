@@ -102,7 +102,9 @@ const ExerciseSetList = ({
       onRequestClose={() => closeModal(() => setShowWeightModal(false))}
       onShow={openModal}
     >
-      <TouchableWithoutFeedback>
+      <TouchableWithoutFeedback
+        onPress={() => closeModal(() => setShowWeightModal(false))}
+      >
         <Animated.View
           style={[styles.modalOverlay, { opacity: overlayOpacity }]}
         >

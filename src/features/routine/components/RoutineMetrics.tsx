@@ -20,6 +20,7 @@ export const RoutineMetrics: React.FC<Props> = ({
       <Text style={styles.metricItem}>⏱ {formatTime(duration)}</Text>
       <Text style={styles.metricItem}>🏋️ {volume} kg</Text>
       <Text style={styles.metricItem}>✅ {completedSets}</Text>
+
       <TouchableOpacity onPress={onFinish}>
         <Text style={styles.finishButton}>Terminar</Text>
       </TouchableOpacity>

@@ -21,7 +21,7 @@ import Modal from "react-native-modal";
 import {
   deleteRoutine,
   duplicateRoutine,
-  findRoutines,
+  findAllRoutines,
 } from "../services/routineService";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
@@ -43,21 +43,26 @@ export default function WorkoutScreen() {
   // Función para cargar y ordenar rutinas
   const fetchRoutines = useCallback(async () => {
     try {
-      const data = await findRoutines();
+      const data = await findAllRoutines();
 
       // Ordenar rutinas por fecha de creación (más recientes primero)
-      const sortedRoutines = data.sort((a, b) => {
-        // Convertir las fechas a timestamps para comparar
-        const dateA = new Date(
-          a.createdAt || a.creationDate || Date.now()
-        ).getTime();
-        const dateB = new Date(
-          b.createdAt || b.creationDate || Date.now()
-        ).getTime();
+      const sortedRoutines = data.sort(
+        (
+          a: { createdAt: any; creationDate: any },
+          b: { createdAt: any; creationDate: any }
+        ) => {
+          // Convertir las fechas a timestamps para comparar
+          const dateA = new Date(
+            a.createdAt || a.creationDate || Date.now()
+          ).getTime();
+          const dateB = new Date(
+            b.createdAt || b.creationDate || Date.now()
+          ).getTime();
 
-        // Orden descendente (más recientes primero)
-        return dateB - dateA;
-      });
+          // Orden descendente (más recientes primero)
+          return dateB - dateA;
+        }
+      );
 
       setRoutines(sortedRoutines);
     } catch (err) {
