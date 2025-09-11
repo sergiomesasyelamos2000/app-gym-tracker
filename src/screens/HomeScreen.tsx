@@ -24,16 +24,11 @@ export default function HomeScreen() {
   const fetchData = useCallback(async () => {
     try {
       const globalStats = await getGlobalStats();
-      console.log("Global stats:", globalStats);
 
       setStats(globalStats);
 
       const sessionsData = await findAllRoutineSessions();
-      console.log("Routine sessions:", sessionsData);
 
-      sessionsData.map((s) => {
-        console.log("Exercises in session:", s.routine?.routineExercises);
-      });
       setSessions(sessionsData);
     } catch (error) {
       console.error("Error fetching data", error);

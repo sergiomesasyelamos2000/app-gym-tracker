@@ -36,7 +36,12 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
   };
 
   return (
-    <View style={styles.row}>
+    <View
+      style={[
+        styles.row,
+        item.completed && { backgroundColor: "#b3f5c2ff" }, // 👈 aquí cambiamos el fondo si está completado
+      ]}
+    >
       <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
 
       {/* Peso */}
@@ -45,7 +50,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
         keyboardType="numeric"
         value={item.weight?.toString()}
         placeholder="Kg"
-        placeholderTextColor="#999"
+        placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
         onChangeText={(text) => {
           const weight = Number(text);
           onUpdate(item.id, "weight", isNaN(weight) ? 0 : weight);
@@ -60,7 +65,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
             keyboardType="numeric"
             value={item.repsMin?.toString() || ""}
             placeholder="8"
-            placeholderTextColor="#999"
+            placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
             onChangeText={handleMinRepsChange}
           />
           <Text style={styles.rangeSeparator}>-</Text>
@@ -69,7 +74,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
             keyboardType="numeric"
             value={item.repsMax?.toString() || ""}
             placeholder="10"
-            placeholderTextColor="#999"
+            placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
             onChangeText={handleMaxRepsChange}
           />
         </View>
@@ -79,7 +84,7 @@ const ExerciseSetRow = ({ item, onUpdate, repsType }: Props) => {
           keyboardType="numeric"
           value={item.reps?.toString() || ""}
           placeholder="Reps"
-          placeholderTextColor="#999"
+          placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
           onChangeText={handleSingleRepsChange}
         />
       )}
