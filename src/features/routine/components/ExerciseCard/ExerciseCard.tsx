@@ -7,7 +7,7 @@ import ExerciseHeader from "./ExerciseHeader";
 import ExerciseNotes from "./ExerciseNotes";
 import ExerciseRestTimer from "./ExerciseRestTimer";
 import ExerciseSetList from "./ExerciseSetList";
-import { parseTime } from "./helpers";
+import { parseTime, formatTime } from "./helpers";
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 
 interface Props {
@@ -27,7 +27,16 @@ const ExerciseCard = ({
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
-  const [restTime, setRestTime] = useState("00:00");
+  const [restTime, setRestTime] = useState(() => {
+    if (exercise.restSeconds) {
+      const seconds = parseInt(exercise.restSeconds, 10);
+      return formatTime({
+        minutes: Math.floor(seconds / 60),
+        seconds: seconds % 60,
+      });
+    }
+    return "00:00";
+  });
 
   // sincroniza sets con parent
   useEffect(() => {
@@ -114,7 +123,7 @@ const ExerciseCard = ({
         repsType={exercise.repsType || "reps"}
         onWeightUnitChange={handleWeightUnitChange}
         onRepsTypeChange={handleRepsTypeChange}
-        readonly={readonly} // ✅ pasamos a ExerciseSetList
+        readonly={readonly}
       />
       {!readonly && (
         <Button mode="contained" onPress={addSet} style={styles.addButton}>

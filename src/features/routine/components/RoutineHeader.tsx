@@ -14,6 +14,7 @@ type Props = {
   onStart?: () => void;
   onEdit?: () => void;
   onChangeTitle?: (text: string) => void;
+  readonly?: boolean;
 };
 
 export const RoutineHeader: React.FC<Props> = ({
@@ -23,21 +24,26 @@ export const RoutineHeader: React.FC<Props> = ({
   onStart,
   onEdit,
   onChangeTitle,
+  readonly,
 }) => {
   if (started) return null;
 
   return (
     <View style={styles.header}>
-      <Text style={styles.title}>{routineTitle || "Nueva rutina"}</Text>
-      {routineId ? (
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.startButton} onPress={onStart}>
-            <Text style={styles.startButtonText}>Iniciar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-            <Text style={styles.editButtonText}>Editar</Text>
-          </TouchableOpacity>
-        </View>
+      {routineId && readonly ? (
+        <>
+          <Text style={styles.title}>
+            {routineTitle || "Rutina sin nombre"}
+          </Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.startButton} onPress={onStart}>
+              <Text style={styles.startButtonText}>Iniciar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+              <Text style={styles.editButtonText}>Editar</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       ) : (
         <View style={styles.inputContainer}>
           <TextInput

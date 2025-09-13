@@ -32,7 +32,7 @@ export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const { routine, exercises } = route.params;
-  const [readonly, setReadonly] = useState(true);
+  const [readonly, setReadonly] = useState(!!routine?.id);
 
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
@@ -53,6 +53,8 @@ export default function RoutineDetailScreen() {
     const fetchRoutine = async () => {
       try {
         const data = await getRoutineById(routine.id);
+        console.log("Fetched routine data:", data);
+
         setRoutineData(data);
       } catch (err) {
         console.error("Error fetching routine by id", err);
@@ -66,7 +68,6 @@ export default function RoutineDetailScreen() {
   // 🔹 Si vienen ejercicios por params → prioridad absoluta
   useEffect(() => {
     if (exercises && exercises.length > 0) {
-      console.log("Ejercicios desde ExerciseList:", exercises);
       setExercises(exercises);
 
       const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
@@ -231,7 +232,7 @@ export default function RoutineDetailScreen() {
           )
         )
       }
-      readonly={!started}
+      readonly={readonly && !started}
     />
   );
 
@@ -266,6 +267,7 @@ export default function RoutineDetailScreen() {
             onStart={() => setStarted(true)}
             onEdit={goToEditRoutine}
             onChangeTitle={setRoutineTitle}
+            readonly={readonly}
           />
         }
         renderItem={renderExerciseCard}
