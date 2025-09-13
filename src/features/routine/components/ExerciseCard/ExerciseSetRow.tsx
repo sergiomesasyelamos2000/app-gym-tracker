@@ -35,8 +35,18 @@ const ExerciseSetRow = ({
     onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
   };
 
+  const completedStyle = item.completed
+    ? {
+        backgroundColor: "#b3f5c2ff",
+        placeholderTextColor: "#b3f5c2ff",
+      }
+    : {
+        backgroundColor: "#f9f9f9",
+        placeholderTextColor: "#999",
+      };
+
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, completedStyle]}>
       <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
 
       {/* Marca anterior */}

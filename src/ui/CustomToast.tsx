@@ -10,6 +10,7 @@ import {
 
 interface CustomToastProps {
   text1: string;
+  text2?: string;
   progress?: number;
   onCancel?: () => void;
   onAddTime?: () => void;
@@ -18,6 +19,7 @@ interface CustomToastProps {
 
 const CustomToast = ({
   text1,
+  text2,
   progress = 1,
   onCancel,
   onAddTime,
@@ -27,10 +29,10 @@ const CustomToast = ({
   const { width } = useWindowDimensions();
 
   useEffect(() => {
-    animatedProgress.setValue(progress);
+    // Animar la barra de progreso suavemente
     Animated.timing(animatedProgress, {
       toValue: progress,
-      duration: 400,
+      duration: 300,
       useNativeDriver: false,
     }).start();
   }, [progress]);
@@ -53,9 +55,16 @@ const CustomToast = ({
           </TouchableOpacity>
         )}
 
-        <Text numberOfLines={2} style={styles.toastText}>
-          {text1}
-        </Text>
+        <View style={styles.textContainer}>
+          <Text numberOfLines={1} style={styles.toastText}>
+            {text1}
+          </Text>
+          {text2 && (
+            <Text numberOfLines={1} style={styles.toastSubtext}>
+              {text2}
+            </Text>
+          )}
+        </View>
 
         {progress > 0 && (
           <TouchableOpacity
@@ -73,7 +82,7 @@ const CustomToast = ({
             onPress={onCancel}
             accessibilityLabel="Cancelar"
           >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>X</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -93,63 +102,82 @@ const styles = StyleSheet.create({
   toastContainer: {
     backgroundColor: "#7C3AED",
     borderRadius: 14,
-    padding: 12,
+    padding: 16,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    elevation: 4,
+    elevation: 6,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
   },
   contentRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
     width: "100%",
   },
-  toastText: {
+  textContainer: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 8,
+  },
+  toastText: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  toastSubtext: {
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 14,
+    fontWeight: "500",
     textAlign: "center",
   },
   actionButton: {
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 60,
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 13,
+    fontSize: 16,
   },
   cancelButton: {
     backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginLeft: 6,
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
   cancelButtonText: {
     color: "#7C3AED",
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "bold",
+    fontSize: 16,
   },
   progressBarContainer: {
     width: "100%",
-    height: 6,
-    backgroundColor: "#f1f1f1",
-    borderRadius: 3,
-    marginTop: 10,
+    height: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 4,
+    marginTop: 12,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
     backgroundColor: "#fff",
+    borderRadius: 4,
   },
 });
 

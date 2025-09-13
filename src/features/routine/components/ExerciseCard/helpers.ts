@@ -8,6 +8,14 @@ export const parseTime = (
   };
 };
 
+export const parseRestTime = (timeStr: string) => {
+  const [minutes, seconds] = timeStr.split(":").map(Number);
+  return {
+    minutes: isNaN(minutes) ? 0 : minutes,
+    seconds: isNaN(seconds) ? 0 : seconds,
+  };
+};
+
 export const formatTime = ({
   minutes,
   seconds,
