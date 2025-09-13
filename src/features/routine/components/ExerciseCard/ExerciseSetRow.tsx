@@ -18,6 +18,8 @@ interface Props {
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
+  previousMark?: string;
+  started?: boolean;
 }
 
 const ExerciseSetRow = ({
@@ -25,30 +27,24 @@ const ExerciseSetRow = ({
   onUpdate,
   repsType,
   readonly = false,
+  previousMark,
+  started = false,
 }: Props) => {
-  const handleMinRepsChange = (text: string) => {
-    const repsMin = Number(text);
-    onUpdate(item.id, "repsMin", isNaN(repsMin) ? 0 : repsMin);
-  };
-
-  const handleMaxRepsChange = (text: string) => {
-    const repsMax = Number(text);
-    onUpdate(item.id, "repsMax", isNaN(repsMax) ? 0 : repsMax);
-  };
-
   const handleSingleRepsChange = (text: string) => {
     const reps = Number(text);
     onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
   };
 
   return (
-    <View
-      style={[
-        styles.row,
-        item.completed && { backgroundColor: "#b3f5c2ff" }, // 👈 aquí cambiamos el fondo si está completado
-      ]}
-    >
+    <View style={styles.row}>
       <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
+
+      {/* Marca anterior */}
+      {started && (
+        <Text style={[styles.previousMark, { flex: 2 }]}>
+          {previousMark || "-"}
+        </Text>
+      )}
 
       {/* Peso */}
       <TextInput
@@ -56,7 +52,7 @@ const ExerciseSetRow = ({
         keyboardType="numeric"
         value={item.weight?.toString()}
         placeholder="Kg"
-        placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
+        placeholderTextColor="#999"
         onChangeText={(text) => {
           const weight = Number(text);
           onUpdate(item.id, "weight", isNaN(weight) ? 0 : weight);
@@ -65,15 +61,30 @@ const ExerciseSetRow = ({
       />
 
       {/* Repeticiones */}
-      {repsType === "range" ? (
+      {started && repsType === "range" ? (
+        <TextInput
+          style={[styles.input, { flex: 2 }]}
+          keyboardType="numeric"
+          value={item.reps?.toString() || ""}
+          placeholder={`${item.repsMin || 0}-${item.repsMax || 0}`}
+          placeholderTextColor="#999"
+          onChangeText={(text) => {
+            const reps = Number(text);
+            onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
+          }}
+          editable={!readonly}
+        />
+      ) : repsType === "range" ? (
         <View style={[styles.rangeContainer, { flex: 2 }]}>
           <TextInput
             style={[styles.rangeInput, { flex: 1 }]}
             keyboardType="numeric"
             value={item.repsMin?.toString() || ""}
             placeholder="8"
-            placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
-            onChangeText={handleMinRepsChange}
+            placeholderTextColor="#999"
+            onChangeText={(text) =>
+              onUpdate(item.id, "repsMin", Number(text) || 0)
+            }
             editable={!readonly}
           />
           <Text style={styles.rangeSeparator}>-</Text>
@@ -82,8 +93,10 @@ const ExerciseSetRow = ({
             keyboardType="numeric"
             value={item.repsMax?.toString() || ""}
             placeholder="10"
-            placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
-            onChangeText={handleMaxRepsChange}
+            placeholderTextColor="#999"
+            onChangeText={(text) =>
+              onUpdate(item.id, "repsMax", Number(text) || 0)
+            }
             editable={!readonly}
           />
         </View>
@@ -93,24 +106,28 @@ const ExerciseSetRow = ({
           keyboardType="numeric"
           value={item.reps?.toString() || ""}
           placeholder="Reps"
-          placeholderTextColor={item.completed ? "#b3f5c2ff" : "#999"}
-          onChangeText={handleSingleRepsChange}
+          placeholderTextColor="#999"
+          onChangeText={(text) => {
+            const reps = Number(text);
+            onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
+          }}
           editable={!readonly}
         />
       )}
 
       {/* Check */}
-      <TouchableOpacity
-        style={{ flex: 1 }}
-        onPress={() => onUpdate(item.id, "completed", !item.completed)}
-        disabled={readonly}
-      >
-        <Icon
-          name={item.completed ? "check-circle" : "radio-button-unchecked"}
-          size={24}
-          color={item.completed ? "#4CAF50" : "#9E9E9E"}
-        />
-      </TouchableOpacity>
+      {!readonly && (
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => onUpdate(item.id, "completed", !item.completed)}
+        >
+          <Icon
+            name={item.completed ? "check-circle" : "radio-button-unchecked"}
+            size={24}
+            color={item.completed ? "#4CAF50" : "#9E9E9E"}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -158,6 +175,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#444",
     fontSize: 15,
+  },
+  previousMark: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#777",
   },
 });
 

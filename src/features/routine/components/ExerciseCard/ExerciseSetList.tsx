@@ -31,6 +31,7 @@ interface Props {
   onWeightUnitChange: (unit: "kg" | "lbs") => void;
   onRepsTypeChange: (type: "reps" | "range") => void;
   readonly?: boolean;
+  started?: boolean;
 }
 
 const ExerciseSetList = ({
@@ -42,6 +43,7 @@ const ExerciseSetList = ({
   onWeightUnitChange,
   onRepsTypeChange,
   readonly = false,
+  started = false,
 }: Props) => {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
@@ -219,29 +221,39 @@ const ExerciseSetList = ({
       <View style={styles.columnTitles}>
         <Text style={[styles.columnTitle, { flex: 1 }]}>Serie</Text>
 
+        {started && (
+          <Text style={[styles.columnTitle, { flex: 2 }]}>Anterior</Text>
+        )}
+
         <TouchableOpacity
           style={{ flex: 2 }}
-          onPress={() => setShowWeightModal(true)}
+          onPress={() => !readonly && !started && setShowWeightModal(true)}
+          disabled={readonly}
         >
           <View style={styles.columnHeader}>
             <Text style={styles.columnTitle}>{weightUnit}</Text>
-            <Icon name="arrow-drop-down" size={16} color="#777" />
+            {!readonly && !started && (
+              <Icon name="arrow-drop-down" size={16} color="#777" />
+            )}
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={{ flex: 2 }}
-          onPress={() => setShowRepsModal(true)}
+          onPress={() => !readonly && !started && setShowRepsModal(true)}
+          disabled={readonly}
         >
           <View style={styles.columnHeader}>
             <Text style={styles.columnTitle}>
               {repsType === "reps" ? "Repeticiones" : "Rango"}
             </Text>
-            <Icon name="arrow-drop-down" size={16} color="#777" />
+            {!readonly && !started && (
+              <Icon name="arrow-drop-down" size={16} color="#777" />
+            )}
           </View>
         </TouchableOpacity>
 
-        <Text style={[styles.columnTitle, { flex: 1 }]}>✔</Text>
+        {!readonly && <Text style={[styles.columnTitle, { flex: 1 }]}>✔</Text>}
       </View>
 
       <GestureHandlerRootView>
@@ -259,6 +271,14 @@ const ExerciseSetList = ({
                 onUpdate={onUpdate}
                 repsType={repsType}
                 readonly={readonly}
+                previousMark={
+                  started
+                    ? `${item.previousWeight || 0} ${weightUnit} x ${
+                        item.previousReps || 0
+                      }`
+                    : undefined
+                }
+                started={started}
               />
             </Swipeable>
           )}

@@ -6,4 +6,6 @@ export interface SetRequestDto {
   repsMin?: number;
   repsMax?: number;
   completed?: boolean;
+  previousWeight?: number;
+  previousReps?: number;
 }

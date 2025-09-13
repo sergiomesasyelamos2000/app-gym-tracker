@@ -16,6 +16,7 @@ interface Props {
   onChangeSets: (sets: SetRequestDto[]) => void;
   onChangeExercise: (exercise: ExerciseRequestDto) => void;
   readonly?: boolean;
+  started?: boolean;
 }
 
 const ExerciseCard = ({
@@ -24,6 +25,7 @@ const ExerciseCard = ({
   onChangeSets,
   onChangeExercise,
   readonly = false,
+  started = false,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -124,6 +126,7 @@ const ExerciseCard = ({
         onWeightUnitChange={handleWeightUnitChange}
         onRepsTypeChange={handleRepsTypeChange}
         readonly={readonly}
+        started={started}
       />
       {!readonly && (
         <Button mode="contained" onPress={addSet} style={styles.addButton}>

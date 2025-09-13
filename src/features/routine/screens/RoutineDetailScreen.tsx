@@ -45,6 +45,19 @@ export default function RoutineDetailScreen() {
   );
 
   useEffect(() => {
+    if (started) {
+      const updatedSets = { ...sets };
+      exercisesState.forEach((exercise) => {
+        updatedSets[exercise.id] = updatedSets[exercise.id].map((set) => ({
+          ...set,
+          previousWeight: set.weight, // Marca anterior: peso
+          previousReps: set.reps || set.repsMin, // Marca anterior: repeticiones
+        }));
+      });
+      setSets(updatedSets);
+    }
+  }, [started]);
+  useEffect(() => {
     if (route.params?.start) setStarted(true);
   }, [route.params?.start]);
 
@@ -89,7 +102,11 @@ export default function RoutineDetailScreen() {
     const mappedExercises: ExerciseRequestDto[] =
       routineData.routineExercises?.map((re: any) => ({
         ...re.exercise,
-        sets: re.sets || [],
+        sets: re.sets.map((set: any) => ({
+          ...set,
+          previousWeight: set.weight, // Cargar el peso guardado como marca anterior
+          previousReps: set.reps || set.repsMin, // Cargar las repeticiones guardadas como marca anterior
+        })),
         notes: re.notes,
         restSeconds: re.restSeconds,
         weightUnit: re.weightUnit || "kg",
@@ -139,7 +156,14 @@ export default function RoutineDetailScreen() {
           : new Date(),
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
-          sets: sets[exercise.id] || [],
+          sets:
+            sets[exercise.id]?.map((set) => ({
+              ...set,
+              weight: set.weight || 0, // Guardar el peso ingresado
+              reps: set.reps || 0, // Guardar las repeticiones ingresadas
+              repsMin: set.repsMin || 0, // Guardar repsMin si aplica
+              repsMax: set.repsMax || 0, // Guardar repsMax si aplica
+            })) || [],
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
         })),
@@ -233,6 +257,7 @@ export default function RoutineDetailScreen() {
         )
       }
       readonly={readonly && !started}
+      started={started}
     />
   );
 
