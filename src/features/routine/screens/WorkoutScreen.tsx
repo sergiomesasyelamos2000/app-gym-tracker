@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   View,
   RefreshControl,
+  Pressable,
 } from "react-native";
 import {
   ExerciseRequestDto,
@@ -281,23 +282,35 @@ export default function WorkoutScreen() {
 
       {/* Banner de entrenamiento en progreso */}
       {showWorkoutBanner && workoutInProgress && (
-        <View style={styles.workoutBanner}>
-          <Text style={styles.workoutBannerText}>
-            Entrenamiento en progreso: {workoutInProgress.routineTitle}
+        <View style={styles.workoutBannerModern}>
+          <Text style={styles.workoutBannerTextModern}>
+            🏋️ Entrenamiento en progreso: {workoutInProgress.routineTitle}
           </Text>
-          <View style={styles.workoutBannerButtons}>
-            <TouchableOpacity
-              style={styles.resumeButton}
+          <View style={styles.workoutBannerActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.bannerButton,
+                styles.resumeButtonModern,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={handleResumeWorkout}
             >
-              <Text style={styles.resumeButtonText}>Reanudar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.discardButton}
+              <Text style={[styles.bannerButtonText, { color: "#B8FFB0" }]}>
+                Reanudar
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.bannerButton,
+                styles.discardButtonModern,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={handleDiscardWorkout}
             >
-              <Text style={styles.discardButtonText}>Descartar</Text>
-            </TouchableOpacity>
+              <Text style={[styles.bannerButtonText, { color: "#FF8A80" }]}>
+                Descartar
+              </Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -459,5 +472,50 @@ const styles = StyleSheet.create({
   discardButtonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  workoutBannerModern: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: "#6C3BAA",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  workoutBannerTextModern: {
+    flex: 1,
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+    marginRight: 12,
+  },
+  workoutBannerActions: {
+    flexDirection: "row",
+    gap: 8, // Para RN >=0.71, si no, usar marginLeft en botones
+  },
+  bannerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  resumeButtonModern: {
+    backgroundColor: "#4CAF50",
+  },
+  discardButtonModern: {
+    backgroundColor: "#F44336",
+  },
+  bannerButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
