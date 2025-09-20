@@ -491,6 +491,51 @@ export default function RoutineDetailScreen() {
       </SafeAreaView>
     );
 
+  useEffect(() => {
+    if (start && routineData && !workoutInProgress) {
+      // Mapear ejercicios con sets vacíos para el inicio
+      const exercisesWithSets =
+        routineData.routineExercises?.map((re: any) => ({
+          ...re.exercise,
+          sets: re.sets.map((set: any) => ({
+            ...set,
+            completed: false,
+            previousWeight: set.weight,
+            previousReps: set.reps || set.repsMin,
+          })),
+          notes: re.notes,
+          restSeconds: re.restSeconds,
+          weightUnit: re.weightUnit || "kg",
+          repsType: re.repsType || "reps",
+        })) ||
+        routineData.exercises?.map((ex: any) => ({
+          ...ex,
+          sets: initializeSets(ex.sets || []).map((s) => ({
+            ...s,
+            completed: false,
+          })),
+        })) ||
+        [];
+
+      setExercises(exercisesWithSets);
+
+      // Crear el workoutInProgress en el store
+      setWorkoutInProgress({
+        routineId: routineData.id,
+        routineTitle: routineData.title,
+        duration: 0,
+        volume: 0,
+        completedSets: 0,
+        exercises: exercisesWithSets,
+        sets: exercisesWithSets.reduce(
+          (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
+          {}
+        ),
+        startedAt: Date.now(),
+      });
+    }
+  }, [start, routineData, workoutInProgress, setWorkoutInProgress]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {started && (

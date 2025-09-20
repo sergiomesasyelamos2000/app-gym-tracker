@@ -51,7 +51,7 @@ export default function WorkoutScreen() {
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       setShowWorkoutBanner(!!workoutInProgress);
       return () => {
         setShowWorkoutBanner(false);
