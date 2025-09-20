@@ -20,13 +20,14 @@ export const initializeSets = (exerciseSets?: SetRequestDto[]) => {
   ];
 };
 
-export function calculateVolume(sets: SetRequestDto[]): number {
-  return sets.reduce((acc, s) => {
-    const weight = Number(s.weight) || 0;
-    const reps = Number(s.reps) || 0;
-    return acc + weight * reps;
-  }, 0);
-}
+export const calculateVolume = (sets: SetRequestDto[]) => {
+  return sets
+    .filter((set) => set.completed) // Solo series completadas
+    .reduce((total, set) => {
+      const reps = set.reps || set.repsMin || 0;
+      return total + (set.weight || 0) * reps;
+    }, 0);
+};
 
 export const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
