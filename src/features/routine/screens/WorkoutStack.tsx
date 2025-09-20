@@ -9,6 +9,7 @@ import RoutineDetailScreen from "./RoutineDetailScreen";
 export type WorkoutStackParamList = {
   WorkoutList: undefined;
   RoutineDetail: {
+    routineId?: string;
     routine?: RoutineRequestDto;
     exercises?: ExerciseRequestDto[];
     start?: boolean;

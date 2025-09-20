@@ -15,7 +15,10 @@ import {
 } from "react-native";
 import uuid from "react-native-uuid";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
+import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
 import {
@@ -26,16 +29,14 @@ import {
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import CustomToast from "../../../ui/CustomToast";
-import { formatTime } from "../components/ExerciseCard/helpers";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
 export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
-  const { routine, exercises } = route.params;
-  const [readonly, setReadonly] = useState(!!routine?.id);
+  const { routineId, routine, exercises, start } = route.params;
+  const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
 
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
@@ -47,6 +48,16 @@ export default function RoutineDetailScreen() {
     {}
   );
 
+  const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
+
+  const {
+    workoutInProgress,
+    setWorkoutInProgress,
+    patchWorkoutInProgress,
+    clearWorkoutInProgress,
+    updateWorkoutProgress,
+  } = useWorkoutInProgressStore();
+
   // Estados para el temporizador global
   const [showRestToast, setShowRestToast] = useState(false);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
@@ -54,41 +65,102 @@ export default function RoutineDetailScreen() {
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ----------------------
+  //  Helper: iniciar rutina
+  // ----------------------
+  const handleStartRoutine = () => {
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
+
+    exercisesState.forEach((exercise) => {
+      if (!initialSets[exercise.id] || initialSets[exercise.id].length === 0) {
+        initialSets[exercise.id] = initializeSets(exercise.sets).map((s) => ({
+          ...s,
+          completed: false,
+        }));
+      }
+    });
+
+    setSets(initialSets);
+
+    setWorkoutInProgress({
+      routineId: routineData?.id || (routineId ?? (uuid.v4() as string)),
+      routineTitle: routineTitle || routineData?.title || "Rutina",
+      duration: 0,
+      volume: 0,
+      completedSets: 0,
+      exercises: exercisesState.map((ex) => ({
+        ...ex,
+        sets: initialSets[ex.id] || [],
+      })),
+      sets: initialSets,
+      startedAt: Date.now(),
+    });
+
+    setStarted(true);
+  };
+
+  // ----------------------
+  //  Ocultar/mostrar tabBar cuando started cambie
+  // ----------------------
+  useEffect(() => {
+    const parent = (navigation as any).getParent?.();
+    if (parent && typeof parent.setOptions === "function") {
+      parent.setOptions({
+        tabBarStyle: started ? { display: "none" } : undefined,
+      });
+    }
+    return () => {
+      const p = (navigation as any).getParent?.();
+      if (p && typeof p.setOptions === "function") {
+        p.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [started]);
+
+  // ----------------------
+  //  Efectos existentes
+  // ----------------------
   useEffect(() => {
     if (started) {
       const updatedSets = { ...sets };
       exercisesState.forEach((exercise) => {
         updatedSets[exercise.id] = updatedSets[exercise.id].map((set) => ({
           ...set,
-          previousWeight: set.weight, // Marca anterior: peso
-          previousReps: set.reps || set.repsMin, // Marca anterior: repeticiones
+          previousWeight: set.weight,
+          previousReps: set.reps || set.repsMin,
         }));
       });
       setSets(updatedSets);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
+
   useEffect(() => {
     if (route.params?.start) setStarted(true);
   }, [route.params?.start]);
 
   useEffect(() => {
-    if (!routine?.id) return;
-    const fetchRoutine = async () => {
-      try {
-        const data = await getRoutineById(routine.id);
-        console.log("Fetched routine data:", data);
+    if (routine) {
+      setRoutineData(routine);
+      setLoading(false);
+    } else if (routineId) {
+      const fetchRoutine = async () => {
+        try {
+          const data = await getRoutineById(routineId);
+          setRoutineData(data);
+        } catch (err) {
+          console.error("Error fetching routine by id", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchRoutine();
+    } else {
+      setLoading(false);
+    }
+  }, [routine, routineId]);
 
-        setRoutineData(data);
-      } catch (err) {
-        console.error("Error fetching routine by id", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRoutine();
-  }, [routine?.id]);
-
-  // 🔹 Si vienen ejercicios por params → prioridad absoluta
+  // Prioridad: exercises desde params
   useEffect(() => {
     if (exercises && exercises.length > 0) {
       setExercises(exercises);
@@ -97,7 +169,7 @@ export default function RoutineDetailScreen() {
       exercises.forEach((exercise) => {
         initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
           ...set,
-          completed: false, // 🔄 Asegurar que nuevas series no estén completadas
+          completed: false,
         }));
       });
       setSets(initialSets);
@@ -106,9 +178,9 @@ export default function RoutineDetailScreen() {
     }
   }, [exercises]);
 
-  // 🔹 Si NO hay ejercicios seleccionados y sí hay routineData → cargar desde la rutina guardada
+  // Si NO hay exercises en params, cargar desde routineData
   useEffect(() => {
-    if (exercises && exercises.length > 0) return; // 🚫 no pisar lo anterior
+    if (exercises && exercises.length > 0) return;
     if (!routineData) return;
 
     const mappedExercises: ExerciseRequestDto[] =
@@ -116,8 +188,8 @@ export default function RoutineDetailScreen() {
         ...re.exercise,
         sets: re.sets.map((set: any) => ({
           ...set,
-          previousWeight: set.weight, // Cargar el peso guardado como marca anterior
-          previousReps: set.reps || set.repsMin, // Cargar las repeticiones guardadas como marca anterior
+          previousWeight: set.weight,
+          previousReps: set.reps || set.repsMin,
         })),
         notes: re.notes,
         restSeconds: re.restSeconds,
@@ -149,15 +221,68 @@ export default function RoutineDetailScreen() {
 
   const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
-
   const completedSets = useMemo(
     () => allSets.filter((s) => s.completed).length,
     [allSets]
   );
 
+  // ----------------------
+  //  Actualizar store al arrancar y durante la sesión
+  // ----------------------
+  useEffect(() => {
+    if (started) {
+      patchWorkoutInProgress({
+        duration,
+        volume,
+        completedSets,
+        exercises: exercisesState.map((ex) => ({
+          ...ex,
+          sets: sets[ex.id] || [],
+        })),
+        sets,
+      });
+    }
+  }, [started, duration, volume, completedSets, sets, exercisesState]);
+
+  // Actualización periódica reducida
+  useEffect(() => {
+    if (!started) return;
+    const interval = setInterval(() => {
+      updateWorkoutProgress({
+        duration,
+        volume,
+        completedSets,
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [started, duration, volume, completedSets, updateWorkoutProgress]);
+
+  // Cargar entrenamiento en progreso desde store si corresponde
+  useEffect(() => {
+    if (workoutInProgress && route.params?.start && !hasInitializedFromStore) {
+      setRoutineTitle(workoutInProgress.routineTitle);
+      setExercises(workoutInProgress.exercises);
+      setSets(workoutInProgress.sets);
+      setDuration(workoutInProgress.duration);
+      setStarted(true);
+      setHasInitializedFromStore(true);
+    }
+  }, [workoutInProgress, route.params?.start, hasInitializedFromStore]);
+
+  // ----------------------
+  //  Guardado / Finalización
+  // ----------------------
   const handleFinishAndSaveRoutine = async () => {
     try {
       setStarted(false);
+
+      const parent = (navigation as any).getParent?.();
+      if (parent && typeof parent.setOptions === "function") {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
+
+      clearWorkoutInProgress();
 
       const routineToSave = {
         ...routineData,
@@ -182,7 +307,6 @@ export default function RoutineDetailScreen() {
       };
 
       let updatedRoutine;
-
       if (routineData?.id) {
         updatedRoutine = await updateRoutineById(routineData.id, routineToSave);
       } else {
@@ -195,7 +319,6 @@ export default function RoutineDetailScreen() {
         completedSets,
       });
 
-      // 🔄 Restablecer todas las series a no completadas
       const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
       Object.keys(sets).forEach((exerciseId) => {
         resetSets[exerciseId] = sets[exerciseId].map((set) => ({
@@ -204,7 +327,6 @@ export default function RoutineDetailScreen() {
         }));
       });
       setSets(resetSets);
-
       alert("Rutina y sesión guardadas exitosamente");
 
       navigation.reset({
@@ -214,7 +336,8 @@ export default function RoutineDetailScreen() {
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
         ],
       });
-    } catch {
+    } catch (err) {
+      console.error(err);
       alert("Error al guardar la rutina");
     }
   };
@@ -283,6 +406,9 @@ export default function RoutineDetailScreen() {
     />
   );
 
+  // ----------------------
+  //  Temporizador global
+  // ----------------------
   const handleStartRestTimer = (restSeconds: number) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
@@ -332,10 +458,13 @@ export default function RoutineDetailScreen() {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
       }
+      const parent = (navigation as any).getParent?.();
+      if (parent && typeof parent.setOptions === "function") {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
     };
   }, []);
 
-  // Animación para el toast
   useEffect(() => {
     if (showRestToast) {
       Animated.spring(slideAnim, {
@@ -381,7 +510,7 @@ export default function RoutineDetailScreen() {
             routineTitle={routineTitle}
             started={started}
             routineId={routineData?.id}
-            onStart={() => setStarted(true)}
+            onStart={handleStartRoutine}
             onEdit={goToEditRoutine}
             onChangeTitle={setRoutineTitle}
             readonly={readonly}
@@ -391,13 +520,12 @@ export default function RoutineDetailScreen() {
         contentContainerStyle={{ paddingTop: started ? 80 : 0, padding: 16 }}
       />
 
-      {!routineData?.id && (
+      {!routineData?.id && !started && (
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}
 
-      {/* Toast de descanso global */}
       {showRestToast && (
         <Animated.View
           style={[

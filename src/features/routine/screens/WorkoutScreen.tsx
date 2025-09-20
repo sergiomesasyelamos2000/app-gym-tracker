@@ -23,6 +23,8 @@ import {
   duplicateRoutine,
   findAllRoutines,
 } from "../services/routineService";
+import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { useShallow } from "zustand/react/shallow";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -39,6 +41,37 @@ export default function WorkoutScreen() {
     useState<RoutineResponseDto | null>(null);
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { workoutInProgress, clearWorkoutInProgress } =
+    useWorkoutInProgressStore(
+      useShallow((state) => ({
+        workoutInProgress: state.workoutInProgress,
+        clearWorkoutInProgress: state.clearWorkoutInProgress,
+      }))
+    );
+  const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setShowWorkoutBanner(!!workoutInProgress);
+      return () => {
+        setShowWorkoutBanner(false);
+      };
+    }, [workoutInProgress])
+  );
+
+  const handleResumeWorkout = () => {
+    if (workoutInProgress) {
+      navigation.navigate("RoutineDetail", {
+        routineId: workoutInProgress.routineId, // Pasar solo el ID
+        start: true,
+      });
+    }
+  };
+
+  const handleDiscardWorkout = () => {
+    clearWorkoutInProgress();
+    setShowWorkoutBanner(false);
+  };
 
   // Función para cargar y ordenar rutinas
   const fetchRoutines = useCallback(async () => {
@@ -178,7 +211,9 @@ export default function WorkoutScreen() {
                 style={{ flex: 1 }}
                 activeOpacity={0.8}
                 onPress={() =>
-                  navigation.navigate("RoutineDetail", { routine })
+                  navigation.navigate("RoutineDetail", {
+                    routineId: routine.id,
+                  })
                 }
               >
                 <Text style={styles.routineName}>{routine.title}</Text>
@@ -193,7 +228,10 @@ export default function WorkoutScreen() {
               <TouchableOpacity
                 style={styles.startRoutineButton}
                 onPress={() =>
-                  navigation.navigate("RoutineDetail", { routine, start: true })
+                  navigation.navigate("RoutineDetail", {
+                    routineId: routine.id,
+                    start: true,
+                  })
                 }
               >
                 <Text style={styles.startRoutineButtonText}>
@@ -240,6 +278,29 @@ export default function WorkoutScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Banner de entrenamiento en progreso */}
+      {showWorkoutBanner && workoutInProgress && (
+        <View style={styles.workoutBanner}>
+          <Text style={styles.workoutBannerText}>
+            Entrenamiento en progreso: {workoutInProgress.routineTitle}
+          </Text>
+          <View style={styles.workoutBannerButtons}>
+            <TouchableOpacity
+              style={styles.resumeButton}
+              onPress={handleResumeWorkout}
+            >
+              <Text style={styles.resumeButtonText}>Reanudar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.discardButton}
+              onPress={handleDiscardWorkout}
+            >
+              <Text style={styles.discardButtonText}>Descartar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -357,5 +418,46 @@ const styles = StyleSheet.create({
   modalItemText: {
     fontSize: 16,
     color: "#333",
+  },
+  workoutBanner: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#6C3BAA",
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  workoutBannerText: {
+    color: "white",
+    fontWeight: "bold",
+    flex: 1,
+  },
+  workoutBannerButtons: {
+    flexDirection: "row",
+  },
+  resumeButton: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  resumeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  discardButton: {
+    backgroundColor: "#F44336",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  discardButtonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
