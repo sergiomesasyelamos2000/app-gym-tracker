@@ -9,6 +9,7 @@ import ExerciseRestTimer from "./ExerciseRestTimer";
 import ExerciseSetList from "./ExerciseSetList";
 import { parseTime, formatTime } from "./helpers";
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
+import ExerciseRestPicker from "./ExerciseRestPicker";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -17,6 +18,7 @@ interface Props {
   onChangeExercise: (exercise: ExerciseRequestDto) => void;
   readonly?: boolean;
   started?: boolean;
+  onStartRestTimer?: (restSeconds: number) => void;
 }
 
 const ExerciseCard = ({
@@ -26,6 +28,7 @@ const ExerciseCard = ({
   onChangeExercise,
   readonly = false,
   started = false,
+  onStartRestTimer,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -76,6 +79,14 @@ const ExerciseCard = ({
     setSets([...sets, newSet]);
   };
 
+  const deleteSet = (id: string) => {
+    setSets((prev) =>
+      prev
+        .filter((set) => set.id !== id)
+        .map((s, i) => ({ ...s, order: i + 1 }))
+    );
+  };
+
   const updateSet = (
     id: string,
     field: keyof SetRequestDto,
@@ -84,14 +95,14 @@ const ExerciseCard = ({
     setSets((prev) =>
       prev.map((set) => (set.id === id ? { ...set, [field]: value } : set))
     );
-  };
 
-  const deleteSet = (id: string) => {
-    setSets((prev) =>
-      prev
-        .filter((set) => set.id !== id)
-        .map((s, i) => ({ ...s, order: i + 1 }))
-    );
+    if (field === "completed" && value === true && onStartRestTimer) {
+      const { minutes, seconds } = parseTime(restTime);
+      const totalSeconds = minutes * 60 + seconds;
+      if (totalSeconds > 0) {
+        onStartRestTimer(totalSeconds);
+      }
+    }
   };
 
   const handleWeightUnitChange = (unit: "kg" | "lbs") => {
@@ -112,7 +123,7 @@ const ExerciseCard = ({
     <Card style={styles.card}>
       <ExerciseHeader exercise={exercise} />
       <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
-      <ExerciseRestTimer
+      <ExerciseRestPicker
         restTime={restTime}
         setRestTime={setRestTime}
         readonly={readonly}

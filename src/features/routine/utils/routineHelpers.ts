@@ -1,11 +1,12 @@
 import uuid from "react-native-uuid";
 import { SetRequestDto } from "../../../models";
 
-export const initializeSets = (exerciseSets?: SetRequestDto[]) => {
-  if (exerciseSets && exerciseSets.length > 0) {
-    return exerciseSets.map((set) => ({
+export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
+  if (sets.length > 0) {
+    return sets.map((set, index) => ({
       ...set,
-      completed: typeof set.completed === "boolean" ? set.completed : false,
+      order: index + 1,
+      completed: false, // 🔄 Asegurar que no estén completadas
     }));
   }
 
@@ -15,7 +16,7 @@ export const initializeSets = (exerciseSets?: SetRequestDto[]) => {
       order: 1,
       weight: 0,
       reps: 0,
-      completed: false,
+      completed: false, // 🔄 Valor por defecto
     },
   ];
 };

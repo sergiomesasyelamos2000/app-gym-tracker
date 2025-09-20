@@ -16,7 +16,7 @@ export const parseRestTime = (timeStr: string) => {
   };
 };
 
-export const formatTime = ({
+/* export const formatTime = ({
   minutes,
   seconds,
 }: {
@@ -31,4 +31,14 @@ export const formatTime = ({
     timeParts.push(seconds.toString().padStart(2, "0"));
   }
   return timeParts.join(":");
+}; */
+
+// En utils/routineHelpers.ts
+export const formatTime = (time: {
+  minutes: number;
+  seconds: number;
+}): string => {
+  return `${time.minutes.toString().padStart(2, "0")}:${time.seconds
+    .toString()
+    .padStart(2, "0")}`;
 };

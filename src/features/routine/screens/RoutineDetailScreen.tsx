@@ -4,8 +4,9 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -25,6 +26,8 @@ import {
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import CustomToast from "../../../ui/CustomToast";
+import { formatTime } from "../components/ExerciseCard/helpers";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -43,6 +46,13 @@ export default function RoutineDetailScreen() {
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
     {}
   );
+
+  // Estados para el temporizador global
+  const [showRestToast, setShowRestToast] = useState(false);
+  const [restTimeRemaining, setRestTimeRemaining] = useState(0);
+  const [totalRestTime, setTotalRestTime] = useState(0);
+  const slideAnim = useRef(new Animated.Value(100)).current;
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (started) {
@@ -85,11 +95,13 @@ export default function RoutineDetailScreen() {
 
       const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
       exercises.forEach((exercise) => {
-        initialSets[exercise.id] = initializeSets(exercise.sets);
+        initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
+          ...set,
+          completed: false, // 🔄 Asegurar que nuevas series no estén completadas
+        }));
       });
       setSets(initialSets);
 
-      // Si es nueva rutina (sin title), ponemos uno por defecto
       setRoutineTitle(routine?.title || "Nueva rutina");
     }
   }, [exercises]);
@@ -159,10 +171,10 @@ export default function RoutineDetailScreen() {
           sets:
             sets[exercise.id]?.map((set) => ({
               ...set,
-              weight: set.weight || 0, // Guardar el peso ingresado
-              reps: set.reps || 0, // Guardar las repeticiones ingresadas
-              repsMin: set.repsMin || 0, // Guardar repsMin si aplica
-              repsMax: set.repsMax || 0, // Guardar repsMax si aplica
+              weight: set.weight || 0,
+              reps: set.reps || 0,
+              repsMin: set.repsMin || 0,
+              repsMax: set.repsMax || 0,
             })) || [],
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
@@ -177,12 +189,21 @@ export default function RoutineDetailScreen() {
         updatedRoutine = await saveRoutine(routineToSave);
       }
 
-      // 👇 Guardar histórico de la sesión
       await saveRoutineSession(updatedRoutine.id, {
         totalTime: duration,
         totalWeight: volume,
         completedSets,
       });
+
+      // 🔄 Restablecer todas las series a no completadas
+      const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
+      Object.keys(sets).forEach((exerciseId) => {
+        resetSets[exerciseId] = sets[exerciseId].map((set) => ({
+          ...set,
+          completed: false,
+        }));
+      });
+      setSets(resetSets);
 
       alert("Rutina y sesión guardadas exitosamente");
 
@@ -258,8 +279,79 @@ export default function RoutineDetailScreen() {
       }
       readonly={readonly && !started}
       started={started}
+      onStartRestTimer={handleStartRestTimer}
     />
   );
+
+  const handleStartRestTimer = (restSeconds: number) => {
+    setTotalRestTime(restSeconds);
+    setRestTimeRemaining(restSeconds);
+    setShowRestToast(true);
+
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+
+    countdownRef.current = setInterval(() => {
+      setRestTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current as NodeJS.Timeout);
+          setShowRestToast(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleAddRestTime = () => {
+    setRestTimeRemaining((prev) => {
+      const newTime = prev + 15;
+      setTotalRestTime(newTime);
+      return newTime;
+    });
+  };
+
+  const handleSubtractRestTime = () => {
+    setRestTimeRemaining((prev) => {
+      const newTime = Math.max(0, prev - 15);
+      setTotalRestTime(newTime);
+      return newTime;
+    });
+  };
+
+  const handleCancelRestTimer = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+    setShowRestToast(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, []);
+
+  // Animación para el toast
+  useEffect(() => {
+    if (showRestToast) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 40,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showRestToast]);
 
   if (loading)
     return (
@@ -304,6 +396,29 @@ export default function RoutineDetailScreen() {
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}
+
+      {/* Toast de descanso global */}
+      {showRestToast && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <CustomToast
+            text1={`${formatTime({
+              minutes: Math.floor(restTimeRemaining / 60),
+              seconds: restTimeRemaining % 60,
+            })}`}
+            progress={restTimeRemaining / totalRestTime}
+            onCancel={handleCancelRestTimer}
+            onAddTime={handleAddRestTime}
+            onSubtractTime={handleSubtractRestTime}
+          />
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -323,5 +438,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  toastContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 1000,
   },
 });
