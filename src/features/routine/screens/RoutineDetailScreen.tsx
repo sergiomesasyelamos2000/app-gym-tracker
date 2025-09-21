@@ -160,8 +160,26 @@ export default function RoutineDetailScreen() {
     }
   }, [routine, routineId]);
 
-  // Prioridad: exercises desde params
+  // Cargar entrenamiento en progreso desde store si corresponde
+  // Este efecto debe ejecutarse ANTES de cualquier otra inicialización
   useEffect(() => {
+    if (workoutInProgress && route.params?.start && !hasInitializedFromStore) {
+      console.log("Cargando desde store...");
+      setRoutineTitle(workoutInProgress.routineTitle);
+      setExercises(workoutInProgress.exercises);
+      setSets(workoutInProgress.sets);
+      setDuration(workoutInProgress.duration);
+      setStarted(true);
+      setHasInitializedFromStore(true);
+
+      // Limpiar el parámetro start para evitar re-inicializaciones
+      navigation.setParams({ start: undefined });
+    }
+  }, [workoutInProgress, route.params?.start, hasInitializedFromStore]);
+
+  // Prioridad: exercises desde params (solo si no hemos cargado desde store)
+  useEffect(() => {
+    if (hasInitializedFromStore) return;
     if (exercises && exercises.length > 0) {
       setExercises(exercises);
 
@@ -176,10 +194,11 @@ export default function RoutineDetailScreen() {
 
       setRoutineTitle(routine?.title || "Nueva rutina");
     }
-  }, [exercises]);
+  }, [exercises, hasInitializedFromStore]);
 
-  // Si NO hay exercises en params, cargar desde routineData
+  // Si NO hay exercises en params, cargar desde routineData (solo si no hemos cargado desde store)
   useEffect(() => {
+    if (hasInitializedFromStore) return;
     if (exercises && exercises.length > 0) return;
     if (!routineData) return;
 
@@ -211,7 +230,7 @@ export default function RoutineDetailScreen() {
       initialSets[exercise.id] = initializeSets(exercise.sets);
     });
     setSets(initialSets);
-  }, [routineData, exercises]);
+  }, [routineData, exercises, hasInitializedFromStore]);
 
   useEffect(() => {
     if (!started) return;
@@ -258,21 +277,14 @@ export default function RoutineDetailScreen() {
     return () => clearInterval(interval);
   }, [started, duration, volume, completedSets, updateWorkoutProgress]);
 
-  // Cargar entrenamiento en progreso desde store si corresponde
-  useEffect(() => {
-    if (workoutInProgress && route.params?.start && !hasInitializedFromStore) {
-      setRoutineTitle(workoutInProgress.routineTitle);
-      setExercises(workoutInProgress.exercises);
-      setSets(workoutInProgress.sets);
-      setDuration(workoutInProgress.duration);
-      setStarted(true);
-      setHasInitializedFromStore(true);
-    }
-  }, [workoutInProgress, route.params?.start, hasInitializedFromStore]);
-
   // Este useEffect debe estar ANTES de cualquier return condicional
   useEffect(() => {
-    if (start && routineData && !workoutInProgress) {
+    if (
+      start &&
+      routineData &&
+      !workoutInProgress &&
+      !hasInitializedFromStore
+    ) {
       // Mapear ejercicios con sets vacíos para el inicio
       const exercisesWithSets =
         routineData.routineExercises?.map((re: any) => ({
@@ -314,7 +326,13 @@ export default function RoutineDetailScreen() {
         startedAt: Date.now(),
       });
     }
-  }, [start, routineData, workoutInProgress, setWorkoutInProgress]);
+  }, [
+    start,
+    routineData,
+    workoutInProgress,
+    setWorkoutInProgress,
+    hasInitializedFromStore,
+  ]);
 
   // ----------------------
   //  Guardado / Finalización
@@ -322,6 +340,7 @@ export default function RoutineDetailScreen() {
   const handleFinishAndSaveRoutine = async () => {
     try {
       setStarted(false);
+      setHasInitializedFromStore(false); // Resetear flag
 
       const parent = (navigation as any).getParent?.();
       if (parent && typeof parent.setOptions === "function") {
