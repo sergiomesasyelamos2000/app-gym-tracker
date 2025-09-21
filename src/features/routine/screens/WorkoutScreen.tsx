@@ -26,6 +26,7 @@ import {
 } from "../services/routineService";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import { useShallow } from "zustand/react/shallow";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -51,14 +52,36 @@ export default function WorkoutScreen() {
     );
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setShowWorkoutBanner(!!workoutInProgress);
-      return () => {
+  // Elimina el useFocusEffect existente y reemplázalo con:
+  useEffect(() => {
+    const checkWorkoutState = async () => {
+      try {
+        // Verificar directamente en AsyncStorage
+        const stored = await AsyncStorage.getItem(
+          "workout-in-progress-storage"
+        );
+        if (!stored) {
+          setShowWorkoutBanner(false);
+          return;
+        }
+
+        const parsed = JSON.parse(stored);
+        setShowWorkoutBanner(!!parsed.state.workoutInProgress);
+      } catch (error) {
+        console.error("Error checking workout state:", error);
         setShowWorkoutBanner(false);
-      };
-    }, [workoutInProgress])
-  );
+      }
+    };
+
+    checkWorkoutState();
+  }, [workoutInProgress]);
+
+  useEffect(() => {
+    return () => {
+      // Limpieza cuando el componente se desmonta
+      setShowWorkoutBanner(false);
+    };
+  }, []);
 
   const handleResumeWorkout = () => {
     if (workoutInProgress) {

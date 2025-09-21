@@ -270,6 +270,52 @@ export default function RoutineDetailScreen() {
     }
   }, [workoutInProgress, route.params?.start, hasInitializedFromStore]);
 
+  // Este useEffect debe estar ANTES de cualquier return condicional
+  useEffect(() => {
+    if (start && routineData && !workoutInProgress) {
+      // Mapear ejercicios con sets vacíos para el inicio
+      const exercisesWithSets =
+        routineData.routineExercises?.map((re: any) => ({
+          ...re.exercise,
+          sets: re.sets.map((set: any) => ({
+            ...set,
+            completed: false,
+            previousWeight: set.weight,
+            previousReps: set.reps || set.repsMin,
+          })),
+          notes: re.notes,
+          restSeconds: re.restSeconds,
+          weightUnit: re.weightUnit || "kg",
+          repsType: re.repsType || "reps",
+        })) ||
+        routineData.exercises?.map((ex: any) => ({
+          ...ex,
+          sets: initializeSets(ex.sets || []).map((s) => ({
+            ...s,
+            completed: false,
+          })),
+        })) ||
+        [];
+
+      setExercises(exercisesWithSets);
+
+      // Crear el workoutInProgress en el store
+      setWorkoutInProgress({
+        routineId: routineData.id,
+        routineTitle: routineData.title,
+        duration: 0,
+        volume: 0,
+        completedSets: 0,
+        exercises: exercisesWithSets,
+        sets: exercisesWithSets.reduce(
+          (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
+          {}
+        ),
+        startedAt: Date.now(),
+      });
+    }
+  }, [start, routineData, workoutInProgress, setWorkoutInProgress]);
+
   // ----------------------
   //  Guardado / Finalización
   // ----------------------
@@ -283,6 +329,8 @@ export default function RoutineDetailScreen() {
       }
 
       clearWorkoutInProgress();
+
+      navigation.setParams({ start: undefined, routineId: undefined });
 
       const routineToSave = {
         ...routineData,
@@ -330,7 +378,7 @@ export default function RoutineDetailScreen() {
       alert("Rutina y sesión guardadas exitosamente");
 
       navigation.reset({
-        index: 1,
+        index: 0,
         routes: [
           { name: "WorkoutList" },
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
@@ -482,6 +530,7 @@ export default function RoutineDetailScreen() {
     }
   }, [showRestToast]);
 
+  // Ahora el return condicional está DESPUÉS de todos los Hooks
   if (loading)
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -490,51 +539,6 @@ export default function RoutineDetailScreen() {
         </Text>
       </SafeAreaView>
     );
-
-  useEffect(() => {
-    if (start && routineData && !workoutInProgress) {
-      // Mapear ejercicios con sets vacíos para el inicio
-      const exercisesWithSets =
-        routineData.routineExercises?.map((re: any) => ({
-          ...re.exercise,
-          sets: re.sets.map((set: any) => ({
-            ...set,
-            completed: false,
-            previousWeight: set.weight,
-            previousReps: set.reps || set.repsMin,
-          })),
-          notes: re.notes,
-          restSeconds: re.restSeconds,
-          weightUnit: re.weightUnit || "kg",
-          repsType: re.repsType || "reps",
-        })) ||
-        routineData.exercises?.map((ex: any) => ({
-          ...ex,
-          sets: initializeSets(ex.sets || []).map((s) => ({
-            ...s,
-            completed: false,
-          })),
-        })) ||
-        [];
-
-      setExercises(exercisesWithSets);
-
-      // Crear el workoutInProgress en el store
-      setWorkoutInProgress({
-        routineId: routineData.id,
-        routineTitle: routineData.title,
-        duration: 0,
-        volume: 0,
-        completedSets: 0,
-        exercises: exercisesWithSets,
-        sets: exercisesWithSets.reduce(
-          (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
-          {}
-        ),
-        startedAt: Date.now(),
-      });
-    }
-  }, [start, routineData, workoutInProgress, setWorkoutInProgress]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { ExerciseRequestDto, SetRequestDto } from "../models";
+import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface WorkoutInProgress {
   routineId: string;
@@ -47,7 +48,13 @@ export const useWorkoutInProgressStore = create<WorkoutInProgressState>()(
             : null,
         })),
 
-      clearWorkoutInProgress: () => set({ workoutInProgress: null }),
+      clearWorkoutInProgress: () => {
+        // Limpiar estado en memoria
+        set({ workoutInProgress: null });
+
+        // Limpiar almacenamiento persistente directamente
+        AsyncStorage.removeItem("workout-in-progress-storage");
+      },
 
       updateWorkoutProgress: (progress) =>
         set((state) => ({
@@ -58,6 +65,11 @@ export const useWorkoutInProgressStore = create<WorkoutInProgressState>()(
     }),
     {
       name: "workout-in-progress-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      // Asegurar que solo se persistan los datos, no las funciones
+      partialize: (state) => ({
+        workoutInProgress: state.workoutInProgress,
+      }),
     }
   )
 );
