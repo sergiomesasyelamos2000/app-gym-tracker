@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: number | boolean | undefined
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
@@ -30,20 +30,65 @@ const ExerciseSetRow = ({
   previousMark,
   started = false,
 }: Props) => {
-  const handleSingleRepsChange = (text: string) => {
-    const reps = Number(text);
-    onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
+  // Estados locales independientes - fuente única de verdad
+  const [localWeight, setLocalWeight] = useState<string>(
+    started ? "" : item.weight?.toString() || ""
+  );
+  const [localReps, setLocalReps] = useState<string>(
+    started ? "" : item.reps?.toString() || ""
+  );
+  const [localRepsMin, setLocalRepsMin] = useState<string>(
+    started ? "" : item.repsMin?.toString() || ""
+  );
+  const [localRepsMax, setLocalRepsMax] = useState<string>(
+    started ? "" : item.repsMax?.toString() || ""
+  );
+
+  // Solo sincronizar con el item cuando started cambia
+  useEffect(() => {
+    if (started) {
+      // Modo started: vaciar los inputs
+      setLocalWeight("");
+      setLocalReps("");
+      setLocalRepsMin("");
+      setLocalRepsMax("");
+    } else {
+      // Modo edición: cargar valores del item
+      setLocalWeight(item.weight?.toString() || "");
+      setLocalReps(item.reps?.toString() || "");
+      setLocalRepsMin(item.repsMin?.toString() || "");
+      setLocalRepsMax(item.repsMax?.toString() || "");
+    }
+  }, [started, item.id]); // Solo cuando started o item.id cambian
+
+  // Funciones de cambio simplificadas
+  const handleWeightChange = (text: string) => {
+    setLocalWeight(text);
+    const weight = text === "" ? undefined : Number(text);
+    onUpdate(item.id, "weight", isNaN(Number(text)) ? undefined : weight);
+  };
+
+  const handleRepsChange = (text: string) => {
+    setLocalReps(text);
+    const reps = text === "" ? undefined : Number(text);
+    onUpdate(item.id, "reps", isNaN(Number(text)) ? undefined : reps);
+  };
+
+  const handleRepsMinChange = (text: string) => {
+    setLocalRepsMin(text);
+    const repsMin = text === "" ? undefined : Number(text);
+    onUpdate(item.id, "repsMin", isNaN(Number(text)) ? undefined : repsMin);
+  };
+
+  const handleRepsMaxChange = (text: string) => {
+    setLocalRepsMax(text);
+    const repsMax = text === "" ? undefined : Number(text);
+    onUpdate(item.id, "repsMax", isNaN(Number(text)) ? undefined : repsMax);
   };
 
   const completedStyle = item.completed
-    ? {
-        backgroundColor: "#b3f5c2ff",
-        placeholderTextColor: "#b3f5c2ff",
-      }
-    : {
-        backgroundColor: "#f9f9f9",
-        placeholderTextColor: "#999",
-      };
+    ? { backgroundColor: "#b3f5c2ff" }
+    : { backgroundColor: "#f9f9f9" };
 
   return (
     <View style={[styles.row, completedStyle]}>
@@ -60,28 +105,28 @@ const ExerciseSetRow = ({
       <TextInput
         style={[styles.input, { flex: 2 }]}
         keyboardType="numeric"
-        value={item.weight?.toString()}
-        placeholder="Kg"
+        value={localWeight}
+        placeholder={
+          started ? previousMark?.split("kg")[0]?.trim() || "Kg" : "Kg"
+        }
         placeholderTextColor="#999"
-        onChangeText={(text) => {
-          const weight = Number(text);
-          onUpdate(item.id, "weight", isNaN(weight) ? 0 : weight);
-        }}
+        onChangeText={handleWeightChange}
         editable={!readonly}
       />
 
       {/* Repeticiones */}
-      {started && repsType === "range" ? (
+      {started ? (
         <TextInput
           style={[styles.input, { flex: 2 }]}
           keyboardType="numeric"
-          value={item.reps?.toString() || ""}
-          placeholder={`${item.repsMin || 0}-${item.repsMax || 0}`}
+          value={localReps}
+          placeholder={
+            repsType === "range"
+              ? `${item.repsMin || ""}-${item.repsMax || ""}`
+              : previousMark?.split("x")[1]?.trim() || "Reps"
+          }
           placeholderTextColor="#999"
-          onChangeText={(text) => {
-            const reps = Number(text);
-            onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
-          }}
+          onChangeText={handleRepsChange}
           editable={!readonly}
         />
       ) : repsType === "range" ? (
@@ -89,24 +134,20 @@ const ExerciseSetRow = ({
           <TextInput
             style={[styles.rangeInput, { flex: 1 }]}
             keyboardType="numeric"
-            value={item.repsMin?.toString() || ""}
+            value={localRepsMin}
             placeholder="8"
             placeholderTextColor="#999"
-            onChangeText={(text) =>
-              onUpdate(item.id, "repsMin", Number(text) || 0)
-            }
+            onChangeText={handleRepsMinChange}
             editable={!readonly}
           />
           <Text style={styles.rangeSeparator}>-</Text>
           <TextInput
             style={[styles.rangeInput, { flex: 1 }]}
             keyboardType="numeric"
-            value={item.repsMax?.toString() || ""}
+            value={localRepsMax}
             placeholder="10"
             placeholderTextColor="#999"
-            onChangeText={(text) =>
-              onUpdate(item.id, "repsMax", Number(text) || 0)
-            }
+            onChangeText={handleRepsMaxChange}
             editable={!readonly}
           />
         </View>
@@ -114,13 +155,10 @@ const ExerciseSetRow = ({
         <TextInput
           style={[styles.input, { flex: 2 }]}
           keyboardType="numeric"
-          value={item.reps?.toString() || ""}
+          value={localReps}
           placeholder="Reps"
           placeholderTextColor="#999"
-          onChangeText={(text) => {
-            const reps = Number(text);
-            onUpdate(item.id, "reps", isNaN(reps) ? 0 : reps);
-          }}
+          onChangeText={handleRepsChange}
           editable={!readonly}
         />
       )}
