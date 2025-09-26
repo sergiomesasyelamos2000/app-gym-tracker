@@ -34,18 +34,21 @@ export default function ExerciseList() {
   >([]);
   const [exercises, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadExercises = async () => {
       try {
+        setError(null);
         const data = await fetchExercises();
         setExercises(data);
-      } catch (error) {
-        console.error("Error fetching exercises:", error);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido");
       } finally {
         setLoading(false);
       }
     };
+
     loadExercises();
   }, []);
 
@@ -80,10 +83,24 @@ export default function ExerciseList() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C3BAA" />
+          <Text style={styles.loadingText}>Cargando ejercicios...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              /* Recargar los ejercicios */
+            }}
+          >
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </TouchableOpacity>
         </View>
       ) : (
+        // Tu contenido actual aquí
         <View style={styles.container}>
-          {/* Header */}
+          {/* Header con buscador */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
             <TextInput
@@ -91,10 +108,11 @@ export default function ExerciseList() {
               placeholder="Buscar ejercicio..."
               value={searchQuery}
               onChangeText={setSearchQuery}
+              placeholderTextColor="#999"
             />
           </View>
 
-          {/* Exercise List */}
+          {/* Lista de ejercicios */}
           <FlatList
             data={filteredExercises}
             keyExtractor={(item) => item.id}
@@ -105,9 +123,16 @@ export default function ExerciseList() {
                 onSelect={handleSelectExercise}
               />
             )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "No se encontraron ejercicios"
+                  : "No hay ejercicios disponibles"}
+              </Text>
+            }
           />
 
-          {/* Confirm Button */}
+          {/* Botón de confirmación */}
           {selectedExercises.length > 0 && (
             <TouchableOpacity
               style={styles.confirmButton}
@@ -167,5 +192,38 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#d32f2f",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#6C3BAA",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#666",
   },
 });
