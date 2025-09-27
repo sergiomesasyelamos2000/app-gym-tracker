@@ -9,6 +9,7 @@ export async function apiFetch<T = any>(
   const response = await fetch(`${BASE_URL}/${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...(options.headers || {}),
     },
     ...options,

@@ -5,6 +5,7 @@ import { ExerciseRequestDto, RoutineRequestDto } from "../../../models";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
 import RoutineDetailScreen from "./RoutineDetailScreen";
+import CreateExerciseScreen from "./CreateExerciseScreen";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;
@@ -24,6 +25,7 @@ export type WorkoutStackParamList = {
     exercises?: ExerciseRequestDto[];
     onUpdate?: (newTitle: string) => void;
   };
+  CreateExercise: undefined;
 };
 
 const Stack = createNativeStackNavigator<WorkoutStackParamList>();
@@ -53,6 +55,12 @@ export default function WorkoutStack() {
         name="RoutineEdit"
         component={RoutineEditScreen}
         options={{ title: "Routine Edit" }}
+      />
+
+      <Stack.Screen
+        name="CreateExercise"
+        component={CreateExerciseScreen}
+        options={{ title: "Create Exercise" }}
       />
     </Stack.Navigator>
   );

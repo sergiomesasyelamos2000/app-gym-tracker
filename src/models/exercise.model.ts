@@ -16,3 +16,30 @@ export interface ExerciseRequestDto {
   weightUnit: "kg" | "lbs";
   repsType: "reps" | "range";
 }
+
+export interface CreateExerciseDto {
+  name: string;
+  equipment: string;
+  primaryMuscle: string;
+  otherMuscles: string[];
+  type: string;
+  imageBase64?: string | null;
+}
+
+export interface EquipmentDto {
+  id: string;
+  name: string;
+  imagePath?: string;
+}
+
+export interface MuscleDto {
+  id: string;
+  name: string;
+  imagePath?: string;
+}
+
+export interface ExerciseTypeDto {
+  id: string;
+  name: string;
+  imagePath?: string;
+}

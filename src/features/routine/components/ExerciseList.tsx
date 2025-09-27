@@ -124,11 +124,24 @@ export default function ExerciseList() {
               />
             )}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>
-                {searchQuery
-                  ? "No se encontraron ejercicios"
-                  : "No hay ejercicios disponibles"}
-              </Text>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {searchQuery
+                    ? "No se encontraron ejercicios"
+                    : "No hay ejercicios disponibles"}
+                </Text>
+
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.createButton}
+                    onPress={() => navigation.navigate("CreateExercise")}
+                  >
+                    <Text style={styles.createButtonText}>
+                      Crear ejercicio personalizado
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             }
           />
 
@@ -225,5 +238,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: "#666",
+  },
+  emptyContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  createButton: {
+    marginTop: 16,
+    backgroundColor: "#6C3BAA",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
