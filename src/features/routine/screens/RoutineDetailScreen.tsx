@@ -164,7 +164,6 @@ export default function RoutineDetailScreen() {
   // Este efecto debe ejecutarse ANTES de cualquier otra inicialización
   useEffect(() => {
     if (workoutInProgress && route.params?.start && !hasInitializedFromStore) {
-      console.log("Cargando desde store...");
       setRoutineTitle(workoutInProgress.routineTitle);
       setExercises(workoutInProgress.exercises);
       setSets(workoutInProgress.sets);

@@ -39,8 +39,6 @@ export default function RoutineEditScreen() {
     const fetchRoutine = async () => {
       if (id) {
         const data = await getRoutineById(id);
-        console.log("Fetched routine data:", data);
-
         // Mapea los ejercicios desde routineExercises
         const exercises: ExerciseRequestDto[] = Array.isArray(
           data.routineExercises

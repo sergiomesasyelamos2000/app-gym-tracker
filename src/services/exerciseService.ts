@@ -21,8 +21,6 @@ export const searchExercises = async (query: string): Promise<any[]> => {
 };
 
 export const createExercise = async (exercise: CreateExerciseDto) => {
-  console.log("exerciseService - createExercise called with:", exercise);
-
   return apiFetch("exercises", {
     method: "POST",
     body: JSON.stringify(exercise),
