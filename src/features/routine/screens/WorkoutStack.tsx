@@ -1,7 +1,11 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import ExerciseListScreen from "../components/ExerciseList";
-import { ExerciseRequestDto, RoutineRequestDto } from "../../../models";
+import {
+  CreateExerciseDto,
+  ExerciseRequestDto,
+  RoutineRequestDto,
+} from "../../../models";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
 import RoutineDetailScreen from "./RoutineDetailScreen";
@@ -16,8 +20,9 @@ export type WorkoutStackParamList = {
     start?: boolean;
   };
   ExerciseList: {
-    onFinishSelection: (exercises: ExerciseRequestDto[]) => void;
+    onFinishSelection?: (exercises: ExerciseRequestDto[]) => void;
     routineId?: string;
+    preselectExercise?: ExerciseRequestDto;
   };
   RoutineEdit: {
     id: string;

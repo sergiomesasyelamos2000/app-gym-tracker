@@ -26,7 +26,8 @@ export default function ExerciseList() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
-  const { onFinishSelection, routineId } = route.params || {};
+  const { onFinishSelection, routineId, preselectExercise } =
+    route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
@@ -34,6 +35,15 @@ export default function ExerciseList() {
   >([]);
   const [exercises, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (preselectExercise) {
+      setSelectedExercises((prev) => {
+        if (prev.some((ex) => ex.id === preselectExercise.id)) return prev;
+        return [...prev, preselectExercise];
+      });
+    }
+  }, [preselectExercise]);
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

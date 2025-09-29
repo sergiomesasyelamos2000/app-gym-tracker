@@ -22,6 +22,7 @@ import {
   fetchMuscles,
 } from "../../../services/exerciseService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { ExerciseRequestDto } from "../../../models";
 
 interface CustomDropdownProps {
   value: string; // Ahora será el ID
@@ -217,35 +218,31 @@ export default function CreateExerciseScreen() {
       let imageBase64: string | undefined;
 
       if (imageUri) {
-        // ✅ Optimizar imagen antes de convertir a base64
         const optimizedImage = await ImageManipulator.manipulateAsync(
           imageUri,
-          [{ resize: { width: 400, height: 400 } }], // Redimensionar
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // Comprimir
+          [{ resize: { width: 400, height: 400 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         imageBase64 = await FileSystem.readAsStringAsync(optimizedImage.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-
-        console.log(
-          "Tamaño de la imagen base64:",
-          imageBase64.length,
-          "caracteres"
-        );
       }
 
-      await createExercise({
+      // 🚀 crear ejercicio y obtener su respuesta con ID
+      const newExercise: ExerciseRequestDto = await createExercise({
         name: name.trim(),
-        equipment: equipmentId, // Enviar ID en lugar de nombre
-        primaryMuscle: primaryMuscleId, // Enviar ID
-        otherMuscles: otherMuscleIds, // Enviar array de IDs
-        type: typeId, // Enviar ID
+        equipment: equipmentId,
+        primaryMuscle: primaryMuscleId,
+        otherMuscles: otherMuscleIds,
+        type: typeId,
         imageBase64,
       });
 
       alert("Ejercicio creado correctamente");
-      navigation.goBack();
+
+      // ✅ Navegar pasando el ejercicio creado
+      navigation.navigate("ExerciseList", { preselectExercise: newExercise });
     } catch (error: any) {
       console.error("Error creando ejercicio:", error);
       alert(`Error al crear el ejercicio: ${error.message}`);
