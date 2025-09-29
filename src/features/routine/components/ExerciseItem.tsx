@@ -16,8 +16,6 @@ export default function ExerciseItem({
   onSelect,
   onRedirect,
 }: Props) {
-  console.log("item", item);
-
   return (
     <TouchableOpacity
       style={[styles.exerciseItem, isSelected && styles.selectedItem]}
