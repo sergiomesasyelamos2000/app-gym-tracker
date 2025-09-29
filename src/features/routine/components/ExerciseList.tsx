@@ -26,8 +26,7 @@ export default function ExerciseList() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
-  const { onFinishSelection, routineId, preselectExercise } =
-    route.params || {};
+  const { onFinishSelection, routineId } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
@@ -35,14 +34,17 @@ export default function ExerciseList() {
   >([]);
   const [exercises, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (preselectExercise) {
-      setSelectedExercises((prev) => {
-        if (prev.some((ex) => ex.id === preselectExercise.id)) return prev;
-        return [...prev, preselectExercise];
-      });
-    }
-  }, [preselectExercise]);
+
+  const handleExerciseCreated = (newExercise: ExerciseRequestDto) => {
+    // Agrega el nuevo ejercicio a la lista de seleccionados automáticamente
+    setSelectedExercises((prev) => [...prev, newExercise]);
+  };
+
+  const navigateToCreateExercise = () => {
+    navigation.navigate("CreateExercise", {
+      onExerciseCreated: handleExerciseCreated,
+    });
+  };
 
   const [error, setError] = useState<string | null>(null);
 
@@ -144,7 +146,7 @@ export default function ExerciseList() {
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
                     style={styles.createButton}
-                    onPress={() => navigation.navigate("CreateExercise")}
+                    onPress={navigateToCreateExercise}
                   >
                     <Text style={styles.createButtonText}>
                       Crear ejercicio personalizado

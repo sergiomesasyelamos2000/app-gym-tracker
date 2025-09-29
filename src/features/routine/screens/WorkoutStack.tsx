@@ -22,7 +22,6 @@ export type WorkoutStackParamList = {
   ExerciseList: {
     onFinishSelection?: (exercises: ExerciseRequestDto[]) => void;
     routineId?: string;
-    preselectExercise?: ExerciseRequestDto;
   };
   RoutineEdit: {
     id: string;
@@ -30,7 +29,9 @@ export type WorkoutStackParamList = {
     exercises?: ExerciseRequestDto[];
     onUpdate?: (newTitle: string) => void;
   };
-  CreateExercise: undefined;
+  CreateExercise: {
+    onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
+  };
 };
 
 const Stack = createNativeStackNavigator<WorkoutStackParamList>();

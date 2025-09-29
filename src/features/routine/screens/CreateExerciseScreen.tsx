@@ -1,4 +1,8 @@
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import {
+  NavigationProp,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import * as FileSystem from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -29,6 +33,10 @@ interface CustomDropdownProps {
   onValueChange: (value: string) => void;
   options: { id: string; name: string; image?: string; imagePath?: string }[];
   placeholder: string;
+}
+
+interface CreateExerciseRouteProps {
+  onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
 }
 
 const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -143,6 +151,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 export default function CreateExerciseScreen() {
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
+  const route = useRoute();
+  const { onExerciseCreated } = route.params as CreateExerciseRouteProps;
   const [name, setName] = useState("");
   const [equipmentId, setEquipmentId] = useState(""); // Cambiar a ID
   const [primaryMuscleId, setPrimaryMuscleId] = useState(""); // Cambiar a ID
@@ -229,8 +239,8 @@ export default function CreateExerciseScreen() {
         });
       }
 
-      // 🚀 crear ejercicio y obtener su respuesta con ID
-      const newExercise: ExerciseRequestDto = await createExercise({
+      // Cambia esta línea para capturar el ejercicio creado
+      const createdExercise = await createExercise({
         name: name.trim(),
         equipment: equipmentId,
         primaryMuscle: primaryMuscleId,
@@ -241,8 +251,12 @@ export default function CreateExerciseScreen() {
 
       alert("Ejercicio creado correctamente");
 
-      // ✅ Navegar pasando el ejercicio creado
-      navigation.navigate("ExerciseList", { preselectExercise: newExercise });
+      // Si existe el callback, ejecútalo con el ejercicio creado
+      if (onExerciseCreated) {
+        onExerciseCreated(createdExercise);
+      }
+
+      navigation.goBack();
     } catch (error: any) {
       console.error("Error creando ejercicio:", error);
       alert(`Error al crear el ejercicio: ${error.message}`);
