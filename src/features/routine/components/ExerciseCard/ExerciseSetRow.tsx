@@ -14,7 +14,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean | undefined
+    value: number | boolean
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
@@ -30,7 +30,7 @@ const ExerciseSetRow = ({
   previousMark,
   started = false,
 }: Props) => {
-  // Estados locales independientes - fuente única de verdad
+  // Estados locales
   const [localWeight, setLocalWeight] = useState<string>(
     started ? "" : item.weight?.toString() || ""
   );
@@ -43,6 +43,54 @@ const ExerciseSetRow = ({
   const [localRepsMax, setLocalRepsMax] = useState<string>(
     started ? "" : item.repsMax?.toString() || ""
   );
+
+  // Función para extraer valores del previousMark
+  const extractValuesFromPreviousMark = () => {
+    if (!previousMark || previousMark === "-") return null;
+
+    try {
+      // Formato esperado: "10 kg x 8" o "22 lbs x 12"
+      const parts = previousMark.split(" x ");
+      if (parts.length !== 2) return null;
+
+      const weightPart = parts[0]; // "10 kg" o "22 lbs"
+      const repsPart = parts[1]; // "8"
+
+      // Extraer el número del peso (eliminar la unidad)
+      const weightValue = weightPart.split(" ")[0];
+      const repsValue = repsPart;
+
+      return {
+        weight: weightValue,
+        reps: repsValue,
+      };
+    } catch (error) {
+      console.error("Error parsing previous mark:", error);
+      return null;
+    }
+  };
+
+  // Función para autocompletar con valores anteriores
+  const handleAutofillFromPrevious = () => {
+    const values = extractValuesFromPreviousMark();
+    if (!values) return;
+
+    // Autocompletar peso
+    setLocalWeight(values.weight);
+    onUpdate(item.id, "weight", Number(values.weight));
+
+    // Autocompletar repeticiones según el tipo
+    if (repsType === "reps") {
+      setLocalReps(values.reps);
+      onUpdate(item.id, "reps", Number(values.reps));
+    } else {
+      // Para rango, poner el mismo valor en min y max
+      setLocalRepsMin(values.reps);
+      setLocalRepsMax(values.reps);
+      onUpdate(item.id, "repsMin", Number(values.reps));
+      onUpdate(item.id, "repsMax", Number(values.reps));
+    }
+  };
 
   // Solo sincronizar con el item cuando started cambia
   useEffect(() => {
@@ -59,31 +107,43 @@ const ExerciseSetRow = ({
       setLocalRepsMin(item.repsMin?.toString() || "");
       setLocalRepsMax(item.repsMax?.toString() || "");
     }
-  }, [started, item.id]); // Solo cuando started o item.id cambian
+  }, [started, item.id]);
 
-  // Funciones de cambio simplificadas
+  // Función helper para sanitizar valores
+  const sanitizeValue = (
+    value: string,
+    field: keyof SetRequestDto
+  ): number | boolean => {
+    if (field === "completed") {
+      return value === "true";
+    }
+    const numValue = Number(value);
+    return isNaN(numValue) ? 0 : numValue;
+  };
+
+  // Handlers actualizados
   const handleWeightChange = (text: string) => {
     setLocalWeight(text);
-    const weight = text === "" ? undefined : Number(text);
-    onUpdate(item.id, "weight", isNaN(Number(text)) ? undefined : weight);
+    const value = sanitizeValue(text, "weight");
+    onUpdate(item.id, "weight", value);
   };
 
   const handleRepsChange = (text: string) => {
     setLocalReps(text);
-    const reps = text === "" ? undefined : Number(text);
-    onUpdate(item.id, "reps", isNaN(Number(text)) ? undefined : reps);
+    const value = sanitizeValue(text, "reps");
+    onUpdate(item.id, "reps", value);
   };
 
   const handleRepsMinChange = (text: string) => {
     setLocalRepsMin(text);
-    const repsMin = text === "" ? undefined : Number(text);
-    onUpdate(item.id, "repsMin", isNaN(Number(text)) ? undefined : repsMin);
+    const value = sanitizeValue(text, "repsMin");
+    onUpdate(item.id, "repsMin", value);
   };
 
   const handleRepsMaxChange = (text: string) => {
     setLocalRepsMax(text);
-    const repsMax = text === "" ? undefined : Number(text);
-    onUpdate(item.id, "repsMax", isNaN(Number(text)) ? undefined : repsMax);
+    const value = sanitizeValue(text, "repsMax");
+    onUpdate(item.id, "repsMax", value);
   };
 
   const completedStyle = item.completed
@@ -94,11 +154,24 @@ const ExerciseSetRow = ({
     <View style={[styles.row, completedStyle]}>
       <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
 
-      {/* Marca anterior */}
+      {/* Marca anterior - Ahora es clickable */}
       {started && (
-        <Text style={[styles.previousMark, { flex: 2 }]}>
-          {previousMark || "-"}
-        </Text>
+        <TouchableOpacity
+          style={{ flex: 2 }}
+          onPress={handleAutofillFromPrevious}
+          disabled={readonly || !previousMark || previousMark === "-"}
+        >
+          <Text
+            style={[
+              styles.previousMark,
+              previousMark &&
+                previousMark !== "-" &&
+                styles.clickablePreviousMark,
+            ]}
+          >
+            {previousMark || "-"}
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* Peso */}
@@ -228,6 +301,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     color: "#777",
+  },
+  clickablePreviousMark: {
+    fontWeight: "600",
   },
 });
 

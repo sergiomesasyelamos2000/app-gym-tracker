@@ -70,12 +70,13 @@ export default function HomeScreen() {
     }).start();
   }, []);
 
-  // Actualizar hora cada minuto
+  // Actualizar hora cada segundo
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
+    }, 1000); // Actualizar cada segundo
 
+    // Cleanup function para limpiar el intervalo cuando el componente se desmonte
     return () => clearInterval(timer);
   }, []);
 
@@ -152,6 +153,7 @@ export default function HomeScreen() {
                 {currentTime.toLocaleTimeString("es-ES", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  second: "2-digit",
                 })}
               </Text>
               <Text style={styles.currentDate}>
@@ -194,7 +196,9 @@ export default function HomeScreen() {
           <Text style={styles.statsTitle}></Text>
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, styles.timeCard]}>
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, styles.timeIconContainer]}
+              >
                 <Text style={styles.statIcon}>⏱️</Text>
               </View>
               <Text style={styles.statValue}>
@@ -204,7 +208,9 @@ export default function HomeScreen() {
             </View>
 
             <View style={[styles.statCard, styles.setsCard]}>
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, styles.setsIconContainer]}
+              >
                 <Text style={styles.statIcon}>✅</Text>
               </View>
               <Text style={styles.statValue}>
@@ -214,7 +220,9 @@ export default function HomeScreen() {
             </View>
 
             <View style={[styles.statCard, styles.weightCard]}>
-              <View style={styles.statIconContainer}>
+              <View
+                style={[styles.statIconContainer, styles.weightIconContainer]}
+              >
                 <Text style={styles.statIcon}>🏋️</Text>
               </View>
               <Text style={styles.statValue}>
@@ -276,7 +284,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Histórico de Sesiones (mantenido igual) */}
+        {/* Histórico de Sesiones */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Histórico de Sesiones</Text>
@@ -441,7 +449,7 @@ const styles = StyleSheet.create({
   },
   currentTime: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: 18, // Reducido ligeramente para acomodar los segundos
     fontWeight: "bold",
     marginBottom: 2,
   },
@@ -663,7 +671,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Resto de estilos (mantenidos del original)
+  // Resto de estilos
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
