@@ -8,6 +8,7 @@ import {
   View,
   RefreshControl,
   Image,
+  Animated,
 } from "react-native";
 import {
   findAllRoutineSessions,
@@ -17,22 +18,17 @@ import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
 
 // Función auxiliar para formatear la URI de la imagen
-// Replace your getImageSource function with this:
 const getImageSource = (exercise: ExerciseRequestDto) => {
-  // Check if imageUrl exists and appears to be base64 data
   if (exercise.imageUrl) {
-    // If it's raw base64 data without the data URI scheme
     if (
       exercise.imageUrl.startsWith("/9j/") ||
       exercise.imageUrl.startsWith("iVBORw")
     ) {
       return { uri: `data:image/jpeg;base64,${exercise.imageUrl}` };
     }
-    // If it already has a proper data URI scheme or HTTP URL
     return { uri: exercise.imageUrl };
   }
 
-  // Fallback to giftUrl if no imageUrl
   if (exercise.giftUrl) {
     return { uri: exercise.giftUrl };
   }
@@ -63,6 +59,25 @@ export default function HomeScreen() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Actualizar hora cada minuto
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Cargar datos
   const fetchData = useCallback(async () => {
@@ -90,6 +105,24 @@ export default function HomeScreen() {
     fetchData();
   }, [fetchData]);
 
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return "¡Buenos días! ☀️";
+    if (hour < 18) return "¡Buenas tardes! 🌤️";
+    return "¡Buenas noches! 🌙";
+  };
+
+  const getMotivationalQuote = () => {
+    const quotes = [
+      "El único límite es tu mente",
+      "Cada repetición te acerca a tu meta",
+      "La disciplina supera al talento",
+      "Hoy es un buen día para ser mejor",
+      "Tu cuerpo puede lograr lo que tu mente cree",
+    ];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -104,62 +137,146 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View style={styles.headerBackground}>
-            <Text style={styles.headerTitle}>¡Hola, Atleta! 💪</Text>
-            <Text style={styles.headerSubtitle}>
-              Listo para otro día de progreso
-            </Text>
+        {/* Nuevo Header Section */}
+        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerGreeting}>{getGreeting()}</Text>
+              <Text style={styles.headerTitle}>Atleta 💪</Text>
+              <Text style={styles.headerSubtitle}>
+                {getMotivationalQuote()}
+              </Text>
+            </View>
+            <View style={styles.timeContainer}>
+              <Text style={styles.currentTime}>
+                {currentTime.toLocaleTimeString("es-ES", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+              <Text style={styles.currentDate}>
+                {currentTime.toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Stats Section */}
+          {/* Quick Stats Overview */}
+          <View style={styles.quickStats}>
+            <View style={styles.quickStat}>
+              <Text style={styles.quickStatValue}>
+                {stats ? Math.round(stats.totalTime / 60) : 0}
+              </Text>
+              <Text style={styles.quickStatLabel}>Min</Text>
+            </View>
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStat}>
+              <Text style={styles.quickStatValue}>
+                {stats ? stats.completedSets : 0}
+              </Text>
+              <Text style={styles.quickStatLabel}>Series</Text>
+            </View>
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStat}>
+              <Text style={styles.quickStatValue}>
+                {stats ? stats.totalWeight : 0}
+              </Text>
+              <Text style={styles.quickStatLabel}>Kg</Text>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Stats Section Rediseñada */}
         <View style={styles.statsSection}>
           <Text style={styles.statsTitle}></Text>
           <View style={styles.statsGrid}>
-            {/* Tiempo Total */}
             <View style={[styles.statCard, styles.timeCard]}>
-              <View style={styles.statHeader}>
-                <View style={[styles.statIcon, styles.timeIcon]}>
-                  <Text style={styles.statIconText}>⏱️</Text>
-                </View>
-                <Text style={styles.statValue}>
-                  {stats ? Math.round(stats.totalTime / 60) : 0}
-                </Text>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>⏱️</Text>
               </View>
+              <Text style={styles.statValue}>
+                {stats ? Math.round(stats.totalTime / 60) : 0}
+              </Text>
               <Text style={styles.statLabel}>Minutos totales</Text>
             </View>
 
-            {/* Series Completadas */}
             <View style={[styles.statCard, styles.setsCard]}>
-              <View style={styles.statHeader}>
-                <View style={[styles.statIcon, styles.setsIcon]}>
-                  <Text style={styles.statIconText}>✅</Text>
-                </View>
-                <Text style={styles.statValue}>
-                  {stats ? stats.completedSets : 0}
-                </Text>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>✅</Text>
               </View>
+              <Text style={styles.statValue}>
+                {stats ? stats.completedSets : 0}
+              </Text>
               <Text style={styles.statLabel}>Series completadas</Text>
             </View>
 
-            {/* Peso Movido */}
             <View style={[styles.statCard, styles.weightCard]}>
-              <View style={styles.statHeader}>
-                <View style={[styles.statIcon, styles.weightIcon]}>
-                  <Text style={styles.statIconText}>🏋️</Text>
-                </View>
-                <Text style={styles.statValue}>
-                  {stats ? stats.totalWeight : 0}
-                </Text>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>🏋️</Text>
               </View>
+              <Text style={styles.statValue}>
+                {stats ? stats.totalWeight : 0}
+              </Text>
               <Text style={styles.statLabel}>Kg movidos</Text>
             </View>
           </View>
         </View>
 
-        {/* Histórico de Sesiones */}
+        {/* Nuevas Acciones Rápidas */}
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.startWorkout]}
+            >
+              <View style={styles.actionIconContainer}>
+                <Text style={styles.actionIcon}>🔥</Text>
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionButtonText}>
+                  Iniciar Entrenamiento
+                </Text>
+                <Text style={styles.actionButtonSubtext}>Comienza ahora</Text>
+              </View>
+              <Text style={styles.actionArrow}>→</Text>
+            </TouchableOpacity>
+
+            <View style={styles.quickActionsRow}>
+              <TouchableOpacity
+                style={[styles.quickAction, styles.progressAction]}
+              >
+                <Text style={styles.quickActionIcon}>📈</Text>
+                <Text style={styles.quickActionText}>Progreso</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickAction, styles.routinesAction]}
+              >
+                <Text style={styles.quickActionIcon}>📋</Text>
+                <Text style={styles.quickActionText}>Rutinas</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickAction, styles.exercisesAction]}
+              >
+                <Text style={styles.quickActionIcon}>💪</Text>
+                <Text style={styles.quickActionText}>Ejercicios</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickAction, styles.statsAction]}
+              >
+                <Text style={styles.quickActionIcon}>🏆</Text>
+                <Text style={styles.quickActionText}>Estadísticas</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Histórico de Sesiones (mantenido igual) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Histórico de Sesiones</Text>
@@ -260,26 +377,6 @@ export default function HomeScreen() {
             ))
           )}
         </View>
-
-        {/* Acciones Rápidas */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.primaryAction]}
-            >
-              <Text style={styles.actionButtonIcon}>🔥</Text>
-              <Text style={styles.actionButtonText}>Iniciar Entrenamiento</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.secondaryAction]}
-            >
-              <Text style={styles.actionButtonIcon}>📈</Text>
-              <Text style={styles.actionButtonText}>Ver Progreso</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -293,53 +390,106 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Header Styles
+  // Nuevo Header Styles
   header: {
     backgroundColor: "#6C3BAA",
     paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    paddingTop: 50,
+    paddingBottom: 25,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#6C3BAA",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 10,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  headerBackground: {
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerGreeting: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+    opacity: 0.9,
   },
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 28,
     fontWeight: "bold",
     marginBottom: 8,
-    textShadowColor: "rgba(0, 0, 0, 0.2)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   headerSubtitle: {
     color: "#E0D7F5",
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: "500",
+    opacity: 0.9,
+  },
+  timeContainer: {
+    alignItems: "flex-end",
+  },
+  currentTime: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  currentDate: {
+    color: "#E0D7F5",
+    fontSize: 12,
+    fontWeight: "500",
+    textTransform: "capitalize",
+  },
+  quickStats: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+  },
+  quickStat: {
+    flex: 1,
+    alignItems: "center",
+  },
+  quickStatValue: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  quickStatLabel: {
+    color: "#E0D7F5",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  quickStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
 
-  // Stats Section
+  // Stats Section Mejorada
   statsSection: {
     paddingHorizontal: 20,
-    marginTop: -25,
+    marginTop: -15,
     marginBottom: 24,
   },
   statsTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#1E293B",
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: "center",
   },
   statsGrid: {
@@ -347,79 +497,173 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: "space-between",
   },
-
-  // Stat Cards
   statCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    padding: 16,
-    borderRadius: 16,
+    padding: 20,
+    borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 4,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    minHeight: 110,
-    justifyContent: "space-between",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    alignItems: "center",
   },
   timeCard: {
-    borderTopWidth: 4,
-    borderTopColor: "#6C3BAA",
+    borderLeftWidth: 4,
+    borderLeftColor: "#6C3BAA",
   },
   setsCard: {
-    borderTopWidth: 4,
-    borderTopColor: "#10B981",
+    borderLeftWidth: 4,
+    borderLeftColor: "#10B981",
   },
   weightCard: {
-    borderTopWidth: 4,
-    borderTopColor: "#F59E0B",
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
   },
-
-  // Stat Content
-  statHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  statIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  statIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 12,
   },
-  timeIcon: {
+  timeIconContainer: {
     backgroundColor: "#6C3BAA20",
   },
-  setsIcon: {
+  setsIconContainer: {
     backgroundColor: "#10B98120",
   },
-  weightIcon: {
+  weightIconContainer: {
     backgroundColor: "#F59E0B20",
   },
-  statIconText: {
-    fontSize: 16,
+  statIcon: {
+    fontSize: 20,
   },
   statValue: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#1E293B",
-    textAlign: "right",
-    flex: 1,
+    marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     color: "#64748B",
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 4,
   },
 
-  // Sections
+  // Nuevas Acciones Rápidas
+  actionsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  actionsGrid: {
+    gap: 16,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  startWorkout: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#EF4444",
+  },
+  actionIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+  },
+  actionIcon: {
+    fontSize: 20,
+    color: "#FFFFFF",
+  },
+  actionTextContainer: {
+    flex: 1,
+  },
+  actionButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1E293B",
+    marginBottom: 4,
+  },
+  actionButtonSubtext: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  actionArrow: {
+    fontSize: 20,
+    color: "#6C3BAA",
+    fontWeight: "bold",
+  },
+  quickActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  quickAction: {
+    flex: 1,
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  progressAction: {
+    borderTopWidth: 3,
+    borderTopColor: "#10B981",
+  },
+  routinesAction: {
+    borderTopWidth: 3,
+    borderTopColor: "#6C3BAA",
+  },
+  exercisesAction: {
+    borderTopWidth: 3,
+    borderTopColor: "#F59E0B",
+  },
+  statsAction: {
+    borderTopWidth: 3,
+    borderTopColor: "#8B5CF6",
+  },
+  quickActionIcon: {
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1E293B",
+    textAlign: "center",
+  },
+
+  // Resto de estilos (mantenidos del original)
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -437,7 +681,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
   },
-  // Session Cards
   sessionCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -493,7 +736,6 @@ const styles = StyleSheet.create({
     color: "#475569",
     fontWeight: "500",
   },
-  // Exercises
   exercisesSection: {
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
@@ -527,9 +769,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  placeholderEmoji: {
-    fontSize: 16,
-  },
   exerciseInfo: {
     flex: 1,
   },
@@ -544,14 +783,13 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   moreExercises: {
-    paddingLeft: 52, // Align with other exercises
+    paddingLeft: 52,
   },
   moreExercisesText: {
     fontSize: 12,
     color: "#6C3BAA",
     fontWeight: "500",
   },
-  // Empty State
   emptyState: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -574,43 +812,5 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
-  },
-  // Actions
-  actionsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  actionsGrid: {
-    gap: 12,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryAction: {
-    backgroundColor: "#6C3BAA",
-  },
-  secondaryAction: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-  },
-  actionButtonIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
