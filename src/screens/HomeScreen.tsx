@@ -60,6 +60,8 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [motivationalQuote, setMotivationalQuote] = useState<string>("");
+
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -70,15 +72,44 @@ export default function HomeScreen() {
     }).start();
   }, []);
 
-  // Actualizar hora cada segundo
+  // Actualizar hora cada minuto
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000); // Actualizar cada segundo
-
-    // Cleanup function para limpiar el intervalo cuando el componente se desmonte
+    }, 60000); // Cada minuto
     return () => clearInterval(timer);
   }, []);
+
+  // Saludo según hora
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return "¡Buenos días! ☀️";
+    if (hour < 18) return "¡Buenas tardes! 🌤️";
+    return "¡Buenas noches! 🌙";
+  };
+
+  // Generar quote motivacional
+  const generateMotivationalQuote = () => {
+    const quotes = [
+      "El único límite es tu mente",
+      "Cada repetición te acerca a tu meta",
+      "La disciplina supera al talento",
+      "Hoy es un buen día para ser mejor",
+      "Tu cuerpo puede lograr lo que tu mente cree",
+    ];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  };
+
+  // Actualizar quote solo cuando cambia el saludo
+  useEffect(() => {
+    setMotivationalQuote(generateMotivationalQuote());
+  }, [getGreeting()]);
+
+  // Formato de hora sin segundos
+  const formattedTime = currentTime.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   // Cargar datos
   const fetchData = useCallback(async () => {
@@ -106,24 +137,6 @@ export default function HomeScreen() {
     fetchData();
   }, [fetchData]);
 
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "¡Buenos días! ☀️";
-    if (hour < 18) return "¡Buenas tardes! 🌤️";
-    return "¡Buenas noches! 🌙";
-  };
-
-  const getMotivationalQuote = () => {
-    const quotes = [
-      "El único límite es tu mente",
-      "Cada repetición te acerca a tu meta",
-      "La disciplina supera al talento",
-      "Hoy es un buen día para ser mejor",
-      "Tu cuerpo puede lograr lo que tu mente cree",
-    ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -138,24 +151,16 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Nuevo Header Section */}
+        {/* Header Section */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerGreeting}>{getGreeting()}</Text>
               <Text style={styles.headerTitle}>Atleta 💪</Text>
-              <Text style={styles.headerSubtitle}>
-                {getMotivationalQuote()}
-              </Text>
+              <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
             </View>
             <View style={styles.timeContainer}>
-              <Text style={styles.currentTime}>
-                {currentTime.toLocaleTimeString("es-ES", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </Text>
+              <Text style={styles.currentTime}>{formattedTime}</Text>
               <Text style={styles.currentDate}>
                 {currentTime.toLocaleDateString("es-ES", {
                   weekday: "long",
@@ -193,7 +198,6 @@ export default function HomeScreen() {
 
         {/* Stats Section Rediseñada */}
         <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}></Text>
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, styles.timeCard]}>
               <View
@@ -233,7 +237,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Nuevas Acciones Rápidas */}
+        {/* Acciones Rápidas */}
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
           <View style={styles.actionsGrid}>
@@ -259,21 +263,18 @@ export default function HomeScreen() {
                 <Text style={styles.quickActionIcon}>📈</Text>
                 <Text style={styles.quickActionText}>Progreso</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.quickAction, styles.routinesAction]}
               >
                 <Text style={styles.quickActionIcon}>📋</Text>
                 <Text style={styles.quickActionText}>Rutinas</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.quickAction, styles.exercisesAction]}
               >
                 <Text style={styles.quickActionIcon}>💪</Text>
                 <Text style={styles.quickActionText}>Ejercicios</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.quickAction, styles.statsAction]}
               >

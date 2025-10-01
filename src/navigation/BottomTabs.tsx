@@ -7,6 +7,7 @@ import NutritionScreen from "../screens/NutritionScreen";
 import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import ProductListScreen from "../features/nutrition/screens/ProductListScreen";
 import NutritionStack from "../features/nutrition/screens/NutritionStack";
+import LoginScreen from "../features/login/screens/LoginScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -32,6 +33,7 @@ export const BottomTabs = () => {
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
+      <Tab.Screen name="Login" component={LoginScreen} />
       <Tab.Screen name="Entreno" component={WorkoutStack} />
       <Tab.Screen name="Nutrición" component={NutritionScreen} />
       <Tab.Screen name="Macros" component={NutritionStack} />
