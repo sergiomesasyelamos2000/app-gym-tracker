@@ -10,6 +10,7 @@ import WorkoutScreen from "../screens/WorkoutScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
 import RoutineDetailScreen from "./RoutineDetailScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";
+import ExerciseDetailScreen from "./ExerciseDetailScreen";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;
@@ -31,6 +32,9 @@ export type WorkoutStackParamList = {
   };
   CreateExercise: {
     onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
+  };
+  ExerciseDetail: {
+    exercise: ExerciseRequestDto;
   };
 };
 
@@ -67,6 +71,12 @@ export default function WorkoutStack() {
         name="CreateExercise"
         component={CreateExerciseScreen}
         options={{ title: "Create Exercise" }}
+      />
+
+      <Stack.Screen
+        name="ExerciseDetail"
+        component={ExerciseDetailScreen}
+        options={{ title: "Detalle del ejercicio" }}
       />
     </Stack.Navigator>
   );

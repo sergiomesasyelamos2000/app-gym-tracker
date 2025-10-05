@@ -14,6 +14,7 @@ import { ToastConfigParams } from "react-native-toast-message";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (
@@ -32,11 +33,13 @@ export default function App() {
     <ReduxProvider store={store}>
       <PaperProvider>
         <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar barStyle="dark-content" />
-            <BottomTabs />
-          </NavigationContainer>
-          <Toast config={toastConfig} />
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <NavigationContainer>
+              <StatusBar barStyle="dark-content" />
+              <BottomTabs />
+            </NavigationContainer>
+            <Toast config={toastConfig} />
+          </GestureHandlerRootView>
         </SafeAreaProvider>
       </PaperProvider>
     </ReduxProvider>

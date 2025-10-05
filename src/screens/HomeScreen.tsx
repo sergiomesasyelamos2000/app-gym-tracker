@@ -16,6 +16,13 @@ import {
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
+import {
+  CompositeNavigationProp,
+  useNavigation,
+} from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -55,6 +62,19 @@ const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
   );
 };
 
+type BottomTabsParamList = {
+  Inicio: undefined;
+  Login: undefined;
+  Entreno: undefined | { screen?: keyof WorkoutStackParamList; params?: any };
+  Nutrición: undefined;
+  Macros: undefined;
+};
+
+type HomeScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<BottomTabsParamList, "Inicio">,
+  NativeStackNavigationProp<WorkoutStackParamList>
+>;
+
 export default function HomeScreen() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -63,6 +83,7 @@ export default function HomeScreen() {
   const [motivationalQuote, setMotivationalQuote] = useState<string>("");
 
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const navigation = useNavigation<HomeScreenNavigationProp>();
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -136,6 +157,12 @@ export default function HomeScreen() {
     setRefreshing(true);
     fetchData();
   }, [fetchData]);
+
+  const handleStartWorkout = () => {
+    navigation.navigate("Entreno", {
+      screen: "WorkoutList",
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -243,6 +270,7 @@ export default function HomeScreen() {
           <View style={styles.actionsGrid}>
             <TouchableOpacity
               style={[styles.actionButton, styles.startWorkout]}
+              onPress={handleStartWorkout}
             >
               <View style={styles.actionIconContainer}>
                 <Text style={styles.actionIcon}>🔥</Text>
@@ -450,7 +478,7 @@ const styles = StyleSheet.create({
   },
   currentTime: {
     color: "#FFFFFF",
-    fontSize: 18, // Reducido ligeramente para acomodar los segundos
+    fontSize: 18,
     fontWeight: "bold",
     marginBottom: 2,
   },
