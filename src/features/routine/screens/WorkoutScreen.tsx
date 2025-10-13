@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
-  RefreshControl,
-  Pressable,
 } from "react-native";
 import {
   ExerciseRequestDto,
@@ -18,15 +18,16 @@ import {
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 import { MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Modal from "react-native-modal";
+import { RFValue } from "react-native-responsive-fontsize";
+import { useShallow } from "zustand/react/shallow";
+import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import {
   deleteRoutine,
   duplicateRoutine,
   findAllRoutines,
 } from "../services/routineService";
-import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
-import { useShallow } from "zustand/react/shallow";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -349,13 +350,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4F4F8",
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     color: "#4E2A84",
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 15,
+    fontSize: RFValue(15),
     color: "#666",
   },
   topActions: {
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "bold",
     marginLeft: 8,
   },
@@ -395,13 +396,13 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   routineName: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "600",
     color: "#222",
     marginBottom: 6,
   },
   routineDate: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#888",
     fontStyle: "italic",
   },
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
   startRoutineButtonText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: RFValue(15),
     marginLeft: 4,
   },
   moreButton: {
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "600",
     color: "#4E2A84",
     marginBottom: 18,
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modalItemText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#333",
   },
   workoutBanner: {
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#fff",
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: RFValue(15),
     marginRight: 12,
   },
   workoutBannerActions: {
@@ -538,7 +539,7 @@ const styles = StyleSheet.create({
   bannerButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: RFValue(14),
     textAlign: "center",
   },
 });

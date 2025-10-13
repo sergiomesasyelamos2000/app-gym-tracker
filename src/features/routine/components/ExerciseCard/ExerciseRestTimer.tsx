@@ -1,16 +1,15 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Animated,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
   useWindowDimensions,
-  Animated,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
 import { TimerPickerModal } from "react-native-timer-picker";
-import { formatTime, parseRestTime } from "./helpers";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import CustomToast from "../../../../ui/CustomToast";
+import { formatTime, parseRestTime } from "./helpers";
 
 interface Props {
   restTime: string;

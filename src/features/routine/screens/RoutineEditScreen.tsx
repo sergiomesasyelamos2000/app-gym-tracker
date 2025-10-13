@@ -3,7 +3,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
-  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -11,10 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
-import { WorkoutStackParamList } from "./WorkoutStack";
-import { getRoutineById, updateRoutineById } from "../services/routineService";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
+import { getRoutineById, updateRoutineById } from "../services/routineService";
+import { WorkoutStackParamList } from "./WorkoutStack";
 
 export default function RoutineEditScreen() {
   const route = useRoute();
@@ -208,14 +208,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#333",
     marginBottom: 20,
     marginHorizontal: 16,
   },
   subTitle: {
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: RFValue(16),
     marginBottom: 8,
     marginHorizontal: 16,
   },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: "#888",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   updateButton: {
     backgroundColor: "#6C3BAA",
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   updateButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   addExerciseButton: {
     backgroundColor: "#e0e0e0",
@@ -265,6 +265,6 @@ const styles = StyleSheet.create({
   addExerciseButtonText: {
     color: "#333",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
 });

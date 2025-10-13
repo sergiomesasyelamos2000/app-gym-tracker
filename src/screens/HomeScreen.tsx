@@ -1,28 +1,30 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
+  CompositeNavigationProp,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Animated,
+  Image,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  RefreshControl,
-  Image,
-  Animated,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
+import { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
   findAllRoutineSessions,
   getGlobalStats,
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
-import {
-  CompositeNavigationProp,
-  useNavigation,
-} from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -105,7 +107,7 @@ export default function HomeScreen() {
   const getGreeting = () => {
     const hour = currentTime.getHours();
     if (hour < 12) return "¡Buenos días! ☀️";
-    if (hour < 18) return "¡Buenas tardes! 🌤️";
+    if (hour < 20) return "¡Buenas tardes! 🌤️";
     return "¡Buenas noches! 🌙";
   };
 
@@ -140,8 +142,31 @@ export default function HomeScreen() {
         findAllRoutineSessions(),
       ]);
 
+      // Calcular campos agregados si es necesario
+      const sessionsWithTotals = sessionsData.map((session) => {
+        const totalWeight = session.exercises?.reduce(
+          (sum: number, e: any) =>
+            sum +
+            e.sets.reduce(
+              (acc: number, s: any) => acc + (s.weight || 0) * (s.reps || 0),
+              0
+            ),
+          0
+        );
+        const totalReps = session.exercises?.reduce(
+          (sum: number, e: any) => sum + e.totalReps,
+          0
+        );
+
+        return {
+          ...session,
+          totalWeight,
+          totalReps,
+        };
+      });
+
       setStats(globalStats);
-      setSessions(sessionsData);
+      setSessions(sessionsWithTotals);
     } catch (error) {
       console.error("Error fetching data", error);
     } finally {
@@ -149,9 +174,17 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useFocusEffect(
+    useCallback(() => {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+      fetchData();
+    }, [fetchData])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -259,7 +292,7 @@ export default function HomeScreen() {
               <Text style={styles.statValue}>
                 {stats ? stats.totalWeight : 0}
               </Text>
-              <Text style={styles.statLabel}>Kg movidos</Text>
+              <Text style={styles.statLabel}>Volumen</Text>
             </View>
           </View>
         </View>
@@ -373,37 +406,35 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {session.routine?.routineExercises?.length > 0 && (
+                {session.exercises?.length > 0 && (
                   <View style={styles.exercisesSection}>
                     <Text style={styles.exercisesTitle}>
                       Ejercicios realizados:
                     </Text>
                     <View style={styles.exercisesList}>
-                      {session.routine.routineExercises
-                        .slice(0, 4)
-                        .map((re: any) => (
-                          <View key={re.id} style={styles.exerciseItem}>
-                            <ExerciseImage
-                              exercise={re.exercise}
-                              style={styles.exerciseImage}
-                            />
-                            <View style={styles.exerciseInfo}>
-                              <Text
-                                style={styles.exerciseName}
-                                numberOfLines={1}
-                              >
-                                {re.exercise.name}
-                              </Text>
-                              <Text style={styles.exerciseSets}>
-                                {re.sets?.length || 0} series
-                              </Text>
-                            </View>
+                      {session.exercises.slice(0, 4).map((exercise: any) => (
+                        <View
+                          key={exercise.exerciseId}
+                          style={styles.exerciseItem}
+                        >
+                          <ExerciseImage
+                            exercise={exercise} // directamente el objeto exercise
+                            style={styles.exerciseImage}
+                          />
+                          <View style={styles.exerciseInfo}>
+                            <Text style={styles.exerciseName} numberOfLines={1}>
+                              {exercise.name}
+                            </Text>
+                            <Text style={styles.exerciseSets}>
+                              {exercise.sets?.length || 0} series
+                            </Text>
                           </View>
-                        ))}
-                      {session.routine.routineExercises.length > 4 && (
+                        </View>
+                      ))}
+                      {session.exercises.length > 4 && (
                         <View style={styles.moreExercises}>
                           <Text style={styles.moreExercisesText}>
-                            +{session.routine.routineExercises.length - 4} más
+                            +{session.exercises.length - 4} más
                           </Text>
                         </View>
                       )}
@@ -455,20 +486,20 @@ const styles = StyleSheet.create({
   },
   headerGreeting: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "600",
     marginBottom: 4,
     opacity: 0.9,
   },
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 28,
+    fontSize: RFValue(28),
     fontWeight: "bold",
     marginBottom: 8,
   },
   headerSubtitle: {
     color: "#E0D7F5",
-    fontSize: 14,
+    fontSize: RFValue(14),
     lineHeight: 20,
     fontWeight: "500",
     opacity: 0.9,
@@ -478,13 +509,13 @@ const styles = StyleSheet.create({
   },
   currentTime: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
     marginBottom: 2,
   },
   currentDate: {
     color: "#E0D7F5",
-    fontSize: 12,
+    fontSize: RFValue(12),
     fontWeight: "500",
     textTransform: "capitalize",
   },
@@ -501,13 +532,13 @@ const styles = StyleSheet.create({
   },
   quickStatValue: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: RFValue(20),
     fontWeight: "bold",
     marginBottom: 4,
   },
   quickStatLabel: {
     color: "#E0D7F5",
-    fontSize: 12,
+    fontSize: RFValue(12),
     fontWeight: "600",
   },
   quickStatDivider: {
@@ -523,7 +554,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statsTitle: {
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     color: "#1E293B",
     marginBottom: 20,
@@ -537,17 +568,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 10, // reduce padding horizontal para ganar espacio
     borderRadius: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
   timeCard: {
     borderLeftWidth: 4,
@@ -579,19 +609,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#F59E0B20",
   },
   statIcon: {
-    fontSize: 20,
+    fontSize: RFValue(20),
   },
   statValue: {
-    fontSize: 24,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     color: "#1E293B",
     marginBottom: 4,
+    flexShrink: 1, // permite reducir si el número es muy largo
+    textAlign: "center",
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#64748B",
     fontWeight: "600",
     textAlign: "center",
+    flexShrink: 1, // permite ajustar si el label es largo
   },
 
   // Nuevas Acciones Rápidas
@@ -631,25 +664,25 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   actionIcon: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     color: "#FFFFFF",
   },
   actionTextContainer: {
     flex: 1,
   },
   actionButtonText: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
     color: "#1E293B",
     marginBottom: 4,
   },
   actionButtonSubtext: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#64748B",
     fontWeight: "500",
   },
   actionArrow: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     color: "#6C3BAA",
     fontWeight: "bold",
   },
@@ -690,11 +723,11 @@ const styles = StyleSheet.create({
     borderTopColor: "#8B5CF6",
   },
   quickActionIcon: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     marginBottom: 8,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     fontWeight: "600",
     color: "#1E293B",
     textAlign: "center",
@@ -709,13 +742,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     fontWeight: "bold",
     color: "#1E293B",
     marginBottom: 4,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#64748B",
   },
   sessionCard: {
@@ -744,12 +777,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   sessionDate: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#64748B",
     textTransform: "capitalize",
   },
   sessionTitle: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "600",
     color: "#1E293B",
   },
@@ -769,7 +802,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   sessionStatText: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#475569",
     fontWeight: "500",
   },
@@ -779,7 +812,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   exercisesTitle: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     fontWeight: "600",
     color: "#64748B",
     marginBottom: 8,
@@ -810,20 +843,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseName: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     fontWeight: "500",
     color: "#1E293B",
     marginBottom: 2,
   },
   exerciseSets: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#64748B",
   },
   moreExercises: {
     paddingLeft: 52,
   },
   moreExercisesText: {
-    fontSize: 12,
+    fontSize: RFValue(12),
     color: "#6C3BAA",
     fontWeight: "500",
   },
@@ -834,18 +867,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyStateEmoji: {
-    fontSize: 48,
+    fontSize: RFValue(48),
     marginBottom: 16,
   },
   emptyStateTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "600",
     color: "#1E293B",
     marginBottom: 8,
     textAlign: "center",
   },
   emptyStateText: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,

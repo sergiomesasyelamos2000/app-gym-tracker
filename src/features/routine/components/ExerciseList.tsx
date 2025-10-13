@@ -15,9 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
+import { ExerciseRequestDto } from "../../../models";
 import { fetchExercises } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
-import { ExerciseRequestDto } from "../../../models";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: RFValue(24),
     fontWeight: "bold",
     color: "#333",
     marginBottom: 8,
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     elevation: 2,
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   confirmButton: {
     backgroundColor: "#6C3BAA",
@@ -215,12 +216,12 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#666",
   },
   errorContainer: {
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#d32f2f",
     textAlign: "center",
     marginBottom: 16,
@@ -243,12 +244,12 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   emptyText: {
     textAlign: "center",
     marginTop: 20,
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#666",
   },
   emptyContainer: {
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "bold",
   },
 });

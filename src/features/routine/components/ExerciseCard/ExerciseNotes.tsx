@@ -1,5 +1,6 @@
 import React from "react";
-import { TextInput, StyleSheet } from "react-native";
+import { StyleSheet, TextInput } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 
 interface Props {
   value: string;
@@ -24,7 +25,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 20,
     backgroundColor: "#fafafc",
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#333",
   },
 });

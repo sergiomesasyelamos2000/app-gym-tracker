@@ -1,10 +1,10 @@
 import React from "react";
 import {
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
   useWindowDimensions,
+  View,
 } from "react-native";
 import { formatTime } from "../utils/routineHelpers";
 

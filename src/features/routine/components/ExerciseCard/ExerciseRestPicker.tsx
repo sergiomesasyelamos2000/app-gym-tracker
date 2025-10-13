@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import {
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
   useWindowDimensions,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
 import { TimerPickerModal } from "react-native-timer-picker";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { formatTime, parseRestTime } from "./helpers";
 
 interface Props {

@@ -13,6 +13,7 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
@@ -21,6 +22,7 @@ import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
+
 import {
   getRoutineById,
   saveRoutine,
@@ -347,7 +349,6 @@ export default function RoutineDetailScreen() {
       }
 
       clearWorkoutInProgress();
-
       navigation.setParams({ start: undefined, routineId: undefined });
 
       const routineToSave = {
@@ -359,6 +360,7 @@ export default function RoutineDetailScreen() {
           : new Date(),
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
+          imageUrl: exercise.imageUrl,
           sets:
             sets[exercise.id]?.map((set) => ({
               ...set,
@@ -372,6 +374,7 @@ export default function RoutineDetailScreen() {
         })),
       };
 
+      // Guardar o actualizar rutina
       let updatedRoutine;
       if (routineData?.id) {
         updatedRoutine = await updateRoutineById(routineData.id, routineToSave);
@@ -379,12 +382,34 @@ export default function RoutineDetailScreen() {
         updatedRoutine = await saveRoutine(routineToSave);
       }
 
-      await saveRoutineSession(updatedRoutine.id, {
+      // Preparar sesión con el histórico completo de ejercicios
+      const sessionToSave = {
         totalTime: duration,
         totalWeight: volume,
         completedSets,
-      });
+        exercises: exercisesState.map((exercise) => ({
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          imageUrl: exercise.imageUrl,
+          totalWeight: (sets[exercise.id] || []).reduce(
+            (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
+            0
+          ),
+          totalReps: (sets[exercise.id] || []).reduce(
+            (acc, s) => acc + (s.reps || 0),
+            0
+          ),
+          sets: (sets[exercise.id] || []).map((s) => ({
+            weight: s.weight || 0,
+            reps: s.reps || 0,
+            completed: s.completed ?? false,
+          })),
+        })),
+      };
 
+      await saveRoutineSession(updatedRoutine.id, sessionToSave);
+
+      // Resetear sets locales
       const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
       Object.keys(sets).forEach((exerciseId) => {
         resetSets[exerciseId] = sets[exerciseId].map((set) => ({
@@ -393,6 +418,7 @@ export default function RoutineDetailScreen() {
         }));
       });
       setSets(resetSets);
+
       alert("Rutina y sesión guardadas exitosamente");
 
       navigation.reset({
@@ -418,6 +444,7 @@ export default function RoutineDetailScreen() {
           : new Date(),
         exercises: exercisesState.map((exercise) => ({
           ...exercise,
+          imageUrl: exercise.imageUrl,
           sets: sets[exercise.id] || [],
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
@@ -631,7 +658,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: RFValue(16),
     letterSpacing: 0.5,
   },
   toastContainer: {

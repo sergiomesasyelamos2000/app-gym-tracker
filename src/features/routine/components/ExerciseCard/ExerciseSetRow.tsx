@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SetRequestDto } from "../../../../models";
 
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 6,
     textAlign: "center",
-    fontSize: 15,
+    fontSize: RFValue(15),
     color: "#333",
   },
   rangeContainer: {
@@ -283,23 +284,23 @@ const styles = StyleSheet.create({
   rangeInput: {
     textAlign: "center",
     padding: 8,
-    fontSize: 15,
+    fontSize: RFValue(15),
     color: "#333",
   },
   rangeSeparator: {
     marginHorizontal: 4,
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#555",
   },
   label: {
     textAlign: "center",
     fontWeight: "500",
     color: "#444",
-    fontSize: 15,
+    fontSize: RFValue(15),
   },
   previousMark: {
     textAlign: "center",
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#777",
   },
   clickablePreviousMark: {

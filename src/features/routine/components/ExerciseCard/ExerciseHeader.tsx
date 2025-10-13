@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import Modal from "react-native-modal";
 import { useNavigation } from "@react-navigation/native";
+import React, { useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Modal from "react-native-modal";
+import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "600",
     color: "#1A1A1A",
     flexShrink: 1,
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "700",
     marginBottom: 12,
     color: "#1A1A1A",
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   modalItemText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     marginLeft: 12,
     color: "#333",
   },

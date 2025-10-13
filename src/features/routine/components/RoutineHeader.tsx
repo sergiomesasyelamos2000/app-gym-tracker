@@ -1,11 +1,12 @@
 import React from "react";
 import {
-  View,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
+  View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 
 type Props = {
   routineTitle: string;
@@ -61,7 +62,7 @@ export const RoutineHeader: React.FC<Props> = ({
 const styles = StyleSheet.create({
   header: { marginBottom: 16, paddingHorizontal: 8, paddingTop: 16 },
   title: {
-    fontSize: 26,
+    fontSize: RFValue(26),
     fontWeight: "bold",
     color: "#222",
     marginBottom: 8,
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   },
   startButtonText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: RFValue(15),
     fontWeight: "bold",
     letterSpacing: 0.5,
   },
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: "#6C3BAA",
     fontWeight: "bold",
-    fontSize: 15,
+    fontSize: RFValue(15),
     letterSpacing: 0.5,
   },
   inputContainer: { marginTop: 12, alignItems: "center" },
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     elevation: 2,
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#333",
     width: "95%",
     borderWidth: 1,

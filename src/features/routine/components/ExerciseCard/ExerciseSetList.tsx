@@ -10,6 +10,8 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
+
 import {
   GestureHandlerRootView,
   Swipeable,
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
   },
   columnTitle: {
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#777",
     textAlign: "center",
   },
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
@@ -345,7 +347,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f0f0f0",
   },
   optionText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#333",
   },
 });

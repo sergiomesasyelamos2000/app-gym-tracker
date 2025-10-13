@@ -8,6 +8,8 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -18,9 +20,9 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Animated,
-  Dimensions,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
+import { ExerciseRequestDto } from "../../../models";
 import {
   createExercise,
   fetchEquipment,
@@ -28,7 +30,6 @@ import {
   fetchMuscles,
 } from "../../../services/exerciseService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { ExerciseRequestDto } from "../../../models";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -583,7 +584,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     color: "#64748B",
     lineHeight: 22,
   },
@@ -596,7 +597,7 @@ const styles = StyleSheet.create({
     borderColor: "#F1F5F9",
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "600",
     color: "#0F172A",
     marginBottom: 20,
@@ -628,7 +629,7 @@ const styles = StyleSheet.create({
   imageOverlayText: {
     color: "#FFFFFF",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: RFValue(14),
   },
   imagePlaceholder: {
     flex: 1,
@@ -646,17 +647,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   imagePlaceholderIconText: {
-    fontSize: 28,
+    fontSize: RFValue(28),
   },
   imagePlaceholderText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "600",
     color: "#475569",
     textAlign: "center",
     marginBottom: 4,
   },
   imagePlaceholderSubtext: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#94A3B8",
     textAlign: "center",
   },
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "600",
     color: "#374151",
     marginBottom: 8,
@@ -673,7 +674,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
+    fontSize: RFValue(16),
     borderWidth: 2,
     borderColor: "#F1F5F9",
     color: "#0F172A",
@@ -700,13 +701,13 @@ const styles = StyleSheet.create({
   },
   dropdownSelectedText: {
     color: "#0F172A",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "500",
     flex: 1,
   },
   dropdownPlaceholderText: {
     color: "#94A3B8",
-    fontSize: 16,
+    fontSize: RFValue(16),
     flex: 1,
   },
   dropdownArrowContainer: {
@@ -714,7 +715,7 @@ const styles = StyleSheet.create({
   },
   dropdownArrow: {
     color: "#64748B",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "bold",
   },
   dropdownModalContainer: {
@@ -732,7 +733,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dropdownModalTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
     color: "#0F172A",
     padding: 24,
@@ -753,13 +754,13 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     color: "#374151",
-    fontSize: 16,
+    fontSize: RFValue(16),
     flex: 1,
   },
   dropdownItemSelectedText: {
     color: "#6C3BAA",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: RFValue(16),
     flex: 1,
   },
   checkmark: {
@@ -772,7 +773,7 @@ const styles = StyleSheet.create({
   },
   checkmarkText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: RFValue(12),
     fontWeight: "bold",
   },
   dropdownCloseButton: {
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
   dropdownCloseText: {
     color: "#64748B",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   muscleSelector: {
     backgroundColor: "#FFFFFF",
@@ -802,16 +803,16 @@ const styles = StyleSheet.create({
   },
   selectorArrowText: {
     color: "#64748B",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "bold",
   },
   placeholderText: {
     color: "#94A3B8",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   selectedText: {
     color: "#0F172A",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "500",
   },
   selectedMusclesContainer: {
@@ -831,12 +832,12 @@ const styles = StyleSheet.create({
     borderColor: "#6C3BAA30",
   },
   selectedMuscleImage: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     marginRight: 6,
   },
   selectedMuscleText: {
     color: "#6C3BAA",
-    fontSize: 14,
+    fontSize: RFValue(14),
     fontWeight: "500",
     marginRight: 4,
   },
@@ -845,7 +846,7 @@ const styles = StyleSheet.create({
   },
   removeMuscleText: {
     color: "#6C3BAA",
-    fontSize: 16,
+    fontSize: RFValue(16),
     fontWeight: "bold",
   },
   saveButton: {
@@ -871,7 +872,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
   },
   loadingContainer: {
@@ -899,13 +900,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     fontWeight: "bold",
     color: "#0F172A",
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#64748B",
   },
   muscleList: {
@@ -920,13 +921,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F8FAFC",
   },
   muscleItemImage: {
-    fontSize: 20,
+    fontSize: RFValue(20),
     marginRight: 16,
     width: 24,
   },
   muscleItemText: {
     color: "#374151",
-    fontSize: 16,
+    fontSize: RFValue(16),
     flex: 1,
   },
   selectedMuscleItem: {
@@ -935,7 +936,7 @@ const styles = StyleSheet.create({
   selectedMuscleItemText: {
     color: "#6C3BAA",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: RFValue(16),
     flex: 1,
   },
   muscleCheckmark: {
@@ -948,7 +949,7 @@ const styles = StyleSheet.create({
   },
   muscleCheckmarkText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: RFValue(12),
     fontWeight: "bold",
   },
   modalButtons: {
@@ -966,7 +967,7 @@ const styles = StyleSheet.create({
   modalCancelText: {
     color: "#64748B",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
   modalConfirmButton: {
     flex: 1,
@@ -978,6 +979,6 @@ const styles = StyleSheet.create({
   modalConfirmText: {
     color: "#FFFFFF",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: RFValue(16),
   },
 });

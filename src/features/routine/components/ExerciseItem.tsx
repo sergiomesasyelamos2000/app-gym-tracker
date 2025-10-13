@@ -1,5 +1,6 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto } from "../../../models";
 
@@ -70,12 +71,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseTitle: {
-    fontSize: 18,
+    fontSize: RFValue(18),
     fontWeight: "bold",
     color: "#333",
   },
   exerciseMuscleGroup: {
-    fontSize: 14,
+    fontSize: RFValue(14),
     color: "#777",
     marginTop: 4,
   },
