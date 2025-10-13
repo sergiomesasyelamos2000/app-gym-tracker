@@ -22,25 +22,29 @@ type Props = NativeStackScreenProps<WorkoutStackParamList, "ExerciseDetail">;
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
-  if (exercise.imageUrl) {
-    if (
-      exercise.imageUrl.startsWith("/9j/") ||
-      exercise.imageUrl.startsWith("iVBORw")
-    ) {
-      return { uri: `data:image/jpeg;base64,${exercise.imageUrl}` };
-    }
-    return { uri: exercise.imageUrl };
-  }
   if (exercise.giftUrl) {
     return { uri: exercise.giftUrl };
   }
-  return null;
+
+  if (!exercise.imageUrl) return null;
+
+  const isBase64 =
+    exercise.imageUrl.startsWith("/9j/") ||
+    exercise.imageUrl.startsWith("iVBORw");
+
+  return {
+    uri: isBase64
+      ? `data:image/jpeg;base64,${exercise.imageUrl}`
+      : exercise.imageUrl,
+  };
 };
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
   const [imageError, setImageError] = useState(false);
   const imageSource = getImageSource(exercise);
+
+  console.log("exercise", exercise);
 
   if (!imageSource || imageError) {
     return <View style={[style, styles.exercisePlaceholder]}></View>;
