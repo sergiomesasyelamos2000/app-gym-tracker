@@ -1,3 +1,4 @@
+// ==================== TYPES ====================
 import {
   NavigationProp,
   useNavigation,
@@ -36,14 +37,22 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 interface CustomDropdownProps {
   value: string;
   onValueChange: (value: string) => void;
-  options: { id: string; name: string; image?: string; imagePath?: string }[];
+  options: DropdownOption[];
   placeholder: string;
+}
+
+interface DropdownOption {
+  id: string;
+  name: string;
+  image?: string;
+  imagePath?: string;
 }
 
 interface CreateExerciseRouteProps {
   onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
 }
 
+// ==================== CUSTOM DROPDOWN COMPONENT ====================
 const CustomDropdown: React.FC<CustomDropdownProps> = ({
   value,
   onValueChange,
@@ -60,24 +69,32 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, [isVisible]);
+  }, [isVisible, fadeAnim]);
 
-  const renderOptionImage = (option: any, style?: any) => {
+  const renderOptionImage = (
+    option: DropdownOption | undefined,
+    imageStyle?: any
+  ) => {
     if (!option) return null;
-    if (option.imagePath)
+
+    if (option.imagePath) {
       return (
         <Image
           source={{ uri: option.imagePath }}
-          style={style}
+          style={imageStyle}
           resizeMode="contain"
         />
       );
-    if (option.image)
+    }
+
+    if (option.image) {
       return (
-        <Text style={[{ fontSize: style?.width || 20 }, style]}>
+        <Text style={[{ fontSize: imageStyle?.width || 20 }, imageStyle]}>
           {option.image}
         </Text>
       );
+    }
+
     return null;
   };
 
@@ -178,11 +195,332 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   );
 };
 
+// ==================== IMAGE PICKER COMPONENT ====================
+interface ExerciseImagePickerProps {
+  imageUri: string | null;
+  onImagePick: () => void;
+}
+
+const ExerciseImagePicker: React.FC<ExerciseImagePickerProps> = ({
+  imageUri,
+  onImagePick,
+}) => (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Imagen del ejercicio</Text>
+    <TouchableOpacity
+      style={styles.imageContainer}
+      onPress={onImagePick}
+      activeOpacity={0.8}
+    >
+      {imageUri ? (
+        <>
+          <Image source={{ uri: imageUri }} style={styles.image} />
+          <View style={styles.imageOverlay}>
+            <Text style={styles.imageOverlayText}>Cambiar imagen</Text>
+          </View>
+        </>
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <View style={styles.imagePlaceholderIcon}>
+            <Text style={styles.imagePlaceholderIconText}>📷</Text>
+          </View>
+          <Text style={styles.imagePlaceholderText}>
+            Toca para agregar una imagen
+          </Text>
+          <Text style={styles.imagePlaceholderSubtext}>Recomendado: 1:1</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  </View>
+);
+
+// ==================== BASIC INFO SECTION ====================
+interface BasicInfoSectionProps {
+  name: string;
+  onNameChange: (name: string) => void;
+  typeId: string;
+  onTypeChange: (typeId: string) => void;
+  exerciseTypeOptions: DropdownOption[];
+}
+
+const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
+  name,
+  onNameChange,
+  typeId,
+  onTypeChange,
+  exerciseTypeOptions,
+}) => (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Información básica</Text>
+
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>Nombre del ejercicio</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ej: Press de banca con barra"
+        placeholderTextColor="#94A3B8"
+        value={name}
+        onChangeText={onNameChange}
+        maxLength={100}
+      />
+    </View>
+
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>Tipo de ejercicio</Text>
+      <CustomDropdown
+        value={typeId}
+        onValueChange={onTypeChange}
+        options={exerciseTypeOptions}
+        placeholder="Selecciona el tipo"
+      />
+    </View>
+  </View>
+);
+
+// ==================== MUSCLE TAG COMPONENT ====================
+interface MuscleTagProps {
+  muscleId: string;
+  muscleName: string;
+  muscleImage: string;
+  onRemove: (muscleId: string) => void;
+}
+
+const MuscleTag: React.FC<MuscleTagProps> = ({
+  muscleId,
+  muscleName,
+  muscleImage,
+  onRemove,
+}) => (
+  <View style={styles.selectedMuscleTag}>
+    <Text style={styles.selectedMuscleImage}>{muscleImage}</Text>
+    <Text style={styles.selectedMuscleText}>{muscleName}</Text>
+    <TouchableOpacity
+      onPress={() => onRemove(muscleId)}
+      style={styles.removeMuscleButton}
+    >
+      <Text style={styles.removeMuscleText}>×</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+// ==================== SPECIFICATIONS SECTION ====================
+interface SpecificationsSectionProps {
+  equipmentId: string;
+  onEquipmentChange: (id: string) => void;
+  equipmentOptions: DropdownOption[];
+  primaryMuscleId: string;
+  onPrimaryMuscleChange: (id: string) => void;
+  muscleOptions: DropdownOption[];
+  otherMuscleIds: string[];
+  onOpenMuscleModal: () => void;
+  onRemoveMuscle: (muscleId: string) => void;
+}
+
+const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
+  equipmentId,
+  onEquipmentChange,
+  equipmentOptions,
+  primaryMuscleId,
+  onPrimaryMuscleChange,
+  muscleOptions,
+  otherMuscleIds,
+  onOpenMuscleModal,
+  onRemoveMuscle,
+}) => {
+  const getMuscleDetails = (muscleId: string) => {
+    const muscle = muscleOptions.find((m) => m.id === muscleId);
+    return {
+      name: muscle?.name || "Desconocido",
+      image: muscle?.image || "💪",
+    };
+  };
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Especificaciones</Text>
+
+      <View style={styles.row}>
+        <View style={[styles.inputContainer, { flex: 1 }]}>
+          <Text style={styles.inputLabel}>Equipamiento</Text>
+          <CustomDropdown
+            value={equipmentId}
+            onValueChange={onEquipmentChange}
+            options={equipmentOptions}
+            placeholder="Seleccionar"
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Músculo principal</Text>
+        <CustomDropdown
+          value={primaryMuscleId}
+          onValueChange={onPrimaryMuscleChange}
+          options={muscleOptions}
+          placeholder="Selecciona el músculo"
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>
+          Músculos secundarios{" "}
+          {otherMuscleIds.length > 0 && `(${otherMuscleIds.length})`}
+        </Text>
+        <TouchableOpacity
+          style={styles.muscleSelector}
+          onPress={onOpenMuscleModal}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={
+              otherMuscleIds.length === 0
+                ? styles.placeholderText
+                : styles.selectedText
+            }
+          >
+            {otherMuscleIds.length === 0
+              ? "Seleccionar músculos adicionales"
+              : "Músculos seleccionados"}
+          </Text>
+          <View style={styles.selectorArrow}>
+            <Text style={styles.selectorArrowText}>⌄</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {otherMuscleIds.length > 0 && (
+        <View style={styles.selectedMusclesContainer}>
+          {otherMuscleIds.map((muscleId) => {
+            const { name, image } = getMuscleDetails(muscleId);
+            return (
+              <MuscleTag
+                key={muscleId}
+                muscleId={muscleId}
+                muscleName={name}
+                muscleImage={image}
+                onRemove={onRemoveMuscle}
+              />
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ==================== MUSCLE MODAL COMPONENT ====================
+interface MuscleModalProps {
+  visible: boolean;
+  onClose: () => void;
+  muscleOptions: DropdownOption[];
+  selectedMuscleIds: string[];
+  onToggleMuscle: (muscleId: string) => void;
+}
+
+const MuscleModal: React.FC<MuscleModalProps> = ({
+  visible,
+  onClose,
+  muscleOptions,
+  selectedMuscleIds,
+  onToggleMuscle,
+}) => {
+  const muscleModalRef = useRef<View>(null);
+
+  const handleBackdrop = (event: any) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalContainer} ref={muscleModalRef}>
+        <TouchableWithoutFeedback onPress={handleBackdrop}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Músculos secundarios</Text>
+                <Text style={styles.modalSubtitle}>
+                  Selecciona los músculos que también se trabajan
+                </Text>
+              </View>
+
+              <FlatList
+                data={muscleOptions}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.muscleItem,
+                      selectedMuscleIds.includes(item.id) &&
+                        styles.selectedMuscleItem,
+                    ]}
+                    onPress={() => onToggleMuscle(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.muscleItemImage}>
+                      {item.image || "💪"}
+                    </Text>
+                    <Text
+                      style={
+                        selectedMuscleIds.includes(item.id)
+                          ? styles.selectedMuscleItemText
+                          : styles.muscleItemText
+                      }
+                    >
+                      {item.name}
+                    </Text>
+                    {selectedMuscleIds.includes(item.id) && (
+                      <View style={styles.muscleCheckmark}>
+                        <Text style={styles.muscleCheckmarkText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+                style={styles.muscleList}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={onClose}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalConfirmButton}
+                  onPress={onClose}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalConfirmText}>
+                    Aceptar ({selectedMuscleIds.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </View>
+    </Modal>
+  );
+};
+
+// ==================== MAIN SCREEN COMPONENT ====================
 export default function CreateExerciseScreen() {
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
   const route = useRoute();
-  const { onExerciseCreated } = route.params as CreateExerciseRouteProps;
+  const { onExerciseCreated } =
+    (route.params as CreateExerciseRouteProps) || {};
+
+  // ==================== STATE ====================
   const [name, setName] = useState("");
   const [equipmentId, setEquipmentId] = useState("");
   const [primaryMuscleId, setPrimaryMuscleId] = useState("");
@@ -192,47 +530,43 @@ export default function CreateExerciseScreen() {
   const [showMuscleModal, setShowMuscleModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [equipmentOptions, setEquipmentOptions] = useState<
-    { id: string; name: string; imagePath?: string }[]
-  >([]);
-  const [muscleOptions, setMuscleOptions] = useState<
-    { id: string; name: string; image?: string; imagePath?: string }[]
-  >([]);
+  const [equipmentOptions, setEquipmentOptions] = useState<DropdownOption[]>(
+    []
+  );
+  const [muscleOptions, setMuscleOptions] = useState<DropdownOption[]>([]);
   const [exerciseTypeOptions, setExerciseTypeOptions] = useState<
-    { id: string; name: string; image?: string; imagePath?: string }[]
+    DropdownOption[]
   >([]);
 
-  const muscleModalRef = useRef<View>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
+  // ==================== DATA LOADING ====================
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [equipmentData, musclesData, exerciseTypesData] =
-          await Promise.all([
-            fetchEquipment(),
-            fetchMuscles(),
-            fetchExerciseTypes(),
-          ]);
-
-        setEquipmentOptions(equipmentData);
-        setMuscleOptions(musclesData);
-        setExerciseTypeOptions(exerciseTypesData);
-      } catch (error) {
-        console.error("Error cargando datos:", error);
-        alert("Error al cargar los datos. Por favor intenta nuevamente.");
-      }
-    };
-
-    loadData();
+    loadInitialData();
   }, []);
 
+  const loadInitialData = async () => {
+    try {
+      const [equipmentData, musclesData, exerciseTypesData] = await Promise.all(
+        [fetchEquipment(), fetchMuscles(), fetchExerciseTypes()]
+      );
+
+      setEquipmentOptions(equipmentData);
+      setMuscleOptions(musclesData);
+      setExerciseTypeOptions(exerciseTypesData);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      alert("Error al cargar los datos. Por favor intenta nuevamente.");
+    }
+  };
+
+  // ==================== IMAGE HANDLING ====================
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (status !== "granted") {
       alert("Se necesitan permisos para acceder a la galería");
       return;
     }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -240,33 +574,62 @@ export default function CreateExerciseScreen() {
       quality: 0.7,
       base64: false,
     });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const optimizeAndEncodeImage = async (uri: string): Promise<string> => {
+    const optimizedImage = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 400, height: 400 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    return await FileSystem.readAsStringAsync(optimizedImage.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  };
+
+  // ==================== MUSCLE SELECTION ====================
+  const toggleMuscleSelection = (muscleId: string) => {
+    setOtherMuscleIds((prev) =>
+      prev.includes(muscleId)
+        ? prev.filter((id) => id !== muscleId)
+        : [...prev, muscleId]
+    );
+  };
+
+  const removeMuscle = (muscleId: string) => {
+    setOtherMuscleIds((prev) => prev.filter((id) => id !== muscleId));
+  };
+
+  // ==================== VALIDATION & SAVE ====================
+  const validateForm = (): boolean => {
+    if (!name.trim()) {
+      alert("Por favor ingresa un nombre para el ejercicio");
+      return false;
+    }
+
+    if (!primaryMuscleId) {
+      alert("Por favor selecciona un grupo muscular primario");
+      return false;
+    }
+
+    return true;
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      alert("Por favor ingresa un nombre para el ejercicio");
-      return;
-    }
-    if (!primaryMuscleId) {
-      alert("Por favor selecciona un grupo muscular primario");
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
+
     try {
       let imageBase64: string | undefined;
 
       if (imageUri) {
-        const optimizedImage = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [{ resize: { width: 400, height: 400 } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-        );
-
-        imageBase64 = await FileSystem.readAsStringAsync(optimizedImage.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+        imageBase64 = await optimizeAndEncodeImage(imageUri);
       }
 
       const createdExercise = await createExercise({
@@ -291,31 +654,10 @@ export default function CreateExerciseScreen() {
     }
   };
 
-  const toggleMuscleSelection = (muscleId: string) =>
-    setOtherMuscleIds((prev) =>
-      prev.includes(muscleId)
-        ? prev.filter((id) => id !== muscleId)
-        : [...prev, muscleId]
-    );
+  // ==================== COMPUTED VALUES ====================
+  const isSaveDisabled = !name.trim() || !primaryMuscleId || isLoading;
 
-  const removeMuscle = (muscleId: string) =>
-    setOtherMuscleIds((prev) => prev.filter((id) => id !== muscleId));
-
-  const handleMuscleModalBackdrop = (event: any) => {
-    if (muscleModalRef.current && event.target === event.currentTarget)
-      setShowMuscleModal(false);
-  };
-
-  const getMuscleImage = (muscleId: string) => {
-    const muscle = muscleOptions.find((m) => m.id === muscleId);
-    return muscle ? muscle.image || "💪" : "💪";
-  };
-
-  const getMuscleName = (muscleId: string) => {
-    const muscle = muscleOptions.find((m) => m.id === muscleId);
-    return muscle ? muscle.name : "Desconocido";
-  };
-
+  // ==================== RENDER ====================
   return (
     <View style={styles.container}>
       <ScrollView
@@ -329,148 +671,35 @@ export default function CreateExerciseScreen() {
           </Text>
         </View>
 
-        {/* Sección de Imagen */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Imagen del ejercicio</Text>
-          <TouchableOpacity
-            style={styles.imageContainer}
-            onPress={pickImage}
-            activeOpacity={0.8}
-          >
-            {imageUri ? (
-              <>
-                <Image source={{ uri: imageUri }} style={styles.image} />
-                <View style={styles.imageOverlay}>
-                  <Text style={styles.imageOverlayText}>Cambiar imagen</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <View style={styles.imagePlaceholderIcon}>
-                  <Text style={styles.imagePlaceholderIconText}>📷</Text>
-                </View>
-                <Text style={styles.imagePlaceholderText}>
-                  Toca para agregar una imagen
-                </Text>
-                <Text style={styles.imagePlaceholderSubtext}>
-                  Recomendado: 1:1
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <ExerciseImagePicker imageUri={imageUri} onImagePick={pickImage} />
 
-        {/* Información Básica */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información básica</Text>
+        <BasicInfoSection
+          name={name}
+          onNameChange={setName}
+          typeId={typeId}
+          onTypeChange={setTypeId}
+          exerciseTypeOptions={exerciseTypeOptions}
+        />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Nombre del ejercicio</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: Press de banca con barra"
-              placeholderTextColor="#94A3B8"
-              value={name}
-              onChangeText={setName}
-              maxLength={100}
-            />
-          </View>
+        <SpecificationsSection
+          equipmentId={equipmentId}
+          onEquipmentChange={setEquipmentId}
+          equipmentOptions={equipmentOptions}
+          primaryMuscleId={primaryMuscleId}
+          onPrimaryMuscleChange={setPrimaryMuscleId}
+          muscleOptions={muscleOptions}
+          otherMuscleIds={otherMuscleIds}
+          onOpenMuscleModal={() => setShowMuscleModal(true)}
+          onRemoveMuscle={removeMuscle}
+        />
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Tipo de ejercicio</Text>
-            <CustomDropdown
-              value={typeId}
-              onValueChange={setTypeId}
-              options={exerciseTypeOptions}
-              placeholder="Selecciona el tipo"
-            />
-          </View>
-        </View>
-
-        {/* Equipamiento y Músculos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Especificaciones</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 1 }]}>
-              <Text style={styles.inputLabel}>Equipamiento</Text>
-              <CustomDropdown
-                value={equipmentId}
-                onValueChange={setEquipmentId}
-                options={equipmentOptions}
-                placeholder="Seleccionar"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Músculo principal</Text>
-            <CustomDropdown
-              value={primaryMuscleId}
-              onValueChange={setPrimaryMuscleId}
-              options={muscleOptions}
-              placeholder="Selecciona el músculo"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>
-              Músculos secundarios{" "}
-              {otherMuscleIds.length > 0 && `(${otherMuscleIds.length})`}
-            </Text>
-            <TouchableOpacity
-              style={styles.muscleSelector}
-              onPress={() => setShowMuscleModal(true)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={
-                  otherMuscleIds.length === 0
-                    ? styles.placeholderText
-                    : styles.selectedText
-                }
-              >
-                {otherMuscleIds.length === 0
-                  ? "Seleccionar músculos adicionales"
-                  : `Músculos seleccionados`}
-              </Text>
-              <View style={styles.selectorArrow}>
-                <Text style={styles.selectorArrowText}>⌄</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Músculos seleccionados */}
-          {otherMuscleIds.length > 0 && (
-            <View style={styles.selectedMusclesContainer}>
-              {otherMuscleIds.map((muscleId) => (
-                <View key={muscleId} style={styles.selectedMuscleTag}>
-                  <Text style={styles.selectedMuscleImage}>
-                    {getMuscleImage(muscleId)}
-                  </Text>
-                  <Text style={styles.selectedMuscleText}>
-                    {getMuscleName(muscleId)}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => removeMuscle(muscleId)}
-                    style={styles.removeMuscleButton}
-                  >
-                    <Text style={styles.removeMuscleText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Botón de Guardar */}
         <TouchableOpacity
           style={[
             styles.saveButton,
-            (!name.trim() || !primaryMuscleId) && styles.saveButtonDisabled,
+            isSaveDisabled && styles.saveButtonDisabled,
           ]}
           onPress={handleSave}
-          disabled={!name.trim() || !primaryMuscleId || isLoading}
+          disabled={isSaveDisabled}
           activeOpacity={0.8}
         >
           {isLoading ? (
@@ -483,87 +712,18 @@ export default function CreateExerciseScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal de músculos */}
-      <Modal
+      <MuscleModal
         visible={showMuscleModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowMuscleModal(false)}
-      >
-        <View style={styles.modalContainer} ref={muscleModalRef}>
-          <TouchableWithoutFeedback onPress={handleMuscleModalBackdrop}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Músculos secundarios</Text>
-                  <Text style={styles.modalSubtitle}>
-                    Selecciona los músculos que también se trabajan
-                  </Text>
-                </View>
-
-                <FlatList
-                  data={muscleOptions}
-                  keyExtractor={(item) => item.id}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.muscleItem,
-                        otherMuscleIds.includes(item.id) &&
-                          styles.selectedMuscleItem,
-                      ]}
-                      onPress={() => toggleMuscleSelection(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.muscleItemImage}>
-                        {item.image || "💪"}
-                      </Text>
-                      <Text
-                        style={
-                          otherMuscleIds.includes(item.id)
-                            ? styles.selectedMuscleItemText
-                            : styles.muscleItemText
-                        }
-                      >
-                        {item.name}
-                      </Text>
-                      {otherMuscleIds.includes(item.id) && (
-                        <View style={styles.muscleCheckmark}>
-                          <Text style={styles.muscleCheckmarkText}>✓</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  style={styles.muscleList}
-                />
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.modalCancelButton}
-                    onPress={() => setShowMuscleModal(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.modalCancelText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.modalConfirmButton}
-                    onPress={() => setShowMuscleModal(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.modalConfirmText}>
-                      Aceptar ({otherMuscleIds.length})
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </Modal>
+        onClose={() => setShowMuscleModal(false)}
+        muscleOptions={muscleOptions}
+        selectedMuscleIds={otherMuscleIds}
+        onToggleMuscle={toggleMuscleSelection}
+      />
     </View>
   );
 }
 
+// ==================== STYLES ====================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -582,7 +742,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-
   subtitle: {
     fontSize: RFValue(16),
     color: "#64748B",

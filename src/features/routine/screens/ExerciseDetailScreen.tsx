@@ -20,7 +20,27 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 
 type Props = NativeStackScreenProps<WorkoutStackParamList, "ExerciseDetail">;
 
-// Función auxiliar para formatear la URI de la imagen
+// ============================================================================
+// TIPOS Y INTERFACES
+// ============================================================================
+interface ExerciseHistoryItem {
+  id: string;
+  date: string;
+  routineName: string;
+  routineId: string;
+  sets: any[];
+  completedSets: number;
+  totalWeight: number;
+  totalReps: number;
+  volume: number;
+  maxWeight: number;
+  totalTime: number;
+  sessionData: any;
+}
+
+// ============================================================================
+// UTILIDADES DE IMAGEN
+// ============================================================================
 const getImageSource = (exercise: ExerciseRequestDto) => {
   if (exercise.giftUrl) {
     return { uri: exercise.giftUrl };
@@ -39,13 +59,12 @@ const getImageSource = (exercise: ExerciseRequestDto) => {
   };
 };
 
-// Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
   const [imageError, setImageError] = useState(false);
   const imageSource = getImageSource(exercise);
 
   if (!imageSource || imageError) {
-    return <View style={[style, styles.exercisePlaceholder]}></View>;
+    return <View style={[style, styles.exercisePlaceholder]} />;
   }
 
   return (
@@ -58,38 +77,47 @@ const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
   );
 };
 
-// Funciones CORREGIDAS para calcular el progreso real
-// Funciones CORREGIDAS para calcular el progreso real
-const calculateRealProgress = (history: any[]) => {
-  if (history.length < 2) return 0;
+// ============================================================================
+// CÁLCULOS DE PROGRESO
+// ============================================================================
+const getValidHistory = (history: ExerciseHistoryItem[]) => {
+  return history
+    .filter((item) => item.maxWeight > 0)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
 
-  // Filtrar sesiones con peso mayor a 0 y ordenar por fecha
-  const validHistory = history.filter((item) => item.maxWeight > 0);
-  if (validHistory.length < 2) return 0;
-
-  const sortedHistory = [...validHistory].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-
-  const oldestSession = sortedHistory[0];
-  const newestSession = sortedHistory[sortedHistory.length - 1];
-
-  if (oldestSession.maxWeight === 0 && newestSession.maxWeight > 0) {
+const calculateProgressBetweenSessions = (
+  firstSession: ExerciseHistoryItem,
+  lastSession: ExerciseHistoryItem
+): number => {
+  if (firstSession.maxWeight === 0 && lastSession.maxWeight > 0) {
     return 100;
   }
 
-  if (oldestSession.maxWeight === 0) return 0;
+  if (firstSession.maxWeight === 0) {
+    return 0;
+  }
 
   const progress =
-    ((newestSession.maxWeight - oldestSession.maxWeight) /
-      oldestSession.maxWeight) *
+    ((lastSession.maxWeight - firstSession.maxWeight) /
+      firstSession.maxWeight) *
     100;
+
   return Math.round(progress);
 };
 
-const calculateMonthlyProgress = (history: any[]) => {
-  // Filtrar sesiones con peso mayor a 0
-  const validHistory = history.filter((item) => item.maxWeight > 0);
+const calculateTotalProgress = (history: ExerciseHistoryItem[]): number => {
+  const validHistory = getValidHistory(history);
+  if (validHistory.length < 2) return 0;
+
+  const oldestSession = validHistory[0];
+  const newestSession = validHistory[validHistory.length - 1];
+
+  return calculateProgressBetweenSessions(oldestSession, newestSession);
+};
+
+const calculateMonthlyProgress = (history: ExerciseHistoryItem[]): number => {
+  const validHistory = getValidHistory(history);
   if (validHistory.length < 2) return 0;
 
   const oneMonthAgo = new Date();
@@ -101,24 +129,15 @@ const calculateMonthlyProgress = (history: any[]) => {
 
   if (recentSessions.length < 2) return 0;
 
-  const sortedRecent = [...recentSessions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const firstRecent = recentSessions[0];
+  const lastRecent = recentSessions[recentSessions.length - 1];
 
-  const firstRecent = sortedRecent[0];
-  const lastRecent = sortedRecent[sortedRecent.length - 1];
-
-  if (firstRecent.maxWeight === 0 && lastRecent.maxWeight > 0) return 100;
-  if (firstRecent.maxWeight === 0) return 0;
-
-  const progress =
-    ((lastRecent.maxWeight - firstRecent.maxWeight) / firstRecent.maxWeight) *
-    100;
-  return Math.round(progress);
+  return calculateProgressBetweenSessions(firstRecent, lastRecent);
 };
 
-// Función para calcular el progreso basado en el mejor peso personal
-const calculatePersonalBestProgress = (history: any[]) => {
+const calculatePersonalBestProgress = (
+  history: ExerciseHistoryItem[]
+): number => {
   if (history.length === 0) return 0;
 
   const sorted = [...history].sort(
@@ -133,59 +152,299 @@ const calculatePersonalBestProgress = (history: any[]) => {
   return Math.round((latest / personalBest) * 100);
 };
 
+// ============================================================================
+// PROCESAMIENTO DE DATOS
+// ============================================================================
+const processExerciseFromSession = (
+  session: any,
+  exerciseId: string
+): ExerciseHistoryItem | null => {
+  const exerciseEntry = session.exercises?.find(
+    (e: any) => e.exerciseId === exerciseId
+  );
+
+  if (!exerciseEntry) return null;
+
+  const sets = exerciseEntry.sets || [];
+  const completedSets = sets.filter((s: any) => s.completed).length;
+  const totalWeight = sets.reduce(
+    (sum: number, s: any) => sum + (s.weight || 0),
+    0
+  );
+  const totalReps = sets.reduce(
+    (sum: number, s: any) => sum + (s.reps || 0),
+    0
+  );
+  const maxWeight = sets
+    .filter((s: any) => s.completed && s.weight > 0)
+    .reduce((max: number, s: any) => Math.max(max, s.weight), 0);
+
+  return {
+    id: session.id,
+    date: session.createdAt,
+    routineName: session.routine?.title || "Entrenamiento sin título",
+    routineId: session.routine?.id,
+    sets,
+    completedSets,
+    totalWeight,
+    totalReps,
+    volume: totalWeight * totalReps,
+    maxWeight,
+    totalTime: session.totalTime,
+    sessionData: session,
+  };
+};
+
+// ============================================================================
+// COMPONENTES
+// ============================================================================
+const LoadingView = () => (
+  <SafeAreaView style={styles.safeArea}>
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#6C3BAA" />
+      <Text style={styles.loadingText}>Cargando histórico...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+const EmptyStateView = () => (
+  <View style={styles.emptyState}>
+    <Text style={styles.emptyStateEmoji}>📊</Text>
+    <Text style={styles.emptyStateTitle}>No hay datos históricos</Text>
+    <Text style={styles.emptyStateText}>
+      Realiza este ejercicio en alguna rutina para comenzar a trackear tu
+      progreso.
+    </Text>
+  </View>
+);
+
+interface HeaderProps {
+  exercise: ExerciseRequestDto;
+  fadeAnim: Animated.Value;
+}
+
+const Header = ({ exercise, fadeAnim }: HeaderProps) => (
+  <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+    <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
+    <View style={styles.exerciseInfo}>
+      <Text style={styles.exerciseName}>{exercise.name}</Text>
+      {exercise.targetMuscles?.length > 0 && (
+        <View style={styles.muscleGroupTag}>
+          <Text style={styles.muscleGroupText}>
+            {exercise.targetMuscles[0]}
+          </Text>
+        </View>
+      )}
+    </View>
+  </Animated.View>
+);
+
+interface QuickStatsProps {
+  currentWeight: number;
+  totalSessions: number;
+  maxWeight: number;
+}
+
+const QuickStats = ({
+  currentWeight,
+  totalSessions,
+  maxWeight,
+}: QuickStatsProps) => (
+  <View style={styles.quickStatsSection}>
+    <View style={styles.quickStatsGrid}>
+      <View style={styles.quickStat}>
+        <Text style={styles.quickStatValue}>
+          {currentWeight > 0 ? `${currentWeight} kg` : "N/A"}
+        </Text>
+        <Text style={styles.quickStatLabel}>Peso actual</Text>
+      </View>
+      <View style={styles.quickStatDivider} />
+      <View style={styles.quickStat}>
+        <Text style={styles.quickStatValue}>{totalSessions}</Text>
+        <Text style={styles.quickStatLabel}>Sesiones</Text>
+      </View>
+      <View style={styles.quickStatDivider} />
+      <View style={styles.quickStat}>
+        <Text style={styles.quickStatValue}>{maxWeight}</Text>
+        <Text style={styles.quickStatLabel}>Récord</Text>
+      </View>
+    </View>
+  </View>
+);
+
+interface ProgressCardProps {
+  title: string;
+  value: number;
+}
+
+const ProgressCard = ({ title, value }: ProgressCardProps) => (
+  <View style={styles.progressCard}>
+    <Text style={styles.progressTitle}>{title}</Text>
+    <Text
+      style={[
+        styles.progressValue,
+        { color: value >= 0 ? "#10B981" : "#EF4444" },
+      ]}
+    >
+      {value > 0 ? "+" : ""}
+      {value}%
+    </Text>
+    <View style={styles.progressBar}>
+      <View
+        style={[
+          styles.progressFill,
+          {
+            width: `${Math.min(Math.max(value, 0), 100)}%`,
+            backgroundColor: value >= 0 ? "#10B981" : "#EF4444",
+          },
+        ]}
+      />
+    </View>
+  </View>
+);
+
+interface ProgressSectionProps {
+  totalProgress: number;
+  monthlyProgress: number;
+  personalBestProgress: number;
+}
+
+const ProgressSection = ({
+  totalProgress,
+  monthlyProgress,
+  personalBestProgress,
+}: ProgressSectionProps) => (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Progreso Real</Text>
+    <View style={styles.progressSection}>
+      <ProgressCard title="Progreso Total" value={totalProgress} />
+      <ProgressCard title="Último Mes" value={monthlyProgress} />
+      <ProgressCard title="Récord Personal" value={personalBestProgress} />
+    </View>
+  </View>
+);
+
+interface HistoryCardProps {
+  item: ExerciseHistoryItem;
+  fadeAnim: Animated.Value;
+  onNavigateToRoutine: (routineId: string, routine: any) => void;
+}
+
+const HistoryCard = ({
+  item,
+  fadeAnim,
+  onNavigateToRoutine,
+}: HistoryCardProps) => (
+  <Animated.View
+    style={[
+      styles.historyCard,
+      {
+        opacity: fadeAnim,
+        transform: [
+          {
+            translateY: fadeAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [50, 0],
+            }),
+          },
+        ],
+      },
+    ]}
+  >
+    <View style={styles.historyHeader}>
+      <View style={styles.historyInfo}>
+        <View style={styles.dateContainer}>
+          <Text style={styles.historyDateIcon}>📅</Text>
+          <Text style={styles.historyDate}>
+            {new Date(item.date).toLocaleDateString("es-ES", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })}
+          </Text>
+        </View>
+        <View style={styles.routineContainer}>
+          <Text style={styles.routineName}>{item.routineName}</Text>
+        </View>
+      </View>
+      <View style={styles.weightBadge}>
+        <Text style={styles.weightValue}>{item.maxWeight} kg</Text>
+      </View>
+    </View>
+
+    <View style={styles.historyStats}>
+      <View style={styles.statItem}>
+        <Text style={styles.statLabel}>Series</Text>
+        <Text style={styles.statValue}>{item.completedSets}</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={styles.statLabel}>Reps</Text>
+        <Text style={styles.statValue}>{item.totalReps}</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={styles.statLabel}>Volumen</Text>
+        <Text style={styles.statValue}>{item.volume} kg</Text>
+      </View>
+    </View>
+
+    {item.sets?.length > 0 && (
+      <View style={styles.setsContainer}>
+        <Text style={styles.setsTitle}>Series:</Text>
+        <View style={styles.setsList}>
+          {item.sets.map((set: any, i: number) => (
+            <View
+              key={i}
+              style={[styles.setItem, set.completed && styles.completedSet]}
+            >
+              <Text style={styles.setText}>
+                {i + 1}. {set.weight}kg × {set.reps} reps{" "}
+                {set.completed ? "✅" : "❌"}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    )}
+
+    <TouchableOpacity
+      style={styles.routineButton}
+      onPress={() =>
+        onNavigateToRoutine(
+          item.sessionData.routine?.id,
+          item.sessionData.routine
+        )
+      }
+    >
+      <Text style={styles.routineButtonText}>Ver sesión completa →</Text>
+    </TouchableOpacity>
+  </Animated.View>
+);
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const { exercise } = route.params;
+
+  // Estado
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<ExerciseHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
     try {
       setLoading(true);
       const sessionsData = await findAllRoutineSessions();
 
       const exerciseHistory = sessionsData
-        .map((session: any) => {
-          const exerciseEntry = session.exercises?.find(
-            (e: any) => e.exerciseId === exercise.id
-          );
-          if (!exerciseEntry) return null;
-
-          const sets = exerciseEntry.sets || [];
-          const completedSets = sets.filter((s: any) => s.completed).length;
-          const totalWeight = sets.reduce(
-            (sum: number, s: any) => sum + (s.weight || 0),
-            0
-          );
-          const totalReps = sets.reduce(
-            (sum: number, s: any) => sum + (s.reps || 0),
-            0
-          );
-          const maxWeight = sets
-            .filter((s: any) => s.completed && s.weight > 0)
-            .reduce((max: number, s: any) => Math.max(max, s.weight), 0);
-
-          const volume = totalWeight * totalReps;
-
-          return {
-            id: session.id,
-            date: session.createdAt,
-            routineName: session.routine?.title || "Entrenamiento sin título",
-            routineId: session.routine?.id,
-            sets,
-            completedSets,
-            totalWeight,
-            totalReps,
-            volume,
-            maxWeight,
-            totalTime: session.totalTime,
-            sessionData: session,
-          };
-        })
-        .filter(Boolean)
+        .map((session: any) => processExerciseFromSession(session, exercise.id))
+        .filter((item): item is ExerciseHistoryItem => item !== null)
         .sort(
-          (a, b) => new Date(b?.date).getTime() - new Date(a?.date).getTime()
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
 
       setHistory(exerciseHistory);
@@ -212,114 +471,40 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
     fetchExerciseHistory();
   }, [fetchExerciseHistory]);
 
-  // === Cálculos globales ===
-  const totalSessions = history.length;
-  const maxWeight =
-    totalSessions > 0 ? Math.max(...history.map((i) => i.maxWeight)) : 0;
-  const currentWeight = totalSessions > 0 ? history[0].maxWeight : 0;
-  const totalVolume = history.reduce((s, i) => s + i.volume, 0);
+  // Cálculos derivados
+  const stats = {
+    totalSessions: history.length,
+    maxWeight:
+      history.length > 0 ? Math.max(...history.map((i) => i.maxWeight)) : 0,
+    currentWeight: history.length > 0 ? history[0].maxWeight : 0,
+    totalVolume: history.reduce((s, i) => s + i.volume, 0),
+  };
 
-  const realProgress = calculateRealProgress(history);
-  const monthlyProgress = calculateMonthlyProgress(history);
-  const personalBestProgress = calculatePersonalBestProgress(history);
+  const progress = {
+    total: calculateTotalProgress(history),
+    monthly: calculateMonthlyProgress(history),
+    personalBest: calculatePersonalBestProgress(history),
+  };
 
-  const renderHistoryItem = ({ item }: { item: any }) => (
-    <Animated.View
-      style={[
-        styles.historyCard,
-        {
-          opacity: fadeAnim,
-          transform: [
-            {
-              translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [50, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <View style={styles.historyHeader}>
-        <View style={styles.historyInfo}>
-          <View style={styles.dateContainer}>
-            <Text style={styles.historyDateIcon}>📅</Text>
-            <Text style={styles.historyDate}>
-              {new Date(item.date).toLocaleDateString("es-ES", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-              })}
-            </Text>
-          </View>
-          <View style={styles.routineContainer}>
-            <Text style={styles.routineName}>{item.routineName}</Text>
-          </View>
-        </View>
-        <View style={styles.weightBadge}>
-          <Text style={styles.weightValue}>{item.maxWeight} kg</Text>
-        </View>
-      </View>
+  // Navegación
+  const handleNavigateToRoutine = useCallback(
+    (routineId: string, routine: any) => {
+      navigation.navigate("RoutineDetail", { routineId, routine });
+    },
+    [navigation]
+  );
 
-      <View style={styles.historyStats}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Series</Text>
-          <Text style={styles.statValue}>{item.completedSets}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Reps</Text>
-          <Text style={styles.statValue}>{item.totalReps}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Volumen</Text>
-          <Text style={styles.statValue}>{item.volume} kg</Text>
-        </View>
-      </View>
-
-      {item.sets?.length > 0 && (
-        <View style={styles.setsContainer}>
-          <Text style={styles.setsTitle}>Series:</Text>
-          <View style={styles.setsList}>
-            {item.sets.map((set: any, i: number) => (
-              <View
-                key={i}
-                style={[styles.setItem, set.completed && styles.completedSet]}
-              >
-                <Text style={styles.setText}>
-                  {i + 1}. {set.weight}kg × {set.reps} reps{" "}
-                  {set.completed ? "✅" : "❌"}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.routineButton}
-        onPress={() =>
-          navigation.navigate("RoutineDetail", {
-            routineId: item.sessionData.routine?.id,
-            routine: item.sessionData.routine,
-          })
-        }
-      >
-        <Text style={styles.routineButtonText}>Ver sesión completa →</Text>
-      </TouchableOpacity>
-    </Animated.View>
+  // Render de item del histórico
+  const renderHistoryItem = ({ item }: { item: ExerciseHistoryItem }) => (
+    <HistoryCard
+      item={item}
+      fadeAnim={fadeAnim}
+      onNavigateToRoutine={handleNavigateToRoutine}
+    />
   );
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
-          <Text style={styles.loadingText}>Cargando histórico...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingView />;
   }
 
   return (
@@ -335,96 +520,27 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
           />
         }
       >
-        {/* Encabezado */}
-        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-          <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
-          <View style={styles.exerciseInfo}>
-            <Text style={styles.exerciseName}>{exercise.name}</Text>
-            {exercise.targetMuscles?.length > 0 && (
-              <View style={styles.muscleGroupTag}>
-                <Text style={styles.muscleGroupText}>
-                  {exercise.targetMuscles[0]}
-                </Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
+        <Header exercise={exercise} fadeAnim={fadeAnim} />
 
-        {/* Estadísticas rápidas */}
-        <View style={styles.quickStatsSection}>
-          <View style={styles.quickStatsGrid}>
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>
-                {currentWeight > 0 ? `${currentWeight} kg` : "N/A"}
-              </Text>
-              <Text style={styles.quickStatLabel}>Peso actual</Text>
-            </View>
-            <View style={styles.quickStatDivider} />
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>{totalSessions}</Text>
-              <Text style={styles.quickStatLabel}>Sesiones</Text>
-            </View>
-            <View style={styles.quickStatDivider} />
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>{maxWeight}</Text>
-              <Text style={styles.quickStatLabel}>Récord</Text>
-            </View>
-          </View>
-        </View>
+        <QuickStats
+          currentWeight={stats.currentWeight}
+          totalSessions={stats.totalSessions}
+          maxWeight={stats.maxWeight}
+        />
 
-        {/* Progresos */}
         {history.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Progreso Real</Text>
-            <View style={styles.progressSection}>
-              {[
-                { title: "Progreso Total", value: realProgress },
-                { title: "Último Mes", value: monthlyProgress },
-                { title: "Récord Personal", value: personalBestProgress },
-              ].map((p, i) => (
-                <View key={i} style={styles.progressCard}>
-                  <Text style={styles.progressTitle}>{p.title}</Text>
-                  <Text
-                    style={[
-                      styles.progressValue,
-                      { color: p.value >= 0 ? "#10B981" : "#EF4444" },
-                    ]}
-                  >
-                    {p.value > 0 ? "+" : ""}
-                    {p.value}%
-                  </Text>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${Math.min(Math.max(p.value, 0), 100)}%`,
-                          backgroundColor: p.value >= 0 ? "#10B981" : "#EF4444",
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
+          <ProgressSection
+            totalProgress={progress.total}
+            monthlyProgress={progress.monthly}
+            personalBestProgress={progress.personalBest}
+          />
         )}
 
-        {/* Histórico por Rutinas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Histórico por Rutinas</Text>
 
           {history.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateEmoji}>📊</Text>
-              <Text style={styles.emptyStateTitle}>
-                No hay datos históricos
-              </Text>
-              <Text style={styles.emptyStateText}>
-                Realiza este ejercicio en alguna rutina para comenzar a trackear
-                tu progreso.
-              </Text>
-            </View>
+            <EmptyStateView />
           ) : (
             <FlatList
               data={history}
@@ -440,6 +556,9 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   );
 };
 
+// ============================================================================
+// ESTILOS
+// ============================================================================
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -468,10 +587,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     shadowColor: "#6C3BAA",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 8,
@@ -524,10 +640,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
@@ -557,30 +670,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  sectionHeader: {
-    marginBottom: 16,
-  },
   sectionTitle: {
     fontSize: RFValue(20),
     fontWeight: "bold",
     color: "#1E293B",
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: RFValue(14),
-    color: "#64748B",
+    marginBottom: 16,
   },
   progressSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 16,
-    paddingHorizontal: 8,
+    gap: 8,
   },
   progressCard: {
     flex: 1,
     backgroundColor: "#FFF",
     padding: 12,
-    marginHorizontal: 4,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -589,43 +693,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   progressTitle: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(12),
     fontWeight: "600",
-    marginBottom: 4,
-    color: "#374151",
+    marginBottom: 8,
+    color: "#64748B",
   },
   progressValue: {
-    fontSize: RFValue(22),
+    fontSize: RFValue(20),
     fontWeight: "700",
-  },
-  progressSubtitle: {
-    fontSize: RFValue(12),
-    color: "#6B7280",
-    marginTop: 2,
+    marginBottom: 8,
   },
   progressBar: {
     height: 6,
     backgroundColor: "#E5E7EB",
     borderRadius: 3,
-    marginTop: 8,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
     borderRadius: 3,
-  },
-
-  progressHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  progressGoal: {
-    fontSize: RFValue(12),
-    color: "#64748B",
-    fontWeight: "500",
   },
   historyList: {
     gap: 12,
@@ -635,10 +721,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
@@ -742,9 +825,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   routineButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingVertical: 8,
     paddingHorizontal: 12,
     backgroundColor: "#F8FAFC",
@@ -753,11 +833,6 @@ const styles = StyleSheet.create({
   routineButtonText: {
     fontSize: RFValue(13),
     fontWeight: "600",
-    color: "#6C3BAA",
-  },
-  routineArrow: {
-    fontSize: RFValue(16),
-    fontWeight: "bold",
     color: "#6C3BAA",
   },
   emptyState: {
@@ -782,80 +857,6 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
-  },
-  routinesSummary: {
-    gap: 12,
-  },
-  routineSummaryStats: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  routineSummaryWeight: {
-    fontSize: RFValue(14),
-    color: "#64748B",
-  },
-  routineSummaryValue: {
-    fontWeight: "600",
-    color: "#6C3BAA",
-  },
-  primaryButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#6C3BAA",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  primaryButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-
-  routineSummaryItem: {
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 10,
-    marginVertical: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  routineSummaryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  routineSummaryName: {
-    fontWeight: "600",
-    fontSize: RFValue(16),
-    color: "#111827",
-  },
-  routineSummarySessions: {
-    fontSize: RFValue(12),
-    color: "#6B7280",
-  },
-  routineSessionItem: {
-    paddingVertical: 4,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#E5E7EB",
-  },
-  routineSessionText: {
-    fontSize: RFValue(14),
-    color: "#374151",
-  },
-  routineSessionValue: {
-    fontWeight: "700",
-    color: "#10B981",
   },
 });
 

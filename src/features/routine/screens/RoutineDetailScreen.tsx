@@ -22,7 +22,6 @@ import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
-
 import {
   getRoutineById,
   saveRoutine,
@@ -37,21 +36,35 @@ type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 export default function RoutineDetailScreen() {
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
-  const { routineId, routine, exercises, start } = route.params;
-  const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
+  const {
+    routineId,
+    routine,
+    exercises: initialExercises,
+    start,
+  } = route.params;
 
+  // ==================== STATE ====================
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
+  const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
+
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
     {}
   );
-
   const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
 
+  // Rest timer state
+  const [showRestToast, setShowRestToast] = useState(false);
+  const [restTimeRemaining, setRestTimeRemaining] = useState(0);
+  const [totalRestTime, setTotalRestTime] = useState(0);
+  const slideAnim = useRef(new Animated.Value(100)).current;
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Store
   const {
     workoutInProgress,
     setWorkoutInProgress,
@@ -60,16 +73,266 @@ export default function RoutineDetailScreen() {
     updateWorkoutProgress,
   } = useWorkoutInProgressStore();
 
-  // Estados para el temporizador global
-  const [showRestToast, setShowRestToast] = useState(false);
-  const [restTimeRemaining, setRestTimeRemaining] = useState(0);
-  const [totalRestTime, setTotalRestTime] = useState(0);
-  const slideAnim = useRef(new Animated.Value(100)).current;
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  // ==================== COMPUTED VALUES ====================
+  const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
+  const volume = useMemo(() => calculateVolume(allSets), [allSets]);
+  const completedSets = useMemo(
+    () => allSets.filter((s) => s.completed).length,
+    [allSets]
+  );
 
-  // ----------------------
-  //  Helper: iniciar rutina
-  // ----------------------
+  // ==================== DATA INITIALIZATION ====================
+
+  // 1. Fetch routine data if needed
+  useEffect(() => {
+    if (routine) {
+      setRoutineData(routine);
+      setLoading(false);
+      return;
+    }
+
+    if (!routineId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchRoutine = async () => {
+      try {
+        const data = await getRoutineById(routineId);
+        setRoutineData(data);
+      } catch (err) {
+        console.error("Error fetching routine by id", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRoutine();
+  }, [routine, routineId]);
+
+  // 2. Load workout in progress from store
+  useEffect(() => {
+    if (!workoutInProgress || !route.params?.start || hasInitializedFromStore) {
+      return;
+    }
+
+    setRoutineTitle(workoutInProgress.routineTitle);
+    setExercises(workoutInProgress.exercises);
+    setSets(workoutInProgress.sets);
+    setDuration(workoutInProgress.duration);
+    setStarted(true);
+    setHasInitializedFromStore(true);
+
+    navigation.setParams({ start: undefined });
+  }, [
+    workoutInProgress,
+    route.params?.start,
+    hasInitializedFromStore,
+    navigation,
+  ]);
+
+  // 3. Initialize exercises from params
+  useEffect(() => {
+    if (hasInitializedFromStore || !initialExercises?.length) {
+      return;
+    }
+
+    setExercises(initialExercises);
+
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
+    initialExercises.forEach((exercise) => {
+      initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
+        ...set,
+        completed: false,
+      }));
+    });
+    setSets(initialSets);
+    setRoutineTitle(routine?.title || "Nueva rutina");
+  }, [initialExercises, hasInitializedFromStore, routine?.title]);
+
+  // 4. Initialize exercises from routine data
+  useEffect(() => {
+    if (hasInitializedFromStore || initialExercises?.length || !routineData) {
+      return;
+    }
+
+    const mappedExercises: ExerciseRequestDto[] =
+      mapRoutineExercises(routineData);
+    setExercises(mappedExercises);
+    setRoutineTitle(routineData.title || "");
+
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
+    mappedExercises.forEach((exercise) => {
+      initialSets[exercise.id] = initializeSets(exercise.sets);
+    });
+    setSets(initialSets);
+  }, [routineData, initialExercises, hasInitializedFromStore]);
+
+  // 5. Auto-start routine if needed
+  useEffect(() => {
+    if (
+      !start ||
+      !routineData ||
+      workoutInProgress ||
+      hasInitializedFromStore
+    ) {
+      return;
+    }
+
+    const exercisesWithSets = mapRoutineExercises(routineData).map((ex) => ({
+      ...ex,
+      sets: ex?.sets?.map((set: any) => ({
+        ...set,
+        completed: false,
+        previousWeight: set.weight,
+        previousReps: set.reps || set.repsMin,
+      })),
+    }));
+
+    setExercises(exercisesWithSets);
+
+    const setsMap = exercisesWithSets.reduce(
+      (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
+      {}
+    );
+
+    setWorkoutInProgress({
+      routineId: routineData.id,
+      routineTitle: routineData.title,
+      duration: 0,
+      volume: 0,
+      completedSets: 0,
+      exercises: exercisesWithSets,
+      sets: setsMap,
+      startedAt: Date.now(),
+    });
+  }, [
+    start,
+    routineData,
+    workoutInProgress,
+    hasInitializedFromStore,
+    setWorkoutInProgress,
+  ]);
+
+  // ==================== WORKOUT MANAGEMENT ====================
+
+  // Duration timer
+  useEffect(() => {
+    if (!started) return;
+
+    const interval = setInterval(() => setDuration((prev) => prev + 1), 1000);
+    return () => clearInterval(interval);
+  }, [started]);
+
+  // Set previous values when starting
+  useEffect(() => {
+    if (!started) return;
+
+    const updatedSets = { ...sets };
+    exercisesState.forEach((exercise) => {
+      updatedSets[exercise.id] = updatedSets[exercise.id].map((set) => ({
+        ...set,
+        previousWeight: set.weight,
+        previousReps: set.reps || set.repsMin,
+      }));
+    });
+    setSets(updatedSets);
+  }, [started]); // Intencionalmente sin dependencias adicionales
+
+  // Auto-start if parameter is set
+  useEffect(() => {
+    if (route.params?.start) {
+      setStarted(true);
+    }
+  }, [route.params?.start]);
+
+  // Update store during workout
+  useEffect(() => {
+    if (!started) return;
+
+    patchWorkoutInProgress({
+      duration,
+      volume,
+      completedSets,
+      exercises: exercisesState.map((ex) => ({
+        ...ex,
+        sets: sets[ex.id] || [],
+      })),
+      sets,
+    });
+  }, [
+    started,
+    duration,
+    volume,
+    completedSets,
+    sets,
+    exercisesState,
+    patchWorkoutInProgress,
+  ]);
+
+  // Periodic progress update
+  useEffect(() => {
+    if (!started) return;
+
+    const interval = setInterval(() => {
+      updateWorkoutProgress({ duration, volume, completedSets });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [started, duration, volume, completedSets, updateWorkoutProgress]);
+
+  // ==================== UI MANAGEMENT ====================
+
+  // Hide/show tab bar
+  useEffect(() => {
+    const parent = (navigation as any).getParent?.();
+    if (!parent?.setOptions) return;
+
+    parent.setOptions({
+      tabBarStyle: started ? { display: "none" } : undefined,
+    });
+
+    return () => {
+      const p = (navigation as any).getParent?.();
+      if (p?.setOptions) {
+        p.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [started, navigation]);
+
+  // Rest timer animation
+  useEffect(() => {
+    if (showRestToast) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 40,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showRestToast, slideAnim]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+      const parent = (navigation as any).getParent?.();
+      if (parent?.setOptions) {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [navigation]);
+
+  // ==================== HANDLERS ====================
+
   const handleStartRoutine = () => {
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
 
@@ -101,323 +364,28 @@ export default function RoutineDetailScreen() {
     setStarted(true);
   };
 
-  // ----------------------
-  //  Ocultar/mostrar tabBar cuando started cambie
-  // ----------------------
-  useEffect(() => {
-    const parent = (navigation as any).getParent?.();
-    if (parent && typeof parent.setOptions === "function") {
-      parent.setOptions({
-        tabBarStyle: started ? { display: "none" } : undefined,
-      });
-    }
-    return () => {
-      const p = (navigation as any).getParent?.();
-      if (p && typeof p.setOptions === "function") {
-        p.setOptions({ tabBarStyle: undefined });
-      }
-    };
-  }, [started]);
-
-  // ----------------------
-  //  Efectos existentes
-  // ----------------------
-  useEffect(() => {
-    if (started) {
-      const updatedSets = { ...sets };
-      exercisesState.forEach((exercise) => {
-        updatedSets[exercise.id] = updatedSets[exercise.id].map((set) => ({
-          ...set,
-          previousWeight: set.weight,
-          previousReps: set.reps || set.repsMin,
-        }));
-      });
-      setSets(updatedSets);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started]);
-
-  useEffect(() => {
-    if (route.params?.start) setStarted(true);
-  }, [route.params?.start]);
-
-  useEffect(() => {
-    if (routine) {
-      setRoutineData(routine);
-      setLoading(false);
-    } else if (routineId) {
-      const fetchRoutine = async () => {
-        try {
-          const data = await getRoutineById(routineId);
-          setRoutineData(data);
-        } catch (err) {
-          console.error("Error fetching routine by id", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchRoutine();
-    } else {
-      setLoading(false);
-    }
-  }, [routine, routineId]);
-
-  // Cargar entrenamiento en progreso desde store si corresponde
-  // Este efecto debe ejecutarse ANTES de cualquier otra inicialización
-  useEffect(() => {
-    if (workoutInProgress && route.params?.start && !hasInitializedFromStore) {
-      setRoutineTitle(workoutInProgress.routineTitle);
-      setExercises(workoutInProgress.exercises);
-      setSets(workoutInProgress.sets);
-      setDuration(workoutInProgress.duration);
-      setStarted(true);
-      setHasInitializedFromStore(true);
-
-      // Limpiar el parámetro start para evitar re-inicializaciones
-      navigation.setParams({ start: undefined });
-    }
-  }, [workoutInProgress, route.params?.start, hasInitializedFromStore]);
-
-  // Prioridad: exercises desde params (solo si no hemos cargado desde store)
-  useEffect(() => {
-    if (hasInitializedFromStore) return;
-    if (exercises && exercises.length > 0) {
-      setExercises(exercises);
-
-      const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
-      exercises.forEach((exercise) => {
-        initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
-          ...set,
-          completed: false,
-        }));
-      });
-      setSets(initialSets);
-
-      setRoutineTitle(routine?.title || "Nueva rutina");
-    }
-  }, [exercises, hasInitializedFromStore]);
-
-  // Si NO hay exercises en params, cargar desde routineData (solo si no hemos cargado desde store)
-  useEffect(() => {
-    if (hasInitializedFromStore) return;
-    if (exercises && exercises.length > 0) return;
-    if (!routineData) return;
-
-    const mappedExercises: ExerciseRequestDto[] =
-      routineData.routineExercises?.map((re: any) => ({
-        ...re.exercise,
-        sets: re.sets.map((set: any) => ({
-          ...set,
-          previousWeight: set.weight,
-          previousReps: set.reps || set.repsMin,
-        })),
-        notes: re.notes,
-        restSeconds: re.restSeconds,
-        weightUnit: re.weightUnit || "kg",
-        repsType: re.repsType || "reps",
-      })) ||
-      routineData.exercises?.map((ex: any) => ({
-        ...ex,
-        weightUnit: ex.weightUnit || "kg",
-        repsType: ex.repsType || "reps",
-      })) ||
-      [];
-
-    setExercises(mappedExercises);
-    setRoutineTitle(routineData.title || "");
-
-    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
-    mappedExercises.forEach((exercise) => {
-      initialSets[exercise.id] = initializeSets(exercise.sets);
-    });
-    setSets(initialSets);
-  }, [routineData, exercises, hasInitializedFromStore]);
-
-  useEffect(() => {
-    if (!started) return;
-    const interval = setInterval(() => setDuration((prev) => prev + 1), 1000);
-    return () => clearInterval(interval);
-  }, [started]);
-
-  const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
-  const volume = useMemo(() => calculateVolume(allSets), [allSets]);
-  const completedSets = useMemo(
-    () => allSets.filter((s) => s.completed).length,
-    [allSets]
-  );
-
-  // ----------------------
-  //  Actualizar store al arrancar y durante la sesión
-  // ----------------------
-  useEffect(() => {
-    if (started) {
-      patchWorkoutInProgress({
-        duration,
-        volume,
-        completedSets,
-        exercises: exercisesState.map((ex) => ({
-          ...ex,
-          sets: sets[ex.id] || [],
-        })),
-        sets,
-      });
-    }
-  }, [started, duration, volume, completedSets, sets, exercisesState]);
-
-  // Actualización periódica reducida
-  useEffect(() => {
-    if (!started) return;
-    const interval = setInterval(() => {
-      updateWorkoutProgress({
-        duration,
-        volume,
-        completedSets,
-      });
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [started, duration, volume, completedSets, updateWorkoutProgress]);
-
-  // Este useEffect debe estar ANTES de cualquier return condicional
-  useEffect(() => {
-    if (
-      start &&
-      routineData &&
-      !workoutInProgress &&
-      !hasInitializedFromStore
-    ) {
-      // Mapear ejercicios con sets vacíos para el inicio
-      const exercisesWithSets =
-        routineData.routineExercises?.map((re: any) => ({
-          ...re.exercise,
-          sets: re.sets.map((set: any) => ({
-            ...set,
-            completed: false,
-            previousWeight: set.weight,
-            previousReps: set.reps || set.repsMin,
-          })),
-          notes: re.notes,
-          restSeconds: re.restSeconds,
-          weightUnit: re.weightUnit || "kg",
-          repsType: re.repsType || "reps",
-        })) ||
-        routineData.exercises?.map((ex: any) => ({
-          ...ex,
-          sets: initializeSets(ex.sets || []).map((s) => ({
-            ...s,
-            completed: false,
-          })),
-        })) ||
-        [];
-
-      setExercises(exercisesWithSets);
-
-      // Crear el workoutInProgress en el store
-      setWorkoutInProgress({
-        routineId: routineData.id,
-        routineTitle: routineData.title,
-        duration: 0,
-        volume: 0,
-        completedSets: 0,
-        exercises: exercisesWithSets,
-        sets: exercisesWithSets.reduce(
-          (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
-          {}
-        ),
-        startedAt: Date.now(),
-      });
-    }
-  }, [
-    start,
-    routineData,
-    workoutInProgress,
-    setWorkoutInProgress,
-    hasInitializedFromStore,
-  ]);
-
-  // ----------------------
-  //  Guardado / Finalización
-  // ----------------------
   const handleFinishAndSaveRoutine = async () => {
     try {
       setStarted(false);
-      setHasInitializedFromStore(false); // Resetear flag
+      setHasInitializedFromStore(false);
 
       const parent = (navigation as any).getParent?.();
-      if (parent && typeof parent.setOptions === "function") {
+      if (parent?.setOptions) {
         parent.setOptions({ tabBarStyle: undefined });
       }
 
       clearWorkoutInProgress();
       navigation.setParams({ start: undefined, routineId: undefined });
 
-      const routineToSave = {
-        ...routineData,
-        id: routineData?.id || (uuid.v4() as string),
-        title: routineTitle,
-        createdAt: routineData?.createdAt
-          ? new Date(routineData.createdAt)
-          : new Date(),
-        exercises: exercisesState.map((exercise) => ({
-          ...exercise,
-          imageUrl: exercise.imageUrl,
-          sets:
-            sets[exercise.id]?.map((set) => ({
-              ...set,
-              weight: set.weight || 0,
-              reps: set.reps || 0,
-              repsMin: set.repsMin || 0,
-              repsMax: set.repsMax || 0,
-            })) || [],
-          weightUnit: exercise.weightUnit || "kg",
-          repsType: exercise.repsType || "reps",
-        })),
-      };
+      const routineToSave = buildRoutinePayload();
+      const updatedRoutine = routineData?.id
+        ? await updateRoutineById(routineData.id, routineToSave)
+        : await saveRoutine(routineToSave);
 
-      // Guardar o actualizar rutina
-      let updatedRoutine;
-      if (routineData?.id) {
-        updatedRoutine = await updateRoutineById(routineData.id, routineToSave);
-      } else {
-        updatedRoutine = await saveRoutine(routineToSave);
-      }
-
-      // Preparar sesión con el histórico completo de ejercicios
-      const sessionToSave = {
-        totalTime: duration,
-        totalWeight: volume,
-        completedSets,
-        exercises: exercisesState.map((exercise) => ({
-          exerciseId: exercise.id,
-          exerciseName: exercise.name,
-          imageUrl: exercise.imageUrl,
-          totalWeight: (sets[exercise.id] || []).reduce(
-            (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
-            0
-          ),
-          totalReps: (sets[exercise.id] || []).reduce(
-            (acc, s) => acc + (s.reps || 0),
-            0
-          ),
-          sets: (sets[exercise.id] || []).map((s) => ({
-            weight: s.weight || 0,
-            reps: s.reps || 0,
-            completed: s.completed ?? false,
-          })),
-        })),
-      };
-
+      const sessionToSave = buildSessionPayload();
       await saveRoutineSession(updatedRoutine.id, sessionToSave);
 
-      // Resetear sets locales
-      const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
-      Object.keys(sets).forEach((exerciseId) => {
-        resetSets[exerciseId] = sets[exerciseId].map((set) => ({
-          ...set,
-          completed: false,
-        }));
-      });
-      setSets(resetSets);
+      resetSetsCompletionStatus();
 
       alert("Rutina y sesión guardadas exitosamente");
 
@@ -436,20 +404,7 @@ export default function RoutineDetailScreen() {
 
   const handleSaveRoutine = async () => {
     try {
-      const routineToSave = {
-        id: routineData?.id || (uuid.v4() as string),
-        title: routineTitle,
-        createdAt: routineData?.createdAt
-          ? new Date(routineData.createdAt)
-          : new Date(),
-        exercises: exercisesState.map((exercise) => ({
-          ...exercise,
-          imageUrl: exercise.imageUrl,
-          sets: sets[exercise.id] || [],
-          weightUnit: exercise.weightUnit || "kg",
-          repsType: exercise.repsType || "reps",
-        })),
-      };
+      const routineToSave = buildRoutinePayload();
       const savedRoutine = await saveRoutine(routineToSave);
 
       alert("Rutina guardada exitosamente");
@@ -471,6 +426,7 @@ export default function RoutineDetailScreen() {
       ...ex,
       sets: sets[ex.id] || [],
     }));
+
     navigation.navigate("RoutineEdit", {
       id: routineData?.id ?? "",
       title: routineData?.title || "",
@@ -479,29 +435,7 @@ export default function RoutineDetailScreen() {
     });
   };
 
-  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => (
-    <ExerciseCard
-      exercise={item}
-      initialSets={sets[item.id] || []}
-      onChangeSets={(updatedSets) =>
-        setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
-      }
-      onChangeExercise={(updatedExercise) =>
-        setExercises((prev) =>
-          prev.map((ex) =>
-            ex.id === updatedExercise.id ? updatedExercise : ex
-          )
-        )
-      }
-      readonly={readonly && !started}
-      started={started}
-      onStartRestTimer={handleStartRestTimer}
-    />
-  );
-
-  // ----------------------
-  //  Temporizador global
-  // ----------------------
+  // Rest timer handlers
   const handleStartRestTimer = (restSeconds: number) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
@@ -546,44 +480,118 @@ export default function RoutineDetailScreen() {
     setShowRestToast(false);
   };
 
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-      const parent = (navigation as any).getParent?.();
-      if (parent && typeof parent.setOptions === "function") {
-        parent.setOptions({ tabBarStyle: undefined });
-      }
-    };
-  }, []);
+  // ==================== HELPER FUNCTIONS ====================
 
-  useEffect(() => {
-    if (showRestToast) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 40,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [showRestToast]);
+  const mapRoutineExercises = (data: any): ExerciseRequestDto[] => {
+    return (
+      data.routineExercises?.map((re: any) => ({
+        ...re.exercise,
+        sets: re.sets.map((set: any) => ({
+          ...set,
+          previousWeight: set.weight,
+          previousReps: set.reps || set.repsMin,
+        })),
+        notes: re.notes,
+        restSeconds: re.restSeconds,
+        weightUnit: re.weightUnit || "kg",
+        repsType: re.repsType || "reps",
+      })) ||
+      data.exercises?.map((ex: any) => ({
+        ...ex,
+        weightUnit: ex.weightUnit || "kg",
+        repsType: ex.repsType || "reps",
+      })) ||
+      []
+    );
+  };
 
-  // Ahora el return condicional está DESPUÉS de todos los Hooks
-  if (loading)
+  const buildRoutinePayload = () => ({
+    ...routineData,
+    id: routineData?.id || (uuid.v4() as string),
+    title: routineTitle,
+    createdAt: routineData?.createdAt
+      ? new Date(routineData.createdAt)
+      : new Date(),
+    exercises: exercisesState.map((exercise) => ({
+      ...exercise,
+      imageUrl: exercise.imageUrl,
+      sets:
+        sets[exercise.id]?.map((set) => ({
+          ...set,
+          weight: set.weight || 0,
+          reps: set.reps || 0,
+          repsMin: set.repsMin || 0,
+          repsMax: set.repsMax || 0,
+        })) || [],
+      weightUnit: exercise.weightUnit || "kg",
+      repsType: exercise.repsType || "reps",
+    })),
+  });
+
+  const buildSessionPayload = () => ({
+    totalTime: duration,
+    totalWeight: volume,
+    completedSets,
+    exercises: exercisesState.map((exercise) => ({
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      imageUrl: exercise.imageUrl,
+      totalWeight: (sets[exercise.id] || []).reduce(
+        (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
+        0
+      ),
+      totalReps: (sets[exercise.id] || []).reduce(
+        (acc, s) => acc + (s.reps || 0),
+        0
+      ),
+      sets: (sets[exercise.id] || []).map((s) => ({
+        weight: s.weight || 0,
+        reps: s.reps || 0,
+        completed: s.completed ?? false,
+      })),
+    })),
+  });
+
+  const resetSetsCompletionStatus = () => {
+    const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
+    Object.keys(sets).forEach((exerciseId) => {
+      resetSets[exerciseId] = sets[exerciseId].map((set) => ({
+        ...set,
+        completed: false,
+      }));
+    });
+    setSets(resetSets);
+  };
+
+  // ==================== RENDER ====================
+
+  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => (
+    <ExerciseCard
+      exercise={item}
+      initialSets={sets[item.id] || []}
+      onChangeSets={(updatedSets) =>
+        setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
+      }
+      onChangeExercise={(updatedExercise) =>
+        setExercises((prev) =>
+          prev.map((ex) =>
+            ex.id === updatedExercise.id ? updatedExercise : ex
+          )
+        )
+      }
+      readonly={readonly && !started}
+      started={started}
+      onStartRestTimer={handleStartRestTimer}
+    />
+  );
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text style={{ textAlign: "center", marginTop: 40 }}>
-          Cargando rutina...
-        </Text>
+        <Text style={styles.loadingText}>Cargando rutina...</Text>
       </SafeAreaView>
     );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -624,16 +632,14 @@ export default function RoutineDetailScreen() {
         <Animated.View
           style={[
             styles.toastContainer,
-            {
-              transform: [{ translateY: slideAnim }],
-            },
+            { transform: [{ translateY: slideAnim }] },
           ]}
         >
           <CustomToast
-            text1={`${formatTime({
+            text1={formatTime({
               minutes: Math.floor(restTimeRemaining / 60),
               seconds: restTimeRemaining % 60,
-            })}`}
+            })}
             progress={restTimeRemaining / totalRestTime}
             onCancel={handleCancelRestTimer}
             onAddTime={handleAddRestTime}
@@ -646,7 +652,14 @@ export default function RoutineDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F7F8FA" },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F7F8FA",
+  },
+  loadingText: {
+    textAlign: "center",
+    marginTop: 40,
+  },
   saveButton: {
     backgroundColor: "#6C3BAA",
     padding: 16,
