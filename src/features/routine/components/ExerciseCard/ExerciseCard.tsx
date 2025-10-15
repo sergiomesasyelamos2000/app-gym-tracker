@@ -121,7 +121,7 @@ const ExerciseCard = ({
 
   return (
     <Card style={styles.card}>
-      <ExerciseHeader exercise={exercise} />
+      <ExerciseHeader exercise={exercise} readonly={readonly} />
       <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
       <ExerciseRestPicker
         restTime={restTime}

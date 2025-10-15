@@ -13,10 +13,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import { ExerciseRequestDto } from "../../../models";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { RFValue } from "react-native-responsive-fontsize";
 
 type Props = NativeStackScreenProps<WorkoutStackParamList, "ExerciseDetail">;
 
@@ -43,8 +43,6 @@ const getImageSource = (exercise: ExerciseRequestDto) => {
 const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
   const [imageError, setImageError] = useState(false);
   const imageSource = getImageSource(exercise);
-
-  console.log("exercise", exercise);
 
   if (!imageSource || imageError) {
     return <View style={[style, styles.exercisePlaceholder]}></View>;
@@ -75,13 +73,6 @@ const calculateRealProgress = (history: any[]) => {
 
   const oldestSession = sortedHistory[0];
   const newestSession = sortedHistory[sortedHistory.length - 1];
-
-  console.log("Progress calculation:", {
-    oldest: oldestSession.maxWeight,
-    newest: newestSession.maxWeight,
-    dateOldest: oldestSession.date,
-    dateNewest: newestSession.date,
-  });
 
   if (oldestSession.maxWeight === 0 && newestSession.maxWeight > 0) {
     return 100;

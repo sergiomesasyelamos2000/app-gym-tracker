@@ -8,9 +8,10 @@ import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
   exercise: ExerciseRequestDto;
+  readonly?: boolean; // <-- añadimos la prop readonly
 }
 
-const ExerciseHeader = ({ exercise }: Props) => {
+const ExerciseHeader = ({ exercise, readonly = false }: Props) => {
   const navigation = useNavigation<any>();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
 
@@ -58,11 +59,14 @@ const ExerciseHeader = ({ exercise }: Props) => {
         {exercise.name}
       </Text>
 
-      <TouchableOpacity onPress={openExerciseOptions}>
-        <Icon name="more-vert" size={24} color="#000" />
-      </TouchableOpacity>
+      {/* Solo mostrar el icono si no es readonly */}
+      {!readonly && (
+        <TouchableOpacity onPress={openExerciseOptions}>
+          <Icon name="more-vert" size={24} color="#000" />
+        </TouchableOpacity>
+      )}
 
-      {/* Modal simple tipo tu ejemplo */}
+      {/* Modal de opciones */}
       <Modal
         isVisible={isActionModalVisible}
         onBackdropPress={closeExerciseOptions}

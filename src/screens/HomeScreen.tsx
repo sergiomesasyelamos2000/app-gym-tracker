@@ -5,7 +5,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -86,6 +86,17 @@ export default function HomeScreen() {
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Listener para el tab press
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("tabPress", (e) => {
+      // Scroll al inicio cuando se pulsa el tab
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -99,7 +110,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Cada minuto
+    }, 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -142,7 +153,6 @@ export default function HomeScreen() {
         findAllRoutineSessions(),
       ]);
 
-      // Calcular campos agregados si es necesario
       const sessionsWithTotals = sessionsData.map((session) => {
         const totalWeight = session.exercises?.reduce(
           (sum: number, e: any) =>
@@ -200,6 +210,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.container}
         refreshControl={
           <RefreshControl
@@ -418,7 +429,7 @@ export default function HomeScreen() {
                           style={styles.exerciseItem}
                         >
                           <ExerciseImage
-                            exercise={exercise} // directamente el objeto exercise
+                            exercise={exercise}
                             style={styles.exerciseImage}
                           />
                           <View style={styles.exerciseInfo}>
@@ -458,7 +469,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Nuevo Header Styles
   header: {
     backgroundColor: "#6C3BAA",
     paddingHorizontal: 20,
@@ -546,8 +556,6 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
-
-  // Stats Section Mejorada
   statsSection: {
     paddingHorizontal: 20,
     marginTop: -15,
@@ -569,7 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingVertical: 20,
-    paddingHorizontal: 10, // reduce padding horizontal para ganar espacio
+    paddingHorizontal: 10,
     borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -616,7 +624,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1E293B",
     marginBottom: 4,
-    flexShrink: 1, // permite reducir si el número es muy largo
+    flexShrink: 1,
     textAlign: "center",
   },
   statLabel: {
@@ -624,10 +632,8 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "600",
     textAlign: "center",
-    flexShrink: 1, // permite ajustar si el label es largo
+    flexShrink: 1,
   },
-
-  // Nuevas Acciones Rápidas
   actionsSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -732,8 +738,6 @@ const styles = StyleSheet.create({
     color: "#1E293B",
     textAlign: "center",
   },
-
-  // Resto de estilos
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,

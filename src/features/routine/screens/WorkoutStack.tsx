@@ -46,31 +46,30 @@ export default function WorkoutStack() {
       <Stack.Screen
         name="WorkoutList"
         component={WorkoutScreen}
-        options={{ title: "Workout" }}
+        options={{ title: "Entrenamiento" }}
       />
       <Stack.Screen
         name="RoutineDetail"
         component={RoutineDetailScreen}
         options={{
-          title: "Routine Detail",
-          headerBackTitle: "Rutinas",
+          title: "Detalle",
         }}
       />
       <Stack.Screen
         name="ExerciseList"
         component={ExerciseListScreen}
-        options={{ title: "Exercise List" }}
+        options={{ title: "Listado" }}
       />
       <Stack.Screen
         name="RoutineEdit"
         component={RoutineEditScreen}
-        options={{ title: "Routine Edit" }}
+        options={{ title: "Editar rutina" }}
       />
 
       <Stack.Screen
         name="CreateExercise"
         component={CreateExerciseScreen}
-        options={{ title: "Create Exercise" }}
+        options={{ title: "Crear ejercicio" }}
       />
 
       <Stack.Screen
