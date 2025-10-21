@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Button, Card } from "react-native-paper";
 import uuid from "react-native-uuid";
 
@@ -19,6 +19,11 @@ interface Props {
   readonly?: boolean;
   started?: boolean;
   onStartRestTimer?: (restSeconds: number) => void;
+  // Nuevas props para reordenamiento
+  compact?: boolean;
+  onLongPress?: () => void;
+  isDragging?: boolean;
+  reorderMode?: boolean;
 }
 
 const ExerciseCard = ({
@@ -29,6 +34,10 @@ const ExerciseCard = ({
   readonly = false,
   started = false,
   onStartRestTimer,
+  compact = false,
+  onLongPress,
+  isDragging = false,
+  reorderMode = false,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -119,9 +128,39 @@ const ExerciseCard = ({
     });
   };
 
+  // Renderizado compacto para modo reordenamiento
+  if (compact) {
+    return (
+      <TouchableOpacity
+        onLongPress={onLongPress}
+        style={[styles.compactCard, isDragging && styles.compactCardDragging]}
+        activeOpacity={0.7}
+      >
+        <View style={styles.compactContent}>
+          <View style={styles.dragHandle}>
+            <Text style={styles.dragHandleIcon}>☰</Text>
+          </View>
+          <View style={styles.compactInfo}>
+            <Text style={styles.compactName} numberOfLines={1}>
+              {exercise.name}
+            </Text>
+            <Text style={styles.compactSets}>{sets.length} series</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // Renderizado normal completo
   return (
     <Card style={styles.card}>
-      <ExerciseHeader exercise={exercise} readonly={readonly} />
+      <ExerciseHeader
+        exercise={exercise}
+        readonly={readonly}
+        onLongPress={onLongPress}
+        isDragging={isDragging}
+        reorderMode={reorderMode}
+      />
       <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
       <ExerciseRestPicker
         restTime={restTime}
@@ -161,6 +200,59 @@ const styles = StyleSheet.create({
     backgroundColor: "#6C63FF",
     borderRadius: 14,
     paddingVertical: 8,
+  },
+  // Estilos para modo compacto/reordenamiento
+  compactCard: {
+    backgroundColor: "#FFFFFF",
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    elevation: 2,
+  },
+  compactCardDragging: {
+    borderColor: "#6366F1",
+    backgroundColor: "#EEF2FF",
+    elevation: 8,
+    shadowColor: "#6366F1",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  compactContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dragHandle: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  dragHandleIcon: {
+    fontSize: 18,
+    color: "#6B7280",
+    fontWeight: "bold",
+  },
+  compactInfo: {
+    flex: 1,
+  },
+  compactName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  compactSets: {
+    fontSize: 13,
+    color: "#6B7280",
   },
 });
 

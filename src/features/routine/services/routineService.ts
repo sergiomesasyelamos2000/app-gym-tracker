@@ -70,3 +70,13 @@ export async function getGlobalStats(): Promise<any> {
     method: "GET",
   });
 }
+
+export const reorderRoutineExercises = async (
+  routineId: string,
+  exerciseIds: string[]
+): Promise<void> => {
+  await apiFetch(`routines/${routineId}/reorder`, {
+    method: "PUT",
+    body: JSON.stringify({ exerciseIds }),
+  });
+};

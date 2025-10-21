@@ -310,7 +310,6 @@ export default function HomeScreen() {
 
         {/* Acciones Rápidas */}
         <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity
               style={[styles.actionButton, styles.startWorkout]}
@@ -327,33 +326,6 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.actionArrow}>→</Text>
             </TouchableOpacity>
-
-            <View style={styles.quickActionsRow}>
-              <TouchableOpacity
-                style={[styles.quickAction, styles.progressAction]}
-              >
-                <Text style={styles.quickActionIcon}>📈</Text>
-                <Text style={styles.quickActionText}>Progreso</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickAction, styles.routinesAction]}
-              >
-                <Text style={styles.quickActionIcon}>📋</Text>
-                <Text style={styles.quickActionText}>Rutinas</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickAction, styles.exercisesAction]}
-              >
-                <Text style={styles.quickActionIcon}>💪</Text>
-                <Text style={styles.quickActionText}>Ejercicios</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickAction, styles.statsAction]}
-              >
-                <Text style={styles.quickActionIcon}>🏆</Text>
-                <Text style={styles.quickActionText}>Estadísticas</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
 
