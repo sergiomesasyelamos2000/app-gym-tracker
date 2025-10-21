@@ -2,18 +2,17 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import DraggableFlatList, {
-  ScaleDecorator,
   RenderItemParams,
+  ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -128,6 +127,8 @@ export default function RoutineEditScreen() {
 
   const handleReorderComplete = (data: ExerciseRequestDto[]) => {
     setExercises(data);
+    // 🔥 CAMBIO: Salir automáticamente del modo reorden
+    setReorderMode(false);
   };
 
   const handleExerciseLongPress = (drag: () => void) => {
@@ -143,6 +144,7 @@ export default function RoutineEditScreen() {
     drag,
     isActive,
   }: RenderItemParams<ExerciseRequestDto>) => {
+    // Modo reordenamiento: cards compactas con imagen y título
     if (reorderMode) {
       return (
         <ScaleDecorator>
@@ -153,15 +155,25 @@ export default function RoutineEditScreen() {
             style={[styles.reorderCard, isActive && styles.reorderCardActive]}
           >
             <View style={styles.reorderContent}>
+              {/* 🔥 Ícono de drag handle */}
               <View style={styles.dragHandle}>
-                <Text style={styles.dragHandleIcon}>☰</Text>
+                <Icon name="drag-indicator" size={24} color="#6B7280" />
               </View>
+
+              {/* 🔥 Imagen del ejercicio */}
+              <Image
+                source={
+                  item.imageUrl
+                    ? { uri: `data:image/png;base64,${item.imageUrl}` }
+                    : require("../../../../assets/not-image.png")
+                }
+                style={styles.reorderImage}
+              />
+
+              {/* 🔥 Título del ejercicio */}
               <View style={styles.reorderInfo}>
-                <Text style={styles.reorderName} numberOfLines={1}>
+                <Text style={styles.reorderName} numberOfLines={2}>
                   {item.name}
-                </Text>
-                <Text style={styles.reorderSets}>
-                  {sets[item.id]?.length || 0} series
                 </Text>
               </View>
             </View>
@@ -170,6 +182,7 @@ export default function RoutineEditScreen() {
       );
     }
 
+    // Modo normal: cards completas
     return (
       <ExerciseCard
         exercise={item}
@@ -205,28 +218,20 @@ export default function RoutineEditScreen() {
 
           <View style={styles.headerRow}>
             <Text style={styles.subTitle}>Ejercicios asociados</Text>
-
-            {reorderMode && (
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => setReorderMode(false)}
-              >
-                <Icon name="check" size={18} color="#fff" />
-                <Text style={styles.doneButtonText}>Listo</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {reorderMode && (
             <View style={styles.reorderHint}>
+              <Icon name="info-outline" size={16} color="#92400E" />
               <Text style={styles.reorderHintText}>
-                Arrastra para reordenar los ejercicios
+                Arrastra para reordenar. Se guardará automáticamente al soltar
               </Text>
             </View>
           )}
 
           {!reorderMode && (
             <View style={styles.normalHint}>
+              <Icon name="touch-app" size={16} color="#1E40AF" />
               <Text style={styles.normalHintText}>
                 Mantén presionado un ejercicio para reordenar
               </Text>
@@ -234,7 +239,7 @@ export default function RoutineEditScreen() {
           )}
         </View>
 
-        {/* List Section - Ocupa el espacio disponible */}
+        {/* List Section */}
         <View style={styles.listContainer}>
           <DraggableFlatList
             data={exercisesState}
@@ -252,13 +257,12 @@ export default function RoutineEditScreen() {
             contentContainerStyle={styles.listContent}
             activationDistance={0}
             dragHitSlop={{ left: 20, right: 20, top: 15, bottom: 15 }}
-            // 🔥 Añade estas props para mejor scroll
             showsVerticalScrollIndicator={true}
             ListFooterComponent={<View style={styles.listFooter} />}
           />
         </View>
 
-        {/* Footer Section - Siempre visible */}
+        {/* Footer Section */}
         <View style={styles.footerSection}>
           {!reorderMode && (
             <TouchableOpacity
@@ -279,9 +283,8 @@ export default function RoutineEditScreen() {
                 });
               }}
             >
-              <Text style={styles.addExerciseButtonText}>
-                + Añadir ejercicio
-              </Text>
+              <Icon name="add-circle-outline" size={20} color="#374151" />
+              <Text style={styles.addExerciseButtonText}>Añadir ejercicio</Text>
             </TouchableOpacity>
           )}
 
@@ -327,7 +330,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  // 🔥 NUEVA SECCIÓN: Header fijo
   headerSection: {
     paddingTop: 12,
     backgroundColor: "#fff",
@@ -356,21 +358,9 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     color: "#111827",
   },
-  doneButton: {
+  reorderHint: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#10B981",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  doneButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  reorderHint: {
     backgroundColor: "#FEF3C7",
     marginHorizontal: 16,
     marginBottom: 16,
@@ -378,14 +368,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: "#F59E0B",
+    gap: 8,
   },
   reorderHintText: {
-    fontSize: RFValue(13),
+    flex: 1,
+    fontSize: RFValue(12),
     color: "#92400E",
     fontWeight: "500",
-    textAlign: "center",
   },
   normalHint: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#EFF6FF",
     marginHorizontal: 16,
     marginBottom: 16,
@@ -393,44 +386,97 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: "#3B82F6",
+    gap: 8,
   },
   normalHintText: {
-    fontSize: RFValue(13),
+    flex: 1,
+    fontSize: RFValue(12),
     color: "#1E40AF",
     fontWeight: "500",
-    textAlign: "center",
   },
-
-  // 🔥 NUEVA SECCIÓN: Lista que ocupa el espacio disponible
   listContainer: {
     flex: 1,
     backgroundColor: "#fff",
   },
   listContent: {
     paddingTop: 8,
-    paddingBottom: 20, // Reducido porque ahora el footer está separado
+    paddingBottom: 20,
     paddingHorizontal: 16,
   },
   listFooter: {
-    height: 20, // Espacio extra al final de la lista
+    height: 20,
   },
-
-  // 🔥 NUEVA SECCIÓN: Footer fijo en la parte inferior
+  // 🔥 NUEVO: Estilos mejorados para cards de reordenamiento
+  reorderCard: {
+    backgroundColor: "#FFFFFF",
+    marginVertical: 6,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  reorderCardActive: {
+    borderColor: "#6366F1",
+    backgroundColor: "#EEF2FF",
+    elevation: 8,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    transform: [{ scale: 1.02 }],
+  },
+  reorderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dragHandle: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  // 🔥 NUEVO: Imagen en modo reorden
+  reorderImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: "#F3F4F6",
+  },
+  reorderInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  reorderName: {
+    fontSize: RFValue(15),
+    fontWeight: "600",
+    color: "#111827",
+    lineHeight: RFValue(20),
+  },
   footerSection: {
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
     paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 20 : 12, // Safe area para iOS
+    paddingBottom: 20,
   },
   addExerciseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#e5e7eb",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: "center",
     marginHorizontal: 16,
     marginBottom: 12,
+    gap: 8,
   },
   addExerciseButtonText: {
     color: "#374151",
@@ -443,6 +489,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 16,
     marginBottom: 8,
+    gap: 12,
   },
   cancelButton: {
     paddingVertical: 12,
@@ -452,7 +499,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d1d5db",
     flex: 1,
-    marginRight: 12,
   },
   cancelText: {
     color: "#6b7280",
@@ -466,7 +512,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     flex: 1,
-    marginLeft: 12,
   },
   updateButtonDisabled: {
     backgroundColor: "#d1d5db",
@@ -481,59 +526,5 @@ const styles = StyleSheet.create({
   },
   textDisabled: {
     opacity: 0.4,
-  },
-
-  // Estilos para las cards de reordenamiento (mantén los que ya tienes)
-  reorderCard: {
-    backgroundColor: "#FFFFFF",
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  reorderCardActive: {
-    borderColor: "#6366F1",
-    backgroundColor: "#EEF2FF",
-    elevation: 8,
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  reorderContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dragHandle: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  dragHandleIcon: {
-    fontSize: RFValue(18),
-    color: "#6B7280",
-  },
-  reorderInfo: {
-    flex: 1,
-  },
-  reorderName: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  reorderSets: {
-    fontSize: RFValue(13),
-    color: "#6B7280",
   },
 });
