@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Button, Card } from "react-native-paper";
+import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { RFValue } from "react-native-responsive-fontsize";
 
+import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 import ExerciseHeader from "./ExerciseHeader";
 import ExerciseNotes from "./ExerciseNotes";
-import ExerciseRestTimer from "./ExerciseRestTimer";
-import ExerciseSetList from "./ExerciseSetList";
-import { parseTime, formatTime } from "./helpers";
-import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 import ExerciseRestPicker from "./ExerciseRestPicker";
+import ExerciseSetList from "./ExerciseSetList";
+import { formatTime, parseTime } from "./helpers";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -24,14 +23,14 @@ interface Props {
   compact?: boolean;
   onLongPress?: () => void;
   isDragging?: boolean;
-  // 🔥 NUEVO: Props para las opciones del header
   onReorder?: () => void;
   onReplace?: () => void;
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
   availableExercises?: ExerciseRequestDto[];
-  supersetWith?: string; // ID del ejercicio con el que hace superserie
-  supersetExerciseName?: string; // Nombre del ejercicio de superserie
+  supersetWith?: string;
+  supersetExerciseName?: string;
+  showOptions?: boolean;
 }
 
 const ExerciseCard = ({
@@ -52,6 +51,7 @@ const ExerciseCard = ({
   availableExercises = [],
   supersetWith,
   supersetExerciseName,
+  showOptions = false,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -148,7 +148,6 @@ const ExerciseCard = ({
         activeOpacity={0.9}
         disabled={readonly}
       >
-        {/* 🔥 NUEVO: Tag de superserie */}
         {supersetWith && supersetExerciseName && (
           <View style={styles.supersetTag}>
             <Icon name="link" size={14} color="#7C3AED" />
@@ -166,6 +165,7 @@ const ExerciseCard = ({
           onDelete={onDelete}
           onAddSuperset={onAddSuperset}
           availableExercises={availableExercises}
+          showOptions={showOptions}
         />
         <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
         <ExerciseRestPicker
@@ -208,7 +208,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 8,
   },
-  // 🔥 NUEVO: Estilos para el tag de superserie
   supersetTag: {
     flexDirection: "row",
     alignItems: "center",

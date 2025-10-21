@@ -2,18 +2,18 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Image,
-  Alert,
 } from "react-native";
 import DraggableFlatList, {
-  ScaleDecorator,
   RenderItemParams,
+  ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -43,11 +43,8 @@ export default function RoutineEditScreen() {
   );
   const [reorderMode, setReorderMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  // 🔥 NUEVO: Estado para superseries (ejercicioId -> ejercicioParejaDeSuperserieId)
   const [supersets, setSupersets] = useState<{ [key: string]: string }>({});
-  // 🔥 NUEVO: Distinguir entre reorden por long press vs botón
   const [reorderFromButton, setReorderFromButton] = useState(false);
-  // 🔥 NUEVO: Estado temporal solo para reorden desde botón
   const [tempExercisesOrder, setTempExercisesOrder] = useState<
     ExerciseRequestDto[]
   >([]);
@@ -66,7 +63,7 @@ export default function RoutineEditScreen() {
               restSeconds: re.restSeconds,
               weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
               repsType: re.repsType || re.exercise.repsType || "reps",
-              supersetWith: re.supersetWith, // 🔥 NUEVO
+              supersetWith: re.supersetWith,
             }))
           : [];
 
@@ -81,7 +78,6 @@ export default function RoutineEditScreen() {
             ? exercise.sets
             : [];
 
-          // 🔥 NUEVO: Cargar superseries
           if (exercise.supersetWith) {
             initialSupersets[exercise.id] = exercise.supersetWith;
           }
@@ -122,7 +118,7 @@ export default function RoutineEditScreen() {
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
           order: index + 1,
-          supersetWith: supersets[exercise.id] || null, // 🔥 NUEVO
+          supersetWith: supersets[exercise.id] || null,
         })),
       };
 
@@ -147,10 +143,8 @@ export default function RoutineEditScreen() {
 
   const handleReorderComplete = (data: ExerciseRequestDto[]) => {
     if (reorderFromButton) {
-      // Modo botón: solo guardar temporalmente
       setTempExercisesOrder(data);
     } else {
-      // Modo long press: aplicar inmediatamente y salir del modo
       setExercises(data);
       setReorderMode(false);
     }
@@ -159,20 +153,18 @@ export default function RoutineEditScreen() {
   const handleExerciseLongPress = (drag: () => void) => {
     console.log("🎯 Long press detected, activating reorder mode");
     setReorderMode(true);
-    setReorderFromButton(false); // Es long press, NO desde botón
+    setReorderFromButton(false);
     setTimeout(() => {
       drag();
     }, 100);
   };
 
-  // 🔥 Habilitar modo reorden desde el header (con botón "Listo")
   const handleReorderFromHeader = () => {
     setReorderMode(true);
-    setReorderFromButton(true); // Es desde botón
-    setTempExercisesOrder(exercisesState); // Copiar orden actual
+    setReorderFromButton(true);
+    setTempExercisesOrder(exercisesState);
   };
 
-  // 🔥 Confirmar reordenación al pulsar "Listo" (solo para modo botón)
   const handleConfirmReorder = () => {
     setExercises(tempExercisesOrder);
     setReorderMode(false);
@@ -180,23 +172,14 @@ export default function RoutineEditScreen() {
     setTempExercisesOrder([]);
   };
 
-  // 🔥 Cancelar reordenación (solo para modo botón)
-  const handleCancelReorder = () => {
-    setReorderMode(false);
-    setReorderFromButton(false);
-    setTempExercisesOrder([]);
-  };
-
-  // 🔥 NUEVO: Manejar reemplazo de ejercicio
   const handleReplaceExercise = (exerciseId: string) => {
     navigation.navigate("ExerciseList", {
       routineId: id,
-      singleSelection: true, // Indicar que solo se puede seleccionar uno
+      singleSelection: true,
       onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
         if (selectedExercises.length > 0) {
           const newExercise = selectedExercises[0];
 
-          // Reemplazar el ejercicio manteniendo sus sets y configuraciones
           setExercises((prev) =>
             prev.map((ex) =>
               ex.id === exerciseId
@@ -212,7 +195,6 @@ export default function RoutineEditScreen() {
             )
           );
 
-          // Transferir los sets del ejercicio anterior al nuevo
           setSets((prev) => {
             const newSets = { ...prev };
             newSets[newExercise.id] = prev[exerciseId] || [];
@@ -220,16 +202,13 @@ export default function RoutineEditScreen() {
             return newSets;
           });
 
-          // Actualizar superseries si existían
           if (supersets[exerciseId]) {
             setSupersets((prev) => {
               const newSupersets = { ...prev };
               const partnerExerciseId = prev[exerciseId];
 
-              // Actualizar la referencia del nuevo ejercicio
               newSupersets[newExercise.id] = partnerExerciseId;
 
-              // Actualizar la referencia del ejercicio pareja
               if (
                 partnerExerciseId &&
                 newSupersets[partnerExerciseId] === exerciseId
@@ -246,7 +225,6 @@ export default function RoutineEditScreen() {
     });
   };
 
-  // 🔥 NUEVO: Eliminar ejercicio
   const handleDeleteExercise = (exerciseId: string) => {
     const exerciseName =
       exercisesState.find((ex) => ex.id === exerciseId)?.name ||
@@ -261,25 +239,20 @@ export default function RoutineEditScreen() {
           text: "Eliminar",
           style: "destructive",
           onPress: () => {
-            // Eliminar el ejercicio
             setExercises((prev) => prev.filter((ex) => ex.id !== exerciseId));
 
-            // Limpiar sets
             setSets((prev) => {
               const newSets = { ...prev };
               delete newSets[exerciseId];
               return newSets;
             });
 
-            // Limpiar superseries
             setSupersets((prev) => {
               const newSupersets = { ...prev };
               const partnerExerciseId = newSupersets[exerciseId];
 
-              // Eliminar la referencia del ejercicio eliminado
               delete newSupersets[exerciseId];
 
-              // Eliminar la referencia del ejercicio pareja
               if (partnerExerciseId) {
                 delete newSupersets[partnerExerciseId];
               }
@@ -292,16 +265,14 @@ export default function RoutineEditScreen() {
     );
   };
 
-  // 🔥 NUEVO: Agregar superserie
   const handleAddSuperset = (exerciseId: string, targetExerciseId: string) => {
     setSupersets((prev) => ({
       ...prev,
       [exerciseId]: targetExerciseId,
-      [targetExerciseId]: exerciseId, // Bidireccional
+      [targetExerciseId]: exerciseId,
     }));
   };
 
-  // 🔥 NUEVO: Obtener nombre del ejercicio de superserie
   const getSupersetExerciseName = (exerciseId: string): string | undefined => {
     const supersetId = supersets[exerciseId];
     if (!supersetId) return undefined;
@@ -315,7 +286,6 @@ export default function RoutineEditScreen() {
     drag,
     isActive,
   }: RenderItemParams<ExerciseRequestDto>) => {
-    // Modo reordenamiento: cards compactas con imagen y título
     if (reorderMode) {
       return (
         <ScaleDecorator>
@@ -350,7 +320,6 @@ export default function RoutineEditScreen() {
       );
     }
 
-    // Modo normal: cards completas
     return (
       <ExerciseCard
         exercise={item}
@@ -367,7 +336,6 @@ export default function RoutineEditScreen() {
         }}
         onLongPress={() => handleExerciseLongPress(drag)}
         isDragging={isActive}
-        // 🔥 Props para las opciones
         onReorder={handleReorderFromHeader}
         onReplace={() => handleReplaceExercise(item.id)}
         onDelete={() => handleDeleteExercise(item.id)}
@@ -385,6 +353,7 @@ export default function RoutineEditScreen() {
         }
         supersetWith={supersets[item.id]}
         supersetExerciseName={getSupersetExerciseName(item.id)}
+        showOptions={true}
       />
     );
   };
@@ -392,7 +361,6 @@ export default function RoutineEditScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Header Section */}
         <View style={styles.headerSection}>
           <TextInput
             style={styles.titleInput}
@@ -405,17 +373,8 @@ export default function RoutineEditScreen() {
           <View style={styles.headerRow}>
             <Text style={styles.subTitle}>Ejercicios asociados</Text>
 
-            {/* 🔥 Botones solo cuando es reorden desde botón */}
             {reorderMode && reorderFromButton && (
               <View style={styles.reorderButtons}>
-                <TouchableOpacity
-                  style={styles.cancelReorderButton}
-                  onPress={handleCancelReorder}
-                >
-                  <Icon name="close" size={18} color="#EF4444" />
-                  <Text style={styles.cancelReorderText}>Cancelar</Text>
-                </TouchableOpacity>
-
                 <TouchableOpacity
                   style={styles.doneButton}
                   onPress={handleConfirmReorder}
@@ -455,7 +414,6 @@ export default function RoutineEditScreen() {
           )}
         </View>
 
-        {/* List Section */}
         <View style={styles.listContainer}>
           <DraggableFlatList
             data={reorderFromButton ? tempExercisesOrder : exercisesState}
@@ -478,7 +436,6 @@ export default function RoutineEditScreen() {
           />
         </View>
 
-        {/* Footer Section */}
         <View style={styles.footerSection}>
           {!reorderMode && (
             <TouchableOpacity
@@ -577,20 +534,6 @@ const styles = StyleSheet.create({
   reorderButtons: {
     flexDirection: "row",
     gap: 8,
-  },
-  cancelReorderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
-  },
-  cancelReorderText: {
-    fontSize: RFValue(13),
-    fontWeight: "600",
-    color: "#EF4444",
   },
   doneButton: {
     flexDirection: "row",

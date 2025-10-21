@@ -43,12 +43,10 @@ export default function RoutineDetailScreen() {
     start,
   } = route.params;
 
-  // ==================== STATE ====================
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
   const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
-
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
@@ -57,14 +55,12 @@ export default function RoutineDetailScreen() {
   );
   const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
 
-  // Rest timer state
   const [showRestToast, setShowRestToast] = useState(false);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
   const [totalRestTime, setTotalRestTime] = useState(0);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Store
   const {
     workoutInProgress,
     setWorkoutInProgress,
@@ -73,7 +69,6 @@ export default function RoutineDetailScreen() {
     updateWorkoutProgress,
   } = useWorkoutInProgressStore();
 
-  // ==================== COMPUTED VALUES ====================
   const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
   const completedSets = useMemo(
@@ -81,9 +76,6 @@ export default function RoutineDetailScreen() {
     [allSets]
   );
 
-  // ==================== DATA INITIALIZATION ====================
-
-  // 1. Fetch routine data if needed
   useEffect(() => {
     if (routine) {
       setRoutineData(routine);
@@ -110,7 +102,6 @@ export default function RoutineDetailScreen() {
     fetchRoutine();
   }, [routine, routineId]);
 
-  // 2. Load workout in progress from store
   useEffect(() => {
     if (!workoutInProgress || !route.params?.start || hasInitializedFromStore) {
       return;
@@ -131,7 +122,6 @@ export default function RoutineDetailScreen() {
     navigation,
   ]);
 
-  // 3. Initialize exercises from params
   useEffect(() => {
     if (hasInitializedFromStore || !initialExercises?.length) {
       return;
@@ -150,7 +140,6 @@ export default function RoutineDetailScreen() {
     setRoutineTitle(routine?.title || "Nueva rutina");
   }, [initialExercises, hasInitializedFromStore, routine?.title]);
 
-  // 4. Initialize exercises from routine data
   useEffect(() => {
     if (hasInitializedFromStore || initialExercises?.length || !routineData) {
       return;
@@ -168,7 +157,6 @@ export default function RoutineDetailScreen() {
     setSets(initialSets);
   }, [routineData, initialExercises, hasInitializedFromStore]);
 
-  // 5. Auto-start routine if needed
   useEffect(() => {
     if (
       !start ||
@@ -214,17 +202,12 @@ export default function RoutineDetailScreen() {
     setWorkoutInProgress,
   ]);
 
-  // ==================== WORKOUT MANAGEMENT ====================
-
-  // Duration timer
   useEffect(() => {
     if (!started) return;
-
     const interval = setInterval(() => setDuration((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
   }, [started]);
 
-  // Set previous values when starting
   useEffect(() => {
     if (!started) return;
 
@@ -237,16 +220,14 @@ export default function RoutineDetailScreen() {
       }));
     });
     setSets(updatedSets);
-  }, [started]); // Intencionalmente sin dependencias adicionales
+  }, [started]);
 
-  // Auto-start if parameter is set
   useEffect(() => {
     if (route.params?.start) {
       setStarted(true);
     }
   }, [route.params?.start]);
 
-  // Update store during workout
   useEffect(() => {
     if (!started) return;
 
@@ -270,7 +251,6 @@ export default function RoutineDetailScreen() {
     patchWorkoutInProgress,
   ]);
 
-  // Periodic progress update
   useEffect(() => {
     if (!started) return;
 
@@ -281,9 +261,6 @@ export default function RoutineDetailScreen() {
     return () => clearInterval(interval);
   }, [started, duration, volume, completedSets, updateWorkoutProgress]);
 
-  // ==================== UI MANAGEMENT ====================
-
-  // Hide/show tab bar
   useEffect(() => {
     const parent = (navigation as any).getParent?.();
     if (!parent?.setOptions) return;
@@ -300,7 +277,6 @@ export default function RoutineDetailScreen() {
     };
   }, [started, navigation]);
 
-  // Rest timer animation
   useEffect(() => {
     if (showRestToast) {
       Animated.spring(slideAnim, {
@@ -318,7 +294,6 @@ export default function RoutineDetailScreen() {
     }
   }, [showRestToast, slideAnim]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (countdownRef.current) {
@@ -330,8 +305,6 @@ export default function RoutineDetailScreen() {
       }
     };
   }, [navigation]);
-
-  // ==================== HANDLERS ====================
 
   const handleStartRoutine = () => {
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
@@ -435,7 +408,6 @@ export default function RoutineDetailScreen() {
     });
   };
 
-  // Rest timer handlers
   const handleStartRestTimer = (restSeconds: number) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
@@ -479,8 +451,6 @@ export default function RoutineDetailScreen() {
     }
     setShowRestToast(false);
   };
-
-  // ==================== HELPER FUNCTIONS ====================
 
   const mapRoutineExercises = (data: any): ExerciseRequestDto[] => {
     return (
@@ -563,8 +533,6 @@ export default function RoutineDetailScreen() {
     setSets(resetSets);
   };
 
-  // ==================== RENDER ====================
-
   const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => (
     <ExerciseCard
       exercise={item}
@@ -582,6 +550,7 @@ export default function RoutineDetailScreen() {
       readonly={readonly && !started}
       started={started}
       onStartRestTimer={handleStartRestTimer}
+      showOptions={false}
     />
   );
 

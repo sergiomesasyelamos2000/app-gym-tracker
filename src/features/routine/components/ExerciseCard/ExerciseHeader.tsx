@@ -2,17 +2,16 @@ import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  FlatList,
-  ScrollView,
 } from "react-native";
 import Modal from "react-native-modal";
+import { Portal } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Portal } from "react-native-paper";
 import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
@@ -23,6 +22,7 @@ interface Props {
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
   availableExercises?: ExerciseRequestDto[];
+  showOptions?: boolean; // 🔥 NUEVO: Controla si se muestran las opciones
 }
 
 const ExerciseHeader = ({
@@ -33,6 +33,7 @@ const ExerciseHeader = ({
   onDelete,
   onAddSuperset,
   availableExercises = [],
+  showOptions = false, // 🔥 Por defecto NO mostrar opciones
 }: Props) => {
   const navigation = useNavigation<any>();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
@@ -121,7 +122,8 @@ const ExerciseHeader = ({
           </Text>
         </View>
 
-        {!readonly && (
+        {/* 🔥 CAMBIO: Solo mostrar si showOptions es true Y no es readonly */}
+        {showOptions && !readonly && (
           <TouchableOpacity onPress={openExerciseOptions}>
             <Icon name="more-vert" size={24} color="#000" />
           </TouchableOpacity>
