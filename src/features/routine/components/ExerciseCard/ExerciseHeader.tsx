@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   View,
   FlatList,
+  ScrollView,
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { Portal } from "react-native-paper";
 import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
@@ -20,7 +22,7 @@ interface Props {
   onReplace?: () => void;
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
-  availableExercises?: ExerciseRequestDto[]; // Lista de ejercicios de la rutina para superseries
+  availableExercises?: ExerciseRequestDto[];
 }
 
 const ExerciseHeader = ({
@@ -35,177 +37,214 @@ const ExerciseHeader = ({
   const navigation = useNavigation<any>();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [isSupersetModalVisible, setSupersetModalVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const handleImagePress = () => {
     navigation.navigate("ExerciseDetail", { exercise });
   };
 
-  const openExerciseOptions = () => setActionModalVisible(true);
-  const closeExerciseOptions = () => setActionModalVisible(false);
+  const openExerciseOptions = () => {
+    console.log("🔥 Opening exercise options");
+    setActionModalVisible(true);
+  };
+
+  const closeExerciseOptions = () => {
+    console.log("🔥 Closing exercise options");
+    setActionModalVisible(false);
+  };
 
   const handleExerciseAction = (
     action: "reorder" | "replace" | "superset" | "delete"
   ) => {
-    closeExerciseOptions();
+    console.log("🔥 Action selected:", action);
+    setPendingAction(action);
+    setActionModalVisible(false);
+  };
 
-    // 🔥 IMPORTANTE: Pequeño delay para que el modal se cierre antes de abrir el siguiente
-    setTimeout(() => {
-      switch (action) {
-        case "reorder":
-          onReorder?.();
-          break;
-        case "replace":
-          onReplace?.();
-          break;
-        case "superset":
-          // Abrir modal de superseries
-          setSupersetModalVisible(true);
-          break;
-        case "delete":
-          onDelete?.();
-          break;
-      }
-    }, 300);
+  const handleActionModalHide = () => {
+    console.log("🔥 Modal cerrado, pending action:", pendingAction);
+
+    if (!pendingAction) return;
+
+    const action = pendingAction;
+    setPendingAction(null);
+
+    console.log("🔥 Executing action:", action);
+
+    switch (action) {
+      case "reorder":
+        onReorder?.();
+        break;
+      case "replace":
+        onReplace?.();
+        break;
+      case "superset":
+        console.log(
+          "🔥 Opening superset modal, exercises:",
+          availableExercises.length
+        );
+        setSupersetModalVisible(true);
+        break;
+      case "delete":
+        onDelete?.();
+        break;
+    }
   };
 
   const handleSelectSupersetExercise = (targetExercise: ExerciseRequestDto) => {
+    console.log("🔥 Superset selected:", targetExercise.name);
     onAddSuperset?.(targetExercise.id);
     setSupersetModalVisible(false);
   };
 
-  // Filtrar ejercicios disponibles (excluir el ejercicio actual)
   const filteredExercises = availableExercises.filter(
     (ex) => ex.id !== exercise.id
   );
 
   return (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8}>
-        <Image
-          source={
-            exercise.imageUrl
-              ? { uri: `data:image/png;base64,${exercise.imageUrl}` }
-              : require("./../../../../../assets/not-image.png")
-          }
-          style={styles.exerciseImage}
-        />
-      </TouchableOpacity>
+    <>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8}>
+          <Image
+            source={
+              exercise.imageUrl
+                ? { uri: `data:image/png;base64,${exercise.imageUrl}` }
+                : require("./../../../../../assets/not-image.png")
+            }
+            style={styles.exerciseImage}
+          />
+        </TouchableOpacity>
 
-      <View style={styles.titleContainer}>
-        <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
-          {exercise.name}
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
+            {exercise.name}
+          </Text>
+        </View>
+
+        {!readonly && (
+          <TouchableOpacity onPress={openExerciseOptions}>
+            <Icon name="more-vert" size={24} color="#000" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {!readonly && (
-        <TouchableOpacity onPress={openExerciseOptions}>
-          <Icon name="more-vert" size={24} color="#000" />
-        </TouchableOpacity>
-      )}
+      <Portal>
+        {/* Modal de opciones del ejercicio */}
+        <Modal
+          isVisible={isActionModalVisible}
+          onBackdropPress={closeExerciseOptions}
+          onSwipeComplete={closeExerciseOptions}
+          swipeDirection="down"
+          style={styles.modalContainer}
+          animationIn="slideInUp"
+          animationOut="slideOutDown"
+          onModalHide={handleActionModalHide}
+          backdropOpacity={0.5}
+          useNativeDriver
+          hideModalContentWhileAnimating
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Opciones de ejercicio</Text>
 
-      {/* Modal de opciones del ejercicio */}
-      <Modal
-        isVisible={isActionModalVisible}
-        onBackdropPress={closeExerciseOptions}
-        onSwipeComplete={closeExerciseOptions}
-        swipeDirection="down"
-        style={styles.modalContainer}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Opciones de ejercicio</Text>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => handleExerciseAction("reorder")}
+            >
+              <Icon name="swap-vert" size={22} color="#4E2A84" />
+              <Text style={styles.modalItemText}>Reordenar ejercicios</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleExerciseAction("reorder")}
-          >
-            <Icon name="swap-vert" size={22} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Reordenar ejercicios</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => handleExerciseAction("replace")}
+            >
+              <Icon name="sync" size={22} color="#4E2A84" />
+              <Text style={styles.modalItemText}>Reemplazar ejercicio</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleExerciseAction("replace")}
-          >
-            <Icon name="sync" size={22} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Reemplazar ejercicio</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => handleExerciseAction("superset")}
+            >
+              <Icon name="link" size={22} color="#4E2A84" />
+              <Text style={styles.modalItemText}>Agregar a superserie</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleExerciseAction("superset")}
-          >
-            <Icon name="link" size={22} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Agregar a superserie</Text>
-          </TouchableOpacity>
+            <View style={styles.modalDivider} />
 
-          <View style={styles.modalDivider} />
-
-          <TouchableOpacity
-            style={styles.modalItem}
-            onPress={() => handleExerciseAction("delete")}
-          >
-            <Icon name="delete" size={22} color="#EF4444" />
-            <Text style={[styles.modalItemText, styles.deleteText]}>
-              Eliminar ejercicio
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      {/* Modal de superseries */}
-      <Modal
-        isVisible={isSupersetModalVisible}
-        onBackdropPress={() => setSupersetModalVisible(false)}
-        onSwipeComplete={() => setSupersetModalVisible(false)}
-        swipeDirection="down"
-        style={styles.modalContainer}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>
-            Superserie de {exercise.name} con...
-          </Text>
-          <Text style={styles.modalSubtitle}>
-            Selecciona el ejercicio con el que deseas hacer superserie
-          </Text>
-
-          {filteredExercises.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Icon name="fitness-center" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>
-                No hay otros ejercicios en esta rutina
+            <TouchableOpacity
+              style={styles.modalItem}
+              onPress={() => handleExerciseAction("delete")}
+            >
+              <Icon name="delete" size={22} color="#EF4444" />
+              <Text style={[styles.modalItemText, styles.deleteText]}>
+                Eliminar ejercicio
               </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredExercises}
-              keyExtractor={(item) => item.id}
-              style={styles.supersetList}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.supersetItem}
-                  onPress={() => handleSelectSupersetExercise(item)}
-                >
-                  <Image
-                    source={
-                      item.imageUrl
-                        ? { uri: `data:image/png;base64,${item.imageUrl}` }
-                        : require("./../../../../../assets/not-image.png")
-                    }
-                    style={styles.supersetImage}
-                  />
-                  <Text style={styles.supersetName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                  <Icon name="chevron-right" size={24} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
-    </View>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Modal de superseries */}
+        <Modal
+          isVisible={isSupersetModalVisible}
+          onBackdropPress={() => {
+            console.log("🔥 Backdrop pressed - closing superset modal");
+            setSupersetModalVisible(false);
+          }}
+          onSwipeComplete={() => setSupersetModalVisible(false)}
+          swipeDirection="down"
+          style={styles.modalContainer}
+          animationIn="slideInUp"
+          animationOut="slideOutDown"
+          backdropOpacity={0.5}
+          useNativeDriver
+          hideModalContentWhileAnimating
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>
+              Superserie de {exercise.name} con...
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Selecciona el ejercicio con el que deseas hacer superserie
+            </Text>
+
+            {filteredExercises.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Icon name="fitness-center" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyText}>
+                  No hay otros ejercicios en esta rutina
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.supersetList}>
+                {filteredExercises.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.supersetItem}
+                    onPress={() => handleSelectSupersetExercise(item)}
+                  >
+                    <Image
+                      source={
+                        item.imageUrl
+                          ? { uri: `data:image/png;base64,${item.imageUrl}` }
+                          : require("./../../../../../assets/not-image.png")
+                      }
+                      style={styles.supersetImage}
+                    />
+                    <Text style={styles.supersetName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Icon name="chevron-right" size={24} color="#9CA3AF" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </Modal>
+      </Portal>
+    </>
   );
 };
 

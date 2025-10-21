@@ -367,12 +367,22 @@ export default function RoutineEditScreen() {
         }}
         onLongPress={() => handleExerciseLongPress(drag)}
         isDragging={isActive}
-        // 🔥 NUEVO: Props para las opciones
+        // 🔥 Props para las opciones
         onReorder={handleReorderFromHeader}
         onReplace={() => handleReplaceExercise(item.id)}
         onDelete={() => handleDeleteExercise(item.id)}
-        onAddSuperset={(targetId) => handleAddSuperset(item.id, targetId)}
-        availableExercises={exercisesState}
+        onAddSuperset={(targetId) => {
+          console.log(
+            "🔥 RoutineEditScreen - Adding superset:",
+            item.id,
+            "->",
+            targetId
+          );
+          handleAddSuperset(item.id, targetId);
+        }}
+        availableExercises={
+          reorderFromButton ? tempExercisesOrder : exercisesState
+        }
         supersetWith={supersets[item.id]}
         supersetExerciseName={getSupersetExerciseName(item.id)}
       />
