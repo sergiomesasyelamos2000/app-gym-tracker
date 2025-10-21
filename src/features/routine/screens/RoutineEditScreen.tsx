@@ -2,17 +2,18 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  Alert,
 } from "react-native";
 import DraggableFlatList, {
-  RenderItemParams,
   ScaleDecorator,
+  RenderItemParams,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -42,6 +43,14 @@ export default function RoutineEditScreen() {
   );
   const [reorderMode, setReorderMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // 🔥 NUEVO: Estado para superseries (ejercicioId -> ejercicioParejaDeSuperserieId)
+  const [supersets, setSupersets] = useState<{ [key: string]: string }>({});
+  // 🔥 NUEVO: Distinguir entre reorden por long press vs botón
+  const [reorderFromButton, setReorderFromButton] = useState(false);
+  // 🔥 NUEVO: Estado temporal solo para reorden desde botón
+  const [tempExercisesOrder, setTempExercisesOrder] = useState<
+    ExerciseRequestDto[]
+  >([]);
 
   useEffect(() => {
     const fetchRoutine = async () => {
@@ -57,6 +66,7 @@ export default function RoutineEditScreen() {
               restSeconds: re.restSeconds,
               weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
               repsType: re.repsType || re.exercise.repsType || "reps",
+              supersetWith: re.supersetWith, // 🔥 NUEVO
             }))
           : [];
 
@@ -64,12 +74,21 @@ export default function RoutineEditScreen() {
         setExercises(exercises);
 
         const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
+        const initialSupersets: { [key: string]: string } = {};
+
         exercises.forEach((exercise) => {
           initialSets[exercise.id] = Array.isArray(exercise.sets)
             ? exercise.sets
             : [];
+
+          // 🔥 NUEVO: Cargar superseries
+          if (exercise.supersetWith) {
+            initialSupersets[exercise.id] = exercise.supersetWith;
+          }
         });
+
         setSets(initialSets);
+        setSupersets(initialSupersets);
       }
     };
     fetchRoutine();
@@ -103,6 +122,7 @@ export default function RoutineEditScreen() {
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
           order: index + 1,
+          supersetWith: supersets[exercise.id] || null, // 🔥 NUEVO
         })),
       };
 
@@ -126,17 +146,168 @@ export default function RoutineEditScreen() {
   };
 
   const handleReorderComplete = (data: ExerciseRequestDto[]) => {
-    setExercises(data);
-    // 🔥 CAMBIO: Salir automáticamente del modo reorden
-    setReorderMode(false);
+    if (reorderFromButton) {
+      // Modo botón: solo guardar temporalmente
+      setTempExercisesOrder(data);
+    } else {
+      // Modo long press: aplicar inmediatamente y salir del modo
+      setExercises(data);
+      setReorderMode(false);
+    }
   };
 
   const handleExerciseLongPress = (drag: () => void) => {
     console.log("🎯 Long press detected, activating reorder mode");
     setReorderMode(true);
+    setReorderFromButton(false); // Es long press, NO desde botón
     setTimeout(() => {
       drag();
     }, 100);
+  };
+
+  // 🔥 Habilitar modo reorden desde el header (con botón "Listo")
+  const handleReorderFromHeader = () => {
+    setReorderMode(true);
+    setReorderFromButton(true); // Es desde botón
+    setTempExercisesOrder(exercisesState); // Copiar orden actual
+  };
+
+  // 🔥 Confirmar reordenación al pulsar "Listo" (solo para modo botón)
+  const handleConfirmReorder = () => {
+    setExercises(tempExercisesOrder);
+    setReorderMode(false);
+    setReorderFromButton(false);
+    setTempExercisesOrder([]);
+  };
+
+  // 🔥 Cancelar reordenación (solo para modo botón)
+  const handleCancelReorder = () => {
+    setReorderMode(false);
+    setReorderFromButton(false);
+    setTempExercisesOrder([]);
+  };
+
+  // 🔥 NUEVO: Manejar reemplazo de ejercicio
+  const handleReplaceExercise = (exerciseId: string) => {
+    navigation.navigate("ExerciseList", {
+      routineId: id,
+      singleSelection: true, // Indicar que solo se puede seleccionar uno
+      onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
+        if (selectedExercises.length > 0) {
+          const newExercise = selectedExercises[0];
+
+          // Reemplazar el ejercicio manteniendo sus sets y configuraciones
+          setExercises((prev) =>
+            prev.map((ex) =>
+              ex.id === exerciseId
+                ? {
+                    ...newExercise,
+                    sets: sets[exerciseId] || [],
+                    notes: ex.notes,
+                    restSeconds: ex.restSeconds,
+                    weightUnit: ex.weightUnit,
+                    repsType: ex.repsType,
+                  }
+                : ex
+            )
+          );
+
+          // Transferir los sets del ejercicio anterior al nuevo
+          setSets((prev) => {
+            const newSets = { ...prev };
+            newSets[newExercise.id] = prev[exerciseId] || [];
+            delete newSets[exerciseId];
+            return newSets;
+          });
+
+          // Actualizar superseries si existían
+          if (supersets[exerciseId]) {
+            setSupersets((prev) => {
+              const newSupersets = { ...prev };
+              const partnerExerciseId = prev[exerciseId];
+
+              // Actualizar la referencia del nuevo ejercicio
+              newSupersets[newExercise.id] = partnerExerciseId;
+
+              // Actualizar la referencia del ejercicio pareja
+              if (
+                partnerExerciseId &&
+                newSupersets[partnerExerciseId] === exerciseId
+              ) {
+                newSupersets[partnerExerciseId] = newExercise.id;
+              }
+
+              delete newSupersets[exerciseId];
+              return newSupersets;
+            });
+          }
+        }
+      },
+    });
+  };
+
+  // 🔥 NUEVO: Eliminar ejercicio
+  const handleDeleteExercise = (exerciseId: string) => {
+    const exerciseName =
+      exercisesState.find((ex) => ex.id === exerciseId)?.name ||
+      "este ejercicio";
+
+    Alert.alert(
+      "Eliminar ejercicio",
+      `¿Estás seguro de que deseas eliminar "${exerciseName}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => {
+            // Eliminar el ejercicio
+            setExercises((prev) => prev.filter((ex) => ex.id !== exerciseId));
+
+            // Limpiar sets
+            setSets((prev) => {
+              const newSets = { ...prev };
+              delete newSets[exerciseId];
+              return newSets;
+            });
+
+            // Limpiar superseries
+            setSupersets((prev) => {
+              const newSupersets = { ...prev };
+              const partnerExerciseId = newSupersets[exerciseId];
+
+              // Eliminar la referencia del ejercicio eliminado
+              delete newSupersets[exerciseId];
+
+              // Eliminar la referencia del ejercicio pareja
+              if (partnerExerciseId) {
+                delete newSupersets[partnerExerciseId];
+              }
+
+              return newSupersets;
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  // 🔥 NUEVO: Agregar superserie
+  const handleAddSuperset = (exerciseId: string, targetExerciseId: string) => {
+    setSupersets((prev) => ({
+      ...prev,
+      [exerciseId]: targetExerciseId,
+      [targetExerciseId]: exerciseId, // Bidireccional
+    }));
+  };
+
+  // 🔥 NUEVO: Obtener nombre del ejercicio de superserie
+  const getSupersetExerciseName = (exerciseId: string): string | undefined => {
+    const supersetId = supersets[exerciseId];
+    if (!supersetId) return undefined;
+
+    const exercise = exercisesState.find((ex) => ex.id === supersetId);
+    return exercise?.name;
   };
 
   const renderExerciseCard = ({
@@ -155,12 +326,10 @@ export default function RoutineEditScreen() {
             style={[styles.reorderCard, isActive && styles.reorderCardActive]}
           >
             <View style={styles.reorderContent}>
-              {/* 🔥 Ícono de drag handle */}
               <View style={styles.dragHandle}>
                 <Icon name="drag-indicator" size={24} color="#6B7280" />
               </View>
 
-              {/* 🔥 Imagen del ejercicio */}
               <Image
                 source={
                   item.imageUrl
@@ -170,7 +339,6 @@ export default function RoutineEditScreen() {
                 style={styles.reorderImage}
               />
 
-              {/* 🔥 Título del ejercicio */}
               <View style={styles.reorderInfo}>
                 <Text style={styles.reorderName} numberOfLines={2}>
                   {item.name}
@@ -199,6 +367,14 @@ export default function RoutineEditScreen() {
         }}
         onLongPress={() => handleExerciseLongPress(drag)}
         isDragging={isActive}
+        // 🔥 NUEVO: Props para las opciones
+        onReorder={handleReorderFromHeader}
+        onReplace={() => handleReplaceExercise(item.id)}
+        onDelete={() => handleDeleteExercise(item.id)}
+        onAddSuperset={(targetId) => handleAddSuperset(item.id, targetId)}
+        availableExercises={exercisesState}
+        supersetWith={supersets[item.id]}
+        supersetExerciseName={getSupersetExerciseName(item.id)}
       />
     );
   };
@@ -218,9 +394,39 @@ export default function RoutineEditScreen() {
 
           <View style={styles.headerRow}>
             <Text style={styles.subTitle}>Ejercicios asociados</Text>
+
+            {/* 🔥 Botones solo cuando es reorden desde botón */}
+            {reorderMode && reorderFromButton && (
+              <View style={styles.reorderButtons}>
+                <TouchableOpacity
+                  style={styles.cancelReorderButton}
+                  onPress={handleCancelReorder}
+                >
+                  <Icon name="close" size={18} color="#EF4444" />
+                  <Text style={styles.cancelReorderText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={handleConfirmReorder}
+                >
+                  <Icon name="check" size={18} color="#fff" />
+                  <Text style={styles.doneButtonText}>Listo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
-          {reorderMode && (
+          {reorderMode && reorderFromButton && (
+            <View style={styles.reorderHint}>
+              <Icon name="info-outline" size={16} color="#92400E" />
+              <Text style={styles.reorderHintText}>
+                Arrastra para reordenar. Pulsa "Listo" para guardar los cambios
+              </Text>
+            </View>
+          )}
+
+          {reorderMode && !reorderFromButton && (
             <View style={styles.reorderHint}>
               <Icon name="info-outline" size={16} color="#92400E" />
               <Text style={styles.reorderHintText}>
@@ -233,7 +439,7 @@ export default function RoutineEditScreen() {
             <View style={styles.normalHint}>
               <Icon name="touch-app" size={16} color="#1E40AF" />
               <Text style={styles.normalHintText}>
-                Mantén presionado un ejercicio para reordenar
+                Usa las opciones de cada ejercicio para editarlos
               </Text>
             </View>
           )}
@@ -242,7 +448,7 @@ export default function RoutineEditScreen() {
         {/* List Section */}
         <View style={styles.listContainer}>
           <DraggableFlatList
-            data={exercisesState}
+            data={reorderFromButton ? tempExercisesOrder : exercisesState}
             keyExtractor={(item) => item.id}
             renderItem={renderExerciseCard}
             onDragBegin={() => {
@@ -358,6 +564,38 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     color: "#111827",
   },
+  reorderButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  cancelReorderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  cancelReorderText: {
+    fontSize: RFValue(13),
+    fontWeight: "600",
+    color: "#EF4444",
+  },
+  doneButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10B981",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  doneButtonText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
   reorderHint: {
     flexDirection: "row",
     alignItems: "center",
@@ -406,7 +644,6 @@ const styles = StyleSheet.create({
   listFooter: {
     height: 20,
   },
-  // 🔥 NUEVO: Estilos mejorados para cards de reordenamiento
   reorderCard: {
     backgroundColor: "#FFFFFF",
     marginVertical: 6,
@@ -441,7 +678,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  // 🔥 NUEVO: Imagen en modo reorden
   reorderImage: {
     width: 56,
     height: 56,

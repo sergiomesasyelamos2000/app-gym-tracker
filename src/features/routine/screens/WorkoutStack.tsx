@@ -1,16 +1,12 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
+import { ExerciseRequestDto, RoutineRequestDto } from "../../../models";
 import ExerciseListScreen from "../components/ExerciseList";
-import {
-  CreateExerciseDto,
-  ExerciseRequestDto,
-  RoutineRequestDto,
-} from "../../../models";
 import WorkoutScreen from "../screens/WorkoutScreen";
-import RoutineEditScreen from "./RoutineEditScreen";
-import RoutineDetailScreen from "./RoutineDetailScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";
 import ExerciseDetailScreen from "./ExerciseDetailScreen";
+import RoutineDetailScreen from "./RoutineDetailScreen";
+import RoutineEditScreen from "./RoutineEditScreen";
 
 export type WorkoutStackParamList = {
   WorkoutList: undefined;
@@ -23,6 +19,7 @@ export type WorkoutStackParamList = {
   ExerciseList: {
     onFinishSelection?: (exercises: ExerciseRequestDto[]) => void;
     routineId?: string;
+    singleSelection?: boolean;
   };
   RoutineEdit: {
     id: string;

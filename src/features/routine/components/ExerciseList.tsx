@@ -27,7 +27,11 @@ export default function ExerciseList() {
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
-  const { onFinishSelection, routineId } = route.params || {};
+  const {
+    onFinishSelection,
+    routineId,
+    singleSelection = false,
+  } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
@@ -70,11 +74,15 @@ export default function ExerciseList() {
   );
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
-    setSelectedExercises((prev) =>
-      prev.some((item) => item.id === exercise.id)
-        ? prev.filter((item) => item.id !== exercise.id)
-        : [...prev, exercise]
-    );
+    if (singleSelection) {
+      setSelectedExercises([exercise]);
+    } else {
+      setSelectedExercises((prev) =>
+        prev.some((item) => item.id === exercise.id)
+          ? prev.filter((item) => item.id !== exercise.id)
+          : [...prev, exercise]
+      );
+    }
   };
 
   const handleConfirm = () => {

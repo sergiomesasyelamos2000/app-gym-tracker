@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Button, Card } from "react-native-paper";
 import uuid from "react-native-uuid";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { RFValue } from "react-native-responsive-fontsize";
 
 import ExerciseHeader from "./ExerciseHeader";
 import ExerciseNotes from "./ExerciseNotes";
@@ -20,8 +22,16 @@ interface Props {
   started?: boolean;
   onStartRestTimer?: (restSeconds: number) => void;
   compact?: boolean;
-  onLongPress?: () => void; // 🔥 ÚNICO manejador de long press
+  onLongPress?: () => void;
   isDragging?: boolean;
+  // 🔥 NUEVO: Props para las opciones del header
+  onReorder?: () => void;
+  onReplace?: () => void;
+  onDelete?: () => void;
+  onAddSuperset?: (targetExerciseId: string) => void;
+  availableExercises?: ExerciseRequestDto[];
+  supersetWith?: string; // ID del ejercicio con el que hace superserie
+  supersetExerciseName?: string; // Nombre del ejercicio de superserie
 }
 
 const ExerciseCard = ({
@@ -35,6 +45,13 @@ const ExerciseCard = ({
   compact = false,
   onLongPress,
   isDragging = false,
+  onReorder,
+  onReplace,
+  onDelete,
+  onAddSuperset,
+  availableExercises = [],
+  supersetWith,
+  supersetExerciseName,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [note, setNote] = useState(exercise.notes || "");
@@ -123,19 +140,33 @@ const ExerciseCard = ({
     });
   };
 
-  // 🔥 CAMBIO: Eliminamos la lógica de reorderMode compacto
-  // El modo compacto ahora se maneja completamente en RoutineEditScreen
-
-  // Renderizado normal completo
   return (
     <Card style={styles.card}>
-      {/* 🔥 CAMBIO: TouchableOpacity alrededor de toda la card */}
       <TouchableOpacity
         onLongPress={onLongPress}
         delayLongPress={500}
         activeOpacity={0.9}
+        disabled={readonly}
       >
-        <ExerciseHeader exercise={exercise} readonly={readonly} />
+        {/* 🔥 NUEVO: Tag de superserie */}
+        {supersetWith && supersetExerciseName && (
+          <View style={styles.supersetTag}>
+            <Icon name="link" size={14} color="#7C3AED" />
+            <Text style={styles.supersetTagText}>
+              Superserie con {supersetExerciseName}
+            </Text>
+          </View>
+        )}
+
+        <ExerciseHeader
+          exercise={exercise}
+          readonly={readonly}
+          onReorder={onReorder}
+          onReplace={onReplace}
+          onDelete={onDelete}
+          onAddSuperset={onAddSuperset}
+          availableExercises={availableExercises}
+        />
         <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
         <ExerciseRestPicker
           restTime={restTime}
@@ -176,6 +207,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#6C63FF",
     borderRadius: 14,
     paddingVertical: 8,
+  },
+  // 🔥 NUEVO: Estilos para el tag de superserie
+  supersetTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EDE9FE",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    marginBottom: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#C4B5FD",
+  },
+  supersetTagText: {
+    fontSize: RFValue(12),
+    fontWeight: "600",
+    color: "#7C3AED",
   },
 });
 

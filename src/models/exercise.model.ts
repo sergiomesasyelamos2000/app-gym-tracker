@@ -15,6 +15,8 @@ export interface ExerciseRequestDto {
   sets?: SetRequestDto[];
   weightUnit: "kg" | "lbs";
   repsType: "reps" | "range";
+  order?: number;
+  supersetWith?: string;
 }
 
 export interface CreateExerciseDto {
