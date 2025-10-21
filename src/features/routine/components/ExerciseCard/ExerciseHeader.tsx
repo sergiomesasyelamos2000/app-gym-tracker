@@ -9,18 +9,10 @@ import { ExerciseRequestDto } from "../../../../models";
 interface Props {
   exercise: ExerciseRequestDto;
   readonly?: boolean;
-  onLongPress?: () => void;
-  isDragging?: boolean;
-  reorderMode?: boolean;
+  // 🔥 ELIMINADO: onLongPress y onTitleLongPress ya no se manejan aquí
 }
 
-const ExerciseHeader = ({
-  exercise,
-  readonly = false,
-  onLongPress,
-  isDragging = false,
-  reorderMode = false,
-}: Props) => {
+const ExerciseHeader = ({ exercise, readonly = false }: Props) => {
   const navigation = useNavigation<any>();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
 
@@ -52,13 +44,8 @@ const ExerciseHeader = ({
   };
 
   return (
-    <View style={[styles.header, isDragging && styles.dragging]}>
-      <TouchableOpacity
-        onPress={handleImagePress}
-        onLongPress={onLongPress} // si quieres también arrastrar por la imagen
-        onPressIn={() => reorderMode && onLongPress?.()} // arranca inmediatamente si reorderMode true
-        activeOpacity={0.8}
-      >
+    <View style={styles.header}>
+      <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8}>
         <Image
           source={
             exercise.imageUrl
@@ -69,17 +56,12 @@ const ExerciseHeader = ({
         />
       </TouchableOpacity>
 
-      {/* 🔹 Ahora el nombre es pulsable para iniciar reordenamiento */}
-      <TouchableOpacity
-        onLongPress={onLongPress}
-        onPressIn={() => reorderMode && onLongPress?.()}
-        activeOpacity={0.7}
-        style={{ flex: 1 }}
-      >
+      {/* 🔥 CAMBIO: Título simple sin TouchableOpacity */}
+      <View style={styles.titleContainer}>
         <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
           {exercise.name}
         </Text>
-      </TouchableOpacity>
+      </View>
 
       {/* Solo mostrar el icono si no es readonly */}
       {!readonly && (
@@ -145,8 +127,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  dragging: {
-    opacity: 0.7,
+  titleContainer: {
+    flex: 1,
+    paddingVertical: 8,
   },
   title: {
     fontSize: RFValue(22),

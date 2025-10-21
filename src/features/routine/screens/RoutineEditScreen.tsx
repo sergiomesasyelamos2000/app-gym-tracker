@@ -8,13 +8,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import DraggableFlatList, {
   ScaleDecorator,
   RenderItemParams,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById, updateRoutineById } from "../services/routineService";
@@ -40,6 +42,7 @@ export default function RoutineEditScreen() {
     }
   );
   const [reorderMode, setReorderMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const fetchRoutine = async () => {
@@ -90,20 +93,17 @@ export default function RoutineEditScreen() {
     setSets(initial);
   }, [title, exercises]);
 
-  React.useEffect(() => {
-    setEditTitle(title);
-  }, [title]);
-
   const handleUpdate = async () => {
     try {
       const routineToUpdate = {
         id: id,
         title: editTitle,
-        exercises: exercisesState.map((exercise) => ({
+        exercises: exercisesState.map((exercise, index) => ({
           ...exercise,
           sets: sets[exercise.id] || [],
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
+          order: index + 1,
         })),
       };
 
@@ -130,6 +130,14 @@ export default function RoutineEditScreen() {
     setExercises(data);
   };
 
+  const handleExerciseLongPress = (drag: () => void) => {
+    console.log("🎯 Long press detected, activating reorder mode");
+    setReorderMode(true);
+    setTimeout(() => {
+      drag();
+    }, 100);
+  };
+
   const renderExerciseCard = ({
     item,
     drag,
@@ -141,6 +149,7 @@ export default function RoutineEditScreen() {
           <TouchableOpacity
             onLongPress={drag}
             disabled={isActive}
+            activeOpacity={1}
             style={[styles.reorderCard, isActive && styles.reorderCardActive]}
           >
             <View style={styles.reorderContent}>
@@ -175,9 +184,8 @@ export default function RoutineEditScreen() {
             )
           );
         }}
-        onLongPress={drag} // <-- PASAMOS drag aquí
-        isDragging={isActive} // <-- PASAMOS isActive
-        reorderMode={reorderMode} // <-- para control inmediato si quieres
+        onLongPress={() => handleExerciseLongPress(drag)}
+        isDragging={isActive}
       />
     );
   };
@@ -185,96 +193,125 @@ export default function RoutineEditScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <TextInput
-          style={styles.titleInput}
-          value={editTitle}
-          onChangeText={setEditTitle}
-          placeholder="Título de la rutina"
-          editable={!reorderMode}
-        />
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <TextInput
+            style={styles.titleInput}
+            value={editTitle}
+            onChangeText={setEditTitle}
+            placeholder="Título de la rutina"
+            editable={!reorderMode}
+          />
 
-        <View style={styles.headerRow}>
-          <Text style={styles.subTitle}>Ejercicios asociados:</Text>
-          <TouchableOpacity
-            style={[
-              styles.reorderButton,
-              reorderMode && styles.reorderButtonActive,
-            ]}
-            onPress={() => setReorderMode(!reorderMode)}
-          >
-            <Text
-              style={[
-                styles.reorderButtonText,
-                reorderMode && styles.reorderButtonTextActive,
-              ]}
-            >
-              {reorderMode ? "✓ Listo" : "⇅ Reordenar"}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerRow}>
+            <Text style={styles.subTitle}>Ejercicios asociados</Text>
+
+            {reorderMode && (
+              <TouchableOpacity
+                style={styles.doneButton}
+                onPress={() => setReorderMode(false)}
+              >
+                <Icon name="check" size={18} color="#fff" />
+                <Text style={styles.doneButtonText}>Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {reorderMode && (
+            <View style={styles.reorderHint}>
+              <Text style={styles.reorderHintText}>
+                Arrastra para reordenar los ejercicios
+              </Text>
+            </View>
+          )}
+
+          {!reorderMode && (
+            <View style={styles.normalHint}>
+              <Text style={styles.normalHintText}>
+                Mantén presionado un ejercicio para reordenar
+              </Text>
+            </View>
+          )}
         </View>
 
-        {reorderMode && (
-          <View style={styles.reorderHint}>
-            <Text style={styles.reorderHintText}>
-              Mantén pulsado y arrastra para reordenar
-            </Text>
-          </View>
-        )}
-
-        <DraggableFlatList
-          data={exercisesState}
-          keyExtractor={(item) => item.id}
-          renderItem={renderExerciseCard}
-          onDragEnd={({ data }) => handleReorderComplete(data)}
-          contentContainerStyle={styles.listContent}
-          activationDistance={reorderMode ? 0 : 999999}
-        />
-
-        {!reorderMode && (
-          <TouchableOpacity
-            style={styles.addExerciseButton}
-            onPress={() => {
-              navigation.navigate("ExerciseList", {
-                routineId: id,
-                onFinishSelection: (
-                  selectedExercises: ExerciseRequestDto[]
-                ) => {
-                  setExercises((prev) => {
-                    const newExercises = selectedExercises.filter(
-                      (ex) => !prev.some((p) => p.id === ex.id)
-                    );
-                    return [...prev, ...newExercises];
-                  });
-                },
-              });
+        {/* List Section - Ocupa el espacio disponible */}
+        <View style={styles.listContainer}>
+          <DraggableFlatList
+            data={exercisesState}
+            keyExtractor={(item) => item.id}
+            renderItem={renderExerciseCard}
+            onDragBegin={() => {
+              console.log("🔄 Drag begin");
+              setIsDragging(true);
             }}
-          >
-            <Text style={styles.addExerciseButtonText}>+ Añadir ejercicio</Text>
-          </TouchableOpacity>
-        )}
+            onDragEnd={({ data }) => {
+              console.log("✅ Drag end");
+              handleReorderComplete(data);
+              setIsDragging(false);
+            }}
+            contentContainerStyle={styles.listContent}
+            activationDistance={0}
+            dragHitSlop={{ left: 20, right: 20, top: 15, bottom: 15 }}
+            // 🔥 Añade estas props para mejor scroll
+            showsVerticalScrollIndicator={true}
+            ListFooterComponent={<View style={styles.listFooter} />}
+          />
+        </View>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-            disabled={reorderMode}
-          >
-            <Text
-              style={[styles.cancelText, reorderMode && styles.buttonDisabled]}
+        {/* Footer Section - Siempre visible */}
+        <View style={styles.footerSection}>
+          {!reorderMode && (
+            <TouchableOpacity
+              style={styles.addExerciseButton}
+              onPress={() => {
+                navigation.navigate("ExerciseList", {
+                  routineId: id,
+                  onFinishSelection: (
+                    selectedExercises: ExerciseRequestDto[]
+                  ) => {
+                    setExercises((prev) => {
+                      const newExercises = selectedExercises.filter(
+                        (ex) => !prev.some((p) => p.id === ex.id)
+                      );
+                      return [...prev, ...newExercises];
+                    });
+                  },
+                });
+              }}
             >
-              Cancelar
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.updateButton,
-              reorderMode && styles.updateButtonDisabled,
-            ]}
-            onPress={handleUpdate}
-            disabled={reorderMode}
-          >
-            <Text style={styles.updateButtonText}>Actualizar</Text>
-          </TouchableOpacity>
+              <Text style={styles.addExerciseButtonText}>
+                + Añadir ejercicio
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                reorderMode && styles.buttonDisabled,
+              ]}
+              onPress={() => navigation.goBack()}
+              disabled={reorderMode}
+            >
+              <Text
+                style={[styles.cancelText, reorderMode && styles.textDisabled]}
+              >
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.updateButton,
+                reorderMode && styles.updateButtonDisabled,
+              ]}
+              onPress={handleUpdate}
+              disabled={reorderMode}
+            >
+              <Text style={styles.updateButtonText}>Actualizar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -288,8 +325,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: "#fff",
+  },
+  // 🔥 NUEVA SECCIÓN: Header fijo
+  headerSection: {
     paddingTop: 12,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
   },
   titleInput: {
     backgroundColor: "#f4f4f4",
@@ -298,41 +341,39 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: RFValue(16),
     color: "#333",
-    marginBottom: 20,
+    marginBottom: 16,
     marginHorizontal: 16,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
     marginHorizontal: 16,
   },
   subTitle: {
     fontWeight: "bold",
     fontSize: RFValue(16),
+    color: "#111827",
   },
-  reorderButton: {
-    backgroundColor: "#E5E7EB",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  doneButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10B981",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    gap: 6,
   },
-  reorderButtonActive: {
-    backgroundColor: "#6366F1",
-  },
-  reorderButtonText: {
-    fontSize: RFValue(13),
+  doneButtonText: {
+    fontSize: RFValue(14),
     fontWeight: "600",
-    color: "#4B5563",
-  },
-  reorderButtonTextActive: {
     color: "#FFFFFF",
   },
   reorderHint: {
     backgroundColor: "#FEF3C7",
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     padding: 12,
     borderRadius: 8,
     borderLeftWidth: 3,
@@ -342,28 +383,126 @@ const styles = StyleSheet.create({
     fontSize: RFValue(13),
     color: "#92400E",
     fontWeight: "500",
+    textAlign: "center",
+  },
+  normalHint: {
+    backgroundColor: "#EFF6FF",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#3B82F6",
+  },
+  normalHintText: {
+    fontSize: RFValue(13),
+    color: "#1E40AF",
+    fontWeight: "500",
+    textAlign: "center",
+  },
+
+  // 🔥 NUEVA SECCIÓN: Lista que ocupa el espacio disponible
+  listContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
   listContent: {
-    paddingBottom: 24,
+    paddingTop: 8,
+    paddingBottom: 20, // Reducido porque ahora el footer está separado
     paddingHorizontal: 16,
   },
+  listFooter: {
+    height: 20, // Espacio extra al final de la lista
+  },
+
+  // 🔥 NUEVA SECCIÓN: Footer fijo en la parte inferior
+  footerSection: {
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 20 : 12, // Safe area para iOS
+  },
+  addExerciseButton: {
+    backgroundColor: "#e5e7eb",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  addExerciseButtonText: {
+    color: "#374151",
+    fontWeight: "600",
+    fontSize: RFValue(16),
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    flex: 1,
+    marginRight: 12,
+  },
+  cancelText: {
+    color: "#6b7280",
+    fontWeight: "600",
+    fontSize: RFValue(16),
+  },
+  updateButton: {
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+    flex: 1,
+    marginLeft: 12,
+  },
+  updateButtonDisabled: {
+    backgroundColor: "#d1d5db",
+  },
+  updateButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: RFValue(16),
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  textDisabled: {
+    opacity: 0.4,
+  },
+
+  // Estilos para las cards de reordenamiento (mantén los que ya tienes)
   reorderCard: {
     backgroundColor: "#FFFFFF",
-    marginVertical: 8,
+    marginVertical: 6,
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   reorderCardActive: {
     borderColor: "#6366F1",
     backgroundColor: "#EEF2FF",
     elevation: 8,
     shadowColor: "#6366F1",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
@@ -396,59 +535,5 @@ const styles = StyleSheet.create({
   reorderSets: {
     fontSize: RFValue(13),
     color: "#6B7280",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: "transparent",
-    paddingVertical: 0,
-  },
-  cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    margin: 0,
-    alignItems: "center",
-  },
-  cancelText: {
-    color: "#888",
-    fontWeight: "bold",
-    fontSize: RFValue(16),
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  updateButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    margin: 0,
-  },
-  updateButtonDisabled: {
-    backgroundColor: "#D1D5DB",
-  },
-  updateButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: RFValue(16),
-  },
-  addExerciseButton: {
-    backgroundColor: "#e0e0e0",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  addExerciseButtonText: {
-    color: "#333",
-    fontWeight: "bold",
-    fontSize: RFValue(16),
   },
 });
