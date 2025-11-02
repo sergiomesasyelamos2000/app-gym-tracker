@@ -1,3 +1,4 @@
+// navigation/BottomTabs.tsx
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { BarChart3, Dumbbell, Heart, Home } from "lucide-react-native";
 import React from "react";
@@ -6,10 +7,13 @@ import NutritionStack from "../features/nutrition/screens/NutritionStack";
 import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
+import { useNavigationStore } from "../store/useNavigationStore";
 
 const Tab = createBottomTabNavigator();
 
 export const BottomTabs = () => {
+  const hiddenTabs = useNavigationStore((state) => state.hiddenTabs);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -28,6 +32,10 @@ export const BottomTabs = () => {
         tabBarActiveTintColor: "#6C3BAA",
         tabBarInactiveTintColor: "gray",
         headerShown: false,
+        // Aplicar visibilidad específica por tab
+        tabBarStyle: {
+          display: hiddenTabs[route.name] ? "none" : "flex",
+        },
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />

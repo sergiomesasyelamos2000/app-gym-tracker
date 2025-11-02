@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  FlatList,
   Image,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -10,226 +8,424 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import { RFValue } from "react-native-responsive-fontsize";
+import Modal from "react-native-modal";
+import { Ionicons } from "@expo/vector-icons";
+import { useNutritionStore } from "../../../store/useNutritionStore";
+import { addFoodEntry } from "../services/nutritionService";
+import { FoodEntry, MealType, FoodUnit } from "../../../models/nutrition.model";
 
-export default function ProductDetailScreen({
-  route,
-  navigation,
-}: {
+const { width } = Dimensions.get("window");
+
+interface Props {
   route: any;
   navigation: any;
-}) {
-  const { producto } = route.params;
-  const [quantity, setQuantity] = useState("133");
-  const [unit, setUnit] = useState("gramo / ml");
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [meal, setMeal] = useState("Cena");
+}
+
+export default function ProductDetailScreen({ route, navigation }: Props) {
+  const {
+    producto,
+    fromDiary = false,
+    selectedMeal: initialMeal,
+    quantity: initialQty,
+    unit: initialUnit,
+  } = route.params;
+  const userProfile = useNutritionStore((state) => state.userProfile);
+  const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
+
+  const [quantity, setQuantity] = useState(
+    initialQty?.toString() || producto.grams?.toString() || "100"
+  );
+  const [unit, setUnit] = useState<FoodUnit>(initialUnit || "gram");
+  const [meal, setMeal] = useState<MealType>(initialMeal || "dinner");
   const [showMore, setShowMore] = useState(false);
-  const [modalData, setModalData] = useState<
-    Array<{ label: string; value: string }>
-  >([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"units" | "meals" | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const units = [
-    { label: "gramo / ml", value: "gramo / ml" },
-    { label: "porción", value: "porción" },
-    { label: "cup, small (125 ml)", value: "cup_small" },
-    { label: "Cannette 0,33 L (330 ml)", value: "cannette" },
-    { label: "Añadir porción nueva", value: "new_portion" },
+  const units: Array<{ label: string; value: FoodUnit; icon: string }> = [
+    { label: "Gramos", value: "gram", icon: "scale-outline" },
+    { label: "Mililitros", value: "ml", icon: "water-outline" },
+    { label: "Porción", value: "portion", icon: "restaurant-outline" },
   ];
 
-  const meals = [
-    { label: "Desayuno", value: "Desayuno" },
-    { label: "Comida", value: "Comida" },
-    { label: "Cena", value: "Cena" },
-    { label: "Merienda", value: "Merienda" },
+  const meals: Array<{
+    label: string;
+    value: MealType;
+    icon: string;
+    color: string;
+  }> = [
+    { label: "Desayuno", value: "breakfast", icon: "sunny", color: "#FFB74D" },
+    { label: "Almuerzo", value: "lunch", icon: "restaurant", color: "#6FCF97" },
+    { label: "Cena", value: "dinner", icon: "moon", color: "#6C3BAA" },
+    { label: "Snack", value: "snack", icon: "fast-food", color: "#409CFF" },
   ];
 
-  const handleSelectUnit = (value: string) => {
-    setUnit(value);
-    setIsModalVisible(false); // Cerrar el modal
+  const calculateNutrients = useMemo(() => {
+    const qty = parseFloat(quantity) || 0;
+    const baseGrams = producto.grams || 100;
+    const multiplier = qty / baseGrams;
+
+    return {
+      calories: Math.round(producto.calories * multiplier),
+      protein: Math.round(producto.protein * multiplier * 10) / 10,
+      carbs: Math.round(producto.carbohydrates * multiplier * 10) / 10,
+      fat: Math.round(producto.fat * multiplier * 10) / 10,
+    };
+  }, [quantity, producto]);
+
+  const handleAddToDiary = async () => {
+    if (!userProfile) {
+      Alert.alert("Error", "Debes configurar tu perfil primero");
+      return;
+    }
+
+    if (!quantity || parseFloat(quantity) <= 0) {
+      Alert.alert("Error", "Por favor ingresa una cantidad válida");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const nutrients = calculateNutrients;
+      const today = new Date().toISOString().split("T")[0];
+
+      const entry: Omit<FoodEntry, "id" | "createdAt"> = {
+        userId: userProfile.userId,
+        productCode: producto.code,
+        productName: producto.name,
+        productImage: producto.image,
+        date: today,
+        mealType: meal,
+        quantity: parseFloat(quantity),
+        unit: unit,
+        calories: nutrients.calories,
+        protein: nutrients.protein,
+        carbs: nutrients.carbs,
+        fat: nutrients.fat,
+      };
+
+      const savedEntry = await addFoodEntry(entry);
+      addFoodEntryToStore(savedEntry);
+
+      Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [
+        {
+          text: "Ver Diario",
+          onPress: () => navigation.navigate("MacrosScreen"),
+        },
+        {
+          text: "Añadir Otro",
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      Alert.alert("Error", "No se pudo guardar el alimento. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSelectMeal = (value: string) => {
-    setMeal(value);
-    setIsModalVisible(false); // Cerrar el modal
+  const getUnitLabel = (value: FoodUnit): string => {
+    return units.find((u) => u.value === value)?.label || "Gramos";
   };
 
-  if (!producto) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <Text style={{ color: "red" }}>
-            No se encontró información del producto.
-          </Text>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ marginTop: 20 }}
-          >
-            <Text style={{ color: "#409CFF" }}>Volver</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+  const getMealData = (value: MealType) => {
+    return meals.find((m) => m.value === value) || meals[2];
+  };
+
+  const handleAddToCart = () => {
+    Alert.alert(
+      "Añadido al carrito 🛒",
+      `${producto.name} se agregó a tu lista de la compra.`
     );
-  }
+  };
+
+  const selectedMeal = getMealData(meal);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()} // Volver al listado de productos
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <View style={styles.headerIcons}>
-            <Icon
-              name="favorite-border"
-              size={24}
-              color="#000"
-              style={styles.icon}
-            />
-            <Icon
-              name="shopping-cart"
-              size={24}
-              color="#000"
-              style={styles.icon}
-            />
-            <Icon name="more-vert" size={24} color="#000" style={styles.icon} />
+          <Text style={styles.headerTitle}>Detalle del Producto</Text>
+          <View style={{ flexDirection: "row", gap: 16 }}>
+            <TouchableOpacity onPress={handleAddToCart}>
+              <Ionicons name="cart-outline" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
+            </TouchableOpacity>
           </View>
         </View>
-        {/* Imagen del producto */}
-        <Image
-          source={
-            producto?.image
-              ? { uri: producto.image }
-              : require("./../../../../assets/not-image.png")
-          }
-          style={styles.productImage}
-        />
-        {/* Nombre del producto */}
-        <Text style={styles.productName}>{producto.name}</Text>
-        {/* Valores nutricionales */}
-        <View style={styles.nutritionRow}>
-          <Text style={[styles.nutritionValue, { color: "#6FCF97" }]}>
-            {producto.calories}
-          </Text>
-          <Text style={[styles.nutritionValue, { color: "#FFB74D" }]}>
-            {producto.carbohydrates}
-          </Text>
-          <Text style={[styles.nutritionValue, { color: "#409CFF" }]}>
-            {producto.protein}
-          </Text>
-          <Text style={[styles.nutritionValue, { color: "#FF6F61" }]}>
-            {producto.fat}
-          </Text>
-        </View>
-        <View style={styles.nutritionLabels}>
-          <Text style={styles.nutritionLabel}>Calorías</Text>
-          <Text style={styles.nutritionLabel}>Carbohidratos (g)</Text>
-          <Text style={styles.nutritionLabel}>Proteína (g)</Text>
-          <Text style={styles.nutritionLabel}>Grasa (g)</Text>
-        </View>
-        {/* Cantidad y unidad */}
-        <View style={styles.pickerRow}>
-          <TextInput
-            style={styles.quantityInput}
-            placeholder="Añadir cantidad..."
-            value={quantity}
-            onChangeText={(text) => setQuantity(text)} // Permitir edición
-            keyboardType="numeric" // Mostrar teclado numérico
+
+        {/* Product Image */}
+        <View style={styles.imageContainer}>
+          <Image
+            source={
+              producto?.image
+                ? { uri: producto.image }
+                : require("./../../../../assets/not-image.png")
+            }
+            style={[
+              styles.productImage,
+              { width: width * 0.6, height: width * 0.6 },
+            ]}
           />
-          <TouchableOpacity
-            style={styles.unitSelector}
-            onPress={() => {
-              setModalData(units);
-              setModalType("units");
-              setIsModalVisible(true);
-            }}
-          >
-            <Text style={styles.unitText}>{unit}</Text>
-          </TouchableOpacity>
         </View>
-        {/* Comida */}
-        <View style={styles.pickerRow}>
+
+        {/* Product Name */}
+        <View style={styles.nameContainer}>
+          <Text style={styles.productName}>{producto.name}</Text>
+        </View>
+
+        {/* Nutritional Values */}
+        <View style={styles.nutritionSection}>
+          <Text style={styles.sectionTitle}>Información Nutricional</Text>
+          <View style={styles.nutritionGrid}>
+            <View
+              style={[styles.nutritionCard, { backgroundColor: "#6FCF9715" }]}
+            >
+              <Ionicons name="flame" size={28} color="#6FCF97" />
+              <Text style={[styles.nutritionValue, { color: "#6FCF97" }]}>
+                {calculateNutrients.calories}
+              </Text>
+              <Text style={styles.nutritionLabel}>Calorías</Text>
+            </View>
+            <View
+              style={[styles.nutritionCard, { backgroundColor: "#FFB74D15" }]}
+            >
+              <Ionicons name="nutrition" size={28} color="#FFB74D" />
+              <Text style={[styles.nutritionValue, { color: "#FFB74D" }]}>
+                {calculateNutrients.carbs}g
+              </Text>
+              <Text style={styles.nutritionLabel}>Carbohidratos</Text>
+            </View>
+            <View
+              style={[styles.nutritionCard, { backgroundColor: "#409CFF15" }]}
+            >
+              <Ionicons name="barbell" size={28} color="#409CFF" />
+              <Text style={[styles.nutritionValue, { color: "#409CFF" }]}>
+                {calculateNutrients.protein}g
+              </Text>
+              <Text style={styles.nutritionLabel}>Proteína</Text>
+            </View>
+            <View
+              style={[styles.nutritionCard, { backgroundColor: "#FF6B6B15" }]}
+            >
+              <Ionicons name="water" size={28} color="#FF6B6B" />
+              <Text style={[styles.nutritionValue, { color: "#FF6B6B" }]}>
+                {calculateNutrients.fat}g
+              </Text>
+              <Text style={styles.nutritionLabel}>Grasa</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quantity Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Cantidad</Text>
+          <View style={styles.quantityContainer}>
+            <View style={styles.quantityInputContainer}>
+              <TextInput
+                style={styles.quantityInput}
+                placeholder="100"
+                value={quantity}
+                onChangeText={setQuantity}
+                keyboardType="decimal-pad"
+              />
+              <TouchableOpacity
+                style={styles.unitButton}
+                onPress={() => {
+                  setModalType("units");
+                  setIsModalVisible(true);
+                }}
+              >
+                <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
+                <Ionicons name="chevron-down" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Meal Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Momento del Día</Text>
           <TouchableOpacity
             style={styles.mealSelector}
             onPress={() => {
-              setModalData(meals);
               setModalType("meals");
               setIsModalVisible(true);
             }}
           >
-            <Text style={styles.unitText}>{meal}</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Valores adicionales */}
-        <View style={styles.additionalValues}>
-          {(showMore
-            ? producto.others ?? []
-            : (producto.others ?? []).slice(0, 10)
-          ).map((item: any, index: number) => (
-            <View key={index} style={styles.additionalValueContainer}>
-              <Text style={styles.additionalValue}>
-                {item.label}: {item.value}
-              </Text>
+            <View style={styles.mealSelectorLeft}>
+              <View
+                style={[
+                  styles.mealIconContainer,
+                  { backgroundColor: `${selectedMeal.color}20` },
+                ]}
+              >
+                <Ionicons
+                  name={selectedMeal.icon as any}
+                  size={24}
+                  color={selectedMeal.color}
+                />
+              </View>
+              <Text style={styles.mealSelectorText}>{selectedMeal.label}</Text>
             </View>
-          ))}
-          <TouchableOpacity onPress={() => setShowMore(!showMore)}>
-            <Text style={styles.showMore}>
-              {showMore ? "Mostrar menos" : "Mostrar más"}
-            </Text>
+            <Ionicons name="chevron-down" size={20} color="#6B7280" />
           </TouchableOpacity>
         </View>
-        {/* Botón flotante */}
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>Añadir al diario</Text>
-        </TouchableOpacity>
-        {/* Modal para seleccionar unidad */}
-        <Modal
-          visible={isModalVisible}
-          transparent={true}
-          onRequestClose={() => setIsModalVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setIsModalVisible(false)} // Cerrar el modal al presionar fuera
-          />
-          <View style={styles.modalContainer}>
-            <FlatList
-              data={modalData} // Usar datos dinámicos
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalItem}
-                  onPress={() => {
-                    if (modalType === "units") {
-                      handleSelectUnit(item.label); // Actualizar el estado de unit
-                    } else if (modalType === "meals") {
-                      handleSelectMeal(item.label); // Actualizar el estado de meal
-                    }
-                  }}
-                >
-                  <Text style={styles.modalItemText}>
-                    {item.label}
-                    {modalType === "units" && unit === item.value ? (
-                      <Text style={styles.tick}> ✓</Text> // Mostrar tick si la unidad está seleccionada
-                    ) : modalType === "meals" && meal === item.value ? (
-                      <Text style={styles.tick}> ✓</Text> // Mostrar tick si la comida está seleccionada
-                    ) : null}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
+
+        {/* Additional Nutrients */}
+        {producto.others && producto.others.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.showMoreButton}
+              onPress={() => setShowMore(!showMore)}
+            >
+              <Text style={styles.showMoreText}>
+                {showMore ? "Ocultar" : "Ver"} información adicional
+              </Text>
+              <Ionicons
+                name={showMore ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="#6C3BAA"
+              />
+            </TouchableOpacity>
+            {showMore && (
+              <View style={styles.additionalNutrients}>
+                {producto.others
+                  .slice(0, 10)
+                  .map((item: any, index: number) => (
+                    <View key={index} style={styles.nutrientRow}>
+                      <Text style={styles.nutrientLabel}>{item.label}</Text>
+                      <Text style={styles.nutrientValue}>{item.value}</Text>
+                    </View>
+                  ))}
+              </View>
+            )}
           </View>
-        </Modal>
+        )}
       </ScrollView>
+
+      {/* Add Button */}
+      {!fromDiary && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.addButton, saving && styles.addButtonDisabled]}
+            onPress={handleAddToDiary}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="add-circle-outline" size={24} color="#fff" />
+                <Text style={styles.addButtonText}>Añadir al Diario</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Units Modal */}
+      <Modal
+        isVisible={isModalVisible && modalType === "units"}
+        onBackdropPress={() => setIsModalVisible(false)}
+        style={styles.modal}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Seleccionar Unidad</Text>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          {units.map((unitOption) => (
+            <TouchableOpacity
+              key={unitOption.value}
+              style={styles.modalOption}
+              onPress={() => {
+                setUnit(unitOption.value);
+                setIsModalVisible(false);
+              }}
+            >
+              <View style={styles.modalOptionLeft}>
+                <Ionicons
+                  name={unitOption.icon as any}
+                  size={24}
+                  color="#6C3BAA"
+                />
+                <Text style={styles.modalOptionText}>{unitOption.label}</Text>
+              </View>
+              {unit === unitOption.value && (
+                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Modal>
+
+      {/* Meals Modal */}
+      <Modal
+        isVisible={isModalVisible && modalType === "meals"}
+        onBackdropPress={() => setIsModalVisible(false)}
+        style={styles.modal}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Seleccionar Momento</Text>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          {meals.map((mealOption) => (
+            <TouchableOpacity
+              key={mealOption.value}
+              style={styles.modalOption}
+              onPress={() => {
+                setMeal(mealOption.value);
+                setIsModalVisible(false);
+              }}
+            >
+              <View style={styles.modalOptionLeft}>
+                <View
+                  style={[
+                    styles.mealIconContainer,
+                    { backgroundColor: `${mealOption.color}20` },
+                  ]}
+                >
+                  <Ionicons
+                    name={mealOption.icon as any}
+                    size={24}
+                    color={mealOption.color}
+                  />
+                </View>
+                <Text style={styles.modalOptionText}>{mealOption.label}</Text>
+              </View>
+              {meal === mealOption.value && (
+                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -237,157 +433,252 @@ export default function ProductDetailScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F8FAFC",
   },
-  container: {
-    //flex: 1,
-    padding: 16,
-    backgroundColor: "#fff",
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    width: "100%",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
-  backButton: {
-    marginRight: 10,
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerIcons: {
-    flexDirection: "row",
+  headerTitle: {
+    fontSize: RFValue(16),
+    fontWeight: "700",
+    color: "#1A1A1A",
   },
-  icon: {
-    marginLeft: 10,
+  imageContainer: {
+    backgroundColor: "#fff",
+    paddingVertical: 30,
+    alignItems: "center",
   },
   productImage: {
-    width: 150,
-    height: 150,
+    width: width * 0.5,
+    height: width * 0.5,
     resizeMode: "contain",
-    marginBottom: 20,
-    alignSelf: "center",
+  },
+  nameContainer: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   productName: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: RFValue(18),
+    fontWeight: "700",
+    color: "#1A1A1A",
     textAlign: "center",
-    marginBottom: 20,
   },
-  nutritionRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    marginBottom: 10,
+  nutritionSection: {
+    backgroundColor: "#fff",
+    padding: 20,
+    marginTop: 12,
   },
-  nutritionLabels: {
+  sectionTitle: {
+    fontSize: RFValue(16),
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 16,
+  },
+  nutritionGrid: {
     flexDirection: "row",
-    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  nutritionCard: {
+    width: (width - 56) / 2,
+    borderRadius: 16,
+    padding: 16,
     alignItems: "center",
-    width: "100%",
-    marginBottom: 20,
   },
   nutritionValue: {
-    width: 100, // <-- ancho fijo
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontSize: RFValue(24),
+    fontWeight: "700",
+    marginTop: 8,
   },
   nutritionLabel: {
-    width: 100, // <-- ancho fijo
-    fontSize: 12,
-    color: "#808080",
-    textAlign: "center",
+    fontSize: RFValue(12),
+    color: "#6B7280",
+    marginTop: 4,
+    fontWeight: "500",
   },
-  pickerRow: {
+  section: {
+    backgroundColor: "#fff",
+    padding: 20,
+    marginTop: 12,
+  },
+  quantityContainer: {
+    gap: 12,
+  },
+  quantityInputContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
+    gap: 12,
   },
   quantityInput: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginRight: 10, // <- separación visual
-  },
-  unitSelector: {
-    flex: 2,
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 10,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    height: 56,
+    fontSize: RFValue(18),
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  unitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+    minWidth: 120,
+  },
+  unitButtonText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    color: "#1A1A1A",
   },
   mealSelector: {
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 16,
+  },
+  mealSelectorLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  mealIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
   },
-  unitText: {
-    fontSize: 16,
-    color: "#333",
+  mealSelectorText: {
+    fontSize: RFValue(15),
+    fontWeight: "600",
+    color: "#1A1A1A",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  showMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 8,
   },
-  modalContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
+  showMoreText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    color: "#6C3BAA",
   },
-  modalItem: {
+  additionalNutrients: {
+    marginTop: 16,
+    gap: 12,
+  },
+  nutrientRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: "#F3F4F6",
   },
-  modalItemText: {
-    fontSize: 16,
-    color: "#333",
+  nutrientLabel: {
+    fontSize: RFValue(14),
+    color: "#6B7280",
   },
-  tick: {
-    color: "#6FCF97",
-    fontWeight: "bold",
+  nutrientValue: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   addButton: {
-    backgroundColor: "#6FCF97",
-    borderRadius: 8,
-    paddingVertical: 12,
+    flexDirection: "row",
+    backgroundColor: "#6C3BAA",
+    borderRadius: 14,
+    height: 56,
+    justifyContent: "center",
     alignItems: "center",
-    width: "100%",
+    gap: 12,
+    elevation: 4,
+    shadowColor: "#6C3BAA",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  addButtonDisabled: {
+    backgroundColor: "#9CA3AF",
   },
   addButtonText: {
-    fontSize: 16,
+    fontSize: RFValue(16),
+    fontWeight: "700",
     color: "#fff",
-    fontWeight: "bold",
   },
-  additionalValues: {
-    width: "100%",
-    marginBottom: 20,
+  modal: {
+    justifyContent: "flex-end",
+    margin: 0,
   },
-  additionalValueContainer: {
-    flex: 1,
-    alignItems: "stretch",
-    marginBottom: 10, // Espaciado entre filas
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 30,
   },
-  additionalValue: {
-    fontSize: 14,
-    color: "#808080",
-    textAlign: "left",
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
-  showMore: {
-    fontSize: 14,
-    color: "#409CFF",
-    marginTop: 10,
-    textAlign: "center",
+  modalTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  modalOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  modalOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  modalOptionText: {
+    fontSize: RFValue(15),
+    fontWeight: "600",
+    color: "#1A1A1A",
   },
 });
