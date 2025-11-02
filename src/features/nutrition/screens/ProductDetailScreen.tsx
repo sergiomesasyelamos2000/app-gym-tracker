@@ -47,10 +47,25 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [modalType, setModalType] = useState<"units" | "meals" | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const units: Array<{ label: string; value: FoodUnit; icon: string }> = [
-    { label: "Gramos", value: "gram", icon: "scale-outline" },
-    { label: "Mililitros", value: "ml", icon: "water-outline" },
-    { label: "Porción", value: "portion", icon: "restaurant-outline" },
+  const units: Array<{
+    label: string;
+    value: FoodUnit;
+    icon: string;
+    color: string;
+  }> = [
+    { label: "Gramos", value: "gram", icon: "scale-outline", color: "#10B981" },
+    {
+      label: "Mililitros",
+      value: "ml",
+      icon: "water-outline",
+      color: "#3B82F6",
+    },
+    {
+      label: "Porción",
+      value: "portion",
+      icon: "restaurant-outline",
+      color: "#F59E0B",
+    },
   ];
 
   const meals: Array<{
@@ -340,7 +355,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Units Modal */}
+      {/* Units Modal - CON COLORES DISTINTIVOS */}
       <Modal
         isVisible={isModalVisible && modalType === "units"}
         onBackdropPress={() => setIsModalVisible(false)}
@@ -365,15 +380,26 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               }}
             >
               <View style={styles.modalOptionLeft}>
-                <Ionicons
-                  name={unitOption.icon as any}
-                  size={24}
-                  color="#6C3BAA"
-                />
+                <View
+                  style={[
+                    styles.unitIconContainer,
+                    { backgroundColor: `${unitOption.color}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name={unitOption.icon as any}
+                    size={24}
+                    color={unitOption.color}
+                  />
+                </View>
                 <Text style={styles.modalOptionText}>{unitOption.label}</Text>
               </View>
               {unit === unitOption.value && (
-                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={unitOption.color}
+                />
               )}
             </TouchableOpacity>
           ))}
@@ -590,23 +616,28 @@ const styles = StyleSheet.create({
   },
   additionalNutrients: {
     marginTop: 16,
-    gap: 12,
   },
   nutrientRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
   },
   nutrientLabel: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(13),
     color: "#6B7280",
+    fontWeight: "500",
+    flex: 1,
+    paddingRight: 12,
   },
   nutrientValue: {
     fontSize: RFValue(14),
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1A1A1A",
+    textAlign: "right",
   },
   footer: {
     position: "absolute",
@@ -675,6 +706,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  unitIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalOptionText: {
     fontSize: RFValue(15),
