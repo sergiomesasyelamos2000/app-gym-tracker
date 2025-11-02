@@ -26,11 +26,24 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.smy862.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "googleWebClientId": "205710874533-vto5on3d8jk7n6t80c8tedtmnrnaki0a.apps.googleusercontent.com",
+      "googleIosClientId": "205710874533-lu2427qt9vgscomg8776juu42a0vibkk.apps.googleusercontent.com",
+      "googleAndroidClientId": "205710874533-ipdn44llqmvr5nk85u2c4ip7ldhr6foq.apps.googleusercontent.com",
+      "apiUrl": "https://9ff5246b145d.ngrok-free.app/api",
+      "eas": {
+        "projectId": "59890898-088b-402b-bc22-b15ec51d1c17"
+      }
     },
     "plugins": [
       [
@@ -39,6 +52,19 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
           "recordAudioAndroid": true
+        }
+      ],
+      "expo-web-browser",
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "pickFirst": ["**/libworklets.so", "**/libreanimated.so"],
+              "exclude": ["**/libfbjni.so"]
+            }
+          }
         }
       ]
     ]
