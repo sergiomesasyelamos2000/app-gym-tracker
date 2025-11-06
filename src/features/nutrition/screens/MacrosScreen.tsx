@@ -1,35 +1,38 @@
-import React, { useEffect, useState, useRef } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  ScrollView,
-  Text,
-  View,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
   ActivityIndicator,
+  Alert,
   Animated,
   LayoutAnimation,
-  Platform,
-  UIManager,
   Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import CircularProgress from "react-native-circular-progress-indicator";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Ionicons } from "@expo/vector-icons";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { Calendar } from "react-native-calendars";
-import {
-  getDailyEntries,
-  deleteFoodEntry,
-  getProductDetail,
-  scanBarcode,
-} from "../services/nutritionService";
+import CalendarStrip from "react-native-calendar-strip";
+import * as nutritionService from "../services/nutritionService";
+import { useCallback } from "react";
 import { FoodEntry, MealType } from "../../../models/nutrition.model";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
+import {
+  deleteFoodEntry,
+  getDailyEntries,
+  getProductDetail,
+  scanBarcode,
+} from "../services/nutritionService";
+import { setLoading } from "../../../store/chatSlice";
 
 // Habilitar LayoutAnimation en Android
 if (
@@ -119,7 +122,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // Effects
   useEffect(() => {
     if (!isProfileComplete()) {
-      navigation.replace("UserProfileSetupScreen", { userId: "temp-user-id" });
+      navigation.replace("UserProfileSetupScreen");
     }
   }, [isProfileComplete]);
 
@@ -230,6 +233,17 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       };
     }, [navigation, setTabVisibility])
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      // Reload today's entries when screen comes into focus
+      loadTodayEntries();
+    }, [selectedDate])
+  );
+
+  useEffect(() => {
+    loadEntriesForDate(selectedDate);
+  }, [selectedDate]);
 
   // Functions
   const loadTodayEntries = async () => {
@@ -365,6 +379,23 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     } catch (error) {
       console.error("Error escaneando código:", error);
       Alert.alert("Error", "No se pudo escanear el código de barras");
+    }
+  };
+
+  const loadEntriesForDate = async (date: string) => {
+    if (!userProfile) return;
+
+    try {
+      setLoading(true);
+      const data = await nutritionService.getDailyEntries(
+        userProfile.userId,
+        date
+      );
+      setTodayEntries(data.entries);
+    } catch (error) {
+      console.error("Error loading entries:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -634,18 +665,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 <Ionicons name="calendar-outline" size={24} color="#6C3BAA" />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => setShowShoppingList(true)}
+                onPress={() => navigation.navigate("ShoppingListScreen")}
                 style={styles.iconButton}
               >
                 <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("UserProfileSetupScreen", {
-                    userId: userProfile.userId,
-                  })
-                }
+                onPress={() => navigation.navigate("SettingsScreen")}
                 style={styles.iconButton}
               >
                 <Ionicons name="settings-outline" size={24} color="#6C3BAA" />
@@ -780,16 +807,20 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 <Ionicons name="close" size={24} color="#1A1A1A" />
               </TouchableOpacity>
             </View>
-            <Calendar
-              onDayPress={handleDateSelect}
-              markedDates={{
-                [selectedDate]: { selected: true, selectedColor: "#6C3BAA" },
+            <CalendarStrip
+              selectedDate={new Date(selectedDate)}
+              onDateSelected={(date) => {
+                setSelectedDate(date.format("YYYY-MM-DD"));
+                setShowCalendar(false);
+                loadEntriesForDate(date.format("YYYY-MM-DD"));
               }}
-              theme={{
-                selectedDayBackgroundColor: "#6C3BAA",
-                todayTextColor: "#6C3BAA",
-                arrowColor: "#6C3BAA",
-              }}
+              calendarHeaderStyle={{ color: "#1A1A1A" }}
+              dateNumberStyle={{ color: "#1A1A1A" }}
+              dateNameStyle={{ color: "#6B7280" }}
+              highlightDateNumberStyle={{ color: "#6C3BAA" }}
+              highlightDateNameStyle={{ color: "#6C3BAA" }}
+              scrollable
+              style={{ height: 100, paddingTop: 20, paddingBottom: 10 }}
             />
           </View>
         </View>
@@ -933,7 +964,6 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", gap: 8 },
   iconButton: { padding: 8 },
-
   caloriesCard: {
     alignItems: "center",
     marginBottom: 16,
@@ -1238,27 +1268,4 @@ const styles = StyleSheet.create({
   shoppingItemName: { fontSize: 15, fontWeight: "600", color: "#1A1A1A" },
   emptyShoppingList: { alignItems: "center", paddingVertical: 60 },
   emptyShoppingText: { fontSize: 16, color: "#9CA3AF", marginTop: 12 },
-  scannerModal: { flex: 1, backgroundColor: "#000" },
-  scannerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "rgba(0,0,0,0.8)",
-  },
-  scannerTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
-  scannerView: { flex: 1, justifyContent: "center", alignItems: "center" },
-  scannerFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 3,
-    borderColor: "#6C3BAA",
-    borderRadius: 20,
-  },
-  scannerText: {
-    color: "#fff",
-    fontSize: 16,
-    marginTop: 30,
-    textAlign: "center",
-  },
 });

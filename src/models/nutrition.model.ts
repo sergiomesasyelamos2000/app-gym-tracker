@@ -76,7 +76,7 @@ export type FoodUnit = "gram" | "ml" | "portion" | "custom";
 
 export interface FoodEntry {
   id?: string;
-  userId: string;
+  userId?: string;
   productCode: string;
   productName: string;
   productImage: string | null;
@@ -105,4 +105,83 @@ export interface DailyNutritionSummary {
     fat: number;
   };
   goals: MacroGoals;
+}
+
+// Shopping List
+export interface ShoppingListItem {
+  id: string;
+  userId: string;
+  productCode: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  unit: FoodUnit;
+  customUnitName?: string;
+  customUnitGrams?: number;
+  purchased: boolean;
+  createdAt: Date;
+}
+
+// Favorite Products
+export interface FavoriteProduct {
+  id: string;
+  userId?: string;
+  productCode: string;
+  productName: string;
+  productImage?: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  createdAt: Date;
+}
+
+// Custom Products
+export interface CustomProduct {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  image?: string;
+  brand?: string;
+  caloriesPer100: number;
+  proteinPer100: number;
+  carbsPer100: number;
+  fatPer100: number;
+  fiberPer100?: number;
+  sugarPer100?: number;
+  sodiumPer100?: number;
+  servingSize?: number;
+  servingUnit?: string;
+  barcode?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Custom Meals
+export interface MealProduct {
+  productCode: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isCustom?: boolean;
+}
+
+export interface CustomMeal {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  image?: string;
+  products: MealProduct[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
