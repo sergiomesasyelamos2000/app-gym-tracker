@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,6 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNutritionStore } from "../../../store/useNutritionStore"; // Importar el store
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
@@ -32,38 +31,63 @@ interface NutritionalValues {
   sodium: string;
 }
 
-export default function CreateProductScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
-  const userProfile = useNutritionStore((state) => state.userProfile); // Obtener el perfil real
+type EditProductScreenNavigationProp = NativeStackNavigationProp<
+  NutritionStackParamList,
+  "EditProductScreen"
+>;
+type EditProductScreenRouteProp = RouteProp<
+  NutritionStackParamList,
+  "EditProductScreen"
+>;
+
+export default function EditProductScreen() {
+  const navigation = useNavigation<EditProductScreenNavigationProp>();
+  const route = useRoute<EditProductScreenRouteProp>();
+  const product = route.params.product;
 
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [brand, setBrand] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [barcode, setBarcode] = useState("");
-  const [servingSize, setServingSize] = useState("");
-  const [servingUnit, setServingUnit] = useState("g");
+  const [deleting, setDeleting] = useState(false);
+  const [name, setName] = useState(product?.name || "");
+  const [description, setDescription] = useState(product?.description || "");
+  const [brand, setBrand] = useState(product?.brand || "");
+  const [imageUri, setImageUri] = useState<string | null>(
+    product?.image || null
+  );
+  const [barcode, setBarcode] = useState(product?.barcode || "");
+  const [servingSize, setServingSize] = useState(
+    product?.servingSize ? String(product.servingSize) : ""
+  );
+  const [servingUnit, setServingUnit] = useState(product?.servingUnit || "g");
 
   const [nutritionalValues, setNutritionalValues] = useState<NutritionalValues>(
     {
-      calories: "",
-      protein: "",
-      carbs: "",
-      fat: "",
-      fiber: "",
-      sugar: "",
-      sodium: "",
+      calories: product?.caloriesPer100 ? String(product.caloriesPer100) : "",
+      protein: product?.proteinPer100 ? String(product.proteinPer100) : "",
+      carbs: product?.carbsPer100 ? String(product.carbsPer100) : "",
+      fat: product?.fatPer100 ? String(product.fatPer100) : "",
+      fiber: product?.fiberPer100 ? String(product.fiberPer100) : "",
+      sugar: product?.sugarPer100 ? String(product.sugarPer100) : "",
+      sodium: product?.sodiumPer100 ? String(product.sodiumPer100) : "",
     }
   );
+
+  useEffect(() => {
+    if (!product) {
+      Alert.alert("Error", "No se encontró el producto", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, []);
 
   const handlePickImage = async () => {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      Alert.alert("Permission Required", "Please allow access to your photos");
+      Alert.alert(
+        "Permiso Requerido",
+        "Por favor permite el acceso a tus fotos"
+      );
       return;
     }
 
@@ -87,7 +111,6 @@ export default function CreateProductScreen() {
     key: keyof NutritionalValues,
     value: string
   ) => {
-    // Allow only numbers and decimal point
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
   };
@@ -130,17 +153,10 @@ export default function CreateProductScreen() {
   const handleSave = async () => {
     if (!validateForm()) return;
 
-    if (!userProfile) {
-      Alert.alert("Error", "No se encontró el perfil de usuario");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // CORREGIDO: Usar los nombres de campos correctos que espera el backend
-      const productData = {
-        userId: userProfile.userId, // Usar el userId real del store
+      const updateData = {
         name: name.trim(),
         description: description.trim() || undefined,
         brand: brand.trim() || undefined,
@@ -163,25 +179,72 @@ export default function CreateProductScreen() {
           : undefined,
       };
 
-      console.log("Enviando producto:", productData);
+      console.log("Actualizando producto:", product.id, updateData);
 
-      await nutritionService.createCustomProduct(productData);
+      await nutritionService.updateCustomProduct(product.id, updateData);
 
-      Alert.alert("¡Éxito!", "Producto personalizado creado exitosamente", [
+      Alert.alert("¡Éxito!", "Producto actualizado correctamente", [
         {
           text: "OK",
           onPress: () => {
-            // Navegar de vuelta a ProductListScreen con parámetro de refresh
-            navigation.navigate("ProductListScreen", { refresh: true });
+            navigation.navigate("ProductListScreen", {
+              refresh: true,
+              screen: "Products", // Navegar directamente al tab de productos personalizados
+            });
           },
         },
       ]);
     } catch (error) {
-      console.error("Error creating product:", error);
-      Alert.alert("Error", "No se pudo crear el producto. Intenta de nuevo.");
+      console.error("Error updating product:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar el producto. Intenta de nuevo."
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar Producto",
+      "¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await nutritionService.deleteCustomProduct(product.id);
+              Alert.alert("¡Eliminado!", "Producto eliminado correctamente", [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    navigation.navigate("ProductListScreen", {
+                      refresh: true,
+                      screen: "Products",
+                    });
+                  },
+                },
+              ]);
+            } catch (error) {
+              console.error("Error deleting product:", error);
+              Alert.alert(
+                "Error",
+                "No se pudo eliminar el producto. Intenta de nuevo."
+              );
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -197,8 +260,22 @@ export default function CreateProductScreen() {
           >
             <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Crear Producto</Text>
-          <View style={styles.headerRight} />
+          <Text style={styles.headerTitle}>Editar Producto</Text>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#E74C3C" />
+            ) : (
+              <Ionicons
+                name="trash-outline"
+                size={RFValue(24)}
+                color="#E74C3C"
+              />
+            )}
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -225,6 +302,12 @@ export default function CreateProductScreen() {
                       size={RFValue(24)}
                       color="#E74C3C"
                     />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.changeImageButton}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="camera" size={RFValue(18)} color="#FFF" />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -434,7 +517,7 @@ export default function CreateProductScreen() {
             ) : (
               <>
                 <Ionicons name="checkmark" size={RFValue(20)} color="#FFF" />
-                <Text style={styles.saveButtonText}>Crear Producto</Text>
+                <Text style={styles.saveButtonText}>Guardar Cambios</Text>
               </>
             )}
           </TouchableOpacity>
@@ -467,8 +550,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  headerRight: {
+  deleteButton: {
+    padding: 8,
     width: 40,
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -517,6 +602,17 @@ const styles = StyleSheet.create({
     right: -8,
     backgroundColor: "#FFF",
     borderRadius: 12,
+  },
+  changeImageButton: {
+    position: "absolute",
+    bottom: -8,
+    right: -8,
+    backgroundColor: "#6C3BAA",
+    borderRadius: 12,
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
   },
   inputGroup: {
     marginBottom: 16,

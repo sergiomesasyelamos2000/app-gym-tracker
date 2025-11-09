@@ -25,53 +25,39 @@ import {
   MealProduct,
   Product,
 } from "../../../models";
-import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
-type CreateMealScreenRouteProp = RouteProp<
+type EditMealScreenNavigationProp = NativeStackNavigationProp<
   NutritionStackParamList,
-  "CreateMealScreen"
+  "EditMealScreen"
+>;
+type EditMealScreenRouteProp = RouteProp<
+  NutritionStackParamList,
+  "EditMealScreen"
 >;
 
-export default function CreateMealScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
-  const route = useRoute<CreateMealScreenRouteProp>();
-
-  const userProfile = useNutritionStore((state) => state.userProfile);
+export default function EditMealScreen() {
+  const navigation = useNavigation<EditMealScreenNavigationProp>();
+  const route = useRoute<EditMealScreenRouteProp>();
+  const meal = route.params.meal as CustomMeal;
 
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [products, setProducts] = useState<MealProduct[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [name, setName] = useState(meal?.name || "");
+  const [description, setDescription] = useState(meal?.description || "");
+  const [imageUri, setImageUri] = useState<string | null>(meal?.image || null);
+  const [products, setProducts] = useState<MealProduct[]>(meal?.products || []);
 
-  // Escuchar cuando se selecciona un producto desde ProductDetailScreen
   useEffect(() => {
-    if (route.params?.selectedProduct) {
-      const product = route.params.selectedProduct;
-
-      const existingProductIndex = products.findIndex(
-        (p) => p.productCode === product.productCode
-      );
-
-      if (existingProductIndex !== -1) {
-        setProducts((prev) =>
-          prev.map((p, index) =>
-            index === existingProductIndex
-              ? { ...p, quantity: p.quantity + product.quantity }
-              : p
-          )
-        );
-      } else {
-        setProducts((prev) => [...prev, product]);
-      }
-
-      navigation.setParams({ selectedProduct: undefined });
+    if (!meal) {
+      Alert.alert("Error", "No se encontró la comida", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
     }
-  }, [route.params?.selectedProduct]);
+  }, [meal]);
 
+  // Escuchar productos seleccionados desde ProductSelectionScreen
   useEffect(() => {
     if (route.params?.selectedProducts) {
       const selectedProducts = route.params.selectedProducts as (
@@ -81,6 +67,7 @@ export default function CreateMealScreen() {
       )[];
 
       const newMealProducts: MealProduct[] = selectedProducts.map((product) => {
+        // Si es una comida personalizada (CustomMeal)
         if ("totalCalories" in product) {
           return {
             id: product.id,
@@ -95,6 +82,7 @@ export default function CreateMealScreen() {
             fat: product.totalFat,
           };
         } else {
+          // Es un Product o CustomProduct
           const isCustom = "caloriesPer100" in product;
           const baseCalories = isCustom
             ? product.caloriesPer100
@@ -123,6 +111,7 @@ export default function CreateMealScreen() {
         }
       });
 
+      // Combinar con productos existentes, evitando duplicados
       setProducts((prev) => {
         const updated = [...prev];
         newMealProducts.forEach((newProduct) => {
@@ -136,6 +125,7 @@ export default function CreateMealScreen() {
         return updated;
       });
 
+      // Limpiar el parámetro
       navigation.setParams({ selectedProducts: undefined });
     }
   }, [route.params?.selectedProducts]);
@@ -180,9 +170,10 @@ export default function CreateMealScreen() {
   };
 
   const handleAddProducts = () => {
-    // Navegar a ProductSelectionScreen indicando que viene de CreateMealScreen
+    // Navegar a ProductSelectionScreen indicando que viene de EditMealScreen
     navigation.navigate("ProductSelectionScreen", {
-      from: "CreateMealScreen",
+      from: "EditMealScreen",
+      meal: meal, // Pasar la comida actual
     });
   };
 
@@ -270,30 +261,31 @@ export default function CreateMealScreen() {
   const handleSave = async () => {
     if (!validateForm()) return;
 
-    if (!userProfile?.userId) {
-      Alert.alert("Error", "No se pudo obtener el perfil de usuario");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const productsWithIds = products.map((product, index) => ({
-        ...product,
-        id: product.id || `temp-${Date.now()}-${index}`,
-      }));
-
-      const mealData = {
-        userId: userProfile.userId,
+      const updateData = {
         name: name.trim(),
-        description: description.trim(),
+        description: description.trim() || undefined,
         image: imageUri || undefined,
-        products: productsWithIds,
+        products: products.map((p) => ({
+          id: p.id || `temp-${Date.now()}-${Math.random()}`,
+          isCustom: p.isCustom,
+          productCode: p.productCode,
+          productName: p.productName,
+          productImage: p.productImage,
+          quantity: p.quantity,
+          unit: p.unit,
+          calories: p.calories,
+          protein: p.protein,
+          carbs: p.carbs,
+          fat: p.fat,
+        })),
       };
 
-      await nutritionService.createCustomMeal(mealData);
+      await nutritionService.updateCustomMeal(meal.id, updateData);
 
-      Alert.alert("¡Éxito!", "Comida personalizada creada exitosamente", [
+      Alert.alert("¡Éxito!", "Comida actualizada correctamente", [
         {
           text: "OK",
           onPress: () => {
@@ -305,11 +297,56 @@ export default function CreateMealScreen() {
         },
       ]);
     } catch (error) {
-      console.error("Error creating meal:", error);
-      Alert.alert("Error", "No se pudo crear la comida. Intenta de nuevo.");
+      console.error("Error updating meal:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar la comida. Intenta de nuevo."
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar Comida",
+      "¿Estás seguro de que deseas eliminar esta comida? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await nutritionService.deleteCustomMeal(meal.id);
+              Alert.alert("¡Eliminado!", "Comida eliminada correctamente", [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    navigation.navigate("ProductListScreen", {
+                      refresh: true,
+                      screen: "Meals",
+                    });
+                  },
+                },
+              ]);
+            } catch (error) {
+              console.error("Error deleting meal:", error);
+              Alert.alert(
+                "Error",
+                "No se pudo eliminar la comida. Intenta de nuevo."
+              );
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const totalMacros = calculateTotalMacros();
@@ -411,12 +448,27 @@ export default function CreateMealScreen() {
             <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Crear Comida</Text>
+            <Text style={styles.headerTitle}>Editar Comida</Text>
             <Text style={styles.headerSubtitle}>
-              {products.length} producto{products.length !== 1 ? "s" : ""}
+              {products.length} productos
             </Text>
           </View>
-          <View style={styles.headerButton} />
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleDelete}
+            disabled={deleting}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#E74C3C" />
+            ) : (
+              <Ionicons
+                name="trash-outline"
+                size={RFValue(24)}
+                color="#E74C3C"
+              />
+            )}
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -619,7 +671,7 @@ export default function CreateMealScreen() {
           <View style={styles.bottomPadding} />
         </ScrollView>
 
-        {/* Footer con botón de crear */}
+        {/* Footer con botón de guardar */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
@@ -631,8 +683,12 @@ export default function CreateMealScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <>
-                <Ionicons name="add-circle" size={RFValue(22)} color="#FFF" />
-                <Text style={styles.saveButtonText}>Crear Comida</Text>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={RFValue(22)}
+                  color="#FFF"
+                />
+                <Text style={styles.saveButtonText}>Guardar Cambios</Text>
               </>
             )}
           </TouchableOpacity>

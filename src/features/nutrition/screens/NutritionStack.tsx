@@ -1,24 +1,59 @@
-import React from "react";
-import ProductListScreen from "./ProductListScreen";
-import MacrosScreen from "./MacrosScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import ProductDetailScreen from "./ProductDetailScreen";
-import UserProfileSetupScreen from "./UserProfileSetupScreen";
-import { Product } from "../../../models/nutrition.model";
-import ShoppingListScreen from "./ShoppingListScreen";
-import SettingsScreen from "./SettingsScreen";
-import CreateProductScreen from "./CreateProductScreen";
+import React from "react";
+import {
+  CustomMeal,
+  CustomProduct,
+  MealProduct,
+  Product,
+} from "../../../models/nutrition.model";
 import CreateMealScreen from "./CreateMealScreen";
+import CreateProductScreen from "./CreateProductScreen";
+import EditMealScreen from "./EditMealScreen";
+import EditProductScreen from "./EditProductScreen";
+import MacrosScreen from "./MacrosScreen";
+import ProductDetailScreen from "./ProductDetailScreen";
+import ProductListScreen from "./ProductListScreen";
+import ProductSelectionScreen from "./ProductSelectionScreen";
+import SettingsScreen from "./SettingsScreen";
+import ShoppingListScreen from "./ShoppingListScreen";
+import UserProfileSetupScreen from "./UserProfileSetupScreen";
 
 export type NutritionStackParamList = {
   MacrosScreen: undefined;
-  ProductListScreen: undefined;
-  ProductDetailScreen: { producto: Product };
+  ProductListScreen:
+    | {
+        refresh?: boolean;
+        screen?: string;
+        selectionMode?: boolean;
+        returnTo?: string;
+      }
+    | undefined;
+  ProductDetailScreen: {
+    producto: Product;
+    selectionMode?: boolean;
+    returnTo?: string;
+    quickAdd?: boolean;
+  };
   UserProfileSetupScreen: { userId: string };
   ShoppingListScreen: undefined;
   SettingsScreen: undefined;
   CreateProductScreen: undefined;
-  CreateMealScreen: undefined;
+  CreateMealScreen: {
+    selectedProduct?: MealProduct;
+    selectedProducts?: (Product | CustomProduct | CustomMeal)[];
+  };
+  EditProductScreen: { product: CustomProduct };
+  EditMealScreen: {
+    meal: CustomMeal;
+    selectedProduct?: MealProduct;
+    selectedProducts?: (Product | CustomProduct | CustomMeal)[];
+  };
+  ProductSelectionScreen:
+    | {
+        from?: string;
+        meal?: CustomMeal;
+      }
+    | undefined;
 };
 
 const Stack = createNativeStackNavigator<NutritionStackParamList>();
@@ -62,9 +97,28 @@ export default function NutritionStack() {
         component={CreateProductScreen}
         options={{ headerShown: false }}
       />
+
+      <Stack.Screen
+        name="EditProductScreen"
+        component={EditProductScreen}
+        options={{ headerShown: false }}
+      />
+
       <Stack.Screen
         name="CreateMealScreen"
         component={CreateMealScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="EditMealScreen"
+        component={EditMealScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="ProductSelectionScreen"
+        component={ProductSelectionScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

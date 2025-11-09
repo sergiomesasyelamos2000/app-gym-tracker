@@ -90,6 +90,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(
     {
       breakfast: true,
@@ -128,7 +129,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   // Efecto para animar los CircularProgress cuando cambian los totales
   useEffect(() => {
-    // Listeners para actualizar los valores mostrados
     const carbsListener = animatedCarbs.addListener(({ value }) => {
       setDisplayCarbs(value);
     });
@@ -146,7 +146,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     };
   }, []);
 
-  // Efecto para animar cuando cambian los valores reales
   useEffect(() => {
     if (!userProfile) return;
 
@@ -164,7 +163,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       { carbs: 0, protein: 0, fat: 0 }
     );
 
-    // Animar los cambios
     Animated.parallel([
       Animated.timing(animatedCarbs, {
         toValue: totals.carbs,
@@ -184,7 +182,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     ]).start();
   }, [todayEntries, notEatenEntries, userProfile]);
 
-  // Efecto para controlar la visibilidad de la tab y animaciones
   useEffect(() => {
     setTabVisibility("Macros", !isSelectionMode);
 
@@ -236,7 +233,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   useFocusEffect(
     useCallback(() => {
-      // Reload today's entries when screen comes into focus
       loadTodayEntries();
     }, [selectedDate])
   );
@@ -321,6 +317,65 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     );
   };
 
+  const handleDuplicateSelected = async () => {
+    if (!userProfile) return;
+
+    Alert.alert(
+      "Duplicar alimentos",
+      `¿Deseas duplicar ${selectedEntries.size} alimento(s)?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Duplicar",
+          onPress: async () => {
+            try {
+              setDuplicating(true);
+
+              // Obtener las entradas seleccionadas
+              const entriesToDuplicate = todayEntries.filter((entry) =>
+                selectedEntries.has(entry.id || "")
+              );
+
+              // Duplicar cada entrada
+              for (const entry of entriesToDuplicate) {
+                const newEntry = {
+                  userId: userProfile.userId,
+                  date: selectedDate, // Usar la fecha seleccionada
+                  mealType: entry.mealType,
+                  productCode: entry.productCode,
+                  productName: entry.productName,
+                  productImage: entry.productImage,
+                  quantity: entry.quantity,
+                  unit: entry.unit,
+                  calories: entry.calories,
+                  protein: entry.protein,
+                  carbs: entry.carbs,
+                  fat: entry.fat,
+                };
+
+                await nutritionService.addFoodEntry(newEntry);
+              }
+
+              // Recargar las entradas
+              await loadEntriesForDate(selectedDate);
+              clearSelection();
+
+              Alert.alert(
+                "¡Éxito!",
+                `${entriesToDuplicate.length} alimento(s) duplicado(s) correctamente`
+              );
+            } catch (error) {
+              console.error("Error duplicating entries:", error);
+              Alert.alert("Error", "No se pudieron duplicar los alimentos");
+            } finally {
+              setDuplicating(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleNavigateToDetail = async (entry: FoodEntry) => {
     if (isSelectionMode) return;
 
@@ -349,6 +404,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       ...prev,
       [meal]: !prev[meal],
     }));
+  };
+
+  const handleAddToMeal = (mealType: MealType) => {
+    // Navegar a ProductListScreen pasando el tipo de comida
+    navigation.navigate("ProductListScreen", {
+      selectedMeal: mealType,
+      returnTo: "MacrosScreen",
+    });
   };
 
   const handleDateSelect = (day: any) => {
@@ -584,12 +647,16 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             {entries.length > 0 ? (
               entries.map(renderFoodEntry)
             ) : (
-              <View style={styles.emptyMealContainer}>
-                <Ionicons name="add-circle-outline" size={32} color="#D1D5DB" />
+              <TouchableOpacity
+                style={styles.emptyMealContainer}
+                onPress={() => handleAddToMeal(mealType)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add-circle-outline" size={32} color="#6C3BAA" />
                 <Text style={styles.emptyMealText}>
-                  No hay alimentos registrados
+                  Toca para añadir alimentos
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
         )}
@@ -621,9 +688,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {loadingProduct && (
+      {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#6C3BAA" />
+          <Text style={styles.loadingText}>
+            {duplicating ? "Duplicando alimentos..." : "Cargando..."}
+          </Text>
         </View>
       )}
 
@@ -793,7 +863,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           </View>
         )}
 
-        {/* Espacio para el action bar */}
         <View style={{ height: 120 }} />
       </ScrollView>
 
@@ -879,8 +948,16 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Text style={styles.actionButtonText}>Eliminar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="copy-outline" size={20} color="#fff" />
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleDuplicateSelected}
+          disabled={duplicating}
+        >
+          {duplicating ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="copy-outline" size={20} color="#fff" />
+          )}
           <Text style={styles.actionButtonText}>Duplicar</Text>
         </TouchableOpacity>
 
@@ -935,10 +1012,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
+  },
+  loadingText: {
+    color: "#fff",
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
   },
   header: {
     backgroundColor: "#fff",
@@ -1153,8 +1236,9 @@ const styles = StyleSheet.create({
   },
   emptyMealText: {
     fontSize: 14,
-    color: "#9CA3AF",
+    color: "#6C3BAA",
     marginTop: 8,
+    fontWeight: "500",
   },
   emptyState: {
     alignItems: "center",

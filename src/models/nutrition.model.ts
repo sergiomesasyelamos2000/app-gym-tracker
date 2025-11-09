@@ -9,6 +9,8 @@ export interface Product {
   fat: number;
   grams: number;
   others: Array<{ label: string; value: any }>;
+  isCustomProduct?: boolean;
+  customProductId?: string;
 }
 
 // Legacy interface (keeping for compatibility)
@@ -160,15 +162,17 @@ export interface CustomProduct {
 
 // Custom Meals
 export interface MealProduct {
+  id: string;
+  isCustom?: boolean;
   productCode: string;
   productName: string;
+  productImage?: string;
   quantity: number;
   unit: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
-  isCustom?: boolean;
 }
 
 export interface CustomMeal {

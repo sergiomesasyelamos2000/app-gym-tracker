@@ -248,10 +248,16 @@ export async function getFavorites(userId: string): Promise<FavoriteProduct[]> {
   });
 }
 
-export async function isFavorite(userId: string, productCode: string): Promise<boolean> {
-  const result = await apiFetch(`nutrition/favorites/${userId}/check/${productCode}`, {
-    method: "GET",
-  });
+export async function isFavorite(
+  userId: string,
+  productCode: string
+): Promise<boolean> {
+  const result = await apiFetch(
+    `nutrition/favorites/${userId}/check/${productCode}`,
+    {
+      method: "GET",
+    }
+  );
   return result;
 }
 

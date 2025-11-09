@@ -1,31 +1,37 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
+  RouteProp,
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useCallback, useEffect, useState } from "react";
+import {
   ActivityIndicator,
   Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
   useWindowDimensions,
+  View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { Ionicons } from "@expo/vector-icons";
-import { getProducts, scanBarcode } from "../services/nutritionService";
-import ReusableCameraView from "../../common/components/ReusableCameraView";
 import {
   CustomMeal,
   CustomProduct,
   FavoriteProduct,
   Product,
 } from "../../../models/nutrition.model";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import * as nutritionService from "../services/nutritionService";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { useFocusEffect } from "@react-navigation/native";
+import ReusableCameraView from "../../common/components/ReusableCameraView";
+import * as nutritionService from "../services/nutritionService";
+import { NutritionStackParamList } from "./NutritionStack";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -40,6 +46,10 @@ interface TabProps {
   searchText: string;
   navigation: any;
 }
+type ProductListScreenRouteProp = RouteProp<
+  NutritionStackParamList,
+  "ProductListScreen"
+>;
 
 // Tab de Todos los Productos
 function AllProductsTab({ searchText, navigation }: TabProps) {
@@ -103,7 +113,6 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
     navigation.navigate("ProductDetailScreen", {
       producto: item,
       quickAdd: true,
-      // NO pasar selectedMeal aquí - dejar que el usuario lo elija
     });
   };
 
@@ -219,7 +228,6 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  // Recargar favoritos cada vez que el tab obtiene foco
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
@@ -245,14 +253,12 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
 
   const handleProductPress = async (item: FavoriteProduct) => {
     try {
-      // Obtener los detalles completos del producto
       const productDetail = await nutritionService.getProductDetail(
         item.productCode
       );
       navigation.navigate("ProductDetailScreen", { producto: productDetail });
     } catch (error) {
       console.error("Error obteniendo detalle del producto:", error);
-      // Si falla, navegar con los datos básicos que tenemos
       navigation.navigate("ProductDetailScreen", {
         producto: {
           code: item.productCode,
@@ -378,35 +384,90 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
 }
 
 // Tab de Productos Personalizados
-function CustomProductsTab({ searchText, navigation }: TabProps) {
+function CustomProductsTab({
+  searchText,
+  navigation,
+  route,
+}: TabProps & { route?: any }) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  // Recargar productos personalizados cada vez que el tab obtiene foco
   useFocusEffect(
     useCallback(() => {
       loadCustomProducts();
     }, [userProfile])
   );
 
-  const loadCustomProducts = async () => {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (route?.params?.refresh) {
+        loadCustomProducts(true);
+        navigation.setParams({ refresh: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route]);
+
+  const loadCustomProducts = async (showRefreshing = false) => {
     if (!userProfile) {
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (showRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const data = await nutritionService.getCustomProducts(userProfile.userId);
+      console.log("Productos personalizados cargados:", data.length);
       setCustomProducts(data);
     } catch (error) {
       console.error("Error loading custom products:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadCustomProducts(true);
+  };
+
+  const handleProductPress = (item: CustomProduct) => {
+    const mappedProduct = {
+      code: item.id,
+      name: item.name,
+      image: item.image,
+      brand: item.brand,
+      grams: 100,
+      calories: item.caloriesPer100,
+      protein: item.proteinPer100,
+      carbohydrates: item.carbsPer100,
+      fat: item.fatPer100,
+      others: [
+        ...(item.fiberPer100
+          ? [{ label: "Fibra", value: item.fiberPer100 }]
+          : []),
+        ...(item.sugarPer100
+          ? [{ label: "Azúcar", value: item.sugarPer100 }]
+          : []),
+        ...(item.sodiumPer100
+          ? [{ label: "Sodio", value: item.sodiumPer100 }]
+          : []),
+      ],
+      isCustomProduct: true,
+      customProductId: item.id,
+    };
+
+    navigation.navigate("ProductDetailScreen", { producto: mappedProduct });
   };
 
   const filteredProducts = customProducts.filter((p) =>
@@ -422,9 +483,7 @@ function CustomProductsTab({ searchText, navigation }: TabProps) {
           borderRadius: isSmallScreen ? 10 : 14,
         },
       ]}
-      onPress={() =>
-        navigation.navigate("ProductDetailScreen", { producto: item })
-      }
+      onPress={() => handleProductPress(item)}
       activeOpacity={0.8}
     >
       <View
@@ -433,7 +492,20 @@ function CustomProductsTab({ searchText, navigation }: TabProps) {
           { width: width * 0.15, height: width * 0.15 },
         ]}
       >
-        <Ionicons name="cube" size={28} color="#6C3BAA" />
+        {item.image ? (
+          <Image
+            source={{ uri: item.image }}
+            style={[
+              styles.productImage,
+              { width: width * 0.12, height: width * 0.12 },
+            ]}
+          />
+        ) : (
+          <Ionicons name="cube" size={28} color="#6C3BAA" />
+        )}
+        <View style={styles.customBadge}>
+          <Ionicons name="create" size={14} color="#6C3BAA" />
+        </View>
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -445,13 +517,33 @@ function CustomProductsTab({ searchText, navigation }: TabProps) {
         >
           {item.name}
         </Text>
+        {item.brand && (
+          <Text style={styles.brandText} numberOfLines={1}>
+            {item.brand}
+          </Text>
+        )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="create" size={14} color="#6C3BAA" />
-            <Text style={styles.macroText}>Personalizado</Text>
+            <Ionicons name="flame" size={14} color="#6FCF97" />
+            <Text style={styles.macroText}>
+              {Math.round(item.caloriesPer100)} kcal
+            </Text>
+          </View>
+          <View style={styles.macroItem}>
+            <Ionicons name="analytics" size={14} color="#808080" />
+            <Text style={styles.macroText}>100g</Text>
           </View>
         </View>
       </View>
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          navigation.navigate("EditProductScreen", { product: item });
+        }}
+      >
+        <Ionicons name="create-outline" size={20} color="#6C3BAA" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -495,6 +587,8 @@ function CustomProductsTab({ searchText, navigation }: TabProps) {
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color="#D1D5DB" />
@@ -518,35 +612,66 @@ function CustomProductsTab({ searchText, navigation }: TabProps) {
 }
 
 // Tab de Comidas Personalizadas
-function CustomMealsTab({ searchText, navigation }: TabProps) {
+function CustomMealsTab({
+  searchText,
+  navigation,
+  route,
+}: TabProps & { route?: any }) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  // Recargar comidas personalizadas cada vez que el tab obtiene foco
   useFocusEffect(
     useCallback(() => {
       loadCustomMeals();
     }, [userProfile])
   );
 
-  const loadCustomMeals = async () => {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (route?.params?.refresh) {
+        loadCustomMeals(true);
+        navigation.setParams({ refresh: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route]);
+
+  const loadCustomMeals = async (showRefreshing = false) => {
     if (!userProfile) {
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (showRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const data = await nutritionService.getCustomMeals(userProfile.userId);
+      console.log("Comidas personalizadas cargadas:", data.length);
       setCustomMeals(data);
     } catch (error) {
       console.error("Error loading custom meals:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadCustomMeals(true);
+  };
+
+  const handleMealPress = (item: CustomMeal) => {
+    // Navegar directamente a la edición de la comida
+    navigation.navigate("EditMealScreen", { meal: item });
   };
 
   const filteredMeals = customMeals.filter((m) =>
@@ -562,9 +687,7 @@ function CustomMealsTab({ searchText, navigation }: TabProps) {
           borderRadius: isSmallScreen ? 10 : 14,
         },
       ]}
-      onPress={() =>
-        navigation.navigate("ProductDetailScreen", { producto: item })
-      }
+      onPress={() => handleMealPress(item)}
       activeOpacity={0.8}
     >
       <View
@@ -573,7 +696,20 @@ function CustomMealsTab({ searchText, navigation }: TabProps) {
           { width: width * 0.15, height: width * 0.15 },
         ]}
       >
-        <Ionicons name="restaurant" size={28} color="#6C3BAA" />
+        {item.image ? (
+          <Image
+            source={{ uri: item.image }}
+            style={[
+              styles.productImage,
+              { width: width * 0.12, height: width * 0.12 },
+            ]}
+          />
+        ) : (
+          <Ionicons name="restaurant" size={28} color="#6C3BAA" />
+        )}
+        <View style={styles.customBadge}>
+          <Ionicons name="restaurant" size={14} color="#6C3BAA" />
+        </View>
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -585,13 +721,33 @@ function CustomMealsTab({ searchText, navigation }: TabProps) {
         >
           {item.name}
         </Text>
+        {item.description && (
+          <Text style={styles.brandText} numberOfLines={1}>
+            {item.description}
+          </Text>
+        )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
+            <Ionicons name="flame" size={14} color="#6FCF97" />
+            <Text style={styles.macroText}>
+              {Math.round(item.totalCalories)} kcal
+            </Text>
+          </View>
+          <View style={styles.macroItem}>
             <Ionicons name="fast-food" size={14} color="#6C3BAA" />
-            <Text style={styles.macroText}>Comida personalizada</Text>
+            <Text style={styles.macroText}>{item.products.length} items</Text>
           </View>
         </View>
       </View>
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          navigation.navigate("EditMealScreen", { meal: item });
+        }}
+      >
+        <Ionicons name="create-outline" size={20} color="#6C3BAA" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -633,6 +789,8 @@ function CustomMealsTab({ searchText, navigation }: TabProps) {
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color="#D1D5DB" />
@@ -655,13 +813,34 @@ function CustomMealsTab({ searchText, navigation }: TabProps) {
   );
 }
 
+type ProductDetailScreenRouteProp = RouteProp<
+  NutritionStackParamList,
+  "ProductDetailScreen"
+>;
+
 // Componente Principal
-export default function ProductListScreen({ navigation }: Props) {
+export default function ProductListScreen() {
   const [searchText, setSearchText] = useState("");
   const [showCamera, setShowCamera] = useState(false);
+  const [initialTab, setInitialTab] = useState<string | undefined>(undefined);
+
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
+  const route = useRoute<ProductListScreenRouteProp>();
+
+  const selectionMode = route.params?.selectionMode || false;
+  const returnTo = route.params?.returnTo;
+
+  useEffect(() => {
+    if (route.params?.screen) {
+      setInitialTab(route.params.screen);
+      navigation.setParams({ screen: undefined });
+    }
+  }, [route.params?.screen]);
 
   const handleBarCodeScanned = async (code: string) => {
     setShowCamera(false);
@@ -738,6 +917,7 @@ export default function ProductListScreen({ navigation }: Props) {
 
         {/* Navegador de Tabs */}
         <Tab.Navigator
+          initialRouteName={initialTab}
           screenOptions={{
             tabBarActiveTintColor: "#6C3BAA",
             tabBarInactiveTintColor: "#9CA3AF",
@@ -825,7 +1005,11 @@ export default function ProductListScreen({ navigation }: Props) {
             }}
           >
             {() => (
-              <CustomMealsTab searchText={searchText} navigation={navigation} />
+              <CustomMealsTab
+                searchText={searchText}
+                navigation={navigation}
+                route={route}
+              />
             )}
           </Tab.Screen>
         </Tab.Navigator>
@@ -1037,5 +1221,35 @@ const styles = StyleSheet.create({
     fontSize: RFValue(14),
     fontWeight: "600",
     color: "#fff",
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  customBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  brandText: {
+    fontSize: RFValue(11),
+    color: "#9CA3AF",
+    marginBottom: 4,
   },
 });
