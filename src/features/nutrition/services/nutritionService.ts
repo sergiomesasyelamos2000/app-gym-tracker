@@ -10,6 +10,28 @@ import {
   CustomMeal,
   FavoriteProduct,
 } from "../../../models/nutrition.model";
+import * as FileSystem from "expo-file-system";
+
+async function convertImageToBase64(uri: string): Promise<string | null> {
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Detectar tipo de imagen
+    let mimeType = "image/jpeg";
+    if (uri.toLowerCase().includes(".png")) {
+      mimeType = "image/png";
+    } else if (uri.toLowerCase().includes(".webp")) {
+      mimeType = "image/webp";
+    }
+
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error("Error converting image to base64:", error);
+    return null;
+  }
+}
 
 // AI Chat
 export async function postText(text: string): Promise<any> {
@@ -287,9 +309,20 @@ export async function searchFavorites(
 export async function createCustomProduct(
   product: Omit<CustomProduct, "id" | "createdAt" | "updatedAt">
 ): Promise<CustomProduct> {
+  // Convertir imagen a base64 si existe
+  let imageBase64: string | undefined = undefined;
+  if (product.image && product.image.startsWith("file://")) {
+    imageBase64 = (await convertImageToBase64(product.image)) || undefined;
+  } else if (product.image) {
+    imageBase64 = product.image; // Ya es una URL o base64
+  }
+
   return apiFetch("nutrition/custom-products", {
     method: "POST",
-    body: JSON.stringify(product),
+    body: JSON.stringify({
+      ...product,
+      image: imageBase64,
+    }),
   });
 }
 
@@ -314,9 +347,18 @@ export async function updateCustomProduct(
   productId: string,
   updates: Partial<CustomProduct>
 ): Promise<CustomProduct> {
+  // Convertir imagen a base64 si existe y es local
+  let imageBase64 = updates.image;
+  if (imageBase64 && imageBase64.startsWith("file://")) {
+    imageBase64 = (await convertImageToBase64(imageBase64)) || undefined;
+  }
+
   return apiFetch(`nutrition/custom-products/${productId}`, {
     method: "PUT",
-    body: JSON.stringify(updates),
+    body: JSON.stringify({
+      ...updates,
+      image: imageBase64,
+    }),
   });
 }
 
@@ -354,9 +396,20 @@ export async function createCustomMeal(
     | "totalFat"
   >
 ): Promise<CustomMeal> {
+  // Convertir imagen a base64 si existe
+  let imageBase64: string | undefined = undefined;
+  if (meal.image && meal.image.startsWith("file://")) {
+    imageBase64 = (await convertImageToBase64(meal.image)) || undefined;
+  } else if (meal.image) {
+    imageBase64 = meal.image; // Ya es una URL o base64
+  }
+
   return apiFetch("nutrition/custom-meals", {
     method: "POST",
-    body: JSON.stringify(meal),
+    body: JSON.stringify({
+      ...meal,
+      image: imageBase64,
+    }),
   });
 }
 
@@ -379,9 +432,18 @@ export async function updateCustomMeal(
   mealId: string,
   updates: Partial<CustomMeal>
 ): Promise<CustomMeal> {
+  // Convertir imagen a base64 si existe y es local
+  let imageBase64 = updates.image;
+  if (imageBase64 && imageBase64.startsWith("file://")) {
+    imageBase64 = (await convertImageToBase64(imageBase64)) || undefined;
+  }
+
   return apiFetch(`nutrition/custom-meals/${mealId}`, {
     method: "PUT",
-    body: JSON.stringify(updates),
+    body: JSON.stringify({
+      ...updates,
+      image: imageBase64,
+    }),
   });
 }
 

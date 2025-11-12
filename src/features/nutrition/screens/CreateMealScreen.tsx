@@ -287,7 +287,7 @@ export default function CreateMealScreen() {
         userId: userProfile.userId,
         name: name.trim(),
         description: description.trim(),
-        image: imageUri || undefined,
+        image: imageUri || undefined, // Solo pasar el URI, el servicio lo convierte
         products: productsWithIds,
       };
 

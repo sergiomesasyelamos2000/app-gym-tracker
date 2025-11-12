@@ -22,10 +22,7 @@ interface ShoppingListItem {
   productCode: string;
   productName: string;
   productImage?: string;
-  quantity: number;
-  unit: string;
   purchased: boolean;
-  addedAt?: Date;
 }
 
 export default function ShoppingListScreen() {
@@ -46,17 +43,10 @@ export default function ShoppingListScreen() {
       const shoppingList = await nutritionService.getShoppingList(
         userProfile.userId
       );
-      setItems(
-        (shoppingList as (ShoppingListItem & { addedAt?: any })[]).map(
-          (item) => ({
-            ...item,
-            addedAt: item.addedAt ? new Date(item.addedAt) : new Date(),
-          })
-        )
-      );
+      setItems(shoppingList);
     } catch (error) {
       console.error("Error loading shopping list:", error);
-      Alert.alert("Error", "Failed to load shopping list");
+      Alert.alert("Error", "No se pudo cargar la lista de compras");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -77,57 +67,60 @@ export default function ShoppingListScreen() {
       const updatedItem = await nutritionService.togglePurchased(itemId);
       setItems((prevItems) =>
         prevItems.map((item) =>
-          item.id === itemId ? { ...item, purchased: updatedItem.purchased } : item
+          item.id === itemId
+            ? { ...item, purchased: updatedItem.purchased }
+            : item
         )
       );
     } catch (error) {
       console.error("Error toggling purchased status:", error);
-      Alert.alert("Error", "Failed to update item status");
+      Alert.alert("Error", "No se pudo actualizar el estado del producto");
     }
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await nutritionService.deleteShoppingListItem(itemId);
-            setItems((prevItems) =>
-              prevItems.filter((item) => item.id !== itemId)
-            );
-          } catch (error) {
-            console.error("Error deleting item:", error);
-            Alert.alert("Error", "Failed to delete item");
-          }
+    Alert.alert(
+      "Eliminar producto",
+      "¿Estás seguro de eliminar este producto?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await nutritionService.deleteShoppingListItem(itemId);
+              setItems((prevItems) =>
+                prevItems.filter((item) => item.id !== itemId)
+              );
+            } catch (error) {
+              console.error("Error deleting item:", error);
+              Alert.alert("Error", "No se pudo eliminar el producto");
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleClearPurchased = () => {
-    if (!userProfile) {
-      Alert.alert("Error", "User profile not found");
-      return;
-    }
+    if (!userProfile) return;
 
     const purchasedCount = items.filter((item) => item.purchased).length;
     if (purchasedCount === 0) {
-      Alert.alert("Info", "No purchased items to clear");
+      Alert.alert("Info", "No hay productos comprados para eliminar");
       return;
     }
 
     Alert.alert(
-      "Clear Purchased Items",
-      `Remove ${purchasedCount} purchased item${
+      "Limpiar comprados",
+      `¿Eliminar ${purchasedCount} producto${
         purchasedCount > 1 ? "s" : ""
-      }?`,
+      } comprado${purchasedCount > 1 ? "s" : ""}?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancelar", style: "cancel" },
         {
-          text: "Clear",
+          text: "Limpiar",
           style: "destructive",
           onPress: async () => {
             try {
@@ -137,7 +130,10 @@ export default function ShoppingListScreen() {
               );
             } catch (error) {
               console.error("Error clearing purchased items:", error);
-              Alert.alert("Error", "Failed to clear purchased items");
+              Alert.alert(
+                "Error",
+                "No se pudieron eliminar los productos comprados"
+              );
             }
           },
         },
@@ -146,23 +142,20 @@ export default function ShoppingListScreen() {
   };
 
   const handleClearAll = () => {
-    if (!userProfile) {
-      Alert.alert("Error", "User profile not found");
-      return;
-    }
+    if (!userProfile) return;
 
     if (items.length === 0) {
-      Alert.alert("Info", "Shopping list is already empty");
+      Alert.alert("Info", "La lista de compras ya está vacía");
       return;
     }
 
     Alert.alert(
-      "Clear All Items",
-      "Are you sure you want to clear your entire shopping list?",
+      "Limpiar todo",
+      "¿Estás seguro de que quieres vaciar toda la lista de compras?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancelar", style: "cancel" },
         {
-          text: "Clear All",
+          text: "Limpiar todo",
           style: "destructive",
           onPress: async () => {
             try {
@@ -170,7 +163,7 @@ export default function ShoppingListScreen() {
               setItems([]);
             } catch (error) {
               console.error("Error clearing shopping list:", error);
-              Alert.alert("Error", "Failed to clear shopping list");
+              Alert.alert("Error", "No se pudo vaciar la lista de compras");
             }
           },
         },
@@ -189,11 +182,12 @@ export default function ShoppingListScreen() {
       <TouchableOpacity
         style={styles.checkbox}
         onPress={() => handleTogglePurchased(item.id)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Ionicons
           name={item.purchased ? "checkbox" : "square-outline"}
           size={RFValue(24)}
-          color={item.purchased ? "#6C3BAA" : "#666"}
+          color={item.purchased ? "#6C3BAA" : "#999"}
         />
       </TouchableOpacity>
 
@@ -204,7 +198,7 @@ export default function ShoppingListScreen() {
         />
       ) : (
         <View style={[styles.productImage, styles.placeholderImage]}>
-          <Ionicons name="nutrition" size={RFValue(20)} color="#999" />
+          <Ionicons name="nutrition" size={RFValue(20)} color="#CCC" />
         </View>
       )}
 
@@ -215,14 +209,12 @@ export default function ShoppingListScreen() {
         >
           {item.productName}
         </Text>
-        <Text style={styles.quantityText}>
-          {item.quantity} {item.unit}
-        </Text>
       </View>
 
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => handleDeleteItem(item.id)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Ionicons name="trash-outline" size={RFValue(20)} color="#E74C3C" />
       </TouchableOpacity>
@@ -231,10 +223,11 @@ export default function ShoppingListScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="cart-outline" size={RFValue(64)} color="#CCC" />
-      <Text style={styles.emptyTitle}>Your shopping list is empty</Text>
+      <Ionicons name="cart-outline" size={RFValue(64)} color="#D1D5DB" />
+      <Text style={styles.emptyTitle}>Lista de compras vacía</Text>
       <Text style={styles.emptySubtitle}>
-        Add products from the nutrition tracker to build your shopping list
+        Agrega productos desde el rastreador nutricional para construir tu lista
+        de compras
       </Text>
     </View>
   );
@@ -246,10 +239,11 @@ export default function ShoppingListScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
+            <Ionicons name="arrow-back" size={RFValue(20)} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Shopping List</Text>
+          <Text style={styles.headerTitle}>Lista de Compras</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.loadingContainer}>
@@ -265,10 +259,11 @@ export default function ShoppingListScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
+          <Ionicons name="arrow-back" size={RFValue(20)} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping List</Text>
+        <Text style={styles.headerTitle}>Lista de Compras</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -276,12 +271,14 @@ export default function ShoppingListScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.pending}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>Pendientes</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{stats.purchased}</Text>
-            <Text style={styles.statLabel}>Purchased</Text>
+            <Text style={[styles.statValue, { color: "#4CAF50" }]}>
+              {stats.purchased}
+            </Text>
+            <Text style={styles.statLabel}>Comprados</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -313,13 +310,17 @@ export default function ShoppingListScreen() {
       {items.length > 0 && (
         <View style={styles.actionsContainer}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.clearPurchasedButton]}
+            style={[
+              styles.actionButton,
+              styles.clearPurchasedButton,
+              stats.purchased === 0 && styles.actionButtonDisabled,
+            ]}
             onPress={handleClearPurchased}
             disabled={stats.purchased === 0}
           >
-            <Ionicons name="checkmark-done" size={RFValue(18)} color="#FFF" />
-            <Text style={styles.actionButtonText}>
-              Clear Purchased ({stats.purchased})
+            <Ionicons name="checkmark-done" size={RFValue(16)} color="#FFF" />
+            <Text style={styles.actionButtonText} numberOfLines={1}>
+              Limpiar
             </Text>
           </TouchableOpacity>
 
@@ -327,8 +328,10 @@ export default function ShoppingListScreen() {
             style={[styles.actionButton, styles.clearAllButton]}
             onPress={handleClearAll}
           >
-            <Ionicons name="trash" size={RFValue(18)} color="#FFF" />
-            <Text style={styles.actionButtonText}>Clear All</Text>
+            <Ionicons name="trash" size={RFValue(16)} color="#FFF" />
+            <Text style={styles.actionButtonText} numberOfLines={1}>
+              Limpiar Todo
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -339,36 +342,36 @@ export default function ShoppingListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F8FAFC",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    borderBottomColor: "#E5E7EB",
   },
   backButton: {
-    padding: 8,
+    padding: 4,
   },
   headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "600",
-    color: "#333",
+    fontSize: RFValue(16),
+    fontWeight: "700",
+    color: "#1A1A1A",
   },
   headerRight: {
-    width: 40,
+    width: 32,
   },
   statsContainer: {
     flexDirection: "row",
     backgroundColor: "#FFF",
-    marginTop: 8,
+    marginTop: 12,
     marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -380,22 +383,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statValue: {
-    fontSize: RFValue(24),
+    fontSize: RFValue(20),
     fontWeight: "700",
     color: "#6C3BAA",
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: RFValue(12),
-    color: "#666",
+    fontSize: RFValue(10),
+    color: "#6B7280",
+    fontWeight: "500",
   },
   statDivider: {
     width: 1,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#E5E7EB",
     marginHorizontal: 12,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   emptyListContent: {
     flexGrow: 1,
@@ -405,8 +409,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFF",
     marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 12,
+    marginVertical: 6,
+    padding: 16,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -415,17 +419,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   checkbox: {
-    padding: 4,
     marginRight: 12,
   },
   productImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    marginRight: 16,
   },
   placeholderImage: {
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -435,39 +438,35 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: RFValue(14),
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 4,
+    fontWeight: "600",
+    color: "#1A1A1A",
+    lineHeight: RFValue(18),
   },
   purchasedText: {
     textDecorationLine: "line-through",
-    color: "#999",
-  },
-  quantityText: {
-    fontSize: RFValue(12),
-    color: "#666",
+    color: "#9CA3AF",
   },
   deleteButton: {
-    padding: 8,
+    padding: 4,
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
   },
   emptyTitle: {
     fontSize: RFValue(18),
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginTop: 20,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: RFValue(14),
-    color: "#666",
+    fontSize: RFValue(13),
+    color: "#6B7280",
     textAlign: "center",
-    lineHeight: RFValue(20),
+    lineHeight: RFValue(18),
   },
   loadingContainer: {
     flex: 1,
@@ -479,7 +478,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
+    borderTopColor: "#E5E7EB",
     gap: 12,
   },
   actionButton: {
@@ -487,9 +486,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 6,
+    minHeight: 50,
   },
   clearPurchasedButton: {
     backgroundColor: "#6C3BAA",
@@ -497,9 +498,14 @@ const styles = StyleSheet.create({
   clearAllButton: {
     backgroundColor: "#E74C3C",
   },
+  actionButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+    opacity: 0.5,
+  },
   actionButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
+    fontSize: RFValue(12),
+    fontWeight: "700",
     color: "#FFF",
+    flexShrink: 1,
   },
 });

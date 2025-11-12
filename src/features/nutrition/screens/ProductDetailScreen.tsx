@@ -16,7 +16,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { addFoodEntry } from "../services/nutritionService";
+import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
 import { FoodEntry, MealType, FoodUnit } from "../../../models/nutrition.model";
 import * as nutritionService from "../services/nutritionService";
 
@@ -27,6 +27,54 @@ interface Props {
   navigation: any;
 }
 
+const UNITS_CONFIG = [
+  {
+    label: "Gramos",
+    value: "gram" as FoodUnit,
+    icon: "scale-outline",
+    color: "#10B981",
+  },
+  {
+    label: "Mililitros",
+    value: "ml" as FoodUnit,
+    icon: "water-outline",
+    color: "#3B82F6",
+  },
+  {
+    label: "Porción",
+    value: "portion" as FoodUnit,
+    icon: "restaurant-outline",
+    color: "#F59E0B",
+  },
+];
+
+const MEALS_CONFIG = [
+  {
+    label: "Desayuno",
+    value: "breakfast" as MealType,
+    icon: "sunny",
+    color: "#FFB74D",
+  },
+  {
+    label: "Almuerzo",
+    value: "lunch" as MealType,
+    icon: "restaurant",
+    color: "#6FCF97",
+  },
+  {
+    label: "Cena",
+    value: "dinner" as MealType,
+    icon: "moon",
+    color: "#6C3BAA",
+  },
+  {
+    label: "Snack",
+    value: "snack" as MealType,
+    icon: "fast-food",
+    color: "#409CFF",
+  },
+];
+
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const {
     producto,
@@ -35,9 +83,14 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     quantity: initialQty,
     unit: initialUnit,
     quickAdd = false,
+    entryId,
   } = route.params;
+
   const userProfile = useNutritionStore((state) => state.userProfile);
   const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
+  const updateFoodEntryInStore = useNutritionStore(
+    (state) => state.updateFoodEntry
+  );
 
   const [quantity, setQuantity] = useState(
     initialQty?.toString() || producto.grams?.toString() || "100"
@@ -48,42 +101,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"units" | "meals" | null>(null);
   const [saving, setSaving] = useState(false);
-
   const [isFavorite, setIsFavorite] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
-
-  const units: Array<{
-    label: string;
-    value: FoodUnit;
-    icon: string;
-    color: string;
-  }> = [
-    { label: "Gramos", value: "gram", icon: "scale-outline", color: "#10B981" },
-    {
-      label: "Mililitros",
-      value: "ml",
-      icon: "water-outline",
-      color: "#3B82F6",
-    },
-    {
-      label: "Porción",
-      value: "portion",
-      icon: "restaurant-outline",
-      color: "#F59E0B",
-    },
-  ];
-
-  const meals: Array<{
-    label: string;
-    value: MealType;
-    icon: string;
-    color: string;
-  }> = [
-    { label: "Desayuno", value: "breakfast", icon: "sunny", color: "#FFB74D" },
-    { label: "Almuerzo", value: "lunch", icon: "restaurant", color: "#6FCF97" },
-    { label: "Cena", value: "dinner", icon: "moon", color: "#6C3BAA" },
-    { label: "Snack", value: "snack", icon: "fast-food", color: "#409CFF" },
-  ];
 
   const calculateNutrients = useMemo(() => {
     const qty = parseFloat(quantity) || 0;
@@ -98,7 +117,6 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     };
   }, [quantity, producto]);
 
-  // Si quickAdd es true, mostrar modal de selección de comida automáticamente
   useEffect(() => {
     if (quickAdd) {
       setModalType("meals");
@@ -106,23 +124,17 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     }
   }, [quickAdd]);
 
-  const handleAddToDiary = async () => {
-    await handleAddToDiaryWithMeal();
-  };
-
-  const getUnitLabel = (value: FoodUnit): string => {
-    return units.find((u) => u.value === value)?.label || "Gramos";
-  };
-
-  const getMealData = (value: MealType) => {
-    return meals.find((m) => m.value === value) || meals[2];
-  };
-
-  const selectedMeal = getMealData(meal);
-
   useEffect(() => {
     checkIfFavorite();
   }, [producto]);
+
+  const getUnitLabel = (value: FoodUnit): string => {
+    return UNITS_CONFIG.find((u) => u.value === value)?.label || "Gramos";
+  };
+
+  const getMealData = (value: MealType) => {
+    return MEALS_CONFIG.find((m) => m.value === value) || MEALS_CONFIG[2];
+  };
 
   const checkIfFavorite = async () => {
     if (!userProfile) return;
@@ -197,20 +209,18 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  // Función para cerrar modal y añadir al diario si es quickAdd
   const handleMealSelection = (selectedMeal: MealType) => {
     setMeal(selectedMeal);
     setIsModalVisible(false);
 
     if (quickAdd) {
-      // Pasar el meal directamente en lugar de depender del estado
       setTimeout(() => {
-        handleAddToDiaryWithMeal(selectedMeal);
+        handleAddOrUpdateEntry(selectedMeal);
       }, 100);
     }
   };
 
-  const handleAddToDiaryWithMeal = async (mealType?: MealType) => {
+  const handleAddOrUpdateEntry = async (mealType?: MealType) => {
     if (!userProfile) {
       Alert.alert("Error", "Debes configurar tu perfil primero");
       return;
@@ -226,43 +236,66 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     try {
       const nutrients = calculateNutrients;
       const today = new Date().toISOString().split("T")[0];
+      const finalMealType = mealType || meal;
 
-      const entry: Omit<FoodEntry, "id" | "createdAt"> = {
-        userId: userProfile.userId,
-        productCode: producto.code,
-        productName: producto.name,
-        productImage: producto.image,
-        date: today,
-        mealType: mealType || meal, // Usar el parámetro si existe, sino el estado
-        quantity: parseFloat(quantity),
-        unit: unit,
-        calories: nutrients.calories,
-        protein: nutrients.protein,
-        carbs: nutrients.carbs,
-        fat: nutrients.fat,
-      };
+      if (fromDiary && entryId) {
+        const updatedEntry: Partial<FoodEntry> = {
+          mealType: finalMealType,
+          quantity: parseFloat(quantity),
+          unit: unit,
+          calories: nutrients.calories,
+          protein: nutrients.protein,
+          carbs: nutrients.carbs,
+          fat: nutrients.fat,
+        };
 
-      const savedEntry = await addFoodEntry(entry);
-      addFoodEntryToStore(savedEntry);
+        await updateFoodEntry(entryId, updatedEntry);
+        updateFoodEntryInStore(entryId, updatedEntry);
 
-      if (quickAdd) {
-        Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [
+        Alert.alert("¡Actualizado!", "Alimento actualizado en tu diario", [
           {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
         ]);
       } else {
-        Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [
-          {
-            text: "Ver Diario",
-            onPress: () => navigation.navigate("MacrosScreen"),
-          },
-          {
-            text: "Añadir Otro",
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        const entry: Omit<FoodEntry, "id" | "createdAt"> = {
+          userId: userProfile.userId,
+          productCode: producto.code,
+          productName: producto.name,
+          productImage: producto.image,
+          date: today,
+          mealType: finalMealType,
+          quantity: parseFloat(quantity),
+          unit: unit,
+          calories: nutrients.calories,
+          protein: nutrients.protein,
+          carbs: nutrients.carbs,
+          fat: nutrients.fat,
+        };
+
+        const savedEntry = await addFoodEntry(entry);
+        addFoodEntryToStore(savedEntry);
+
+        if (quickAdd) {
+          Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ]);
+        } else {
+          Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [
+            {
+              text: "Ver Diario",
+              onPress: () => navigation.navigate("MacrosScreen"),
+            },
+            {
+              text: "Añadir Otro",
+              onPress: () => navigation.goBack(),
+            },
+          ]);
+        }
       }
     } catch (error) {
       console.error("Error saving entry:", error);
@@ -272,10 +305,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const selectedMeal = getMealData(meal);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
@@ -283,8 +317,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           >
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalle del Producto</Text>
-          <View style={{ flexDirection: "row", gap: 16 }}>
+          <Text style={styles.headerTitle}>
+            {fromDiary ? "Editar Alimento" : "Detalle del Producto"}
+          </Text>
+          <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={handleAddToShoppingList}
               disabled={addingToCart}
@@ -305,7 +341,6 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image
             source={
@@ -320,85 +355,86 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           />
         </View>
 
-        {/* Product Name */}
         <View style={styles.nameContainer}>
           <Text style={styles.productName}>{producto.name}</Text>
         </View>
 
-        {/* Nutritional Values */}
         <View style={styles.nutritionSection}>
           <Text style={styles.sectionTitle}>Información Nutricional</Text>
           <View style={styles.nutritionGrid}>
-            <View
-              style={[styles.nutritionCard, { backgroundColor: "#6FCF9715" }]}
-            >
-              <Ionicons name="flame" size={28} color="#6FCF97" />
-              <Text style={[styles.nutritionValue, { color: "#6FCF97" }]}>
-                {calculateNutrients.calories}
-              </Text>
-              <Text style={styles.nutritionLabel}>Calorías</Text>
-            </View>
-            <View
-              style={[styles.nutritionCard, { backgroundColor: "#FFB74D15" }]}
-            >
-              <Ionicons name="nutrition" size={28} color="#FFB74D" />
-              <Text style={[styles.nutritionValue, { color: "#FFB74D" }]}>
-                {calculateNutrients.carbs}g
-              </Text>
-              <Text style={styles.nutritionLabel}>Carbohidratos</Text>
-            </View>
-            <View
-              style={[styles.nutritionCard, { backgroundColor: "#409CFF15" }]}
-            >
-              <Ionicons name="barbell" size={28} color="#409CFF" />
-              <Text style={[styles.nutritionValue, { color: "#409CFF" }]}>
-                {calculateNutrients.protein}g
-              </Text>
-              <Text style={styles.nutritionLabel}>Proteína</Text>
-            </View>
-            <View
-              style={[styles.nutritionCard, { backgroundColor: "#FF6B6B15" }]}
-            >
-              <Ionicons name="water" size={28} color="#FF6B6B" />
-              <Text style={[styles.nutritionValue, { color: "#FF6B6B" }]}>
-                {calculateNutrients.fat}g
-              </Text>
-              <Text style={styles.nutritionLabel}>Grasa</Text>
-            </View>
+            {[
+              {
+                key: "calories",
+                label: "Calorías",
+                icon: "flame",
+                color: "#6FCF97",
+                suffix: "",
+              },
+              {
+                key: "carbs",
+                label: "Carbohidratos",
+                icon: "nutrition",
+                color: "#FFB74D",
+                suffix: "g",
+              },
+              {
+                key: "protein",
+                label: "Proteína",
+                icon: "barbell",
+                color: "#409CFF",
+                suffix: "g",
+              },
+              {
+                key: "fat",
+                label: "Grasa",
+                icon: "water",
+                color: "#FF6B6B",
+                suffix: "g",
+              },
+            ].map(({ key, label, icon, color, suffix }) => (
+              <View
+                key={key}
+                style={[
+                  styles.nutritionCard,
+                  { backgroundColor: `${color}15` },
+                ]}
+              >
+                <Ionicons name={icon as any} size={28} color={color} />
+                <Text style={[styles.nutritionValue, { color }]}>
+                  {calculateNutrients[key as keyof typeof calculateNutrients]}
+                  {suffix}
+                </Text>
+                <Text style={styles.nutritionLabel}>{label}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* Quantity Input */}
         {!quickAdd && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Cantidad</Text>
-            <View style={styles.quantityContainer}>
-              <View style={styles.quantityInputContainer}>
-                <TextInput
-                  style={styles.quantityInput}
-                  placeholder="100"
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="decimal-pad"
-                />
-                <TouchableOpacity
-                  style={styles.unitButton}
-                  onPress={() => {
-                    setModalType("units");
-                    setIsModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.unitButtonText}>
-                    {getUnitLabel(unit)}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
+            <View style={styles.quantityInputContainer}>
+              <TextInput
+                style={styles.quantityInput}
+                placeholder="100"
+                value={quantity}
+                onChangeText={setQuantity}
+                keyboardType="decimal-pad"
+              />
+              <TouchableOpacity
+                style={styles.unitButton}
+                onPress={() => {
+                  setModalType("units");
+                  setIsModalVisible(true);
+                }}
+              >
+                <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
+                <Ionicons name="chevron-down" size={20} color="#6B7280" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* Meal Selection */}
         {!quickAdd && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Momento del Día</Text>
@@ -431,7 +467,6 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {/* Additional Nutrients */}
         {producto.others && producto.others.length > 0 && (
           <View style={styles.section}>
             <TouchableOpacity
@@ -463,12 +498,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         )}
       </ScrollView>
 
-      {/* Add Button */}
       {!fromDiary && !quickAdd && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.addButton, saving && styles.addButtonDisabled]}
-            onPress={handleAddToDiary}
+            onPress={() => handleAddOrUpdateEntry()}
             disabled={saving}
           >
             {saving ? (
@@ -483,7 +517,29 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Units Modal */}
+      {fromDiary && !quickAdd && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.addButton, saving && styles.addButtonDisabled]}
+            onPress={() => handleAddOrUpdateEntry()}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={24}
+                  color="#fff"
+                />
+                <Text style={styles.addButtonText}>Actualizar</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Modal
         isVisible={isModalVisible && modalType === "units"}
         onBackdropPress={() => setIsModalVisible(false)}
@@ -498,7 +554,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
-          {units.map((unitOption) => (
+          {UNITS_CONFIG.map((unitOption) => (
             <TouchableOpacity
               key={unitOption.value}
               style={styles.modalOption}
@@ -534,12 +590,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         </View>
       </Modal>
 
-      {/* Meals Modal */}
       <Modal
         isVisible={isModalVisible && modalType === "meals"}
         onBackdropPress={() => {
           setIsModalVisible(false);
-          // Si es quickAdd y se cierra sin seleccionar, volver atrás
           if (quickAdd) {
             navigation.goBack();
           }
@@ -564,7 +618,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
-          {meals.map((mealOption) => (
+          {MEALS_CONFIG.map((mealOption) => (
             <TouchableOpacity
               key={mealOption.value}
               style={styles.modalOption}
@@ -625,14 +679,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1A1A1A",
   },
+  headerActions: {
+    flexDirection: "row",
+    gap: 16,
+  },
   imageContainer: {
     backgroundColor: "#fff",
     paddingVertical: 30,
     alignItems: "center",
   },
   productImage: {
-    width: width * 0.5,
-    height: width * 0.5,
     resizeMode: "contain",
   },
   nameContainer: {
@@ -685,9 +741,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 20,
     marginTop: 12,
-  },
-  quantityContainer: {
-    gap: 12,
   },
   quantityInputContainer: {
     flexDirection: "row",
