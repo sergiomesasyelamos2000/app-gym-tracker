@@ -1,92 +1,251 @@
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import React, { useState, useRef, useCallback } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import React, { useRef, useState, useCallback, useEffect } from "react";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  Text,
+  Vibration,
+  Dimensions,
+  BackHandler,
+} from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
-type Photo = { uri: string };
+const { width } = Dimensions.get("window");
+const SCAN_AREA_SIZE = Math.min(width * 0.7, 300);
 
 type Props = {
-  onPhotoTaken?: (photo: Photo) => void;
   onBarCodeScanned?: (data: string) => void;
   onCloseCamera?: () => void;
 };
 
 export default function ReusableCameraView({
-  onPhotoTaken,
   onBarCodeScanned,
   onCloseCamera,
 }: Props) {
-  const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [scanned, setScanned] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Cambiar cámara (frontal/trasera)
-  const toggleCameraFacing = useCallback(() => {
-    setFacing((prev) => (prev === "back" ? "front" : "back"));
+  // Flag para saber si el componente está montado
+  const isMounted = useRef(true);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    isMounted.current = true;
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
-  // Tomar foto
-  const takePhoto = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
-      onPhotoTaken?.(photo);
+  // Manejar el botón de retroceso en Android
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (isMounted.current) {
+          onCloseCamera?.();
+        }
+        return true;
+      }
+    );
+
+    return () => backHandler.remove();
+  }, [onCloseCamera]);
+
+  const handleBarCodeScanned = useCallback(
+    ({ data }: { data: string }) => {
+      if (!scanned && isMounted.current) {
+        setScanned(true);
+        Vibration.vibrate(100);
+
+        // Pequeño delay para dar feedback visual
+        setTimeout(() => {
+          if (isMounted.current) {
+            onBarCodeScanned?.(data);
+          }
+        }, 300);
+      }
+    },
+    [scanned, onBarCodeScanned]
+  );
+
+  const handleCameraError = useCallback((error: any) => {
+    if (isMounted.current) {
+      console.error("Error en cámara:", error);
+      setError("No se pudo iniciar la cámara. Intenta de nuevo.");
+    }
+  }, []);
+
+  // **FIX 5: Cleanup al cerrar**
+  const handleClose = () => {
+    if (isMounted.current) {
+      setScanned(true);
+      onCloseCamera?.();
     }
   };
 
-  // Escanear código de barras
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (!scanned) {
-      setScanned(true);
-      onBarCodeScanned?.(data);
+  const handleRequestPermission = async () => {
+    try {
+      const result = await requestPermission();
+      if (!result.granted && isMounted.current) {
+        setError("Permiso de cámara denegado. Actívalo en ajustes.");
+      }
+    } catch (err) {
+      if (isMounted.current) {
+        setError("Error al solicitar permisos");
+      }
+    }
+  };
+
+  const handleRetry = () => {
+    if (isMounted.current) {
+      setError(null);
+      setScanned(false);
     }
   };
 
   if (!permission) {
-    return <View />;
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Cargando...</Text>
+      </View>
+    );
   }
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Icon name="camera-off" size={50} color="gray" />
+      <View style={styles.permissionContainer}>
+        <View style={styles.permissionIconContainer}>
+          <Icon name="qr-code-scanner" size={80} color="#6C3BAA" />
+        </View>
+        <Text style={styles.permissionTitle}>Permiso de Cámara</Text>
+        <Text style={styles.permissionText}>
+          Necesitamos acceso a tu cámara para escanear códigos de barras
+        </Text>
         <TouchableOpacity
-          onPress={requestPermission}
+          onPress={handleRequestPermission}
           style={styles.permissionButton}
         >
-          <Icon name="lock-open" size={24} color="white" />
+          <Text style={styles.permissionButtonText}>Permitir Cámara</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleClose} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Cancelar</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <View style={styles.errorIconContainer}>
+          <Icon name="error-outline" size={80} color="#FF6B6B" />
+        </View>
+        <Text style={styles.errorTitle}>Error</Text>
+        <Text style={styles.errorText}>{error}</Text>
+
+        <TouchableOpacity onPress={handleClose} style={styles.errorButton}>
+          <Text style={styles.errorButtonText}>Cerrar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleRetry} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const renderCorner = (
+    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
+  ) => {
+    const styleMap = {
+      topLeft: [styles.corner, styles.cornerTopLeft],
+      topRight: [styles.corner, styles.cornerTopRight],
+      bottomLeft: [styles.corner, styles.cornerBottomLeft],
+      bottomRight: [styles.corner, styles.cornerBottomRight],
+    };
+
+    return <View style={styleMap[position]} />;
+  };
+
   return (
     <View style={styles.container}>
       <CameraView
         style={styles.camera}
-        facing={facing}
+        facing={"back" as CameraType}
         ref={cameraRef}
-        onBarcodeScanned={handleBarCodeScanned}
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        onMountError={handleCameraError}
+        barcodeScannerSettings={{
+          barcodeTypes: [
+            "aztec",
+            "ean13",
+            "ean8",
+            "qr",
+            "pdf417",
+            "upc_e",
+            "datamatrix",
+            "code39",
+            "code93",
+            "itf14",
+            "codabar",
+            "code128",
+            "upc_a",
+          ],
+        }}
       >
-        {/* Botón cerrar */}
-        <TouchableOpacity style={styles.closeButton} onPress={onCloseCamera}>
-          <Icon name="close" size={30} color="white" />
-        </TouchableOpacity>
-
-        {/* Controles inferiores */}
-        <View style={styles.buttonContainer}>
-          {/* Botón captura */}
-          <TouchableOpacity style={styles.circularButton} onPress={takePhoto}>
-            <View style={styles.innerCircle} />
-          </TouchableOpacity>
-
-          {/* Botón flip cámara */}
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={styles.flipButton}
-            onPress={toggleCameraFacing}
+            style={styles.closeButton}
+            onPress={handleClose}
+            activeOpacity={0.7}
           >
-            <Icon name="flip-camera-ios" size={30} color="white" />
+            <Icon name="close" size={28} color="white" />
           </TouchableOpacity>
+          <Text style={styles.title}>Escanear Código</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* Overlay */}
+        <View style={styles.overlay}>
+          <View style={[styles.overlaySection, styles.overlayTop]} />
+
+          <View style={styles.overlayMiddle}>
+            <View style={[styles.overlaySection, styles.overlaySide]} />
+
+            <View style={styles.scanAreaContainer}>
+              <View style={styles.scanArea}>
+                {renderCorner("topLeft")}
+                {renderCorner("topRight")}
+                {renderCorner("bottomLeft")}
+                {renderCorner("bottomRight")}
+
+                <View style={styles.scanLine} />
+
+                <View style={styles.scanGlow} />
+              </View>
+
+              <Text style={styles.instructionText}>
+                Coloca el código de barras dentro del marco
+              </Text>
+            </View>
+
+            <View style={[styles.overlaySection, styles.overlaySide]} />
+          </View>
+
+          <View style={[styles.overlaySection, styles.overlayBottom]}>
+            <View style={styles.bottomInfo}>
+              <Icon name="info" size={20} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.helpText}>
+                El escaneo es automático cuando el código está bien enfocado
+              </Text>
+            </View>
+          </View>
         </View>
       </CameraView>
     </View>
@@ -96,52 +255,276 @@ export default function ReusableCameraView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
     backgroundColor: "black",
   },
   camera: {
     flex: 1,
   },
-  buttonContainer: {
+  header: {
     position: "absolute",
-    bottom: 20,
+    top: 50,
+    left: 0,
+    right: 0,
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-  },
-  circularButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  innerCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "red",
-  },
-  flipButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    zIndex: 2,
   },
   closeButton: {
-    position: "absolute",
-    top: 20,
-    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
+  title: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  overlay: {
+    flex: 1,
+  },
+  overlaySection: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  overlayTop: {
+    flex: 1.5,
+  },
+  overlayMiddle: {
+    flexDirection: "row",
+    height: SCAN_AREA_SIZE + 80,
+  },
+  overlaySide: {
+    flex: 1,
+  },
+  overlayBottom: {
+    flex: 2,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingTop: 30,
+  },
+  scanAreaContainer: {
+    width: SCAN_AREA_SIZE,
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  scanArea: {
+    width: SCAN_AREA_SIZE,
+    height: SCAN_AREA_SIZE,
+    borderWidth: 0,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.02)",
+    position: "relative",
+  },
+  scanLine: {
+    width: "100%",
+    height: 3,
+    backgroundColor: "#6C3BAA",
+    position: "absolute",
+    top: "50%",
+    shadowColor: "#6C3BAA",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  scanGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "rgba(108, 59, 170, 0.3)",
+    shadowColor: "#6C3BAA",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
+    elevation: 5,
+  },
+  corner: {
+    position: "absolute",
+    width: 25,
+    height: 25,
+    borderColor: "#6C3BAA",
+    opacity: 0.85,
+  },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 12,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 12,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 12,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 12,
+  },
+  instructionText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 25,
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  bottomInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginHorizontal: 40,
+  },
+  helpText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
+    marginLeft: 10,
+    flex: 1,
+    textAlign: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "black",
+  },
+  loadingText: {
+    color: "white",
+    fontSize: 16,
+  },
+  cameraLoading: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  cameraLoadingText: {
+    color: "white",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "black",
+    paddingHorizontal: 40,
+  },
+  permissionIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(108, 59, 170, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  permissionTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  permissionText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 40,
+  },
   permissionButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "gray",
-    borderRadius: 5,
+    backgroundColor: "#6C3BAA",
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: "#6C3BAA",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 15,
+  },
+  permissionButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
+  secondaryButtonText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "black",
+    paddingHorizontal: 40,
+  },
+  errorIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255, 107, 107, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  errorTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  errorText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 40,
+  },
+  errorButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  errorButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

@@ -74,7 +74,7 @@ export interface UserNutritionProfile {
 
 // Food diary
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-export type FoodUnit = "gram" | "ml" | "portion" | "custom";
+export type FoodUnit = "g" | "ml" | "portion" | "custom";
 
 export interface FoodEntry {
   id?: string;

@@ -897,13 +897,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   proteinText: {
-    color: "#4ECDC4",
+    color: "#2196F3",
   },
   carbsText: {
-    color: "#FFB347",
+    color: "#FFB74D",
   },
   fatText: {
-    color: "#FF6B9D",
+    color: "#FF9800",
   },
   removeProductButton: {
     width: 36,

@@ -450,6 +450,23 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     });
   };
 
+  const formatHeaderDate = () => {
+    const date = new Date(selectedDate + "T00:00:00");
+    if (isToday) {
+      return date.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+    } else {
+      return date.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+    }
+  };
+
   if (!userProfile) return null;
 
   const effectiveEntries = todayEntries.filter(
@@ -684,9 +701,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               <Text style={styles.headerTitle}>
                 {isToday ? "Hoy" : formatShortDate()}
               </Text>
-              {isToday && (
-                <Text style={styles.headerDate}>{formatDisplayDate()}</Text>
-              )}
+              <Text style={styles.headerDate}>{formatHeaderDate()}</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity

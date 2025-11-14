@@ -18,8 +18,10 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Modal from "react-native-modal";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
+import { FoodUnit } from "../../../models/nutrition.model";
 
 interface NutritionalValues {
   calories: string;
@@ -40,6 +42,27 @@ type EditProductScreenRouteProp = RouteProp<
   "EditProductScreen"
 >;
 
+const UNITS_CONFIG = [
+  {
+    label: "Gramos",
+    value: "g" as FoodUnit,
+    icon: "scale-outline",
+    color: "#10B981",
+  },
+  {
+    label: "Mililitros",
+    value: "ml" as FoodUnit,
+    icon: "water-outline",
+    color: "#3B82F6",
+  },
+  {
+    label: "Porción",
+    value: "portion" as FoodUnit,
+    icon: "restaurant-outline",
+    color: "#F59E0B",
+  },
+];
+
 export default function EditProductScreen() {
   const navigation = useNavigation<EditProductScreenNavigationProp>();
   const route = useRoute<EditProductScreenRouteProp>();
@@ -57,7 +80,10 @@ export default function EditProductScreen() {
   const [servingSize, setServingSize] = useState(
     product?.servingSize ? String(product.servingSize) : ""
   );
-  const [servingUnit, setServingUnit] = useState(product?.servingUnit || "g");
+  const [servingUnit, setServingUnit] = useState<FoodUnit>(
+    (product?.servingUnit as FoodUnit) || "gram"
+  );
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const [nutritionalValues, setNutritionalValues] = useState<NutritionalValues>(
     {
@@ -124,6 +150,14 @@ export default function EditProductScreen() {
   ) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
+  };
+
+  const getUnitLabel = (value: FoodUnit): string => {
+    return UNITS_CONFIG.find((u) => u.value === value)?.label || "Gramos";
+  };
+
+  const getUnitData = (value: FoodUnit) => {
+    return UNITS_CONFIG.find((u) => u.value === value) || UNITS_CONFIG[0];
   };
 
   const validateForm = (): boolean => {
@@ -255,6 +289,8 @@ export default function EditProductScreen() {
       ]
     );
   };
+
+  const selectedUnit = getUnitData(servingUnit);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -400,28 +436,43 @@ export default function EditProductScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tamaño de Porción</Text>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 2, marginRight: 12 }]}>
-                <Text style={styles.label}>Cantidad</Text>
-                <TextInput
-                  style={styles.input}
-                  value={servingSize}
-                  onChangeText={setServingSize}
-                  placeholder="100"
-                  placeholderTextColor="#999"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Unidad</Text>
-                <TextInput
-                  style={styles.input}
-                  value={servingUnit}
-                  onChangeText={setServingUnit}
-                  placeholder="g"
-                  placeholderTextColor="#999"
-                />
-              </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Cantidad</Text>
+              <TextInput
+                style={styles.input}
+                value={servingSize}
+                onChangeText={setServingSize}
+                placeholder="100"
+                placeholderTextColor="#999"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unidad</Text>
+              <TouchableOpacity
+                style={styles.unitSelector}
+                onPress={() => setIsModalVisible(true)}
+              >
+                <View style={styles.unitSelectorLeft}>
+                  <View
+                    style={[
+                      styles.unitIconContainer,
+                      { backgroundColor: `${selectedUnit.color}15` },
+                    ]}
+                  >
+                    <Ionicons
+                      name={selectedUnit.icon as any}
+                      size={20}
+                      color={selectedUnit.color}
+                    />
+                  </View>
+                  <Text style={styles.unitSelectorText}>
+                    {selectedUnit.label}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color="#6B7280" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -565,6 +616,57 @@ export default function EditProductScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Modal de selección de unidades */}
+      <Modal
+        isVisible={isModalVisible}
+        onBackdropPress={() => setIsModalVisible(false)}
+        style={styles.modal}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Seleccionar Unidad</Text>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          {UNITS_CONFIG.map((unitOption) => (
+            <TouchableOpacity
+              key={unitOption.value}
+              style={styles.modalOption}
+              onPress={() => {
+                setServingUnit(unitOption.value);
+                setIsModalVisible(false);
+              }}
+            >
+              <View style={styles.modalOptionLeft}>
+                <View
+                  style={[
+                    styles.unitIconContainer,
+                    { backgroundColor: `${unitOption.color}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name={unitOption.icon as any}
+                    size={24}
+                    color={unitOption.color}
+                  />
+                </View>
+                <Text style={styles.modalOptionText}>{unitOption.label}</Text>
+              </View>
+              {servingUnit === unitOption.value && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={unitOption.color}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -715,6 +817,36 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
   },
+  unitSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+  },
+  unitSelectorLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  unitIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  unitSelectorText: {
+    fontSize: RFValue(15),
+    fontWeight: "600",
+    color: "#1A1A1A",
+    flex: 1,
+  },
   footer: {
     padding: 16,
     backgroundColor: "#FFF",
@@ -745,5 +877,46 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 32,
+  },
+  modal: {
+    justifyContent: "flex-end",
+    margin: 0,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  modalTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  modalOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  modalOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  modalOptionText: {
+    fontSize: RFValue(15),
+    fontWeight: "600",
+    color: "#1A1A1A",
   },
 });

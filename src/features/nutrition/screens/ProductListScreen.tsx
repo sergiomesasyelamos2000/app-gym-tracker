@@ -7,7 +7,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  RefreshControl,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import {
@@ -51,19 +52,46 @@ type ProductListScreenRouteProp = RouteProp<
   "ProductListScreen"
 >;
 
+// Cache para evitar recargas innecesarias
+const dataCache = {
+  allProducts: null as Product[] | null,
+  favorites: null as FavoriteProduct[] | null,
+  customProducts: null as CustomProduct[] | null,
+  customMeals: null as CustomMeal[] | null,
+  lastUpdate: {
+    allProducts: 0,
+    favorites: 0,
+    customProducts: 0,
+    customMeals: 0,
+  },
+};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
 // Tab de Todos los Productos
 function AllProductsTab({ searchText, navigation }: TabProps) {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
   useEffect(() => {
-    loadProducts(1, true);
+    // Solo cargar si no se ha cargado antes o si el cache está vencido
+    const now = Date.now();
+    const cacheAge = now - dataCache.lastUpdate.allProducts;
+
+    if (!hasLoadedRef.current || cacheAge > CACHE_DURATION) {
+      loadProducts(1, true);
+      hasLoadedRef.current = true;
+    } else if (dataCache.allProducts) {
+      // Usar datos en caché
+      setProductos(dataCache.allProducts);
+    }
   }, []);
 
   const loadProducts = async (pageToLoad: number, initial = false) => {
@@ -82,10 +110,15 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
 
       if (initial) {
         setProductos(data.products);
+        dataCache.allProducts = data.products;
+        dataCache.lastUpdate.allProducts = Date.now();
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
       } else {
-        setProductos((prev) => [...prev, ...data.products]);
+        const newProducts = [...productos, ...data.products];
+        setProductos(newProducts);
+        dataCache.allProducts = newProducts;
+        dataCache.lastUpdate.allProducts = Date.now();
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
       }
@@ -224,15 +257,24 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
 function FavoritesTab({ searchText, navigation }: TabProps) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const hasLoadedRef = useRef(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  useFocusEffect(
-    useCallback(() => {
+  useEffect(() => {
+    // Solo cargar si no se ha cargado antes o si el cache está vencido
+    const now = Date.now();
+    const cacheAge = now - dataCache.lastUpdate.favorites;
+
+    if (!hasLoadedRef.current || cacheAge > CACHE_DURATION) {
       loadFavorites();
-    }, [userProfile])
-  );
+      hasLoadedRef.current = true;
+    } else if (dataCache.favorites) {
+      // Usar datos en caché
+      setFavorites(dataCache.favorites);
+    }
+  }, [userProfile]);
 
   const loadFavorites = async () => {
     if (!userProfile) {
@@ -244,12 +286,25 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
     try {
       const data = await nutritionService.getFavorites(userProfile.userId);
       setFavorites(data);
+      dataCache.favorites = data;
+      dataCache.lastUpdate.favorites = Date.now();
     } catch (error) {
       console.error("Error loading favorites:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Recargar cuando la pantalla recibe foco
+  useFocusEffect(
+    useCallback(() => {
+      const now = Date.now();
+      const cacheAge = now - dataCache.lastUpdate.favorites;
+      if (cacheAge > CACHE_DURATION) {
+        loadFavorites();
+      }
+    }, [userProfile])
+  );
 
   const handleProductPress = async (item: FavoriteProduct) => {
     try {
@@ -391,14 +446,34 @@ function CustomProductsTab({
 }: TabProps & { route?: any }) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedRef = useRef(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
+  useEffect(() => {
+    // Solo cargar si no se ha cargado antes o si el cache está vencido
+    const now = Date.now();
+    const cacheAge = now - dataCache.lastUpdate.customProducts;
+
+    if (!hasLoadedRef.current || cacheAge > CACHE_DURATION) {
+      loadCustomProducts();
+      hasLoadedRef.current = true;
+    } else if (dataCache.customProducts) {
+      // Usar datos en caché
+      setCustomProducts(dataCache.customProducts);
+    }
+  }, [userProfile]);
+
+  // Recargar cuando la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
-      loadCustomProducts();
+      const now = Date.now();
+      const cacheAge = now - dataCache.lastUpdate.customProducts;
+      if (cacheAge > CACHE_DURATION) {
+        loadCustomProducts();
+      }
     }, [userProfile])
   );
 
@@ -427,8 +502,9 @@ function CustomProductsTab({
 
     try {
       const data = await nutritionService.getCustomProducts(userProfile.userId);
-      console.log("Productos personalizados cargados:", data.length);
       setCustomProducts(data);
+      dataCache.customProducts = data;
+      dataCache.lastUpdate.customProducts = Date.now();
     } catch (error) {
       console.error("Error loading custom products:", error);
     } finally {
@@ -547,6 +623,16 @@ function CustomProductsTab({
     </TouchableOpacity>
   );
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      colors={["#6C3BAA"]}
+      tintColor="#6C3BAA"
+      progressBackgroundColor="#ffffff"
+    />
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -587,8 +673,7 @@ function CustomProductsTab({
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
+        refreshControl={refreshControl}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color="#D1D5DB" />
@@ -619,14 +704,34 @@ function CustomMealsTab({
 }: TabProps & { route?: any }) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedRef = useRef(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
+  useEffect(() => {
+    // Solo cargar si no se ha cargado antes o si el cache está vencido
+    const now = Date.now();
+    const cacheAge = now - dataCache.lastUpdate.customMeals;
+
+    if (!hasLoadedRef.current || cacheAge > CACHE_DURATION) {
+      loadCustomMeals();
+      hasLoadedRef.current = true;
+    } else if (dataCache.customMeals) {
+      // Usar datos en caché
+      setCustomMeals(dataCache.customMeals);
+    }
+  }, [userProfile]);
+
+  // Recargar cuando la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
-      loadCustomMeals();
+      const now = Date.now();
+      const cacheAge = now - dataCache.lastUpdate.customMeals;
+      if (cacheAge > CACHE_DURATION) {
+        loadCustomMeals();
+      }
     }, [userProfile])
   );
 
@@ -655,8 +760,9 @@ function CustomMealsTab({
 
     try {
       const data = await nutritionService.getCustomMeals(userProfile.userId);
-      console.log("Comidas personalizadas cargadas:", data.length);
       setCustomMeals(data);
+      dataCache.customMeals = data;
+      dataCache.lastUpdate.customMeals = Date.now();
     } catch (error) {
       console.error("Error loading custom meals:", error);
     } finally {
@@ -670,7 +776,6 @@ function CustomMealsTab({
   };
 
   const handleMealPress = (item: CustomMeal) => {
-    // Navegar directamente a la edición de la comida
     navigation.navigate("EditMealScreen", { meal: item });
   };
 
@@ -751,6 +856,16 @@ function CustomMealsTab({
     </TouchableOpacity>
   );
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      colors={["#6C3BAA"]}
+      tintColor="#6C3BAA"
+      progressBackgroundColor="#ffffff"
+    />
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -789,8 +904,7 @@ function CustomMealsTab({
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
+        refreshControl={refreshControl}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color="#D1D5DB" />
@@ -919,6 +1033,8 @@ export default function ProductListScreen() {
         <Tab.Navigator
           initialRouteName={initialTab}
           screenOptions={{
+            lazy: true, // Lazy loading activado
+            lazyPreloadDistance: 1, // Pre-cargar solo el tab adyacente
             tabBarActiveTintColor: "#6C3BAA",
             tabBarInactiveTintColor: "#9CA3AF",
             tabBarLabelStyle: {
