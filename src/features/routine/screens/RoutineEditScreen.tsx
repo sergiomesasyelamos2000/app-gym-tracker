@@ -101,10 +101,17 @@ export default function RoutineEditScreen() {
     );
 
     const initial: { [exerciseId: string]: SetRequestDto[] } = {};
+    const initialSupersets: { [key: string]: string } = {};
+
     (exercises || []).forEach((exercise) => {
       initial[exercise.id] = exercise.sets || [];
+      if (exercise.supersetWith) {
+        initialSupersets[exercise.id] = exercise.supersetWith;
+      }
     });
+
     setSets(initial);
+    setSupersets(initialSupersets);
   }, [title, exercises]);
 
   const handleUpdate = async () => {
@@ -247,6 +254,7 @@ export default function RoutineEditScreen() {
               return newSets;
             });
 
+            // 🔥 Eliminar superseries relacionadas
             setSupersets((prev) => {
               const newSupersets = { ...prev };
               const partnerExerciseId = newSupersets[exerciseId];
@@ -265,12 +273,66 @@ export default function RoutineEditScreen() {
     );
   };
 
+  // 🔥 FUNCIÓN PARA AGREGAR SUPERSERIE
   const handleAddSuperset = (exerciseId: string, targetExerciseId: string) => {
+    console.log(`🔥 Adding superset: ${exerciseId} with ${targetExerciseId}`);
+
     setSupersets((prev) => ({
       ...prev,
       [exerciseId]: targetExerciseId,
       [targetExerciseId]: exerciseId,
     }));
+
+    Alert.alert(
+      "Superserie creada",
+      "Los ejercicios se han vinculado correctamente"
+    );
+  };
+
+  // 🔥 FUNCIÓN PARA ELIMINAR SUPERSERIE
+  const handleRemoveSuperset = (exerciseId: string) => {
+    const targetExerciseId = supersets[exerciseId];
+
+    if (!targetExerciseId) {
+      console.log("🔥 No superset found for exercise:", exerciseId);
+      return;
+    }
+
+    const exerciseName =
+      exercisesState.find((ex) => ex.id === exerciseId)?.name ||
+      "Este ejercicio";
+    const targetExerciseName =
+      exercisesState.find((ex) => ex.id === targetExerciseId)?.name ||
+      "el otro ejercicio";
+
+    Alert.alert(
+      "Eliminar superserie",
+      `¿Deseas eliminar la superserie entre "${exerciseName}" y "${targetExerciseName}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => {
+            console.log(
+              `🔥 Removing superset from ${exerciseId} and ${targetExerciseId}`
+            );
+
+            setSupersets((prev) => {
+              const newSupersets = { ...prev };
+              delete newSupersets[exerciseId];
+              delete newSupersets[targetExerciseId];
+              return newSupersets;
+            });
+
+            Alert.alert(
+              "Superserie eliminada",
+              "La vinculación ha sido eliminada"
+            );
+          },
+        },
+      ]
+    );
   };
 
   const getSupersetExerciseName = (exerciseId: string): string | undefined => {
@@ -339,15 +401,8 @@ export default function RoutineEditScreen() {
         onReorder={handleReorderFromHeader}
         onReplace={() => handleReplaceExercise(item.id)}
         onDelete={() => handleDeleteExercise(item.id)}
-        onAddSuperset={(targetId) => {
-          console.log(
-            "🔥 RoutineEditScreen - Adding superset:",
-            item.id,
-            "->",
-            targetId
-          );
-          handleAddSuperset(item.id, targetId);
-        }}
+        onAddSuperset={(targetId) => handleAddSuperset(item.id, targetId)}
+        onRemoveSuperset={() => handleRemoveSuperset(item.id)} // 🔥 PASAR FUNCIÓN
         availableExercises={
           reorderFromButton ? tempExercisesOrder : exercisesState
         }

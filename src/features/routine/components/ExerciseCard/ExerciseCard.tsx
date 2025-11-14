@@ -1,5 +1,13 @@
+// ExerciseCard.tsx - Versión actualizada
+
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Button, Card } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
@@ -27,6 +35,7 @@ interface Props {
   onReplace?: () => void;
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
+  onRemoveSuperset?: () => void; // 🔥 NUEVO
   availableExercises?: ExerciseRequestDto[];
   supersetWith?: string;
   supersetExerciseName?: string;
@@ -48,6 +57,7 @@ const ExerciseCard = ({
   onReplace,
   onDelete,
   onAddSuperset,
+  onRemoveSuperset, // 🔥 NUEVO
   availableExercises = [],
   supersetWith,
   supersetExerciseName,
@@ -65,6 +75,10 @@ const ExerciseCard = ({
     }
     return "00:00";
   });
+
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
+  const isMediumScreen = width < 420;
 
   useEffect(() => {
     onChangeSets?.(sets);
@@ -141,19 +155,52 @@ const ExerciseCard = ({
   };
 
   return (
-    <Card style={styles.card}>
+    <Card
+      style={[
+        styles.card,
+        {
+          padding: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
+          marginVertical: isSmallScreen ? 8 : 16,
+        },
+      ]}
+    >
       <TouchableOpacity
         onLongPress={onLongPress}
         delayLongPress={500}
         activeOpacity={0.9}
         disabled={readonly}
       >
+        {/* 🔥 TAG DE SUPERSERIE */}
         {supersetWith && supersetExerciseName && (
-          <View style={styles.supersetTag}>
-            <Icon name="link" size={14} color="#7C3AED" />
-            <Text style={styles.supersetTagText}>
-              Superserie con {supersetExerciseName}
+          <View
+            style={[
+              styles.supersetTag,
+              {
+                paddingHorizontal: isSmallScreen ? 10 : 12,
+                paddingVertical: isSmallScreen ? 6 : 8,
+                marginBottom: isSmallScreen ? 8 : 12,
+              },
+            ]}
+          >
+            <Icon name="link" size={isSmallScreen ? 14 : 16} color="#7C3AED" />
+            <Text
+              style={[
+                styles.supersetTagText,
+                { fontSize: RFValue(isSmallScreen ? 11 : 12) },
+              ]}
+            >
+              Superserie: {supersetExerciseName}
             </Text>
+
+            {/* 🔥 BOTÓN PARA ELIMINAR SUPERSERIE (solo en edición) */}
+            {showOptions && onRemoveSuperset && (
+              <TouchableOpacity
+                onPress={onRemoveSuperset}
+                style={styles.removeSuperset}
+              >
+                <Icon name="close" size={16} color="#7C3AED" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -164,15 +211,20 @@ const ExerciseCard = ({
           onReplace={onReplace}
           onDelete={onDelete}
           onAddSuperset={onAddSuperset}
+          onRemoveSuperset={onRemoveSuperset} // 🔥 PASAR PROP
           availableExercises={availableExercises}
           showOptions={showOptions}
+          hasSuperset={!!supersetWith} // 🔥 NUEVO: Indicar si ya tiene superserie
         />
+
         <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
+
         <ExerciseRestPicker
           restTime={restTime}
           setRestTime={setRestTime}
           readonly={readonly}
         />
+
         <ExerciseSetList
           sets={sets}
           onUpdate={updateSet}
@@ -184,9 +236,25 @@ const ExerciseCard = ({
           readonly={readonly}
           started={started}
         />
+
         {!readonly && (
-          <Button mode="contained" onPress={addSet} style={styles.addButton}>
-            + Añadir Serie
+          <Button
+            mode="contained"
+            onPress={addSet}
+            style={[
+              styles.addButton,
+              {
+                paddingVertical: isSmallScreen ? 4 : 8,
+                marginTop: isSmallScreen ? 12 : 20,
+              },
+            ]}
+            labelStyle={{
+              fontSize: RFValue(isSmallScreen ? 13 : 15),
+              fontWeight: "600",
+            }}
+            icon="plus"
+          >
+            Añadir Serie
           </Button>
         )}
       </TouchableOpacity>
@@ -201,30 +269,46 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 20,
     elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   addButton: {
     marginTop: 20,
-    backgroundColor: "#6C63FF",
-    borderRadius: 14,
+    backgroundColor: "#6C3BAA",
+    borderRadius: 12,
     paddingVertical: 8,
+    elevation: 2,
   },
   supersetTag: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#EDE9FE",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 20,
     alignSelf: "flex-start",
     marginBottom: 12,
     gap: 6,
     borderWidth: 1,
     borderColor: "#C4B5FD",
+    minWidth: 0,
   },
   supersetTagText: {
     fontSize: RFValue(12),
     fontWeight: "600",
     color: "#7C3AED",
+    flexShrink: 1,
+  },
+  removeSuperset: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
   },
 });
 

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 
@@ -53,14 +54,18 @@ const ExerciseSetList = ({
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(300)).current;
 
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
+  const isMediumScreen = width < 420;
+
   const renderRightActions = (itemId: string) => (
     <View style={styles.actionsContainer}>
-      <Icon
-        name="delete"
-        size={24}
-        color="#F44336"
+      <TouchableOpacity
         onPress={() => onDelete(itemId)}
-      />
+        style={styles.deleteButton}
+      >
+        <Icon name="delete" size={22} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -121,10 +126,14 @@ const ExerciseSetList = ({
                 { transform: [{ translateY: modalTranslateY }] },
               ]}
             >
+              <View style={styles.modalHandle} />
               <Text style={styles.modalTitle}>Unidad de Peso</Text>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  weightUnit === "kg" && styles.optionButtonSelected,
+                ]}
                 onPress={() => {
                   closeModal(() => {
                     onWeightUnitChange("kg");
@@ -132,14 +141,33 @@ const ExerciseSetList = ({
                   });
                 }}
               >
-                <Text style={styles.optionText}>Kilogramos (kg)</Text>
+                <View style={styles.optionContent}>
+                  <Icon
+                    name="fitness-center"
+                    size={20}
+                    color={weightUnit === "kg" ? "#6C3BAA" : "#999"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      weightUnit === "kg" && styles.optionTextSelected,
+                    ]}
+                  >
+                    Kilogramos (kg)
+                  </Text>
+                </View>
                 {weightUnit === "kg" && (
-                  <Icon name="check" size={20} color="#6C63FF" />
+                  <View style={styles.checkCircle}>
+                    <Icon name="check" size={16} color="#fff" />
+                  </View>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  weightUnit === "lbs" && styles.optionButtonSelected,
+                ]}
                 onPress={() => {
                   closeModal(() => {
                     onWeightUnitChange("lbs");
@@ -147,9 +175,25 @@ const ExerciseSetList = ({
                   });
                 }}
               >
-                <Text style={styles.optionText}>Libras (lbs)</Text>
+                <View style={styles.optionContent}>
+                  <Icon
+                    name="fitness-center"
+                    size={20}
+                    color={weightUnit === "lbs" ? "#6C3BAA" : "#999"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      weightUnit === "lbs" && styles.optionTextSelected,
+                    ]}
+                  >
+                    Libras (lbs)
+                  </Text>
+                </View>
                 {weightUnit === "lbs" && (
-                  <Icon name="check" size={20} color="#6C63FF" />
+                  <View style={styles.checkCircle}>
+                    <Icon name="check" size={16} color="#fff" />
+                  </View>
                 )}
               </TouchableOpacity>
             </Animated.View>
@@ -180,10 +224,14 @@ const ExerciseSetList = ({
                 { transform: [{ translateY: modalTranslateY }] },
               ]}
             >
+              <View style={styles.modalHandle} />
               <Text style={styles.modalTitle}>Tipo de Repeticiones</Text>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  repsType === "reps" && styles.optionButtonSelected,
+                ]}
                 onPress={() => {
                   closeModal(() => {
                     onRepsTypeChange("reps");
@@ -191,14 +239,33 @@ const ExerciseSetList = ({
                   });
                 }}
               >
-                <Text style={styles.optionText}>Repeticiones</Text>
+                <View style={styles.optionContent}>
+                  <Icon
+                    name="repeat"
+                    size={20}
+                    color={repsType === "reps" ? "#6C3BAA" : "#999"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      repsType === "reps" && styles.optionTextSelected,
+                    ]}
+                  >
+                    Repeticiones
+                  </Text>
+                </View>
                 {repsType === "reps" && (
-                  <Icon name="check" size={20} color="#6C63FF" />
+                  <View style={styles.checkCircle}>
+                    <Icon name="check" size={16} color="#fff" />
+                  </View>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  repsType === "range" && styles.optionButtonSelected,
+                ]}
                 onPress={() => {
                   closeModal(() => {
                     onRepsTypeChange("range");
@@ -206,9 +273,25 @@ const ExerciseSetList = ({
                   });
                 }}
               >
-                <Text style={styles.optionText}>Rango de Repeticiones</Text>
+                <View style={styles.optionContent}>
+                  <Icon
+                    name="view-week"
+                    size={20}
+                    color={repsType === "range" ? "#6C3BAA" : "#999"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      repsType === "range" && styles.optionTextSelected,
+                    ]}
+                  >
+                    Rango de Repeticiones
+                  </Text>
+                </View>
                 {repsType === "range" && (
-                  <Icon name="check" size={20} color="#6C63FF" />
+                  <View style={styles.checkCircle}>
+                    <Icon name="check" size={16} color="#fff" />
+                  </View>
                 )}
               </TouchableOpacity>
             </Animated.View>
@@ -220,42 +303,95 @@ const ExerciseSetList = ({
 
   return (
     <>
-      <View style={styles.columnTitles}>
-        <Text style={[styles.columnTitle, { flex: 1 }]}>Serie</Text>
+      <View
+        style={[
+          styles.columnTitles,
+          { paddingHorizontal: isSmallScreen ? 4 : 8 },
+        ]}
+      >
+        <Text
+          style={[
+            styles.columnTitle,
+            {
+              flex: isSmallScreen ? 0.7 : 0.8,
+              fontSize: RFValue(isSmallScreen ? 10 : 12),
+            },
+          ]}
+        >
+          #
+        </Text>
 
         {started && (
-          <Text style={[styles.columnTitle, { flex: 2 }]}>Anterior</Text>
+          <Text
+            style={[
+              styles.columnTitle,
+              {
+                flex: isSmallScreen ? 1.3 : 1.5,
+                fontSize: RFValue(isSmallScreen ? 10 : 12),
+              },
+            ]}
+            numberOfLines={1}
+          >
+            Ant.
+          </Text>
         )}
 
         <TouchableOpacity
-          style={{ flex: 2 }}
+          style={{ flex: isSmallScreen ? 1.3 : 1.5 }}
           onPress={() => !readonly && !started && setShowWeightModal(true)}
           disabled={readonly}
         >
           <View style={styles.columnHeader}>
-            <Text style={styles.columnTitle}>{weightUnit}</Text>
+            <Text
+              style={[
+                styles.columnTitle,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
+              {weightUnit}
+            </Text>
             {!readonly && !started && (
-              <Icon name="arrow-drop-down" size={16} color="#777" />
+              <Icon
+                name="arrow-drop-down"
+                size={isSmallScreen ? 14 : 16}
+                color="#777"
+              />
             )}
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={{ flex: 2 }}
+          style={{ flex: isSmallScreen ? 1.8 : 2 }}
           onPress={() => !readonly && !started && setShowRepsModal(true)}
           disabled={readonly}
         >
           <View style={styles.columnHeader}>
-            <Text style={styles.columnTitle}>
-              {repsType === "reps" ? "Repeticiones" : "Rango"}
+            <Text
+              style={[
+                styles.columnTitle,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+              numberOfLines={1}
+            >
+              {repsType === "reps" ? "Reps" : "Rango"}
             </Text>
             {!readonly && !started && (
-              <Icon name="arrow-drop-down" size={16} color="#777" />
+              <Icon
+                name="arrow-drop-down"
+                size={isSmallScreen ? 14 : 16}
+                color="#777"
+              />
             )}
           </View>
         </TouchableOpacity>
 
-        {!readonly && <Text style={[styles.columnTitle, { flex: 1 }]}>✔</Text>}
+        {!readonly && (
+          <View
+            style={[styles.checkHeader, { flex: isSmallScreen ? 0.7 : 0.8 }]}
+          >
+            <Icon name="done" size={isSmallScreen ? 16 : 18} color="#6C3BAA" />
+          </View>
+        )}
       </View>
 
       <GestureHandlerRootView>
@@ -267,6 +403,7 @@ const ExerciseSetList = ({
               renderRightActions={() =>
                 !readonly ? renderRightActions(item.id) : null
               }
+              overshootRight={false}
             >
               <ExerciseSetRow
                 item={item}
@@ -302,22 +439,40 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 8,
     alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   columnHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
   },
   columnTitle: {
     fontWeight: "600",
-    fontSize: RFValue(14),
-    color: "#777",
+    fontSize: RFValue(12),
+    color: "#6B7280",
     textAlign: "center",
+  },
+  checkHeader: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionsContainer: {
     justifyContent: "center",
     alignItems: "center",
     width: 75,
+    marginVertical: 4,
+  },
+  deleteButton: {
+    backgroundColor: "#EF4444",
+    width: 60,
+    height: "100%",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
   },
   modalOverlay: {
     flex: 1,
@@ -326,29 +481,62 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: 40,
   },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
   modalTitle: {
     fontSize: RFValue(18),
-    fontWeight: "bold",
+    fontWeight: "700",
     textAlign: "center",
     marginBottom: 20,
-    color: "#333",
+    color: "#1F2937",
   },
   optionButton: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  optionButtonSelected: {
+    backgroundColor: "#F3F4FF",
+    borderColor: "#6C3BAA",
+  },
+  optionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   optionText: {
-    fontSize: RFValue(16),
-    color: "#333",
+    fontSize: RFValue(15),
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  optionTextSelected: {
+    color: "#6C3BAA",
+    fontWeight: "600",
+  },
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#6C3BAA",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

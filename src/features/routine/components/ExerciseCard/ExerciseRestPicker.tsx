@@ -4,6 +4,8 @@ import {
   Text,
   TouchableOpacity,
   useWindowDimensions,
+  View,
+  Platform,
 } from "react-native";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -21,20 +23,32 @@ const ExerciseRestPicker = ({
   readonly = false,
 }: Props) => {
   const [showPicker, setShowPicker] = useState(false);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
+  // Determinar si es una pantalla pequeña
+  const isSmallScreen = width < 375;
+  const isMediumScreen = width >= 375 && width < 768;
+  const isLargeScreen = width >= 768;
+
+  // Escalado más inteligente basado en breakpoints
   const dynamicStyles = {
-    padding: Math.max(10, width * 0.03),
-    fontSize: Math.max(14, width * 0.04),
-    iconSize: Math.max(20, width * 0.06),
+    containerPadding: isSmallScreen ? 10 : isMediumScreen ? 12 : 16,
+    iconSize: isSmallScreen ? 18 : isMediumScreen ? 20 : 24,
+    fontSize: isSmallScreen ? 13 : isMediumScreen ? 14 : 16,
+    borderRadius: isSmallScreen ? 10 : 12,
+    marginBottom: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
   };
 
+  // Estilos del modal adaptados al tamaño de pantalla
   const modalFontSizes = {
-    title: Math.max(18, width * 0.045),
-    label: Math.max(12, width * 0.035),
-    button: Math.max(14, width * 0.038),
-    pickerItem: Math.max(22, width * 0.055),
+    title: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
+    label: isSmallScreen ? 11 : isMediumScreen ? 12 : 14,
+    button: isSmallScreen ? 13 : isMediumScreen ? 14 : 16,
+    pickerItem: isSmallScreen ? 20 : isMediumScreen ? 24 : 28,
   };
+
+  const modalPadding = isSmallScreen ? 16 : isMediumScreen ? 20 : 24;
+  const modalWidth = isLargeScreen ? width * 0.5 : width * 0.85;
 
   const handleTimeConfirm = (pickedDuration: any) => {
     const newTime = formatTime(pickedDuration);
@@ -45,15 +59,59 @@ const ExerciseRestPicker = ({
   return (
     <>
       <TouchableOpacity
-        style={[styles.timerContainer, { padding: dynamicStyles.padding }]}
-        onPress={() => setShowPicker(true)}
-        activeOpacity={0.8}
+        style={[
+          styles.timerContainer,
+          {
+            padding: dynamicStyles.containerPadding,
+            borderRadius: dynamicStyles.borderRadius,
+            marginBottom: dynamicStyles.marginBottom,
+            opacity: readonly ? 0.6 : 1,
+          },
+        ]}
+        onPress={() => !readonly && setShowPicker(true)}
+        activeOpacity={0.7}
         disabled={readonly}
       >
-        <Icon name="timer" size={dynamicStyles.iconSize} color="#000" />
-        <Text style={[styles.timerText, { fontSize: dynamicStyles.fontSize }]}>
-          Descanso: {restTime}
-        </Text>
+        <View style={styles.iconWrapper}>
+          <Icon
+            name="timer"
+            size={dynamicStyles.iconSize}
+            color={readonly ? "#9CA3AF" : "#6B7280"}
+          />
+        </View>
+
+        <View style={styles.textWrapper}>
+          <Text
+            style={[
+              styles.timerLabel,
+              {
+                fontSize: dynamicStyles.fontSize * 0.85,
+              },
+            ]}
+          >
+            Descanso
+          </Text>
+          <Text
+            style={[
+              styles.timerValue,
+              {
+                fontSize: dynamicStyles.fontSize,
+                color: readonly ? "#999" : "#333",
+              },
+            ]}
+          >
+            {restTime}
+          </Text>
+        </View>
+
+        {!readonly && (
+          <Icon
+            name="chevron-right"
+            size={dynamicStyles.iconSize}
+            color="#999"
+            style={styles.chevronIcon}
+          />
+        )}
       </TouchableOpacity>
 
       <TimerPickerModal
@@ -62,9 +120,9 @@ const ExerciseRestPicker = ({
         hideHours
         minuteLabel="min"
         initialValue={parseRestTime(restTime)}
-        secondLabel="sec"
+        secondLabel="seg"
         onConfirm={handleTimeConfirm}
-        modalTitle="Seleccionar tiempo de descanso"
+        modalTitle="Tiempo de descanso"
         onCancel={() => setShowPicker(false)}
         closeOnOverlayPress
         use12HourPicker={false}
@@ -72,39 +130,81 @@ const ExerciseRestPicker = ({
         confirmButtonText="Confirmar"
         styles={{
           theme: "light",
+          backgroundColor: "#FFFFFF",
           modalTitle: {
             fontSize: modalFontSizes.title,
-            fontWeight: "bold",
-            marginBottom: 20,
-            marginTop: 10,
+            fontWeight: "700",
+            color: "#1F2937",
+            marginBottom: isSmallScreen ? 16 : 20,
+            marginTop: isSmallScreen ? 8 : 12,
             textAlign: "center",
+            letterSpacing: 0.3,
           },
           pickerLabel: {
             fontSize: modalFontSizes.label,
             marginTop: 4,
+            color: "#6B7280",
+            fontWeight: "600",
+            textTransform: "lowercase",
           },
           pickerItem: {
             fontSize: modalFontSizes.pickerItem,
+            fontWeight: "600",
+            color: "#111827",
           },
           cancelButton: {
             fontSize: modalFontSizes.button,
-            paddingVertical: 12,
-            paddingHorizontal: 20,
+            paddingVertical: isSmallScreen ? 10 : 12,
+            paddingHorizontal: isSmallScreen ? 16 : 20,
+            backgroundColor: "#F3F4F6",
+            color: "#6B7280",
+            fontWeight: "600",
+            borderRadius: 10,
+            borderWidth: 0,
+            borderColor: "transparent",
+            overflow: "hidden",
           },
           confirmButton: {
             fontSize: modalFontSizes.button,
-            paddingVertical: 12,
-            paddingHorizontal: 20,
+            paddingVertical: isSmallScreen ? 10 : 12,
+            paddingHorizontal: isSmallScreen ? 16 : 20,
+            backgroundColor: "#111827",
+            color: "#FFFFFF",
+            fontWeight: "700",
+            borderRadius: 10,
+            borderWidth: 0,
+            borderColor: "transparent",
+            overflow: "hidden",
           },
           buttonContainer: {
-            marginTop: 25,
-            marginBottom: 10,
+            marginTop: isSmallScreen ? 20 : 25,
+            marginBottom: isSmallScreen ? 8 : 12,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 12,
+            paddingHorizontal: modalPadding,
           },
           pickerContainer: {
-            marginVertical: 15,
+            marginVertical: isSmallScreen ? 12 : 16,
+            paddingHorizontal: modalPadding,
           },
           contentContainer: {
-            padding: Math.max(20, width * 0.05),
+            padding: modalPadding,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 16,
+            maxWidth: modalWidth,
+            width: "100%",
+            ...Platform.select({
+              ios: {
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+              },
+              android: {
+                elevation: 8,
+              },
+            }),
           },
         }}
       />
@@ -116,16 +216,49 @@ const styles = StyleSheet.create({
   timerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f2f7",
-    borderRadius: 12,
-    marginBottom: 20,
-    justifyContent: "flex-start",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    justifyContent: "space-between",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  timerText: {
-    marginLeft: 10,
-    color: "#333",
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  textWrapper: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: 2,
+  },
+  timerLabel: {
+    color: "#6B7280",
     fontWeight: "500",
-    flexShrink: 1,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  timerValue: {
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  chevronIcon: {
+    marginLeft: 8,
   },
 });
 

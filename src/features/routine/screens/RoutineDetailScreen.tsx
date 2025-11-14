@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
@@ -465,11 +466,13 @@ export default function RoutineDetailScreen() {
         restSeconds: re.restSeconds,
         weightUnit: re.weightUnit || "kg",
         repsType: re.repsType || "reps",
+        supersetWith: re.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
       })) ||
       data.exercises?.map((ex: any) => ({
         ...ex,
         weightUnit: ex.weightUnit || "kg",
         repsType: ex.repsType || "reps",
+        supersetWith: ex.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
       })) ||
       []
     );
@@ -495,6 +498,7 @@ export default function RoutineDetailScreen() {
         })) || [],
       weightUnit: exercise.weightUnit || "kg",
       repsType: exercise.repsType || "reps",
+      supersetWith: exercise.supersetWith || null, // 🔥 INCLUIR SUPERSERIES
     })),
   });
 
@@ -533,26 +537,35 @@ export default function RoutineDetailScreen() {
     setSets(resetSets);
   };
 
-  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => (
-    <ExerciseCard
-      exercise={item}
-      initialSets={sets[item.id] || []}
-      onChangeSets={(updatedSets) =>
-        setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
-      }
-      onChangeExercise={(updatedExercise) =>
-        setExercises((prev) =>
-          prev.map((ex) =>
-            ex.id === updatedExercise.id ? updatedExercise : ex
+  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => {
+    // 🔥 Buscar el nombre del ejercicio con el que hace superserie
+    const supersetExercise = item.supersetWith
+      ? exercisesState.find((ex) => ex.id === item.supersetWith)
+      : null;
+
+    return (
+      <ExerciseCard
+        exercise={item}
+        initialSets={sets[item.id] || []}
+        onChangeSets={(updatedSets) =>
+          setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
+        }
+        onChangeExercise={(updatedExercise) =>
+          setExercises((prev) =>
+            prev.map((ex) =>
+              ex.id === updatedExercise.id ? updatedExercise : ex
+            )
           )
-        )
-      }
-      readonly={readonly && !started}
-      started={started}
-      onStartRestTimer={handleStartRestTimer}
-      showOptions={false}
-    />
-  );
+        }
+        readonly={readonly && !started}
+        started={started}
+        onStartRestTimer={handleStartRestTimer}
+        showOptions={false}
+        supersetWith={item.supersetWith} // 🔥 PASAR PROP
+        supersetExerciseName={supersetExercise?.name} // 🔥 PASAR PROP
+      />
+    );
+  };
 
   if (loading) {
     return (
@@ -628,6 +641,8 @@ const styles = StyleSheet.create({
   loadingText: {
     textAlign: "center",
     marginTop: 40,
+    fontSize: RFValue(16),
+    color: "#6B7280",
   },
   saveButton: {
     backgroundColor: "#6C3BAA",

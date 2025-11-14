@@ -21,8 +21,10 @@ interface Props {
   onReplace?: () => void;
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
+  onRemoveSuperset?: () => void;
   availableExercises?: ExerciseRequestDto[];
-  showOptions?: boolean; // 🔥 NUEVO: Controla si se muestran las opciones
+  showOptions?: boolean;
+  hasSuperset?: boolean;
 }
 
 const ExerciseHeader = ({
@@ -32,8 +34,10 @@ const ExerciseHeader = ({
   onReplace,
   onDelete,
   onAddSuperset,
+  onRemoveSuperset,
   availableExercises = [],
-  showOptions = false, // 🔥 Por defecto NO mostrar opciones
+  showOptions = false,
+  hasSuperset = false,
 }: Props) => {
   const navigation = useNavigation<any>();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
@@ -165,13 +169,28 @@ const ExerciseHeader = ({
               <Text style={styles.modalItemText}>Reemplazar ejercicio</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => handleExerciseAction("superset")}
-            >
-              <Icon name="link" size={22} color="#4E2A84" />
-              <Text style={styles.modalItemText}>Agregar a superserie</Text>
-            </TouchableOpacity>
+            {hasSuperset ? (
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={() => {
+                  setActionModalVisible(false);
+                  onRemoveSuperset?.();
+                }}
+              >
+                <Icon name="link-off" size={22} color="#EF4444" />
+                <Text style={[styles.modalItemText, { color: "#EF4444" }]}>
+                  Eliminar superserie
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.modalItem}
+                onPress={() => handleExerciseAction("superset")}
+              >
+                <Icon name="link" size={22} color="#4E2A84" />
+                <Text style={styles.modalItemText}>Agregar a superserie</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.modalDivider} />
 
