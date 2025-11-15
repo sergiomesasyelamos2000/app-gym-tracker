@@ -1015,7 +1015,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F8FAFC" },
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
   screen: { flex: 1 },
   loadingOverlay: {
     position: "absolute",

@@ -501,7 +501,7 @@ export default function CreateMealScreen() {
           {/* Productos */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View>
+              <View style={styles.sectionHeaderText}>
                 <Text style={styles.sectionTitle}>Productos</Text>
                 <Text style={styles.sectionSubtitle}>
                   {products.length === 0
@@ -645,7 +645,7 @@ export default function CreateMealScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -784,6 +784,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 16,
+    gap: 12,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    marginRight: 8,
   },
   sectionTitle: {
     fontSize: RFValue(18),
@@ -794,6 +799,7 @@ const styles = StyleSheet.create({
     fontSize: RFValue(13),
     color: "#666",
     marginTop: 2,
+    flexWrap: "wrap",
   },
   addProductsButton: {
     flexDirection: "row",
@@ -803,6 +809,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
+    flexShrink: 0,
   },
   addProductsText: {
     fontSize: RFValue(14),

@@ -596,7 +596,7 @@ export default function CreateProductScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: "row",
@@ -702,12 +702,6 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  sectionTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 16,
   },
   inputGroup: {
     marginBottom: 20,
@@ -843,5 +837,41 @@ const styles = StyleSheet.create({
     fontSize: RFValue(15),
     fontWeight: "600",
     color: "#1A1A1A",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 12,
+  },
+
+  sectionHeaderText: {
+    flex: 1,
+    marginRight: 8,
+  },
+
+  sectionTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+
+  sectionSubtitle: {
+    fontSize: RFValue(13),
+    color: "#666",
+    marginTop: 2,
+    flexWrap: "wrap",
+  },
+
+  addProductsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0E6FF",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+    flexShrink: 0,
   },
 });
