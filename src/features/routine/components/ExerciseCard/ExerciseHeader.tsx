@@ -49,32 +49,25 @@ const ExerciseHeader = ({
   };
 
   const openExerciseOptions = () => {
-    console.log("🔥 Opening exercise options");
     setActionModalVisible(true);
   };
 
   const closeExerciseOptions = () => {
-    console.log("🔥 Closing exercise options");
     setActionModalVisible(false);
   };
 
   const handleExerciseAction = (
     action: "reorder" | "replace" | "superset" | "delete"
   ) => {
-    console.log("🔥 Action selected:", action);
     setPendingAction(action);
     setActionModalVisible(false);
   };
 
   const handleActionModalHide = () => {
-    console.log("🔥 Modal cerrado, pending action:", pendingAction);
-
     if (!pendingAction) return;
 
     const action = pendingAction;
     setPendingAction(null);
-
-    console.log("🔥 Executing action:", action);
 
     switch (action) {
       case "reorder":
@@ -84,10 +77,6 @@ const ExerciseHeader = ({
         onReplace?.();
         break;
       case "superset":
-        console.log(
-          "🔥 Opening superset modal, exercises:",
-          availableExercises.length
-        );
         setSupersetModalVisible(true);
         break;
       case "delete":
@@ -97,7 +86,6 @@ const ExerciseHeader = ({
   };
 
   const handleSelectSupersetExercise = (targetExercise: ExerciseRequestDto) => {
-    console.log("🔥 Superset selected:", targetExercise.name);
     onAddSuperset?.(targetExercise.id);
     setSupersetModalVisible(false);
   };
@@ -210,7 +198,6 @@ const ExerciseHeader = ({
         <Modal
           isVisible={isSupersetModalVisible}
           onBackdropPress={() => {
-            console.log("🔥 Backdrop pressed - closing superset modal");
             setSupersetModalVisible(false);
           }}
           onSwipeComplete={() => setSupersetModalVisible(false)}

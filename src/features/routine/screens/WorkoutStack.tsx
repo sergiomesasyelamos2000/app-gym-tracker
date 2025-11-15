@@ -39,7 +39,11 @@ const Stack = createNativeStackNavigator<WorkoutStackParamList>();
 
 export default function WorkoutStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerBackButtonDisplayMode: "minimal",
+      }}
+    >
       <Stack.Screen
         name="WorkoutList"
         component={WorkoutScreen}
@@ -62,13 +66,11 @@ export default function WorkoutStack() {
         component={RoutineEditScreen}
         options={{ title: "Editar rutina" }}
       />
-
       <Stack.Screen
         name="CreateExercise"
         component={CreateExerciseScreen}
         options={{ title: "Crear ejercicio" }}
       />
-
       <Stack.Screen
         name="ExerciseDetail"
         component={ExerciseDetailScreen}

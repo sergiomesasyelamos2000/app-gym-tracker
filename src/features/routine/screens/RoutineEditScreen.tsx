@@ -158,7 +158,6 @@ export default function RoutineEditScreen() {
   };
 
   const handleExerciseLongPress = (drag: () => void) => {
-    console.log("🎯 Long press detected, activating reorder mode");
     setReorderMode(true);
     setReorderFromButton(false);
     setTimeout(() => {
@@ -275,8 +274,6 @@ export default function RoutineEditScreen() {
 
   // 🔥 FUNCIÓN PARA AGREGAR SUPERSERIE
   const handleAddSuperset = (exerciseId: string, targetExerciseId: string) => {
-    console.log(`🔥 Adding superset: ${exerciseId} with ${targetExerciseId}`);
-
     setSupersets((prev) => ({
       ...prev,
       [exerciseId]: targetExerciseId,
@@ -294,7 +291,6 @@ export default function RoutineEditScreen() {
     const targetExerciseId = supersets[exerciseId];
 
     if (!targetExerciseId) {
-      console.log("🔥 No superset found for exercise:", exerciseId);
       return;
     }
 
@@ -314,10 +310,6 @@ export default function RoutineEditScreen() {
           text: "Eliminar",
           style: "destructive",
           onPress: () => {
-            console.log(
-              `🔥 Removing superset from ${exerciseId} and ${targetExerciseId}`
-            );
-
             setSupersets((prev) => {
               const newSupersets = { ...prev };
               delete newSupersets[exerciseId];
@@ -475,11 +467,9 @@ export default function RoutineEditScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderExerciseCard}
             onDragBegin={() => {
-              console.log("🔄 Drag begin");
               setIsDragging(true);
             }}
             onDragEnd={({ data }) => {
-              console.log("✅ Drag end");
               handleReorderComplete(data);
               setIsDragging(false);
             }}

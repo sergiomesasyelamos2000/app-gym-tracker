@@ -1,4 +1,3 @@
-// ==================== TYPES ====================
 import {
   NavigationProp,
   useNavigation,
@@ -9,20 +8,24 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
-  Dimensions,
+  Easing,
   FlatList,
   Image,
   Modal,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto } from "../../../models";
 import {
   createExercise,
@@ -32,493 +35,25 @@ import {
 } from "../../../services/exerciseService";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-interface CustomDropdownProps {
-  value: string;
-  onValueChange: (value: string) => void;
-  options: DropdownOption[];
-  placeholder: string;
-}
-
 interface DropdownOption {
   id: string;
   name: string;
-  image?: string;
-  imagePath?: string;
+  image?: string; // Base64 de imagen o emoji
 }
 
 interface CreateExerciseRouteProps {
   onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
 }
 
-// ==================== CUSTOM DROPDOWN COMPONENT ====================
-const CustomDropdown: React.FC<CustomDropdownProps> = ({
-  value,
-  onValueChange,
-  options,
-  placeholder,
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const selectedOption = options.find((opt) => opt.id === value);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: isVisible ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [isVisible, fadeAnim]);
-
-  const renderOptionImage = (
-    option: DropdownOption | undefined,
-    imageStyle?: any
-  ) => {
-    if (!option) return null;
-
-    if (option.imagePath) {
-      return (
-        <Image
-          source={{ uri: option.imagePath }}
-          style={imageStyle}
-          resizeMode="contain"
-        />
-      );
-    }
-
-    if (option.image) {
-      return (
-        <Text style={[{ fontSize: imageStyle?.width || 20 }, imageStyle]}>
-          {option.image}
-        </Text>
-      );
-    }
-
-    return null;
-  };
-
-  return (
-    <>
-      <TouchableOpacity
-        style={styles.dropdownSelector}
-        onPress={() => setIsVisible(true)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.dropdownContent}>
-          {renderOptionImage(selectedOption, {
-            width: 32,
-            height: 32,
-            marginRight: 12,
-          })}
-          <Text
-            style={
-              selectedOption
-                ? styles.dropdownSelectedText
-                : styles.dropdownPlaceholderText
-            }
-            numberOfLines={1}
-          >
-            {selectedOption ? selectedOption.name : placeholder}
-          </Text>
-        </View>
-        <View style={styles.dropdownArrowContainer}>
-          <Text style={styles.dropdownArrow}>⌄</Text>
-        </View>
-      </TouchableOpacity>
-
-      <Modal
-        visible={isVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setIsVisible(false)}>
-          <Animated.View
-            style={[styles.dropdownModalContainer, { opacity: fadeAnim }]}
-          >
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdownModalContent}>
-                <Text style={styles.dropdownModalTitle}>{placeholder}</Text>
-                <FlatList
-                  data={options}
-                  keyExtractor={(item) => item.id}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.dropdownItem,
-                        value === item.id && styles.dropdownItemSelected,
-                      ]}
-                      onPress={() => {
-                        onValueChange(item.id);
-                        setIsVisible(false);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      {renderOptionImage(item, {
-                        width: 36,
-                        height: 36,
-                        marginRight: 12,
-                      })}
-                      <Text
-                        style={
-                          value === item.id
-                            ? styles.dropdownItemSelectedText
-                            : styles.dropdownItemText
-                        }
-                        numberOfLines={1}
-                      >
-                        {item.name}
-                      </Text>
-                      {value === item.id && (
-                        <View style={styles.checkmark}>
-                          <Text style={styles.checkmarkText}>✓</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                />
-                <TouchableOpacity
-                  style={styles.dropdownCloseButton}
-                  onPress={() => setIsVisible(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.dropdownCloseText}>Cerrar</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </Animated.View>
-        </TouchableWithoutFeedback>
-      </Modal>
-    </>
-  );
-};
-
-// ==================== IMAGE PICKER COMPONENT ====================
-interface ExerciseImagePickerProps {
-  imageUri: string | null;
-  onImagePick: () => void;
-}
-
-const ExerciseImagePicker: React.FC<ExerciseImagePickerProps> = ({
-  imageUri,
-  onImagePick,
-}) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionTitle}>Imagen del ejercicio</Text>
-    <TouchableOpacity
-      style={styles.imageContainer}
-      onPress={onImagePick}
-      activeOpacity={0.8}
-    >
-      {imageUri ? (
-        <>
-          <Image source={{ uri: imageUri }} style={styles.image} />
-          <View style={styles.imageOverlay}>
-            <Text style={styles.imageOverlayText}>Cambiar imagen</Text>
-          </View>
-        </>
-      ) : (
-        <View style={styles.imagePlaceholder}>
-          <View style={styles.imagePlaceholderIcon}>
-            <Text style={styles.imagePlaceholderIconText}>📷</Text>
-          </View>
-          <Text style={styles.imagePlaceholderText}>
-            Toca para agregar una imagen
-          </Text>
-          <Text style={styles.imagePlaceholderSubtext}>Recomendado: 1:1</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  </View>
-);
-
-// ==================== BASIC INFO SECTION ====================
-interface BasicInfoSectionProps {
-  name: string;
-  onNameChange: (name: string) => void;
-  typeId: string;
-  onTypeChange: (typeId: string) => void;
-  exerciseTypeOptions: DropdownOption[];
-}
-
-const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
-  name,
-  onNameChange,
-  typeId,
-  onTypeChange,
-  exerciseTypeOptions,
-}) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionTitle}>Información básica</Text>
-
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Nombre del ejercicio</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ej: Press de banca con barra"
-        placeholderTextColor="#94A3B8"
-        value={name}
-        onChangeText={onNameChange}
-        maxLength={100}
-      />
-    </View>
-
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Tipo de ejercicio</Text>
-      <CustomDropdown
-        value={typeId}
-        onValueChange={onTypeChange}
-        options={exerciseTypeOptions}
-        placeholder="Selecciona el tipo"
-      />
-    </View>
-  </View>
-);
-
-// ==================== MUSCLE TAG COMPONENT ====================
-interface MuscleTagProps {
-  muscleId: string;
-  muscleName: string;
-  muscleImage: string;
-  onRemove: (muscleId: string) => void;
-}
-
-const MuscleTag: React.FC<MuscleTagProps> = ({
-  muscleId,
-  muscleName,
-  muscleImage,
-  onRemove,
-}) => (
-  <View style={styles.selectedMuscleTag}>
-    <Text style={styles.selectedMuscleImage}>{muscleImage}</Text>
-    <Text style={styles.selectedMuscleText}>{muscleName}</Text>
-    <TouchableOpacity
-      onPress={() => onRemove(muscleId)}
-      style={styles.removeMuscleButton}
-    >
-      <Text style={styles.removeMuscleText}>×</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-// ==================== SPECIFICATIONS SECTION ====================
-interface SpecificationsSectionProps {
-  equipmentId: string;
-  onEquipmentChange: (id: string) => void;
-  equipmentOptions: DropdownOption[];
-  primaryMuscleId: string;
-  onPrimaryMuscleChange: (id: string) => void;
-  muscleOptions: DropdownOption[];
-  otherMuscleIds: string[];
-  onOpenMuscleModal: () => void;
-  onRemoveMuscle: (muscleId: string) => void;
-}
-
-const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
-  equipmentId,
-  onEquipmentChange,
-  equipmentOptions,
-  primaryMuscleId,
-  onPrimaryMuscleChange,
-  muscleOptions,
-  otherMuscleIds,
-  onOpenMuscleModal,
-  onRemoveMuscle,
-}) => {
-  const getMuscleDetails = (muscleId: string) => {
-    const muscle = muscleOptions.find((m) => m.id === muscleId);
-    return {
-      name: muscle?.name || "Desconocido",
-      image: muscle?.image || "💪",
-    };
-  };
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Especificaciones</Text>
-
-      <View style={styles.row}>
-        <View style={[styles.inputContainer, { flex: 1 }]}>
-          <Text style={styles.inputLabel}>Equipamiento</Text>
-          <CustomDropdown
-            value={equipmentId}
-            onValueChange={onEquipmentChange}
-            options={equipmentOptions}
-            placeholder="Seleccionar"
-          />
-        </View>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Músculo principal</Text>
-        <CustomDropdown
-          value={primaryMuscleId}
-          onValueChange={onPrimaryMuscleChange}
-          options={muscleOptions}
-          placeholder="Selecciona el músculo"
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>
-          Músculos secundarios{" "}
-          {otherMuscleIds.length > 0 && `(${otherMuscleIds.length})`}
-        </Text>
-        <TouchableOpacity
-          style={styles.muscleSelector}
-          onPress={onOpenMuscleModal}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={
-              otherMuscleIds.length === 0
-                ? styles.placeholderText
-                : styles.selectedText
-            }
-          >
-            {otherMuscleIds.length === 0
-              ? "Seleccionar músculos adicionales"
-              : "Músculos seleccionados"}
-          </Text>
-          <View style={styles.selectorArrow}>
-            <Text style={styles.selectorArrowText}>⌄</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {otherMuscleIds.length > 0 && (
-        <View style={styles.selectedMusclesContainer}>
-          {otherMuscleIds.map((muscleId) => {
-            const { name, image } = getMuscleDetails(muscleId);
-            return (
-              <MuscleTag
-                key={muscleId}
-                muscleId={muscleId}
-                muscleName={name}
-                muscleImage={image}
-                onRemove={onRemoveMuscle}
-              />
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-};
-
-// ==================== MUSCLE MODAL COMPONENT ====================
-interface MuscleModalProps {
-  visible: boolean;
-  onClose: () => void;
-  muscleOptions: DropdownOption[];
-  selectedMuscleIds: string[];
-  onToggleMuscle: (muscleId: string) => void;
-}
-
-const MuscleModal: React.FC<MuscleModalProps> = ({
-  visible,
-  onClose,
-  muscleOptions,
-  selectedMuscleIds,
-  onToggleMuscle,
-}) => {
-  const muscleModalRef = useRef<View>(null);
-
-  const handleBackdrop = (event: any) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalContainer} ref={muscleModalRef}>
-        <TouchableWithoutFeedback onPress={handleBackdrop}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Músculos secundarios</Text>
-                <Text style={styles.modalSubtitle}>
-                  Selecciona los músculos que también se trabajan
-                </Text>
-              </View>
-
-              <FlatList
-                data={muscleOptions}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.muscleItem,
-                      selectedMuscleIds.includes(item.id) &&
-                        styles.selectedMuscleItem,
-                    ]}
-                    onPress={() => onToggleMuscle(item.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.muscleItemImage}>
-                      {item.image || "💪"}
-                    </Text>
-                    <Text
-                      style={
-                        selectedMuscleIds.includes(item.id)
-                          ? styles.selectedMuscleItemText
-                          : styles.muscleItemText
-                      }
-                    >
-                      {item.name}
-                    </Text>
-                    {selectedMuscleIds.includes(item.id) && (
-                      <View style={styles.muscleCheckmark}>
-                        <Text style={styles.muscleCheckmarkText}>✓</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-                style={styles.muscleList}
-              />
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={onClose}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.modalCancelText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalConfirmButton}
-                  onPress={onClose}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.modalConfirmText}>
-                    Aceptar ({selectedMuscleIds.length})
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </View>
-    </Modal>
-  );
-};
-
-// ==================== MAIN SCREEN COMPONENT ====================
 export default function CreateExerciseScreen() {
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
   const route = useRoute();
   const { onExerciseCreated } =
     (route.params as CreateExerciseRouteProps) || {};
+
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
 
   // ==================== STATE ====================
   const [name, setName] = useState("");
@@ -527,7 +62,6 @@ export default function CreateExerciseScreen() {
   const [otherMuscleIds, setOtherMuscleIds] = useState<string[]>([]);
   const [typeId, setTypeId] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [showMuscleModal, setShowMuscleModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const [equipmentOptions, setEquipmentOptions] = useState<DropdownOption[]>(
@@ -537,6 +71,17 @@ export default function CreateExerciseScreen() {
   const [exerciseTypeOptions, setExerciseTypeOptions] = useState<
     DropdownOption[]
   >([]);
+
+  // Modales
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showPrimaryMuscleModal, setShowPrimaryMuscleModal] = useState(false);
+  const [showSecondaryMusclesModal, setShowSecondaryMusclesModal] =
+    useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
+  // Animaciones
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const modalTranslateY = useRef(new Animated.Value(300)).current;
 
   // ==================== DATA LOADING ====================
   useEffect(() => {
@@ -556,6 +101,43 @@ export default function CreateExerciseScreen() {
       console.error("Error cargando datos:", error);
       alert("Error al cargar los datos. Por favor intenta nuevamente.");
     }
+  };
+
+  // ==================== MODAL ANIMATIONS ====================
+  const openModal = () => {
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalTranslateY, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeModal = (callback: () => void) => {
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalTranslateY, {
+        toValue: 300,
+        duration: 250,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      callback();
+    });
   };
 
   // ==================== IMAGE HANDLING ====================
@@ -654,77 +236,455 @@ export default function CreateExerciseScreen() {
     }
   };
 
-  // ==================== COMPUTED VALUES ====================
+  // ==================== RENDER IMAGE HELPER ====================
+  /**
+   * 🔥 Función para renderizar la imagen correctamente
+   * Si es base64 largo (>100 chars) = imagen real
+   * Si es corto = emoji
+   */
+  // Reemplaza la función renderOptionImage existente con esta versión corregida:
+
+  const renderOptionImage = (
+    item: DropdownOption,
+    size: "small" | "medium" | "large" = "medium"
+  ) => {
+    if (!item.image) return null;
+
+    const sizeMap = {
+      small: { width: 32, height: 32, fontSize: RFValue(18) },
+      medium: { width: 56, height: 56, fontSize: RFValue(24) },
+      large: { width: 80, height: 80, fontSize: RFValue(30) },
+    };
+
+    const dimensions = sizeMap[size];
+
+    // Si es base64 (imagen real) - más de 100 caracteres
+    if (item.image.length > 100) {
+      const imageUri = item.image.startsWith("data:image")
+        ? item.image
+        : `data:image/jpeg;base64,${item.image}`;
+
+      return (
+        <View
+          style={{
+            width: dimensions.width,
+            height: dimensions.height,
+            borderRadius: 12,
+            backgroundColor: "#fff",
+            padding: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#E5E7EB",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+          }}
+        >
+          <Image
+            source={{ uri: imageUri }}
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+            resizeMode="contain"
+          />
+        </View>
+      );
+    }
+
+    // Si es emoji (menos de 100 caracteres)
+    return (
+      <View
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ fontSize: dimensions.fontSize }}>{item.image}</Text>
+      </View>
+    );
+  };
+
+  // ==================== HELPERS ====================
+  const getSelectedOption = (options: DropdownOption[], selectedId: string) => {
+    return options.find((opt) => opt.id === selectedId);
+  };
+
+  const getMuscleDetails = (muscleId: string) => {
+    const muscle = muscleOptions.find((m) => m.id === muscleId);
+    return {
+      name: muscle?.name || "Desconocido",
+      image: muscle?.image || "💪",
+    };
+  };
+
+  // ==================== RENDER MODAL ====================
+  const renderSelectionModal = (
+    visible: boolean,
+    title: string,
+    options: DropdownOption[],
+    selectedValue: string,
+    onSelect: (id: string) => void,
+    onClose: () => void,
+    multiSelect: boolean = false,
+    selectedValues: string[] = []
+  ) => (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="none"
+      onRequestClose={() => closeModal(onClose)}
+      onShow={openModal}
+    >
+      <TouchableWithoutFeedback onPress={() => closeModal(onClose)}>
+        <Animated.View
+          style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+        >
+          <TouchableWithoutFeedback>
+            <Animated.View
+              style={[
+                styles.modalContent,
+                { transform: [{ translateY: modalTranslateY }] },
+              ]}
+            >
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>{title}</Text>
+
+              <FlatList
+                data={options}
+                keyExtractor={(item) => item.id}
+                style={styles.optionsList}
+                renderItem={({ item }) => {
+                  const isSelected = multiSelect
+                    ? selectedValues.includes(item.id)
+                    : selectedValue === item.id;
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.optionButton,
+                        isSelected && styles.optionButtonSelected,
+                      ]}
+                      onPress={() => {
+                        if (multiSelect) {
+                          toggleMuscleSelection(item.id);
+                        } else {
+                          closeModal(() => {
+                            onSelect(item.id);
+                            onClose();
+                          });
+                        }
+                      }}
+                    >
+                      <View style={styles.optionContent}>
+                        {/* 🔥 Usar función helper para renderizar imagen */}
+                        {renderOptionImage(item, "medium")}
+                        <Text
+                          style={[
+                            styles.optionText,
+                            isSelected && styles.optionTextSelected,
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <View style={styles.checkCircle}>
+                          <Icon name="check" size={16} color="#fff" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+
+              {multiSelect && (
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.modalConfirmButton}
+                    onPress={() => closeModal(onClose)}
+                  >
+                    <Text style={styles.modalConfirmText}>
+                      Confirmar ({selectedValues.length})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Animated.View>
+          </TouchableWithoutFeedback>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
   const isSaveDisabled = !name.trim() || !primaryMuscleId || isLoading;
 
-  // ==================== RENDER ====================
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text style={styles.subtitle}>
-            Completa la información para agregar un ejercicio personalizado
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* IMAGEN */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Imagen del ejercicio</Text>
+            <TouchableOpacity
+              style={[
+                styles.imageContainer,
+                { width: width * 0.6, height: width * 0.6 },
+              ]}
+              onPress={pickImage}
+              activeOpacity={0.8}
+            >
+              {imageUri ? (
+                <>
+                  <Image source={{ uri: imageUri }} style={styles.image} />
+                  <View style={styles.imageOverlay}>
+                    <Icon name="photo-camera" size={24} color="#fff" />
+                    <Text style={styles.imageOverlayText}>Cambiar imagen</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <View style={styles.imagePlaceholderIcon}>
+                    <Icon name="add-a-photo" size={32} color="#6C3BAA" />
+                  </View>
+                  <Text style={styles.imagePlaceholderText}>
+                    Toca para agregar una imagen
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* NOMBRE */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Nombre del ejercicio *</Text>
+            <TextInput
+              style={[
+                styles.input,
+                { fontSize: RFValue(isSmallScreen ? 14 : 15) },
+              ]}
+              placeholder="Ej: Press de banca con barra"
+              placeholderTextColor="#9CA3AF"
+              value={name}
+              onChangeText={setName}
+              maxLength={100}
+            />
+          </View>
+
+          {/* TIPO DE EJERCICIO */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Tipo de ejercicio</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowTypeModal(true)}
+            >
+              <View style={styles.selectorContent}>
+                {typeId ? (
+                  <>
+                    {renderOptionImage(
+                      getSelectedOption(exerciseTypeOptions, typeId)!,
+                      "small"
+                    )}
+                    <Text style={styles.selectorText}>
+                      {getSelectedOption(exerciseTypeOptions, typeId)?.name ||
+                        "Seleccionar tipo"}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.selectorPlaceholder}>
+                    Seleccionar tipo
+                  </Text>
+                )}
+              </View>
+              <Icon name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* EQUIPAMIENTO */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Equipamiento</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowEquipmentModal(true)}
+            >
+              <View style={styles.selectorContent}>
+                {equipmentId ? (
+                  <>
+                    {renderOptionImage(
+                      getSelectedOption(equipmentOptions, equipmentId)!,
+                      "small"
+                    )}
+                    <Text style={styles.selectorText}>
+                      {getSelectedOption(equipmentOptions, equipmentId)?.name ||
+                        "Seleccionar equipamiento"}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.selectorPlaceholder}>
+                    Seleccionar equipamiento
+                  </Text>
+                )}
+              </View>
+              <Icon name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* MÚSCULO PRINCIPAL */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Músculo principal *</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowPrimaryMuscleModal(true)}
+            >
+              <View style={styles.selectorContent}>
+                {primaryMuscleId ? (
+                  <>
+                    {renderOptionImage(
+                      getSelectedOption(muscleOptions, primaryMuscleId)!,
+                      "small"
+                    )}
+                    <Text style={styles.selectorText}>
+                      {getSelectedOption(muscleOptions, primaryMuscleId)
+                        ?.name || "Seleccionar músculo"}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.selectorPlaceholder}>
+                    Seleccionar músculo principal
+                  </Text>
+                )}
+              </View>
+              <Icon name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* MÚSCULOS SECUNDARIOS */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>
+              Músculos secundarios{" "}
+              {otherMuscleIds.length > 0 && `(${otherMuscleIds.length})`}
+            </Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowSecondaryMusclesModal(true)}
+            >
+              <View style={styles.selectorContent}>
+                <Text
+                  style={
+                    otherMuscleIds.length > 0
+                      ? styles.selectorText
+                      : styles.selectorPlaceholder
+                  }
+                >
+                  {otherMuscleIds.length > 0
+                    ? "Músculos seleccionados"
+                    : "Seleccionar músculos adicionales"}
+                </Text>
+              </View>
+              <Icon name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
+
+            {otherMuscleIds.length > 0 && (
+              <View style={styles.selectedMusclesContainer}>
+                {otherMuscleIds.map((muscleId) => {
+                  const muscle = muscleOptions.find((m) => m.id === muscleId);
+                  if (!muscle) return null;
+
+                  return (
+                    <View key={muscleId} style={styles.muscleTag}>
+                      {/* 🔥 Renderizar imagen en el tag */}
+                      {renderOptionImage(muscle, "small")}
+                      <Text style={styles.muscleTagText}>{muscle.name}</Text>
+                      <TouchableOpacity
+                        onPress={() => removeMuscle(muscleId)}
+                        style={styles.muscleTagRemove}
+                      >
+                        <Icon name="close" size={14} color="#6C3BAA" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* BOTÓN GUARDAR */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              isSaveDisabled && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={isSaveDisabled}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Crear ejercicio</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
-        <ExerciseImagePicker imageUri={imageUri} onImagePick={pickImage} />
+        {/* MODALES */}
+        {renderSelectionModal(
+          showTypeModal,
+          "Tipo de ejercicio",
+          exerciseTypeOptions,
+          typeId,
+          setTypeId,
+          () => setShowTypeModal(false)
+        )}
 
-        <BasicInfoSection
-          name={name}
-          onNameChange={setName}
-          typeId={typeId}
-          onTypeChange={setTypeId}
-          exerciseTypeOptions={exerciseTypeOptions}
-        />
+        {renderSelectionModal(
+          showEquipmentModal,
+          "Equipamiento",
+          equipmentOptions,
+          equipmentId,
+          setEquipmentId,
+          () => setShowEquipmentModal(false)
+        )}
 
-        <SpecificationsSection
-          equipmentId={equipmentId}
-          onEquipmentChange={setEquipmentId}
-          equipmentOptions={equipmentOptions}
-          primaryMuscleId={primaryMuscleId}
-          onPrimaryMuscleChange={setPrimaryMuscleId}
-          muscleOptions={muscleOptions}
-          otherMuscleIds={otherMuscleIds}
-          onOpenMuscleModal={() => setShowMuscleModal(true)}
-          onRemoveMuscle={removeMuscle}
-        />
+        {renderSelectionModal(
+          showPrimaryMuscleModal,
+          "Músculo principal",
+          muscleOptions,
+          primaryMuscleId,
+          setPrimaryMuscleId,
+          () => setShowPrimaryMuscleModal(false)
+        )}
 
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            isSaveDisabled && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={isSaveDisabled}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.saveButtonText}>Creando ejercicio...</Text>
-            </View>
-          ) : (
-            <Text style={styles.saveButtonText}>Crear ejercicio</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      <MuscleModal
-        visible={showMuscleModal}
-        onClose={() => setShowMuscleModal(false)}
-        muscleOptions={muscleOptions}
-        selectedMuscleIds={otherMuscleIds}
-        onToggleMuscle={toggleMuscleSelection}
-      />
-    </View>
+        {renderSelectionModal(
+          showSecondaryMusclesModal,
+          "Músculos secundarios",
+          muscleOptions,
+          "",
+          () => {},
+          () => setShowSecondaryMusclesModal(false),
+          true,
+          otherMuscleIds
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
-// ==================== STYLES ====================
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
@@ -733,41 +693,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 40,
-  },
-  header: {
-    padding: 24,
-    paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  subtitle: {
-    fontSize: RFValue(16),
-    color: "#64748B",
-    lineHeight: 22,
+    paddingBottom: 20,
   },
   section: {
-    backgroundColor: "#FFFFFF",
-    marginTop: 16,
-    padding: 24,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#F1F5F9",
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: RFValue(18),
+    fontSize: RFValue(16),
     fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 20,
+    color: "#1F2937",
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: RFValue(15),
+    color: "#1F2937",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   imageContainer: {
-    width: SCREEN_WIDTH - 96,
-    height: SCREEN_WIDTH - 96,
-    borderRadius: 20,
-    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    backgroundColor: "#F9FAFB",
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: "#E5E7EB",
     borderStyle: "dashed",
     overflow: "hidden",
     alignSelf: "center",
@@ -784,9 +744,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.7)",
     padding: 12,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
   imageOverlayText: {
-    color: "#FFFFFF",
+    color: "#fff",
     fontWeight: "600",
     fontSize: RFValue(14),
   },
@@ -800,344 +763,186 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#EDE9FE",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
-  },
-  imagePlaceholderIconText: {
-    fontSize: RFValue(28),
+    marginBottom: 12,
   },
   imagePlaceholderText: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#475569",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  imagePlaceholderSubtext: {
     fontSize: RFValue(14),
-    color: "#94A3B8",
+    fontWeight: "500",
+    color: "#6B7280",
     textAlign: "center",
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
+  selector: {
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
-    padding: 16,
-    fontSize: RFValue(16),
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
-    color: "#0F172A",
-  },
-  row: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  selectorContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
     gap: 12,
   },
-  dropdownSelector: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    minHeight: 56,
-  },
-  dropdownContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  dropdownSelectedText: {
-    color: "#0F172A",
-    fontSize: RFValue(16),
+  selectorText: {
+    fontSize: RFValue(15),
+    color: "#1F2937",
     fontWeight: "500",
-    flex: 1,
   },
-  dropdownPlaceholderText: {
-    color: "#94A3B8",
-    fontSize: RFValue(16),
-    flex: 1,
-  },
-  dropdownArrowContainer: {
-    paddingLeft: 8,
-  },
-  dropdownArrow: {
-    color: "#64748B",
-    fontSize: RFValue(16),
-    fontWeight: "bold",
-  },
-  dropdownModalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dropdownModalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 0,
-    width: "90%",
-    maxHeight: "70%",
-    overflow: "hidden",
-  },
-  dropdownModalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "bold",
-    color: "#0F172A",
-    padding: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
-  },
-  dropdownItemSelected: {
-    backgroundColor: "#6C3BAA08",
-  },
-  dropdownItemText: {
-    color: "#374151",
-    fontSize: RFValue(16),
-    flex: 1,
-  },
-  dropdownItemSelectedText: {
-    color: "#6C3BAA",
-    fontWeight: "600",
-    fontSize: RFValue(16),
-    flex: 1,
-  },
-  checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#6C3BAA",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkmarkText: {
-    color: "#FFFFFF",
-    fontSize: RFValue(12),
-    fontWeight: "bold",
-  },
-  dropdownCloseButton: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    alignItems: "center",
-  },
-  dropdownCloseText: {
-    color: "#64748B",
-    fontWeight: "600",
-    fontSize: RFValue(16),
-  },
-  muscleSelector: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    minHeight: 56,
-  },
-  selectorArrow: {
-    marginLeft: 8,
-  },
-  selectorArrowText: {
-    color: "#64748B",
-    fontSize: RFValue(16),
-    fontWeight: "bold",
-  },
-  placeholderText: {
-    color: "#94A3B8",
-    fontSize: RFValue(16),
-  },
-  selectedText: {
-    color: "#0F172A",
-    fontSize: RFValue(16),
-    fontWeight: "500",
+  selectorPlaceholder: {
+    fontSize: RFValue(15),
+    color: "#9CA3AF",
   },
   selectedMusclesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 8,
+    marginTop: 12,
   },
-  selectedMuscleTag: {
+  muscleTag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6C3BAA10",
+    backgroundColor: "#EDE9FE",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#6C3BAA30",
+    borderColor: "#C4B5FD",
+    gap: 6,
   },
-  selectedMuscleImage: {
-    fontSize: RFValue(14),
-    marginRight: 6,
+  muscleTagText: {
+    fontSize: RFValue(13),
+    color: "#7C3AED",
+    fontWeight: "600",
   },
-  selectedMuscleText: {
-    color: "#6C3BAA",
-    fontSize: RFValue(14),
-    fontWeight: "500",
-    marginRight: 4,
+  muscleTagRemove: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
   },
-  removeMuscleButton: {
-    padding: 4,
-  },
-  removeMuscleText: {
-    color: "#6C3BAA",
-    fontSize: RFValue(16),
-    fontWeight: "bold",
+  footer: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   saveButton: {
     backgroundColor: "#6C3BAA",
-    padding: 20,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
-    margin: 24,
-    marginTop: 32,
+    elevation: 3,
     shadowColor: "#6C3BAA",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   saveButtonDisabled: {
-    backgroundColor: "#CBD5E1",
+    backgroundColor: "#D1D5DB",
     shadowOpacity: 0,
     elevation: 0,
   },
   saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: RFValue(18),
-    fontWeight: "bold",
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  modalContainer: {
-    flex: 1,
+    color: "#fff",
+    fontSize: RFValue(16),
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
     justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "white",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    paddingBottom: 40,
     maxHeight: "80%",
   },
-  modalHeader: {
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: RFValue(20),
-    fontWeight: "bold",
-    color: "#0F172A",
-    marginBottom: 4,
+    fontSize: RFValue(18),
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#1F2937",
+    paddingHorizontal: 20,
   },
-  modalSubtitle: {
-    fontSize: RFValue(14),
-    color: "#64748B",
-  },
-  muscleList: {
+  optionsList: {
     maxHeight: 400,
   },
-  muscleItem: {
+  optionButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  optionButtonSelected: {
+    backgroundColor: "#F3F4FF",
+    borderColor: "#6C3BAA",
+  },
+  optionContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
-  },
-  muscleItemImage: {
-    fontSize: RFValue(20),
-    marginRight: 16,
-    width: 24,
-  },
-  muscleItemText: {
-    color: "#374151",
-    fontSize: RFValue(16),
+    gap: 12,
     flex: 1,
   },
-  selectedMuscleItem: {
-    backgroundColor: "#6C3BAA08",
+  optionText: {
+    fontSize: RFValue(15),
+    color: "#6B7280",
+    fontWeight: "500",
   },
-  selectedMuscleItemText: {
+  optionTextSelected: {
     color: "#6C3BAA",
     fontWeight: "600",
-    fontSize: RFValue(16),
-    flex: 1,
   },
-  muscleCheckmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#6C3BAA",
     justifyContent: "center",
     alignItems: "center",
   },
-  muscleCheckmarkText: {
-    color: "#FFFFFF",
-    fontSize: RFValue(12),
-    fontWeight: "bold",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    padding: 24,
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: "#F1F5F9",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    color: "#64748B",
-    fontWeight: "600",
-    fontSize: RFValue(16),
+  modalActions: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   modalConfirmButton: {
-    flex: 1,
     backgroundColor: "#6C3BAA",
-    padding: 16,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
   },
   modalConfirmText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+    color: "#fff",
     fontSize: RFValue(16),
+    fontWeight: "600",
   },
 });

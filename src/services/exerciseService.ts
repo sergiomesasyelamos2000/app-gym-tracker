@@ -1,16 +1,10 @@
 import { apiFetch } from "../api/index";
-import { ENV_ASSETS } from "../environments/environment";
 import {
   CreateExerciseDto,
   EquipmentDto,
   ExerciseTypeDto,
   MuscleDto,
 } from "../models/index.js";
-
-/* export async function fetchExercises(): Promise<ExerciseRequestDto[]> {
-  return apiFetch("exercises");
-}
- */
 
 export const fetchExercises = async (): Promise<any[]> => {
   return apiFetch("exercises");
@@ -31,39 +25,13 @@ export const createExercise = async (exercise: CreateExerciseDto) => {
 };
 
 export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
-  const data = await apiFetch<EquipmentDto[]>("exercises/equipment/all");
-
-  // Construir URLs completas para las imágenes
-  return data.map((equipment) => ({
-    ...equipment,
-    imagePath: equipment.imagePath
-      ? `${ENV_ASSETS.API_URL}${equipment.imagePath}`
-      : undefined,
-  }));
+  return apiFetch<EquipmentDto[]>("exercises/equipment/all");
 };
 
 export const fetchExerciseTypes = async (): Promise<ExerciseTypeDto[]> => {
-  const data = await apiFetch<ExerciseTypeDto[]>(
-    "exercises/exercise-types/all"
-  );
-
-  // Construir URLs completas para las imágenes
-  return data.map((exerciseType) => ({
-    ...exerciseType,
-    imagePath: exerciseType.imagePath
-      ? `${ENV_ASSETS.API_URL}${exerciseType.imagePath}`
-      : undefined,
-  }));
+  return apiFetch<ExerciseTypeDto[]>("exercises/exercise-types/all");
 };
 
 export const fetchMuscles = async (): Promise<MuscleDto[]> => {
-  const data = await apiFetch<MuscleDto[]>("exercises/muscles/all");
-
-  // Construir URLs completas para las imágenes
-  return data.map((muscle) => ({
-    ...muscle,
-    imagePath: muscle.imagePath
-      ? `${ENV_ASSETS.API_URL}${muscle.imagePath}`
-      : undefined,
-  }));
+  return apiFetch<MuscleDto[]>("exercises/muscles/all");
 };

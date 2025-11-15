@@ -35,7 +35,7 @@ interface Props {
   onReplace?: () => void;
   onDelete?: () => void;
   onAddSuperset?: (targetExerciseId: string) => void;
-  onRemoveSuperset?: () => void; // 🔥 NUEVO
+  onRemoveSuperset?: () => void;
   availableExercises?: ExerciseRequestDto[];
   supersetWith?: string;
   supersetExerciseName?: string;
@@ -57,7 +57,7 @@ const ExerciseCard = ({
   onReplace,
   onDelete,
   onAddSuperset,
-  onRemoveSuperset, // 🔥 NUEVO
+  onRemoveSuperset,
   availableExercises = [],
   supersetWith,
   supersetExerciseName,
@@ -211,10 +211,10 @@ const ExerciseCard = ({
           onReplace={onReplace}
           onDelete={onDelete}
           onAddSuperset={onAddSuperset}
-          onRemoveSuperset={onRemoveSuperset} // 🔥 PASAR PROP
+          onRemoveSuperset={onRemoveSuperset}
           availableExercises={availableExercises}
           showOptions={showOptions}
-          hasSuperset={!!supersetWith} // 🔥 NUEVO: Indicar si ya tiene superserie
+          hasSuperset={!!supersetWith}
         />
 
         <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />

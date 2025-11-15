@@ -204,7 +204,10 @@ export default function WorkoutScreen() {
 
       {/* Listado de rutinas con RefreshControl */}
       <ScrollView
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[
+          styles.listContainer,
+          showWorkoutBanner && styles.listContainerWithBanner,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -304,37 +307,55 @@ export default function WorkoutScreen() {
         </View>
       </Modal>
 
-      {/* Banner de entrenamiento en progreso */}
+      {/* Banner de entrenamiento en progreso - MEJORADO */}
       {showWorkoutBanner && workoutInProgress && (
-        <View style={styles.workoutBannerModern}>
-          <Text style={styles.workoutBannerTextModern}>
-            🏋️ Entrenamiento en progreso: {workoutInProgress.routineTitle}
-          </Text>
-          <View style={styles.workoutBannerActions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.bannerButton,
-                styles.resumeButtonModern,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={handleResumeWorkout}
-            >
-              <Text style={[styles.bannerButtonText, { color: "#B8FFB0" }]}>
-                Reanudar
-              </Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.bannerButton,
-                styles.discardButtonModern,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={handleDiscardWorkout}
-            >
-              <Text style={[styles.bannerButtonText, { color: "#FF8A80" }]}>
-                Descartar
-              </Text>
-            </Pressable>
+        <View style={styles.workoutBannerContainer}>
+          <View style={styles.workoutBanner}>
+            {/* Icono y texto */}
+            <View style={styles.bannerContent}>
+              <View style={styles.bannerIcon}>
+                <MaterialIcons name="fitness-center" size={20} color="#fff" />
+              </View>
+              <View style={styles.bannerTextContainer}>
+                <Text style={styles.bannerTitle}>
+                  Entrenamiento en progreso
+                </Text>
+                <Text
+                  style={styles.bannerRoutineName}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {workoutInProgress.routineTitle}
+                </Text>
+              </View>
+            </View>
+
+            {/* Botones */}
+            <View style={styles.bannerActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.bannerButton,
+                  styles.discardButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={handleDiscardWorkout}
+              >
+                <MaterialIcons name="close" size={16} color="#FF6B6B" />
+                <Text style={styles.discardButtonText}>Descartar</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.bannerButton,
+                  styles.resumeButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={handleResumeWorkout}
+              >
+                <MaterialIcons name="play-arrow" size={18} color="#fff" />
+                <Text style={styles.resumeButtonText}>Reanudar</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       )}
@@ -381,7 +402,10 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 20,
+  },
+  listContainerWithBanner: {
+    paddingBottom: 100, // Espacio extra cuando el banner está visible
   },
   routineCard: {
     backgroundColor: "#fff",
@@ -456,90 +480,108 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     color: "#333",
   },
-  workoutBanner: {
+
+  // Banner mejorado
+  workoutBannerContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#6C3BAA",
     padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    backgroundColor: "transparent",
     zIndex: 1000,
   },
-  workoutBannerText: {
-    color: "white",
-    fontWeight: "bold",
-    flex: 1,
-  },
-  workoutBannerButtons: {
-    flexDirection: "row",
-  },
-  resumeButton: {
-    backgroundColor: "#4CAF50",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  resumeButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  discardButton: {
-    backgroundColor: "#F44336",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  discardButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  workoutBannerModern: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: "#6C3BAA",
-    borderRadius: 12,
+  workoutBanner: {
+    backgroundColor: "#4E2A84",
+    borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  workoutBannerTextModern: {
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: RFValue(15),
     marginRight: 12,
   },
-  workoutBannerActions: {
+  bannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  bannerTextContainer: {
+    flex: 1,
+  },
+  bannerTitle: {
+    fontSize: RFValue(12),
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 2,
+  },
+  bannerRoutineName: {
+    fontSize: RFValue(15),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  bannerActions: {
     flexDirection: "row",
-    gap: 8, // Para RN >=0.71, si no, usar marginLeft en botones
+    alignItems: "center",
+    gap: 8,
   },
   bannerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    gap: 6,
+    minHeight: 40,
   },
-  resumeButtonModern: {
-    backgroundColor: "#4CAF50",
+  discardButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 107, 0.3)",
   },
-  discardButtonModern: {
-    backgroundColor: "#F44336",
+  discardButtonText: {
+    color: "#FF6B6B",
+    fontSize: RFValue(13),
+    fontWeight: "600",
   },
-  bannerButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: RFValue(14),
-    textAlign: "center",
+  resumeButton: {
+    backgroundColor: "#6C3BAA",
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  resumeButtonText: {
+    color: "#FFFFFF",
+    fontSize: RFValue(13),
+    fontWeight: "700",
+  },
+  buttonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.96 }],
   },
 });

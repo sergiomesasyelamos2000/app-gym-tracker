@@ -1,18 +1,18 @@
-import React, { useState, useRef, useEffect } from "react";
+import * as AuthSession from "expo-auth-session";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Animated,
   SafeAreaView,
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
 import { apiFetch } from "../../../api"; // Ajusta la ruta según tu estructura
-import * as AuthSession from "expo-auth-session";
 
 // Es necesario para completar la sesión de autenticación en web
 WebBrowser.maybeCompleteAuthSession();
@@ -38,7 +38,6 @@ export default function LoginScreen() {
     const redirectUri = AuthSession.makeRedirectUri({
       scheme: "app", // This should match the "scheme" in your app.json
     });
-    console.log("Generated Redirect URI:", redirectUri);
   }, []);
 
   // Animaciones de entrada
@@ -76,8 +75,6 @@ export default function LoginScreen() {
       );
       const userInfo = await userInfoResponse.json();
 
-      console.log("✅ Usuario:", userInfo);
-
       // 2. Enviar token e información a TU backend
       const backendData = await apiFetch("auth/google/callback", {
         method: "POST",
@@ -88,7 +85,6 @@ export default function LoginScreen() {
       });
 
       // 3. Manejar la respuesta de tu backend (ej. guardar token, navegar a pantalla principal)
-      console.log("Login exitoso. Datos del backend:", backendData);
       Alert.alert("¡Bienvenido!", `Hola ${userInfo.name}`);
     } catch (error) {
       console.error("Error en la autenticación:", error);
