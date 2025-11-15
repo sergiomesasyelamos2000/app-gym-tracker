@@ -134,7 +134,7 @@ export default function RoutineEditScreen() {
         routineToUpdate
       );
 
-      alert("Rutina actualizada exitosamente");
+      Alert.alert("¡Éxito!", "Rutina actualizada exitosamente");
       navigation.reset({
         index: 1,
         routes: [
@@ -144,7 +144,7 @@ export default function RoutineEditScreen() {
       });
     } catch (error) {
       console.error("Error al actualizar la rutina:", error);
-      alert("Error al actualizar la rutina");
+      Alert.alert("Error", "Error al actualizar la rutina");
     }
   };
 

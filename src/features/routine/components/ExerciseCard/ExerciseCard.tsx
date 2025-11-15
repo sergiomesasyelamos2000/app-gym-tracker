@@ -15,7 +15,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 import ExerciseHeader from "./ExerciseHeader";
-import ExerciseNotes from "./ExerciseNotes";
+import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
@@ -64,7 +64,7 @@ const ExerciseCard = ({
   showOptions = false,
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
-  const [note, setNote] = useState(exercise.notes || "");
+  const [notes, setNotes] = useState<ExerciseNote[]>(exercise.notes || []);
   const [restTime, setRestTime] = useState(() => {
     if (exercise.restSeconds) {
       const seconds = parseInt(exercise.restSeconds, 10);
@@ -88,10 +88,10 @@ const ExerciseCard = ({
     const { minutes, seconds } = parseTime(restTime);
     onChangeExercise?.({
       ...exercise,
-      notes: note,
+      notes: notes,
       restSeconds: (minutes * 60 + seconds).toString(),
     });
-  }, [note, restTime]);
+  }, [notes, restTime]);
 
   const addSet = () => {
     const newSet: SetRequestDto =
@@ -217,7 +217,7 @@ const ExerciseCard = ({
           hasSuperset={!!supersetWith}
         />
 
-        <ExerciseNotes value={note} onChange={setNote} readonly={readonly} />
+        <ExerciseNotes notes={notes} onChange={setNotes} readonly={readonly} />
 
         <ExerciseRestPicker
           restTime={restTime}

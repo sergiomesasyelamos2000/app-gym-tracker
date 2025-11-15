@@ -9,6 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   FlatList,
@@ -98,8 +99,10 @@ export default function CreateExerciseScreen() {
       setMuscleOptions(musclesData);
       setExerciseTypeOptions(exerciseTypesData);
     } catch (error) {
-      console.error("Error cargando datos:", error);
-      alert("Error al cargar los datos. Por favor intenta nuevamente.");
+      Alert.alert(
+        "Error",
+        "Error al cargar los datos. Por favor intenta nuevamente."
+      );
     }
   };
 
@@ -145,7 +148,7 @@ export default function CreateExerciseScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      alert("Se necesitan permisos para acceder a la galería");
+      Alert.alert("Error", "Se necesitan permisos para acceder a la galería");
       return;
     }
 
@@ -190,12 +193,12 @@ export default function CreateExerciseScreen() {
   // ==================== VALIDATION & SAVE ====================
   const validateForm = (): boolean => {
     if (!name.trim()) {
-      alert("Por favor ingresa un nombre para el ejercicio");
+      Alert.alert("Error", "Por favor ingresa un nombre para el ejercicio");
       return false;
     }
 
     if (!primaryMuscleId) {
-      alert("Por favor selecciona un grupo muscular primario");
+      Alert.alert("Error", "Por favor ingresa un nombre para el ejercicio");
       return false;
     }
 
@@ -229,8 +232,7 @@ export default function CreateExerciseScreen() {
 
       navigation.goBack();
     } catch (error: any) {
-      console.error("Error creando ejercicio:", error);
-      alert(`Error al crear el ejercicio: ${error.message}`);
+      Alert.alert("Error", `Error al crear el ejercicio: ${error.message}`);
     } finally {
       setIsLoading(false);
     }

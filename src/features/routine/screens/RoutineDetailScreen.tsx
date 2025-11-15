@@ -6,13 +6,13 @@ import {
 } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   FlatList,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
@@ -361,7 +361,7 @@ export default function RoutineDetailScreen() {
 
       resetSetsCompletionStatus();
 
-      alert("Rutina y sesión guardadas exitosamente");
+      Alert.alert("¡Éxito!", "Rutina y sesión guardadas exitosamente");
 
       navigation.reset({
         index: 0,
@@ -371,8 +371,7 @@ export default function RoutineDetailScreen() {
         ],
       });
     } catch (err) {
-      console.error(err);
-      alert("Error al guardar la rutina");
+      Alert.alert("Error", "Error al guardar la rutina");
     }
   };
 
@@ -381,7 +380,7 @@ export default function RoutineDetailScreen() {
       const routineToSave = buildRoutinePayload();
       const savedRoutine = await saveRoutine(routineToSave);
 
-      alert("Rutina guardada exitosamente");
+      Alert.alert("¡Éxito!", "Rutina guardada exitosamente");
 
       navigation.reset({
         index: 1,
@@ -391,7 +390,7 @@ export default function RoutineDetailScreen() {
         ],
       });
     } catch {
-      alert("Error al guardar la rutina");
+      Alert.alert("Error", "Error al guardar la rutina");
     }
   };
 

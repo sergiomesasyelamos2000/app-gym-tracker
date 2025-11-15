@@ -1,5 +1,11 @@
 import { SetRequestDto } from "./set.model";
 
+export interface ExerciseNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface ExerciseRequestDto {
   id: string;
   name: string;
@@ -10,7 +16,7 @@ export interface ExerciseRequestDto {
   targetMuscles: string[];
   secondaryMuscles?: string[];
   instructions: string[];
-  notes?: string;
+  notes?: ExerciseNote[];
   restSeconds?: string;
   sets?: SetRequestDto[];
   weightUnit: "kg" | "lbs";
