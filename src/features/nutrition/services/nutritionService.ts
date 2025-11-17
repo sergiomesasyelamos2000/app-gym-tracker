@@ -11,6 +11,19 @@ import {
   FavoriteProduct,
 } from "../../../models/nutrition.model";
 import * as FileSystem from "expo-file-system";
+import { useAuthStore } from "../../../store/useAuthStore";
+
+/**
+ * Get current user ID from auth store
+ * @throws Error if user is not authenticated
+ */
+function getCurrentUserId(): string {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) {
+    throw new Error("User not authenticated. Please log in.");
+  }
+  return userId;
+}
 
 async function convertImageToBase64(uri: string): Promise<string | null> {
   try {
@@ -76,19 +89,25 @@ export async function getProductDetail(code: string): Promise<Product> {
 
 // User Profile Management
 export async function getUserProfile(
-  userId: string
+  userId?: string
 ): Promise<UserNutritionProfile> {
-  return apiFetch(`nutrition/profile/${userId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/profile/${id}`, {
     method: "GET",
   });
 }
 
 export async function createUserProfile(
-  profile: Omit<UserNutritionProfile, "id" | "createdAt" | "updatedAt">
+  profile: Omit<
+    UserNutritionProfile,
+    "id" | "createdAt" | "updatedAt" | "userId"
+  > & { userId?: string }
 ): Promise<UserNutritionProfile> {
+  const userId = profile.userId || getCurrentUserId();
+
   // Transformar el objeto para que coincida con CreateUserNutritionProfileDto
   const dto = {
-    userId: profile.userId,
+    userId,
     anthropometrics: {
       weight: profile.anthropometrics.weight,
       height: profile.anthropometrics.height,
@@ -120,20 +139,22 @@ export async function createUserProfile(
 }
 
 export async function updateUserProfile(
-  userId: string,
-  updates: Partial<UserNutritionProfile>
+  updates: Partial<UserNutritionProfile>,
+  userId?: string
 ): Promise<UserNutritionProfile> {
-  return apiFetch(`nutrition/profile/${userId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/profile/${id}`, {
     method: "PUT",
     body: JSON.stringify(updates),
   });
 }
 
 export async function updateMacroGoals(
-  userId: string,
-  goals: MacroGoals
+  goals: MacroGoals,
+  userId?: string
 ): Promise<UserNutritionProfile> {
-  return apiFetch(`nutrition/profile/${userId}/goals`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/profile/${id}/goals`, {
     method: "PUT",
     body: JSON.stringify(goals),
   });
@@ -141,20 +162,21 @@ export async function updateMacroGoals(
 
 // Food Diary Management
 export async function addFoodEntry(
-  entry: Omit<FoodEntry, "id" | "createdAt">
+  entry: Omit<FoodEntry, "id" | "createdAt" | "userId"> & { userId?: string }
 ): Promise<FoodEntry> {
-  // Ensure userId is included in the entry
+  const userId = entry.userId || getCurrentUserId();
   return apiFetch("nutrition/diary", {
     method: "POST",
-    body: JSON.stringify(entry),
+    body: JSON.stringify({ ...entry, userId }),
   });
 }
 
 export async function getDailyEntries(
-  userId: string,
-  date: string
+  date: string,
+  userId?: string
 ): Promise<DailyNutritionSummary> {
-  return apiFetch(`nutrition/diary/${userId}/${date}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/diary/${id}/${date}`, {
     method: "GET",
   });
 }
@@ -177,42 +199,45 @@ export async function deleteFoodEntry(entryId: string): Promise<void> {
 
 // Get weekly/monthly summaries
 export async function getWeeklySummary(
-  userId: string,
-  startDate: string
+  startDate: string,
+  userId?: string
 ): Promise<DailyNutritionSummary[]> {
-  return apiFetch(`nutrition/diary/${userId}/weekly?startDate=${startDate}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/diary/${id}/weekly?startDate=${startDate}`, {
     method: "GET",
   });
 }
 
 export async function getMonthlySummary(
-  userId: string,
   year: number,
-  month: number
+  month: number,
+  userId?: string
 ): Promise<DailyNutritionSummary[]> {
-  return apiFetch(
-    `nutrition/diary/${userId}/monthly?year=${year}&month=${month}`,
-    {
-      method: "GET",
-    }
-  );
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/diary/${id}/monthly?year=${year}&month=${month}`, {
+    method: "GET",
+  });
 }
 
 // ==================== SHOPPING LIST ====================
 
 export async function addToShoppingList(
-  item: Omit<ShoppingListItem, "id" | "createdAt" | "purchased">
+  item: Omit<ShoppingListItem, "id" | "createdAt" | "purchased" | "userId"> & {
+    userId?: string;
+  }
 ): Promise<ShoppingListItem> {
+  const userId = item.userId || getCurrentUserId();
   return apiFetch("nutrition/shopping-list", {
     method: "POST",
-    body: JSON.stringify(item),
+    body: JSON.stringify({ ...item, userId }),
   });
 }
 
 export async function getShoppingList(
-  userId: string
+  userId?: string
 ): Promise<ShoppingListItem[]> {
-  return apiFetch(`nutrition/shopping-list/${userId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/shopping-list/${id}`, {
     method: "GET",
   });
 }
@@ -241,14 +266,16 @@ export async function deleteShoppingListItem(itemId: string): Promise<void> {
   });
 }
 
-export async function clearPurchasedItems(userId: string): Promise<number> {
-  return apiFetch(`nutrition/shopping-list/${userId}/purchased`, {
+export async function clearPurchasedItems(userId?: string): Promise<number> {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/shopping-list/${id}/purchased`, {
     method: "DELETE",
   });
 }
 
-export async function clearShoppingList(userId: string): Promise<void> {
-  return apiFetch(`nutrition/shopping-list/${userId}/all`, {
+export async function clearShoppingList(userId?: string): Promise<void> {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/shopping-list/${id}/all`, {
     method: "DELETE",
   });
 }
@@ -256,26 +283,33 @@ export async function clearShoppingList(userId: string): Promise<void> {
 // ==================== FAVORITES ====================
 
 export async function addFavorite(
-  favorite: Omit<FavoriteProduct, "id" | "createdAt">
+  favorite: Omit<FavoriteProduct, "id" | "createdAt" | "userId"> & {
+    userId?: string;
+  }
 ): Promise<FavoriteProduct> {
+  const userId = favorite.userId || getCurrentUserId();
   return apiFetch("nutrition/favorites", {
     method: "POST",
-    body: JSON.stringify(favorite),
+    body: JSON.stringify({ ...favorite, userId }),
   });
 }
 
-export async function getFavorites(userId: string): Promise<FavoriteProduct[]> {
-  return apiFetch(`nutrition/favorites/${userId}`, {
+export async function getFavorites(
+  userId?: string
+): Promise<FavoriteProduct[]> {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/favorites/${id}`, {
     method: "GET",
   });
 }
 
 export async function isFavorite(
-  userId: string,
-  productCode: string
+  productCode: string,
+  userId?: string
 ): Promise<boolean> {
+  const id = userId || getCurrentUserId();
   const result = await apiFetch(
-    `nutrition/favorites/${userId}/check/${productCode}`,
+    `nutrition/favorites/${id}/check/${productCode}`,
     {
       method: "GET",
     }
@@ -284,20 +318,22 @@ export async function isFavorite(
 }
 
 export async function removeFavoriteByProductCode(
-  userId: string,
-  productCode: string
+  productCode: string,
+  userId?: string
 ): Promise<void> {
-  return apiFetch(`nutrition/favorites/${userId}/product/${productCode}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/favorites/${id}/product/${productCode}`, {
     method: "DELETE",
   });
 }
 
 export async function searchFavorites(
-  userId: string,
-  query: string
+  query: string,
+  userId?: string
 ): Promise<FavoriteProduct[]> {
+  const id = userId || getCurrentUserId();
   return apiFetch(
-    `nutrition/favorites/${userId}/search?query=${encodeURIComponent(query)}`,
+    `nutrition/favorites/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
     }
@@ -307,8 +343,12 @@ export async function searchFavorites(
 // ==================== CUSTOM PRODUCTS ====================
 
 export async function createCustomProduct(
-  product: Omit<CustomProduct, "id" | "createdAt" | "updatedAt">
+  product: Omit<CustomProduct, "id" | "createdAt" | "updatedAt" | "userId"> & {
+    userId?: string;
+  }
 ): Promise<CustomProduct> {
+  const userId = product.userId || getCurrentUserId();
+
   // Convertir imagen a base64 si existe
   let imageBase64: string | undefined = undefined;
   if (product.image && product.image.startsWith("file://")) {
@@ -321,24 +361,27 @@ export async function createCustomProduct(
     method: "POST",
     body: JSON.stringify({
       ...product,
+      userId,
       image: imageBase64,
     }),
   });
 }
 
 export async function getCustomProducts(
-  userId: string
+  userId?: string
 ): Promise<CustomProduct[]> {
-  return apiFetch(`nutrition/custom-products/${userId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/custom-products/${id}`, {
     method: "GET",
   });
 }
 
 export async function getCustomProductById(
-  userId: string,
-  productId: string
+  productId: string,
+  userId?: string
 ): Promise<CustomProduct> {
-  return apiFetch(`nutrition/custom-products/${userId}/${productId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/custom-products/${id}/${productId}`, {
     method: "GET",
   });
 }
@@ -369,13 +412,12 @@ export async function deleteCustomProduct(productId: string): Promise<void> {
 }
 
 export async function searchCustomProducts(
-  userId: string,
-  query: string
+  query: string,
+  userId?: string
 ): Promise<CustomProduct[]> {
+  const id = userId || getCurrentUserId();
   return apiFetch(
-    `nutrition/custom-products/${userId}/search?query=${encodeURIComponent(
-      query
-    )}`,
+    `nutrition/custom-products/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
     }
@@ -394,8 +436,11 @@ export async function createCustomMeal(
     | "totalProtein"
     | "totalCarbs"
     | "totalFat"
-  >
+    | "userId"
+  > & { userId?: string }
 ): Promise<CustomMeal> {
+  const userId = meal.userId || getCurrentUserId();
+
   // Convertir imagen a base64 si existe
   let imageBase64: string | undefined = undefined;
   if (meal.image && meal.image.startsWith("file://")) {
@@ -408,22 +453,25 @@ export async function createCustomMeal(
     method: "POST",
     body: JSON.stringify({
       ...meal,
+      userId,
       image: imageBase64,
     }),
   });
 }
 
-export async function getCustomMeals(userId: string): Promise<CustomMeal[]> {
-  return apiFetch(`nutrition/custom-meals/${userId}`, {
+export async function getCustomMeals(userId?: string): Promise<CustomMeal[]> {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/custom-meals/${id}`, {
     method: "GET",
   });
 }
 
 export async function getCustomMealById(
-  userId: string,
-  mealId: string
+  mealId: string,
+  userId?: string
 ): Promise<CustomMeal> {
-  return apiFetch(`nutrition/custom-meals/${userId}/${mealId}`, {
+  const id = userId || getCurrentUserId();
+  return apiFetch(`nutrition/custom-meals/${id}/${mealId}`, {
     method: "GET",
   });
 }
@@ -460,13 +508,12 @@ export async function duplicateCustomMeal(mealId: string): Promise<CustomMeal> {
 }
 
 export async function searchCustomMeals(
-  userId: string,
-  query: string
+  query: string,
+  userId?: string
 ): Promise<CustomMeal[]> {
+  const id = userId || getCurrentUserId();
   return apiFetch(
-    `nutrition/custom-meals/${userId}/search?query=${encodeURIComponent(
-      query
-    )}`,
+    `nutrition/custom-meals/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
     }

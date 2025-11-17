@@ -1,12 +1,12 @@
 // navigation/BottomTabs.tsx
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { BarChart3, Dumbbell, Heart, Home } from "lucide-react-native";
+import { BarChart3, Dumbbell, Heart, Home, User } from "lucide-react-native";
 import React from "react";
-import LoginScreen from "../features/login/screens/LoginScreen";
 import NutritionStack from "../features/nutrition/screens/NutritionStack";
 import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 import { useNavigationStore } from "../store/useNavigationStore";
 
 const Tab = createBottomTabNavigator();
@@ -27,6 +27,8 @@ export const BottomTabs = () => {
               return <Heart color={color} size={size} />;
             case "Macros":
               return <BarChart3 color={color} size={size} />;
+            case "Perfil":
+              return <User color={color} size={size} />;
           }
         },
         tabBarActiveTintColor: "#6C3BAA",
@@ -39,10 +41,10 @@ export const BottomTabs = () => {
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Login" component={LoginScreen} />
       <Tab.Screen name="Entreno" component={WorkoutStack} />
       <Tab.Screen name="Nutrición" component={NutritionScreen} />
       <Tab.Screen name="Macros" component={NutritionStack} />
+      <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );
 };

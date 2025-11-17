@@ -3,6 +3,19 @@ import {
   RoutineResponseDto,
 } from "../../../models/index.js";
 import { apiFetch } from "../../../api/index";
+import { useAuthStore } from "../../../store/useAuthStore";
+
+/**
+ * Get current user ID from auth store
+ * @throws Error if user is not authenticated
+ */
+function getCurrentUserId(): string {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) {
+    throw new Error("User not authenticated. Please log in.");
+  }
+  return userId;
+}
 
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto

@@ -4,7 +4,7 @@ import { StatusBar } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
-import { BottomTabs } from "./src/navigation";
+import { RootNavigator } from "./src/navigation";
 
 import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
@@ -36,7 +36,7 @@ export default function App() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <NavigationContainer>
               <StatusBar barStyle="dark-content" />
-              <BottomTabs />
+              <RootNavigator />
             </NavigationContainer>
             <Toast config={toastConfig} />
           </GestureHandlerRootView>
