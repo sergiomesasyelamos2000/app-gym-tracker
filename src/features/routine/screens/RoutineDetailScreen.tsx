@@ -31,6 +31,7 @@ import {
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { notificationService } from "../../../services/notificationService";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -408,7 +409,7 @@ export default function RoutineDetailScreen() {
     });
   };
 
-  const handleStartRestTimer = (restSeconds: number) => {
+  const handleStartRestTimer = async (restSeconds: number, exerciseName?: string) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
     setShowRestToast(true);
@@ -417,6 +418,10 @@ export default function RoutineDetailScreen() {
       clearInterval(countdownRef.current);
     }
 
+    // Start push notification timer
+    await notificationService.startRestTimer(restSeconds, exerciseName);
+
+    // Keep the visual toast timer
     countdownRef.current = setInterval(() => {
       setRestTimeRemaining((prev) => {
         if (prev <= 1) {

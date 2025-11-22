@@ -27,7 +27,7 @@ interface Props {
   onChangeExercise: (exercise: ExerciseRequestDto) => void;
   readonly?: boolean;
   started?: boolean;
-  onStartRestTimer?: (restSeconds: number) => void;
+  onStartRestTimer?: (restSeconds: number, exerciseName?: string) => void;
   compact?: boolean;
   onLongPress?: () => void;
   isDragging?: boolean;
@@ -135,7 +135,7 @@ const ExerciseCard = ({
       const { minutes, seconds } = parseTime(restTime);
       const totalSeconds = minutes * 60 + seconds;
       if (totalSeconds > 0) {
-        onStartRestTimer(totalSeconds);
+        onStartRestTimer(totalSeconds, exercise.name);
       }
     }
   };
