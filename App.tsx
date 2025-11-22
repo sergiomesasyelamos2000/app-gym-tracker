@@ -15,6 +15,7 @@ import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (
@@ -28,20 +29,30 @@ const toastConfig = {
   ),
 };
 
+function AppContent() {
+  const { isDark } = useTheme();
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <RootNavigator />
+      </NavigationContainer>
+      <Toast config={toastConfig} />
+    </GestureHandlerRootView>
+  );
+}
+
 export default function App() {
   return (
     <ReduxProvider store={store}>
-      <PaperProvider>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <NavigationContainer>
-              <StatusBar barStyle="dark-content" />
-              <RootNavigator />
-            </NavigationContainer>
-            <Toast config={toastConfig} />
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
-      </PaperProvider>
+      <ThemeProvider>
+        <PaperProvider>
+          <SafeAreaProvider>
+            <AppContent />
+          </SafeAreaProvider>
+        </PaperProvider>
+      </ThemeProvider>
     </ReduxProvider>
   );
 }
