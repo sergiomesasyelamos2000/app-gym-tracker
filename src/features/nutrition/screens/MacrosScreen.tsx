@@ -247,10 +247,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     if (!userProfile) return;
 
     try {
-      const data = await nutritionService.getDailyEntries(
-        userProfile.userId,
-        date
-      );
+      const data = await nutritionService.getDailyEntries(userProfile.id, date);
       setTodayEntries(data.entries);
     } catch (error) {
       console.error("Error loading entries:", error);
@@ -332,7 +329,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
               for (const entry of entriesToDuplicate) {
                 await nutritionService.addFoodEntry({
-                  userId: userProfile.userId,
+                  userId: userProfile.id,
                   date: selectedDate,
                   mealType: entry.mealType,
                   productCode: entry.productCode,

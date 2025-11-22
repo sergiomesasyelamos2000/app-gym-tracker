@@ -172,10 +172,11 @@ export async function addFoodEntry(
 }
 
 export async function getDailyEntries(
-  date: string,
-  userId?: string
+  userId: string,
+  date: string
 ): Promise<DailyNutritionSummary> {
   const id = userId || getCurrentUserId();
+  console.log("datasdasda", date, "userId", id);
   return apiFetch(`nutrition/diary/${id}/${date}`, {
     method: "GET",
   });

@@ -42,8 +42,20 @@ export async function apiFetch<T = any>(
       authStore.clearAuth();
     }
 
+    // ✅ Intentar parsear el error como JSON
     const errorText = await response.text();
-    throw new Error(`Error ${response.status}: ${errorText}`);
+    let errorMessage = `Error ${response.status}`;
+
+    try {
+      const errorData = JSON.parse(errorText);
+      // Extraer el mensaje del error del backend
+      errorMessage = errorData.message || errorData.error || errorText;
+    } catch {
+      // Si no es JSON, usar el texto completo
+      errorMessage = errorText || errorMessage;
+    }
+
+    throw new Error(errorMessage);
   }
 
   // ✅ Si es 204 (sin contenido), no intentes hacer .json()
