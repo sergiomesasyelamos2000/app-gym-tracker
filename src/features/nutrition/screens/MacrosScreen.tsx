@@ -271,7 +271,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   );
 
   const loadEntriesForDate = async (date: string) => {
-    if (!user?.id) return;
+    if (!user?.id || !user?.id) return;
 
     try {
       const data = await nutritionService.getDailyEntries(user.id, date);
@@ -284,6 +284,25 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       }
     } catch (error) {
       console.error("Error loading entries:", error);
+      // Si el error es porque no hay perfil, redirigir a configuración
+      if (
+        error instanceof Error &&
+        error.message.includes("Perfil no encontrado")
+      ) {
+        Alert.alert(
+          "Perfil Incompleto",
+          "Necesitas completar tu perfil de nutrición para continuar.",
+          [
+            {
+              text: "Configurar Ahora",
+              onPress: () =>
+                navigation.replace("UserProfileSetupScreen", {
+                  userId: user.id,
+                }),
+            },
+          ]
+        );
+      }
     }
   };
 
