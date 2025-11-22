@@ -844,12 +844,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               >
                 <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("SettingsScreen")}
-                style={styles.iconButton}
-              >
-                <Ionicons name="settings-outline" size={24} color="#6C3BAA" />
-              </TouchableOpacity>
             </View>
           </View>
 
