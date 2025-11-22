@@ -108,25 +108,26 @@ export async function createUserProfile(
   const userId = profile.userId || getCurrentUserId();
 
   // Transformar el objeto para que coincida con CreateUserNutritionProfileDto
+  // Asegurarse de que todos los valores numéricos estén redondeados para compatibilidad con la base de datos
   const dto = {
     userId,
     anthropometrics: {
-      weight: profile.anthropometrics.weight,
-      height: profile.anthropometrics.height,
-      age: profile.anthropometrics.age,
+      weight: Math.round(profile.anthropometrics.weight * 10) / 10, // Redondear a 1 decimal
+      height: Math.round(profile.anthropometrics.height),
+      age: Math.round(profile.anthropometrics.age),
       gender: profile.anthropometrics.gender,
       activityLevel: profile.anthropometrics.activityLevel,
     },
     goals: {
       weightGoal: profile.goals.weightGoal,
-      targetWeight: profile.goals.targetWeight,
-      weeklyWeightChange: profile.goals.weeklyWeightChange,
+      targetWeight: Math.round(profile.goals.targetWeight * 10) / 10, // Redondear a 1 decimal
+      weeklyWeightChange: Math.round(profile.goals.weeklyWeightChange * 100) / 100, // Redondear a 2 decimales
     },
     macroGoals: {
-      dailyCalories: profile.macroGoals.dailyCalories,
-      protein: profile.macroGoals.protein,
-      carbs: profile.macroGoals.carbs,
-      fat: profile.macroGoals.fat,
+      dailyCalories: Math.round(profile.macroGoals.dailyCalories), // Entero
+      protein: Math.round(profile.macroGoals.protein), // Entero
+      carbs: Math.round(profile.macroGoals.carbs), // Entero
+      fat: Math.round(profile.macroGoals.fat), // Entero
     },
     preferences: {
       weightUnit: profile.preferences.weightUnit,

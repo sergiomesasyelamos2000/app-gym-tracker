@@ -133,7 +133,7 @@ function calculateMacros(
   const carbGrams = Math.round(carbCalories / 4);
 
   return {
-    dailyCalories: targetCalories,
+    dailyCalories: Math.round(targetCalories), // Round to integer for database compatibility
     protein: proteinGrams,
     carbs: Math.max(0, carbGrams), // Ensure non-negative
     fat: fatGrams,
