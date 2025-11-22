@@ -5,15 +5,15 @@ import {
   MacroGoals,
   UserAnthropometrics,
   UserGoals,
-} from '../models/nutrition.model';
+} from "../models/nutrition.model";
 
 // Activity level multipliers for TDEE calculation
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
-  sedentary: 1.2, // Little or no exercise
-  light: 1.375, // Light exercise 1-3 days/week
-  moderate: 1.55, // Moderate exercise 3-5 days/week
-  active: 1.725, // Hard exercise 6-7 days/week
-  very_active: 1.9, // Very hard exercise & physical job or training twice per day
+  sedentary: 1.2,
+  lightly_active: 1.375,
+  moderately_active: 1.55,
+  very_active: 1.725,
+  extra_active: 1.9, // Very hard exercise & physical job or training twice per day
 };
 
 // Calorie adjustment per kg of weight change per week
@@ -34,9 +34,9 @@ function calculateBMR(
 ): number {
   const baseBMR = 10 * weight + 6.25 * height - 5 * age;
 
-  if (gender === 'male') {
+  if (gender === "male") {
     return baseBMR + 5;
-  } else if (gender === 'female') {
+  } else if (gender === "female") {
     return baseBMR - 161;
   } else {
     // For 'other', use average of male and female
@@ -48,11 +48,11 @@ function calculateBMR(
  * Calculate Total Daily Energy Expenditure (TDEE)
  * TDEE = BMR × Activity Multiplier
  */
-function calculateTDEE(
+export function calculateTDEE(
   bmr: number,
   activityLevel: ActivityLevel
 ): number {
-  return Math.round(bmr * ACTIVITY_MULTIPLIERS[activityLevel]);
+  return bmr * ACTIVITY_MULTIPLIERS[activityLevel];
 }
 
 /**
@@ -63,17 +63,18 @@ function calculateTargetCalories(
   weightGoal: WeightGoal,
   weeklyWeightChange: number
 ): number {
-  if (weightGoal === 'maintain') {
+  if (weightGoal === "maintain") {
     return tdee;
   }
 
   // Calculate weekly calorie adjustment
-  const weeklyCalorieAdjustment = weeklyWeightChange * CALORIE_ADJUSTMENT_PER_KG;
+  const weeklyCalorieAdjustment =
+    weeklyWeightChange * CALORIE_ADJUSTMENT_PER_KG;
 
   // Convert to daily adjustment
   const dailyCalorieAdjustment = Math.round(weeklyCalorieAdjustment / 7);
 
-  if (weightGoal === 'lose') {
+  if (weightGoal === "lose") {
     return Math.max(1200, tdee - dailyCalorieAdjustment); // Minimum 1200 kcal for safety
   } else {
     return tdee + dailyCalorieAdjustment;
@@ -102,21 +103,21 @@ function calculateMacros(
   let fatPercentage: number;
 
   switch (weightGoal) {
-    case 'lose':
+    case "lose":
       // Higher protein to preserve muscle during cut
       proteinGrams = Math.round(weight * 2.2);
       fatPercentage = 0.25;
       break;
-    case 'gain':
+    case "gain":
       // High protein for muscle growth, moderate fat, high carbs
       proteinGrams = Math.round(weight * 2.0);
       fatPercentage = 0.25;
       break;
-    case 'maintain':
+    case "maintain":
     default:
       // Balanced approach
       proteinGrams = Math.round(weight * 1.8);
-      fatPercentage = 0.30;
+      fatPercentage = 0.3;
       break;
   }
 
@@ -171,9 +172,10 @@ export function calculateMacroGoals(
 /**
  * Helper function to get BMR and TDEE for display purposes
  */
-export function getMetabolicRates(
-  anthropometrics: UserAnthropometrics
-): { bmr: number; tdee: number } {
+export function getMetabolicRates(anthropometrics: UserAnthropometrics): {
+  bmr: number;
+  tdee: number;
+} {
   const { weight, height, age, gender, activityLevel } = anthropometrics;
 
   const bmr = calculateBMR(weight, height, age, gender);
@@ -185,16 +187,18 @@ export function getMetabolicRates(
 /**
  * Helper to validate weekly weight change based on goal
  */
-export function getRecommendedWeightChangeRange(
-  weightGoal: WeightGoal
-): { min: number; max: number; recommended: number } {
-  if (weightGoal === 'lose') {
+export function getRecommendedWeightChangeRange(weightGoal: WeightGoal): {
+  min: number;
+  max: number;
+  recommended: number;
+} {
+  if (weightGoal === "lose") {
     return {
       min: 0.25,
       max: 1.0,
       recommended: 0.5, // 0.5kg per week is sustainable
     };
-  } else if (weightGoal === 'gain') {
+  } else if (weightGoal === "gain") {
     return {
       min: 0.25,
       max: 0.5,

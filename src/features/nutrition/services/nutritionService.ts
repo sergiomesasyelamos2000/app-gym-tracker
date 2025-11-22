@@ -1,7 +1,6 @@
 import { apiFetch } from "../../../api";
 import {
   Product,
-  UserNutritionProfile,
   FoodEntry,
   DailyNutritionSummary,
   MacroGoals,
@@ -12,6 +11,7 @@ import {
 } from "../../../models/nutrition.model";
 import * as FileSystem from "expo-file-system";
 import { useAuthStore } from "../../../store/useAuthStore";
+import { UserNutritionProfileResponseDto } from "../../../models/user-nutrition-profile.model";
 
 /**
  * Get current user ID from auth store
@@ -89,8 +89,8 @@ export async function getProductDetail(code: string): Promise<Product> {
 
 // User Profile Management
 export async function getUserProfile(
-  userId?: string
-): Promise<UserNutritionProfile> {
+  userId: string
+): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
   return apiFetch(`nutrition/profile/${id}`, {
     method: "GET",
@@ -98,10 +98,13 @@ export async function getUserProfile(
 }
 
 export async function createUserProfile(
-  profile: Omit<UserNutritionProfile, "id" | "createdAt" | "updatedAt" | "userId"> & {
+  profile: Omit<
+    UserNutritionProfileResponseDto,
+    "id" | "createdAt" | "updatedAt" | "userId"
+  > & {
     userId?: string;
   }
-): Promise<UserNutritionProfile> {
+): Promise<UserNutritionProfileResponseDto> {
   const userId = profile.userId || getCurrentUserId();
 
   // Transformar el objeto para que coincida con CreateUserNutritionProfileDto
@@ -138,9 +141,9 @@ export async function createUserProfile(
 }
 
 export async function updateUserProfile(
-  updates: Partial<UserNutritionProfile>,
+  updates: Partial<UserNutritionProfileResponseDto>,
   userId?: string
-): Promise<UserNutritionProfile> {
+): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
   return apiFetch(`nutrition/profile/${id}`, {
     method: "PUT",
@@ -151,7 +154,7 @@ export async function updateUserProfile(
 export async function updateMacroGoals(
   goals: MacroGoals,
   userId?: string
-): Promise<UserNutritionProfile> {
+): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
   return apiFetch(`nutrition/profile/${id}/goals`, {
     method: "PUT",
@@ -174,9 +177,7 @@ export async function getDailyEntries(
   userId: string,
   date: string
 ): Promise<DailyNutritionSummary> {
-  const id = userId || getCurrentUserId();
-  console.log("datasdasda", date, "userId", id);
-  return apiFetch(`nutrition/diary/${id}/${date}`, {
+  return apiFetch(`nutrition/diary/${userId}/${date}`, {
     method: "GET",
   });
 }

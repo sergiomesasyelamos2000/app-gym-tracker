@@ -1,34 +1,34 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  SafeAreaView,
-  Alert,
-} from "react-native";
-import { RFValue } from "react-native-responsive-fontsize";
-import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { NutritionStackParamList } from "./NutritionStack";
+import React, { useState } from "react";
+import {
+  Alert,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Modal from "react-native-modal";
+import { RFValue } from "react-native-responsive-fontsize";
 import {
   ActivityLevel,
   Gender,
-  WeightGoal,
   UserAnthropometrics,
   UserGoals,
+  WeightGoal,
 } from "../../../models/nutrition.model";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { useNutritionStore } from "../../../store/useNutritionStore";
 import {
   calculateMacroGoals,
   getEstimatedTimeToGoal,
 } from "../../../utils/macroCalculator";
-import { useAuthStore } from "../../../store/useAuthStore";
-import { useNutritionStore } from "../../../store/useNutritionStore";
 import { createUserProfile } from "../services/nutritionService";
+import { NutritionStackParamList } from "./NutritionStack";
 
 const { width, height } = Dimensions.get("window");
 
@@ -62,7 +62,8 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
+  const [activityLevel, setActivityLevel] =
+    useState<ActivityLevel>("moderately_active");
   const [weightGoal, setWeightGoal] = useState<WeightGoal>("maintain");
   const [targetWeight, setTargetWeight] = useState("");
   const [weeklyWeightChange, setWeeklyWeightChange] = useState(0.5);
@@ -82,22 +83,22 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       description: "Poco o ningún ejercicio",
     },
     {
-      value: "light",
+      value: "lightly_active", // ← Cambio
       label: "Ligero",
       description: "Ejercicio ligero 1-3 días/semana",
     },
     {
-      value: "moderate",
+      value: "moderately_active", // ← Cambio
       label: "Moderado",
       description: "Ejercicio moderado 3-5 días/semana",
     },
     {
-      value: "active",
+      value: "very_active", // ← Cambio
       label: "Activo",
       description: "Ejercicio intenso 6-7 días/semana",
     },
     {
-      value: "very_active",
+      value: "extra_active", // ← Cambio
       label: "Muy Activo",
       description: "Ejercicio muy intenso y trabajo físico",
     },

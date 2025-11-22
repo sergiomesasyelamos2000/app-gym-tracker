@@ -99,15 +99,16 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const todayEntries = useNutritionStore((state) => state.todayEntries);
   const setTodayEntries = useNutritionStore((state) => state.setTodayEntries);
   const removeFoodEntry = useNutritionStore((state) => state.removeFoodEntry);
-  const isProfileComplete = useNutritionStore(
-    (state) => state.isProfileComplete
-  );
+  const setUserProfile = useNutritionStore((state) => state.setUserProfile);
+  const hasProfile = useNutritionStore((state) => state.hasProfile);
+  const setHasProfile = useNutritionStore((state) => state.setHasProfile);
   const setTabVisibility = useNavigationStore(
     (state) => state.setTabVisibility
   );
 
   const [calendarKey, setCalendarKey] = useState(0);
-
+  const [showSetupPrompt, setShowSetupPrompt] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
     new Set()
   );
@@ -146,11 +147,35 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   );
   const isToday = selectedDate === new Date().toISOString().split("T")[0];
 
+  // ✅ Verificar perfil al montar y cuando cambia el usuario
   useEffect(() => {
-    if (!isProfileComplete() && user?.id) {
-      navigation.replace("UserProfileSetupScreen", { userId: user.id });
+    if (user?.id) {
+      checkUserProfile();
     }
-  }, [isProfileComplete, user]);
+  }, [user]);
+
+  // ✅ Función para verificar si existe perfil
+  const checkUserProfile = async () => {
+    if (!user?.id) return;
+
+    try {
+      setCheckingProfile(true);
+      const profile = await nutritionService.getUserProfile(user.id);
+      setUserProfile(profile);
+      setHasProfile(true);
+      setShowSetupPrompt(false);
+    } catch (error) {
+      console.log("No se encontró perfil nutricional");
+      setHasProfile(false);
+      setUserProfile(null);
+      // Mostrar prompt solo si es la primera vez o si ya hay entradas
+      if (todayEntries.length > 0) {
+        setShowSetupPrompt(true);
+      }
+    } finally {
+      setCheckingProfile(false);
+    }
+  };
 
   useEffect(() => {
     const listeners = [
@@ -167,8 +192,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   }, []);
 
   useEffect(() => {
-    if (!userProfile) return;
-
     const effectiveEntries = todayEntries.filter(
       (entry) => !notEatenEntries.has(entry.id || "")
     );
@@ -199,7 +222,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         useNativeDriver: false,
       }),
     ]).start();
-  }, [todayEntries, notEatenEntries, userProfile]);
+  }, [todayEntries, notEatenEntries]);
 
   useEffect(() => {
     setTabVisibility("Macros", !isSelectionMode);
@@ -239,18 +262,26 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadEntriesForDate(selectedDate);
+      if (user?.id) {
+        loadEntriesForDate(selectedDate);
+      }
       setTabVisibility("Macros", true);
       return () => setTabVisibility("Macros", true);
-    }, [selectedDate, setTabVisibility])
+    }, [selectedDate, user, setTabVisibility])
   );
 
   const loadEntriesForDate = async (date: string) => {
-    if (!userProfile) return;
+    if (!user?.id) return;
 
     try {
-      const data = await nutritionService.getDailyEntries(userProfile.id, date);
+      const data = await nutritionService.getDailyEntries(user.id, date);
       setTodayEntries(data.entries);
+      setHasProfile(data.hasProfile);
+
+      // Si no tiene perfil y hay entradas, mostrar prompt
+      if (!data.hasProfile && data.entries.length > 0) {
+        setShowSetupPrompt(true);
+      }
     } catch (error) {
       console.error("Error loading entries:", error);
     }
@@ -312,7 +343,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   };
 
   const handleDuplicateSelected = async () => {
-    if (!userProfile) return;
+    if (!user?.id) return;
 
     Alert.alert(
       "Duplicar alimentos",
@@ -331,7 +362,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
               for (const entry of entriesToDuplicate) {
                 await nutritionService.addFoodEntry({
-                  userId: userProfile.id,
+                  userId: user.id,
                   date: selectedDate,
                   mealType: entry.mealType,
                   productCode: entry.productCode,
@@ -422,7 +453,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const handleDateSelect = (day: any) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSelectedDate(day.dateString);
-    setCalendarKey((prev) => prev + 1); // Forzar re-render
+    setCalendarKey((prev) => prev + 1);
   };
 
   const handleTodayPress = () => {
@@ -451,22 +482,76 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   const formatHeaderDate = () => {
     const date = new Date(selectedDate + "T00:00:00");
-    if (isToday) {
-      return date.toLocaleDateString("es-ES", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      });
-    } else {
-      return date.toLocaleDateString("es-ES", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      });
-    }
+    return date.toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
   };
 
-  if (!userProfile) return null;
+  // ✅ Loading inicial mientras verifica perfil
+  if (checkingProfile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6C3BAA" />
+          <Text style={styles.loadingText}>Cargando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ✅ Renderizar prompt de configuración
+  if (showSetupPrompt && !hasProfile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.setupPromptContainer}>
+          <Ionicons name="nutrition-outline" size={80} color="#6C3BAA" />
+          <Text style={styles.setupPromptTitle}>
+            Configura tu Perfil Nutricional
+          </Text>
+          <Text style={styles.setupPromptText}>
+            Para calcular tus macros personalizados y objetivos calóricos,
+            necesitamos algunos datos básicos sobre ti.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.setupPromptButton}
+            onPress={() => {
+              navigation.navigate("UserProfileSetupScreen", {
+                userId: user!.id,
+              });
+            }}
+          >
+            <Text style={styles.setupPromptButtonText}>Configurar Ahora</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.setupPromptSkipButton}
+            onPress={() => {
+              setShowSetupPrompt(false);
+            }}
+          >
+            <Text style={styles.setupPromptSkipText}>
+              Continuar sin configurar
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.setupPromptNote}>
+            Podrás configurarlo más tarde desde Ajustes
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ✅ Usar valores por defecto si no hay perfil
+  const goals = userProfile?.macroGoals || {
+    dailyCalories: 2000,
+    protein: 150,
+    carbs: 200,
+    fat: 65,
+  };
 
   const effectiveEntries = todayEntries.filter(
     (entry) => !notEatenEntries.has(entry.id || "")
@@ -481,8 +566,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
-
-  const goals = userProfile.macroGoals;
 
   const remaining = {
     calories: goals.dailyCalories - totals.calories,
@@ -683,6 +766,27 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         </View>
       )}
 
+      {/* ✅ Banner informativo si no tiene perfil */}
+      {!hasProfile && !showSetupPrompt && (
+        <TouchableOpacity
+          style={styles.noBanner}
+          onPress={() =>
+            navigation.navigate("UserProfileSetupScreen", { userId: user!.id })
+          }
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color="#6C3BAA"
+          />
+          <Text style={styles.noBannerText}>
+            Configura tu perfil para objetivos personalizados
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color="#6C3BAA" />
+        </TouchableOpacity>
+      )}
+
       <ScrollView
         style={styles.screen}
         refreshControl={
@@ -833,7 +937,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Calendar Modal Mejorado */}
+      {/* Calendar Modal */}
       <Modal visible={showCalendar} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <TouchableOpacity
@@ -1016,6 +1120,11 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
   screen: { flex: 1 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   loadingOverlay: {
     position: "absolute",
     top: 0,
@@ -1028,9 +1137,76 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   loadingText: {
-    color: "#fff",
+    color: "#6B7280",
     marginTop: 12,
     fontSize: 16,
+    fontWeight: "600",
+  },
+  // ✅ Estilos para el prompt de configuración
+  setupPromptContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+    backgroundColor: "#FFFFFF",
+  },
+  setupPromptTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginTop: 24,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  setupPromptText: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  setupPromptButton: {
+    backgroundColor: "#6C3BAA",
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  setupPromptButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  setupPromptSkipButton: {
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  setupPromptSkipText: {
+    fontSize: 14,
+    color: "#6C3BAA",
+    fontWeight: "600",
+  },
+  setupPromptNote: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  // ✅ Banner informativo
+  noBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3E8FF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9D5FF",
+  },
+  noBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#6C3BAA",
     fontWeight: "600",
   },
   header: { backgroundColor: "#fff", padding: 20, marginBottom: 12 },
@@ -1216,7 +1392,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
   },
-
   calendarModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1226,13 +1401,23 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E7EB",
   },
   calendarModalTitle: { fontSize: 20, fontWeight: "700", color: "#1A1A1A" },
-
+  todayButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    backgroundColor: "#F3E8FF",
+    borderRadius: 12,
+  },
   todayButtonText: { fontSize: 16, fontWeight: "600", color: "#6C3BAA" },
-
-  confirmButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  arrowButton: {
-    padding: 8,
-    borderRadius: 8,
+  calendar: {
+    marginTop: 8,
+    paddingBottom: 12,
   },
   calendarFooter: {
     paddingHorizontal: 20,
@@ -1248,28 +1433,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textTransform: "capitalize",
   },
-  todayButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    backgroundColor: "#F3E8FF",
-    borderRadius: 12,
-  },
-  calendar: {
-    marginTop: 8,
-    paddingBottom: 12,
-  },
   confirmButton: {
     backgroundColor: "#6C3BAA",
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
+  },
+  confirmButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  arrowButton: {
+    padding: 8,
+    borderRadius: 8,
   },
   calendarModalContainer: {
     backgroundColor: "#fff",

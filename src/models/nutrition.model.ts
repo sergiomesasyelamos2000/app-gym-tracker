@@ -26,14 +26,15 @@ export interface NutritionItem {
 // User profile and goals
 export type ActivityLevel =
   | "sedentary"
-  | "light"
-  | "moderate"
-  | "active"
-  | "very_active";
+  | "lightly_active"
+  | "moderately_active"
+  | "very_active"
+  | "extra_active";
+
 export type Gender = "male" | "female" | "other";
 export type WeightGoal = "lose" | "maintain" | "gain";
-export type WeightUnit = "kg" | "lbs";
 export type HeightUnit = "cm" | "ft";
+export type WeightUnit = "kg" | "lbs";
 
 export interface UserAnthropometrics {
   weight: number;
@@ -46,30 +47,19 @@ export interface UserAnthropometrics {
 export interface UserGoals {
   weightGoal: WeightGoal;
   targetWeight: number;
-  weeklyWeightChange: number; // kg per week (0.25, 0.5, 0.75, 1.0)
+  weeklyWeightChange: number;
 }
 
 export interface MacroGoals {
   dailyCalories: number;
-  protein: number; // grams
-  carbs: number; // grams
-  fat: number; // grams
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 export interface UserPreferences {
   weightUnit: WeightUnit;
   heightUnit: HeightUnit;
-}
-
-export interface UserNutritionProfile {
-  id: string;
-  userId: string; // ID del usuario al que pertenece este perfil
-  anthropometrics: UserAnthropometrics;
-  goals: UserGoals;
-  macroGoals: MacroGoals;
-  preferences: UserPreferences;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 // Food diary
@@ -106,7 +96,13 @@ export interface DailyNutritionSummary {
     carbs: number;
     fat: number;
   };
-  goals: MacroGoals;
+  goals: {
+    dailyCalories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  hasProfile: boolean;
 }
 
 // Shopping List

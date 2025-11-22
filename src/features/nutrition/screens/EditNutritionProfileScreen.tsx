@@ -45,9 +45,6 @@ export default function EditNutritionProfileScreen({
   const currentUser = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
-  const updateStoreMacroGoals = useNutritionStore(
-    (state) => state.updateMacroGoals
-  );
 
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +56,7 @@ export default function EditNutritionProfileScreen({
   const [gender, setGender] = useState<Gender>(
     userProfile?.anthropometrics.gender || "male"
   );
+
   const [age, setAge] = useState(
     userProfile?.anthropometrics.age.toString() || ""
   );
@@ -69,7 +67,7 @@ export default function EditNutritionProfileScreen({
     userProfile?.anthropometrics.height.toString() || ""
   );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
-    userProfile?.anthropometrics.activityLevel || "moderate"
+    userProfile?.anthropometrics.activityLevel || "moderately_active"
   );
   const [weightGoal, setWeightGoal] = useState<WeightGoal>(
     userProfile?.goals.weightGoal || "maintain"
@@ -107,22 +105,22 @@ export default function EditNutritionProfileScreen({
       description: "Poco o ningún ejercicio",
     },
     {
-      value: "light",
+      value: "lightly_active", // ← Cambio
       label: "Ligero",
       description: "Ejercicio ligero 1-3 días/semana",
     },
     {
-      value: "moderate",
+      value: "moderately_active", // ← Cambio
       label: "Moderado",
       description: "Ejercicio moderado 3-5 días/semana",
     },
     {
-      value: "active",
+      value: "very_active", // ← Cambio
       label: "Activo",
       description: "Ejercicio intenso 6-7 días/semana",
     },
     {
-      value: "very_active",
+      value: "extra_active", // ← Cambio
       label: "Muy Activo",
       description: "Ejercicio muy intenso y trabajo físico",
     },

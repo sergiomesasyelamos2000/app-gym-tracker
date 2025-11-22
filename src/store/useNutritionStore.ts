@@ -1,66 +1,65 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  UserNutritionProfile,
-  FoodEntry,
-  DailyNutritionSummary,
-  MacroGoals,
-} from '../models/nutrition.model';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FoodEntry, DailyNutritionSummary } from "../models/nutrition.model";
+import { UserNutritionProfileResponseDto } from "../models/user-nutrition-profile.model";
 
 interface NutritionState {
-  // User profile and goals
-  userProfile: UserNutritionProfile | null;
-  setUserProfile: (profile: UserNutritionProfile) => void;
-  updateMacroGoals: (goals: MacroGoals) => void;
-  clearUserProfile: () => void;
-
-  // Daily food diary
+  // State
+  userProfile: UserNutritionProfileResponseDto | null;
   todayEntries: FoodEntry[];
-  addFoodEntry: (entry: FoodEntry) => void;
-  removeFoodEntry: (entryId: string) => void;
-  updateFoodEntry: (entryId: string, updates: Partial<FoodEntry>) => void;
-  setTodayEntries: (entries: FoodEntry[]) => void;
-  clearTodayEntries: () => void;
+  hasProfile: boolean;
 
-  // Totals
-  getTodayTotals: () => {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  };
-
-  // Helper to check if profile is complete
+  // Actions - Profile
+  setUserProfile: (profile: UserNutritionProfileResponseDto | null) => void;
+  setHasProfile: (hasProfile: boolean) => void;
   isProfileComplete: () => boolean;
+
+  // Actions - Entries
+  setTodayEntries: (entries: FoodEntry[]) => void;
+  addFoodEntry: (entry: FoodEntry) => void;
+  updateFoodEntry: (entryId: string, entry: Partial<FoodEntry>) => void;
+  removeFoodEntry: (entryId: string) => void;
+
+  // Actions - Clear
+  clearNutritionData: () => void;
 }
 
 export const useNutritionStore = create<NutritionState>()(
   persist(
     (set, get) => ({
-      // Initial state
+      // ========== STATE ==========
       userProfile: null,
       todayEntries: [],
+      hasProfile: false,
 
-      // Profile actions
-      setUserProfile: (profile) => set({ userProfile: profile }),
+      // ========== PROFILE ACTIONS ==========
+      setUserProfile: (profile) =>
+        set({
+          userProfile: profile,
+          hasProfile: !!profile,
+        }),
 
-      updateMacroGoals: (goals) =>
-        set((state) => ({
-          userProfile: state.userProfile
-            ? { ...state.userProfile, macroGoals: goals }
-            : null,
-        })),
+      setHasProfile: (hasProfile) => set({ hasProfile }),
 
-      clearUserProfile: () => {
-        set({ userProfile: null, todayEntries: [] });
-        AsyncStorage.removeItem('nutrition-storage');
+      isProfileComplete: () => {
+        const { userProfile } = get();
+        return !!userProfile;
       },
 
-      // Food diary actions
+      // ========== ENTRIES ACTIONS ==========
+      setTodayEntries: (entries) => set({ todayEntries: entries }),
+
       addFoodEntry: (entry) =>
         set((state) => ({
           todayEntries: [...state.todayEntries, entry],
+        })),
+
+      updateFoodEntry: (entryId, updatedEntry) =>
+        set((state) => ({
+          todayEntries: state.todayEntries.map((entry) =>
+            entry.id === entryId ? { ...entry, ...updatedEntry } : entry
+          ),
         })),
 
       removeFoodEntry: (entryId) =>
@@ -70,47 +69,21 @@ export const useNutritionStore = create<NutritionState>()(
           ),
         })),
 
-      updateFoodEntry: (entryId, updates) =>
-        set((state) => ({
-          todayEntries: state.todayEntries.map((entry) =>
-            entry.id === entryId ? { ...entry, ...updates } : entry
-          ),
-        })),
-
-      setTodayEntries: (entries) => set({ todayEntries: entries }),
-
-      clearTodayEntries: () => set({ todayEntries: [] }),
-
-      // Computed values
-      getTodayTotals: () => {
-        const entries = get().todayEntries;
-        return entries.reduce(
-          (totals, entry) => ({
-            calories: totals.calories + entry.calories,
-            protein: totals.protein + entry.protein,
-            carbs: totals.carbs + entry.carbs,
-            fat: totals.fat + entry.fat,
-          }),
-          { calories: 0, protein: 0, carbs: 0, fat: 0 }
-        );
-      },
-
-      isProfileComplete: () => {
-        const profile = get().userProfile;
-        return (
-          profile !== null &&
-          profile.anthropometrics !== undefined &&
-          profile.goals !== undefined &&
-          profile.macroGoals !== undefined
-        );
-      },
+      // ========== CLEAR ACTIONS ==========
+      clearNutritionData: () =>
+        set({
+          userProfile: null,
+          todayEntries: [],
+          hasProfile: false,
+        }),
     }),
     {
-      name: 'nutrition-storage',
+      name: "nutrition-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // Opcional: Solo persistir userProfile, no las entries del día
       partialize: (state) => ({
         userProfile: state.userProfile,
-        todayEntries: state.todayEntries,
+        hasProfile: state.hasProfile,
       }),
     }
   )
