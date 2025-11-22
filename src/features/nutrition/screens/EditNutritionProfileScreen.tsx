@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Modal from "react-native-modal";
@@ -28,48 +29,72 @@ import {
 } from "../../../utils/macroCalculator";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { createUserProfile } from "../services/nutritionService";
+import { updateUserProfile } from "../services/nutritionService";
 
 const { width, height } = Dimensions.get("window");
 
 type Props = NativeStackScreenProps<
   NutritionStackParamList,
-  "UserProfileSetupScreen"
+  "EditNutritionProfileScreen"
 >;
 
-export default function UserProfileSetupScreen({ navigation, route }: Props) {
+export default function EditNutritionProfileScreen({
+  navigation,
+  route,
+}: Props) {
   const currentUser = useAuthStore((state) => state.user);
-  const userId = route.params?.userId || currentUser?.id;
+  const userProfile = useNutritionStore((state) => state.userProfile);
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
+  const updateStoreMacroGoals = useNutritionStore(
+    (state) => state.updateMacroGoals
+  );
 
-  // Validar que tenemos un userId válido
-  React.useEffect(() => {
-    if (!userId) {
-      Alert.alert(
-        "Error",
-        "No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
-      );
-    }
-  }, [userId]);
+  const [loading, setLoading] = useState(false);
 
   // Step tracking
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
 
-  // Form data
-  const [gender, setGender] = useState<Gender>("male");
-  const [age, setAge] = useState("");
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
-  const [weightGoal, setWeightGoal] = useState<WeightGoal>("maintain");
-  const [targetWeight, setTargetWeight] = useState("");
-  const [weeklyWeightChange, setWeeklyWeightChange] = useState(0.5);
+  // Form data - inicializar con datos del perfil existente
+  const [gender, setGender] = useState<Gender>(
+    userProfile?.anthropometrics.gender || "male"
+  );
+  const [age, setAge] = useState(
+    userProfile?.anthropometrics.age.toString() || ""
+  );
+  const [weight, setWeight] = useState(
+    userProfile?.anthropometrics.weight.toString() || ""
+  );
+  const [height, setHeight] = useState(
+    userProfile?.anthropometrics.height.toString() || ""
+  );
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
+    userProfile?.anthropometrics.activityLevel || "moderate"
+  );
+  const [weightGoal, setWeightGoal] = useState<WeightGoal>(
+    userProfile?.goals.weightGoal || "maintain"
+  );
+  const [targetWeight, setTargetWeight] = useState(
+    userProfile?.goals.targetWeight.toString() || ""
+  );
+  const [weeklyWeightChange, setWeeklyWeightChange] = useState(
+    userProfile?.goals.weeklyWeightChange || 0.5
+  );
 
   // Modal states
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
+
+  // Validar que tenemos un perfil válido
+  useEffect(() => {
+    if (!userProfile || !currentUser?.id) {
+      Alert.alert(
+        "Error",
+        "No se encontró el perfil de nutrición. Por favor, completa la configuración inicial.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [userProfile, currentUser]);
 
   const activityLevels: {
     value: ActivityLevel;
@@ -137,10 +162,18 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    } else {
+      navigation.goBack();
     }
   };
 
   const handleComplete = async () => {
+    if (!userProfile || !currentUser?.id) {
+      Alert.alert("Error", "No se encontró el perfil de usuario");
+      return;
+    }
+
+    setLoading(true);
     try {
       const anthropometrics: UserAnthropometrics = {
         weight: parseFloat(weight),
@@ -159,33 +192,40 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         weeklyWeightChange,
       };
 
+      // Recalcular macros basados en los nuevos datos
       const macroGoals = calculateMacroGoals(anthropometrics, goals);
 
-      const profile = {
-        userId,
+      const updates = {
         anthropometrics,
         goals,
         macroGoals,
-        preferences: {
-          weightUnit: "kg" as const,
-          heightUnit: "cm" as const,
-        },
+        preferences: userProfile.preferences,
       };
 
-      // Save to backend
-      const savedProfile = await createUserProfile(profile);
+      // Actualizar en el backend
+      const updatedProfile = await updateUserProfile(updates, currentUser.id);
 
-      // Save to local store
-      setUserProfile(savedProfile);
+      // Actualizar en el store local
+      setUserProfile(updatedProfile);
 
-      // Navigate to MacrosScreen
-      navigation.replace("MacrosScreen");
+      Alert.alert(
+        "Perfil Actualizado",
+        "Tus datos y macros han sido recalculados exitosamente.",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
     } catch (error) {
-      console.error("Error saving profile:", error);
+      console.error("Error updating profile:", error);
       Alert.alert(
         "Error",
-        "No se pudo guardar el perfil. Por favor intenta de nuevo."
+        "No se pudo actualizar el perfil. Por favor intenta de nuevo."
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -482,16 +522,23 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     }
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#6C3BAA" />
+        <Text style={styles.loadingText}>Actualizando perfil...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          {currentStep > 1 && (
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-back" size={28} color="#6C3BAA" />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.headerTitle}>Configura tu Perfil</Text>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={28} color="#6C3BAA" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Editar Perfil de Nutrición</Text>
         </View>
 
         {renderProgressBar()}
@@ -501,7 +548,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       <View style={styles.footer}>
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>
-            {currentStep === totalSteps ? "Completar" : "Siguiente"}
+            {currentStep === totalSteps ? "Guardar Cambios" : "Siguiente"}
           </Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
         </TouchableOpacity>
@@ -546,6 +593,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: RFValue(14),
+    color: "#808080",
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -561,7 +617,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   headerTitle: {
-    fontSize: RFValue(20),
+    fontSize: RFValue(18),
     fontWeight: "700",
     color: "#1A1A1A",
   },

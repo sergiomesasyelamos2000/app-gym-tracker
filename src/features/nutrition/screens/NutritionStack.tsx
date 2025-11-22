@@ -9,6 +9,7 @@ import {
 import CreateMealScreen from "./CreateMealScreen";
 import CreateProductScreen from "./CreateProductScreen";
 import EditMealScreen from "./EditMealScreen";
+import EditNutritionProfileScreen from "./EditNutritionProfileScreen";
 import EditProductScreen from "./EditProductScreen";
 import MacrosScreen from "./MacrosScreen";
 import ProductDetailScreen from "./ProductDetailScreen";
@@ -35,6 +36,7 @@ export type NutritionStackParamList = {
     quickAdd?: boolean;
   };
   UserProfileSetupScreen: { userId: string };
+  EditNutritionProfileScreen: undefined;
   ShoppingListScreen: undefined;
   SettingsScreen: undefined;
   CreateProductScreen: undefined;
@@ -79,6 +81,11 @@ export default function NutritionStack() {
       <Stack.Screen
         name="UserProfileSetupScreen"
         component={UserProfileSetupScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditNutritionProfileScreen"
+        component={EditNutritionProfileScreen}
         options={{ headerShown: false }}
       />
 

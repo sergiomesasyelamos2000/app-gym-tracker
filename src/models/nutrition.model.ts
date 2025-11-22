@@ -63,6 +63,7 @@ export interface UserPreferences {
 
 export interface UserNutritionProfile {
   id: string;
+  userId: string; // ID del usuario al que pertenece este perfil
   anthropometrics: UserAnthropometrics;
   goals: UserGoals;
   macroGoals: MacroGoals;

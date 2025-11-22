@@ -21,6 +21,7 @@ import { Calendar, LocaleConfig } from "react-native-calendars";
 import CircularProgress from "react-native-circular-progress-indicator";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { FoodEntry, MealType } from "../../../models/nutrition.model";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
@@ -93,6 +94,7 @@ const MEAL_CONFIG: Record<
 };
 
 export default function MacrosScreen({ navigation }: { navigation: any }) {
+  const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const todayEntries = useNutritionStore((state) => state.todayEntries);
   const setTodayEntries = useNutritionStore((state) => state.setTodayEntries);
@@ -145,10 +147,10 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const isToday = selectedDate === new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    if (!isProfileComplete()) {
-      navigation.replace("UserProfileSetupScreen");
+    if (!isProfileComplete() && user?.id) {
+      navigation.replace("UserProfileSetupScreen", { userId: user.id });
     }
-  }, [isProfileComplete]);
+  }, [isProfileComplete, user]);
 
   useEffect(() => {
     const listeners = [

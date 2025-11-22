@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useNavigation } from "@react-navigation/native";
+import { useNutritionStore } from "../../../store/useNutritionStore";
 
 interface SettingItem {
   id: string;
@@ -25,7 +26,10 @@ interface SettingItem {
 }
 
 export default function SettingsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const isProfileComplete = useNutritionStore(
+    (state) => state.isProfileComplete
+  );
 
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -33,8 +37,19 @@ export default function SettingsScreen() {
   const [metricUnits, setMetricUnits] = useState(true);
 
   const handleEditMacros = () => {
-    // Navigate to edit macro goals screen
-    Alert.alert("Navigation", "Navigate to Edit Macro Goals screen");
+    if (isProfileComplete()) {
+      navigation.navigate("EditNutritionProfileScreen");
+    } else {
+      Alert.alert(
+        "Perfil Incompleto",
+        "Primero debes completar tu perfil de nutrición para poder editar tus macros.",
+        [
+          {
+            text: "OK",
+          },
+        ]
+      );
+    }
   };
 
   const handleExportData = () => {

@@ -16,14 +16,48 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../store/useAuthStore";
+import { useNutritionStore } from "../store/useNutritionStore";
 import { logout as logoutService } from "../features/login/services/authService";
-import { LogOut, Mail, User, Calendar } from "lucide-react-native";
+import { LogOut, Mail, User, Calendar, Utensils, ChevronRight } from "lucide-react-native";
 
 export default function ProfileScreen() {
+  const navigation = useNavigation<any>();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const userProfile = useNutritionStore((state) => state.userProfile);
+  const isProfileComplete = useNutritionStore(
+    (state) => state.isProfileComplete
+  );
+
+  const handleEditNutritionProfile = () => {
+    if (isProfileComplete()) {
+      navigation.navigate("Macros", {
+        screen: "EditNutritionProfileScreen",
+      });
+    } else {
+      Alert.alert(
+        "Perfil de Nutrición",
+        "Aún no has configurado tu perfil de nutrición. ¿Deseas configurarlo ahora?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Configurar",
+            onPress: () => {
+              if (user?.id) {
+                navigation.navigate("Macros", {
+                  screen: "UserProfileSetupScreen",
+                  params: { userId: user.id },
+                });
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -125,6 +159,67 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* Nutrition Profile Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Perfil de Nutrición</Text>
+
+          <TouchableOpacity
+            style={styles.nutritionCard}
+            onPress={handleEditNutritionProfile}
+          >
+            <View style={styles.nutritionHeader}>
+              <View style={styles.nutritionIconContainer}>
+                <Utensils color="#6C3BAA" size={24} />
+              </View>
+              <View style={styles.nutritionContent}>
+                <Text style={styles.nutritionTitle}>
+                  {isProfileComplete()
+                    ? "Editar Perfil de Nutrición"
+                    : "Configurar Perfil de Nutrición"}
+                </Text>
+                <Text style={styles.nutritionSubtitle}>
+                  {isProfileComplete()
+                    ? "Actualiza tus datos y objetivos"
+                    : "Completa tu perfil para empezar"}
+                </Text>
+              </View>
+              <ChevronRight color="#94A3B8" size={20} />
+            </View>
+
+            {isProfileComplete() && userProfile && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.nutritionStats}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Objetivo</Text>
+                    <Text style={styles.statValue}>
+                      {userProfile.goals.weightGoal === "lose"
+                        ? "Perder peso"
+                        : userProfile.goals.weightGoal === "gain"
+                        ? "Ganar peso"
+                        : "Mantener peso"}
+                    </Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Calorías diarias</Text>
+                    <Text style={styles.statValue}>
+                      {Math.round(userProfile.macroGoals.dailyCalories)} kcal
+                    </Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Peso actual</Text>
+                    <Text style={styles.statValue}>
+                      {userProfile.anthropometrics.weight} kg
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Actions Section */}
@@ -329,5 +424,67 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#94A3B8",
     marginBottom: 4,
+  },
+  nutritionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  nutritionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  nutritionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F3E8FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  nutritionContent: {
+    flex: 1,
+  },
+  nutritionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginBottom: 2,
+  },
+  nutritionSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+  },
+  nutritionStats: {
+    flexDirection: "row",
+    paddingTop: 12,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#64748B",
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E293B",
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 8,
   },
 });

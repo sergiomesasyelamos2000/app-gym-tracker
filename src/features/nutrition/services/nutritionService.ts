@@ -98,10 +98,9 @@ export async function getUserProfile(
 }
 
 export async function createUserProfile(
-  profile: Omit<
-    UserNutritionProfile,
-    "id" | "createdAt" | "updatedAt" | "userId"
-  > & { userId?: string }
+  profile: Omit<UserNutritionProfile, "id" | "createdAt" | "updatedAt" | "userId"> & {
+    userId?: string;
+  }
 ): Promise<UserNutritionProfile> {
   const userId = profile.userId || getCurrentUserId();
 
