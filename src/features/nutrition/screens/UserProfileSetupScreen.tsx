@@ -173,19 +173,54 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         },
       };
 
+      console.log("📝 Attempting to create user profile...");
+      console.log("User ID:", userId);
+      console.log("Anthropometrics:", anthropometrics);
+      console.log("Goals:", goals);
+      console.log("Macro Goals:", macroGoals);
+
       // Save to backend
       const savedProfile = await createUserProfile(profile);
+
+      console.log("✅ Profile created successfully:", savedProfile);
 
       // Save to local store
       setUserProfile(savedProfile);
 
       // Navigate to MacrosScreen
       navigation.replace("MacrosScreen");
-    } catch (error) {
-      console.error("Error saving profile:", error);
+    } catch (error: any) {
+      console.error("❌ Error saving profile:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        response: error?.response,
+        data: error?.response?.data,
+      });
+
+      let errorMessage = "No se pudo guardar el perfil. Por favor intenta de nuevo.";
+
+      // Extract more specific error message if available
+      if (error?.message) {
+        if (error.message.includes("ya existe")) {
+          errorMessage = "Ya existe un perfil para este usuario. Intenta actualizar el perfil existente.";
+        } else if (error.message.includes("authenticated")) {
+          errorMessage = "Sesión expirada. Por favor inicia sesión nuevamente.";
+        } else if (error.message.includes("Network")) {
+          errorMessage = "Error de conexión. Verifica tu conexión a internet.";
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+
       Alert.alert(
-        "Error",
-        "No se pudo guardar el perfil. Por favor intenta de nuevo."
+        "Error al Guardar Perfil",
+        errorMessage,
+        [
+          {
+            text: "OK",
+            style: "default",
+          },
+        ]
       );
     }
   };

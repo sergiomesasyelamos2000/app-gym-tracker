@@ -45,17 +45,38 @@ export async function apiFetch<T = any>(
     // ✅ Intentar parsear el error como JSON
     const errorText = await response.text();
     let errorMessage = `Error ${response.status}`;
+    let errorDetails: any = null;
 
     try {
       const errorData = JSON.parse(errorText);
       // Extraer el mensaje del error del backend
       errorMessage = errorData.message || errorData.error || errorText;
+      errorDetails = errorData;
+
+      console.error("❌ API Error Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        endpoint,
+        errorData,
+      });
     } catch {
       // Si no es JSON, usar el texto completo
       errorMessage = errorText || errorMessage;
+
+      console.error("❌ API Error (non-JSON):", {
+        status: response.status,
+        statusText: response.statusText,
+        endpoint,
+        errorText,
+      });
     }
 
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage);
+    (error as any).status = response.status;
+    (error as any).statusText = response.statusText;
+    (error as any).details = errorDetails;
+
+    throw error;
   }
 
   // ✅ Si es 204 (sin contenido), no intentes hacer .json()
