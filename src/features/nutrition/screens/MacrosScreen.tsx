@@ -24,6 +24,7 @@ import { FoodEntry, MealType } from "../../../models/nutrition.model";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { useTheme } from "../../../contexts/ThemeContext";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
 import * as nutritionService from "../services/nutritionService";
 import {
@@ -105,6 +106,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const setTabVisibility = useNavigationStore(
     (state) => state.setTabVisibility
   );
+  const { theme } = useTheme();
 
   const [calendarKey, setCalendarKey] = useState(0);
   const [showSetupPrompt, setShowSetupPrompt] = useState(false);
@@ -511,10 +513,10 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Loading inicial mientras verifica perfil
   if (checkingProfile) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando...</Text>
         </View>
       </SafeAreaView>
     );
@@ -523,19 +525,19 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Renderizar prompt de configuración
   if (showSetupPrompt && !hasProfile) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.setupPromptContainer}>
-          <Ionicons name="nutrition-outline" size={80} color="#6C3BAA" />
-          <Text style={styles.setupPromptTitle}>
+          <Ionicons name="nutrition-outline" size={80} color={theme.primary} />
+          <Text style={[styles.setupPromptTitle, { color: theme.text }]}>
             Configura tu Perfil Nutricional
           </Text>
-          <Text style={styles.setupPromptText}>
+          <Text style={[styles.setupPromptText, { color: theme.textSecondary }]}>
             Para calcular tus macros personalizados y objetivos calóricos,
             necesitamos algunos datos básicos sobre ti.
           </Text>
 
           <TouchableOpacity
-            style={styles.setupPromptButton}
+            style={[styles.setupPromptButton, { backgroundColor: theme.primary }]}
             onPress={() => {
               navigation.navigate("UserProfileSetupScreen", {
                 userId: user!.id,
@@ -551,12 +553,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               setShowSetupPrompt(false);
             }}
           >
-            <Text style={styles.setupPromptSkipText}>
+            <Text style={[styles.setupPromptSkipText, { color: theme.primary }]}>
               Continuar sin configurar
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.setupPromptNote}>
+          <Text style={[styles.setupPromptNote, { color: theme.textTertiary }]}>
             Podrás configurarlo más tarde desde Ajustes
           </Text>
         </View>
@@ -605,7 +607,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   if (showScanner) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <ReusableCameraView
           onBarCodeScanned={handleBarCodeScanned}
           onCloseCamera={() => setShowScanner(false)}
@@ -623,7 +625,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         key={entry.id}
         style={[
           styles.foodEntry,
-          isSelected && styles.foodEntrySelected,
+          { borderBottomColor: theme.divider },
+          isSelected && [styles.foodEntrySelected, { backgroundColor: theme.primaryLight + '20' }],
           isNotEaten && styles.foodEntryNotEaten,
         ]}
       >
@@ -641,7 +644,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             <Text
               style={[
                 styles.foodEntryName,
-                isNotEaten && styles.foodEntryNameNotEaten,
+                { color: theme.text },
+                isNotEaten && [styles.foodEntryNameNotEaten, { color: theme.textTertiary }],
               ]}
             >
               {entry.productName}
@@ -649,7 +653,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             <Text
               style={[
                 styles.foodEntryDetails,
-                isNotEaten && styles.foodEntryDetailsNotEaten,
+                { color: theme.textSecondary },
+                isNotEaten && [styles.foodEntryDetailsNotEaten, { color: theme.textTertiary }],
               ]}
             >
               {entry.quantity} {entry.unit} • {Math.round(entry.calories)} kcal
@@ -665,7 +670,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 key={key}
                 style={[styles.macroChip, { backgroundColor: color }]}
               >
-                <Text style={styles.macroChipText}>
+                <Text style={[styles.macroChipText, { color: theme.text }]}>
                   {label} {Math.round(entry[key as keyof FoodEntry] as number)}
                 </Text>
               </View>
@@ -681,7 +686,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={24}
-            color={isSelected ? "#6C3BAA" : "#B0B0B0"}
+            color={isSelected ? theme.primary : theme.textTertiary}
           />
         </TouchableOpacity>
       </View>
@@ -697,9 +702,9 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     const mealConfig = MEAL_CONFIG[mealType];
 
     return (
-      <View key={mealType} style={styles.mealSection}>
+      <View key={mealType} style={[styles.mealSection, { borderColor: theme.border }]}>
         <TouchableOpacity
-          style={styles.mealHeader}
+          style={[styles.mealHeader, { backgroundColor: theme.backgroundSecondary }]}
           onPress={() => toggleMeal(mealType)}
           activeOpacity={0.7}
         >
@@ -717,26 +722,26 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               />
             </View>
             <View>
-              <Text style={styles.mealTitle}>{mealConfig.label}</Text>
-              <Text style={styles.mealSubtitle}>
+              <Text style={[styles.mealTitle, { color: theme.text }]}>{mealConfig.label}</Text>
+              <Text style={[styles.mealSubtitle, { color: theme.textTertiary }]}>
                 {entries.length}{" "}
                 {entries.length === 1 ? "alimento" : "alimentos"}
               </Text>
             </View>
           </View>
           <View style={styles.mealHeaderRight}>
-            <Text style={styles.mealCalories}>
+            <Text style={[styles.mealCalories, { color: theme.primary }]}>
               {Math.round(mealTotals)} kcal
             </Text>
             <Ionicons
               name={isExpanded ? "chevron-up" : "chevron-down"}
               size={20}
-              color="#808080"
+              color={theme.textSecondary}
             />
           </View>
         </TouchableOpacity>
         {isExpanded && (
-          <View style={styles.mealEntries}>
+          <View style={[styles.mealEntries, { backgroundColor: theme.card }]}>
             {entries.length > 0 ? (
               entries.map(renderFoodEntry)
             ) : (
@@ -745,8 +750,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => handleAddToMeal(mealType)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add-circle-outline" size={32} color="#6C3BAA" />
-                <Text style={styles.emptyMealText}>
+                <Ionicons name="add-circle-outline" size={32} color={theme.primary} />
+                <Text style={[styles.emptyMealText, { color: theme.primary }]}>
                   Toca para añadir alimentos
                 </Text>
               </TouchableOpacity>
@@ -775,11 +780,11 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
-          <Text style={styles.loadingText}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.text }]}>
             {duplicating ? "Duplicando alimentos..." : "Cargando..."}
           </Text>
         </View>
@@ -788,7 +793,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       {/* ✅ Banner informativo si no tiene perfil */}
       {!hasProfile && !showSetupPrompt && (
         <TouchableOpacity
-          style={styles.noBanner}
+          style={[styles.noBanner, { backgroundColor: theme.primaryLight + '20', borderBottomColor: theme.primary + '30' }]}
           onPress={() =>
             navigation.navigate("UserProfileSetupScreen", { userId: user!.id })
           }
@@ -797,12 +802,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Ionicons
             name="information-circle-outline"
             size={20}
-            color="#6C3BAA"
+            color={theme.primary}
           />
-          <Text style={styles.noBannerText}>
+          <Text style={[styles.noBannerText, { color: theme.primary }]}>
             Configura tu perfil para objetivos personalizados
           </Text>
-          <Ionicons name="chevron-forward" size={20} color="#6C3BAA" />
+          <Ionicons name="chevron-forward" size={20} color={theme.primary} />
         </TouchableOpacity>
       )}
 
@@ -812,43 +817,43 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.card }]}>
           <View style={styles.headerTop}>
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>
                 {isToday ? "Hoy" : formatShortDate()}
               </Text>
-              <Text style={styles.headerDate}>{formatHeaderDate()}</Text>
+              <Text style={[styles.headerDate, { color: theme.textSecondary }]}>{formatHeaderDate()}</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={() => setShowScanner(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="barcode-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="barcode-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowCalendar(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="calendar-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="calendar-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("ShoppingListScreen")}
                 style={styles.iconButton}
               >
-                <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="cart-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.caloriesCard}>
-            <Text style={styles.caloriesLabel}>
+            <Text style={[styles.caloriesLabel, { color: theme.textSecondary }]}>
               {remaining.calories > 0
                 ? "Calorías disponibles"
                 : "Calorías excedidas"}
@@ -856,32 +861,33 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             <Text
               style={[
                 styles.caloriesValue,
+                { color: remaining.calories > 0 ? theme.success : theme.error },
                 remaining.calories < 0 && styles.caloriesValueExceeded,
               ]}
             >
               {Math.abs(Math.round(remaining.calories))}
             </Text>
-            <Text style={styles.caloriesSubtext}>
+            <Text style={[styles.caloriesSubtext, { color: theme.textTertiary }]}>
               {Math.round(totals.calories)} de {goals.dailyCalories} kcal
             </Text>
           </View>
 
-          <View style={styles.caloriesProgressBar}>
+          <View style={[styles.caloriesProgressBar, { backgroundColor: theme.divider }]}>
             <View
               style={[
                 styles.caloriesProgressFill,
                 {
                   width: `${Math.min(100, percentages.calories)}%`,
                   backgroundColor:
-                    remaining.calories > 0 ? "#4CAF50" : "#FF6B6B",
+                    remaining.calories > 0 ? theme.success : theme.error,
                 },
               ]}
             />
           </View>
         </View>
 
-        <View style={styles.macrosSection}>
-          <Text style={styles.sectionTitle}>Macronutrientes</Text>
+        <View style={[styles.macrosSection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Macronutrientes</Text>
           <View style={styles.macrosRow}>
             {[
               {
@@ -915,14 +921,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                   radius={50}
                   maxValue={goal}
                   title={label}
-                  titleStyle={styles.circleTitle}
-                  progressValueColor={"#1A1A1A"}
+                  titleStyle={[styles.circleTitle, { color: theme.textSecondary }]}
+                  progressValueColor={theme.text}
                   activeStrokeColor={color}
-                  inActiveStrokeColor={"#E0E0E0"}
+                  inActiveStrokeColor={theme.border}
                   inActiveStrokeOpacity={0.3}
                   valueSuffix="g"
                 />
-                <Text style={styles.macrosRemaining}>
+                <Text style={[styles.macrosRemaining, { color: theme.textTertiary }]}>
                   {Math.max(0, Math.round(remaining))}g restantes
                 </Text>
               </View>
@@ -930,8 +936,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           </View>
         </View>
 
-        <View style={styles.diarySection}>
-          <Text style={styles.sectionTitle}>Diario de Alimentos</Text>
+        <View style={[styles.diarySection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Diario de Alimentos</Text>
           {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map(
             renderMealSection
           )}
@@ -939,9 +945,9 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
         {todayEntries.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyStateTitle}>Comienza tu día</Text>
-            <Text style={styles.emptyStateText}>
+            <Ionicons name="restaurant-outline" size={64} color={theme.textTertiary} />
+            <Text style={[styles.emptyStateTitle, { color: theme.text }]}>Comienza tu día</Text>
+            <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
               Registra tus comidas para alcanzar tus objetivos nutricionales
             </Text>
           </View>
@@ -958,25 +964,25 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             activeOpacity={1}
             onPress={() => setShowCalendar(false)}
           />
-          <View style={styles.calendarModalContainer}>
-            <View style={styles.calendarModalHeader}>
-              <Text style={styles.calendarModalTitle}>Seleccionar Fecha</Text>
+          <View style={[styles.calendarModalContainer, { backgroundColor: theme.card }]}>
+            <View style={[styles.calendarModalHeader, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.calendarModalTitle, { color: theme.text }]}>Seleccionar Fecha</Text>
               <TouchableOpacity
                 onPress={() => setShowCalendar(false)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="close" size={24} color="#1A1A1A" />
+                <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
 
             {!isToday && (
               <TouchableOpacity
-                style={styles.todayButton}
+                style={[styles.todayButton, { backgroundColor: theme.primaryLight + '20' }]}
                 onPress={handleTodayPress}
                 activeOpacity={0.7}
               >
-                <Ionicons name="today-outline" size={20} color="#6C3BAA" />
-                <Text style={styles.todayButtonText}>Ir a Hoy</Text>
+                <Ionicons name="today-outline" size={20} color={theme.primary} />
+                <Text style={[styles.todayButtonText, { color: theme.primary }]}>Ir a Hoy</Text>
               </TouchableOpacity>
             )}
 
@@ -987,15 +993,15 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               markedDates={{
                 [selectedDate]: {
                   selected: true,
-                  selectedColor: "#6C3BAA",
+                  selectedColor: theme.primary,
                   selectedTextColor: "#ffffff",
                 },
                 [new Date().toISOString().split("T")[0]]: {
                   marked: true,
-                  dotColor: "#6C3BAA",
+                  dotColor: theme.primary,
                   selected:
                     selectedDate === new Date().toISOString().split("T")[0],
-                  selectedColor: "#6C3BAA",
+                  selectedColor: theme.primary,
                 },
               }}
               enableSwipeMonths={true}
@@ -1014,24 +1020,24 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                       direction === "left" ? "chevron-back" : "chevron-forward"
                     }
                     size={24}
-                    color="#6C3BAA"
+                    color={theme.primary}
                   />
                 </View>
               )}
               theme={{
-                backgroundColor: "#ffffff",
-                calendarBackground: "#ffffff",
-                textSectionTitleColor: "#6B7280",
-                selectedDayBackgroundColor: "#6C3BAA",
+                backgroundColor: theme.card,
+                calendarBackground: theme.card,
+                textSectionTitleColor: theme.textSecondary,
+                selectedDayBackgroundColor: theme.primary,
                 selectedDayTextColor: "#ffffff",
-                todayTextColor: "#6C3BAA",
-                dayTextColor: "#1A1A1A",
-                textDisabledColor: "#D1D5DB",
-                dotColor: "#6C3BAA",
+                todayTextColor: theme.primary,
+                dayTextColor: theme.text,
+                textDisabledColor: theme.textTertiary,
+                dotColor: theme.primary,
                 selectedDotColor: "#ffffff",
-                arrowColor: "#6C3BAA",
-                monthTextColor: "#1A1A1A",
-                indicatorColor: "#6C3BAA",
+                arrowColor: theme.primary,
+                monthTextColor: theme.text,
+                indicatorColor: theme.primary,
                 textDayFontFamily: "System",
                 textMonthFontFamily: "System",
                 textDayHeaderFontFamily: "System",
@@ -1045,14 +1051,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               style={styles.calendar}
             />
 
-            <View style={styles.calendarFooter}>
-              <Text style={styles.selectedDateText}>
+            <View style={[styles.calendarFooter, { borderTopColor: theme.border }]}>
+              <Text style={[styles.selectedDateText, { color: theme.textSecondary }]}>
                 {selectedDate === new Date().toISOString().split("T")[0]
                   ? "Hoy"
                   : formatDisplayDate()}
               </Text>
               <TouchableOpacity
-                style={styles.confirmButton}
+                style={[styles.confirmButton, { backgroundColor: theme.primary }]}
                 onPress={() => {
                   LayoutAnimation.configureNext(
                     LayoutAnimation.Presets.easeInEaseOut
@@ -1070,7 +1076,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       </Modal>
 
       <Animated.View
-        style={[styles.floatingActionBar, actionBarStyle]}
+        style={[styles.floatingActionBar, actionBarStyle, { backgroundColor: theme.primary }]}
         pointerEvents={isSelectionMode ? "auto" : "none"}
       >
         <TouchableOpacity
@@ -1120,7 +1126,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         pointerEvents={isSelectionMode ? "none" : "auto"}
       >
         <TouchableOpacity
-          style={styles.addButtonTouchable}
+          style={[styles.addButtonTouchable, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
           onPress={() => navigation.navigate("ProductListScreen")}
         >
           <Icon name="add" size={28} color="#fff" />

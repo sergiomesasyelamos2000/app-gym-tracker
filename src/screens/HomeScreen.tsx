@@ -25,6 +25,7 @@ import {
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
+import { useTheme } from "../contexts/ThemeContext";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -87,6 +88,7 @@ export default function HomeScreen() {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const scrollViewRef = useRef<ScrollView>(null);
+  const { theme } = useTheme();
 
   // Listener para el tab press
   useEffect(() => {
@@ -208,7 +210,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -216,14 +218,14 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
-        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.header, { opacity: fadeAnim, backgroundColor: theme.primary }]}>
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerGreeting}>{getGreeting()}</Text>
@@ -270,40 +272,40 @@ export default function HomeScreen() {
         {/* Stats Section Rediseñada */}
         <View style={styles.statsSection}>
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, styles.timeCard]}>
+            <View style={[styles.statCard, styles.timeCard, { backgroundColor: theme.card }]}>
               <View
                 style={[styles.statIconContainer, styles.timeIconContainer]}
               >
                 <Text style={styles.statIcon}>⏱️</Text>
               </View>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statValue, { color: theme.text }]}>
                 {stats ? Math.round(stats.totalTime / 60) : 0}
               </Text>
-              <Text style={styles.statLabel}>Minutos totales</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Minutos totales</Text>
             </View>
 
-            <View style={[styles.statCard, styles.setsCard]}>
+            <View style={[styles.statCard, styles.setsCard, { backgroundColor: theme.card }]}>
               <View
                 style={[styles.statIconContainer, styles.setsIconContainer]}
               >
                 <Text style={styles.statIcon}>✅</Text>
               </View>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statValue, { color: theme.text }]}>
                 {stats ? stats.completedSets : 0}
               </Text>
-              <Text style={styles.statLabel}>Series completadas</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Series completadas</Text>
             </View>
 
-            <View style={[styles.statCard, styles.weightCard]}>
+            <View style={[styles.statCard, styles.weightCard, { backgroundColor: theme.card }]}>
               <View
                 style={[styles.statIconContainer, styles.weightIconContainer]}
               >
                 <Text style={styles.statIcon}>🏋️</Text>
               </View>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statValue, { color: theme.text }]}>
                 {stats ? stats.totalWeight : 0}
               </Text>
-              <Text style={styles.statLabel}>Volumen</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Volumen</Text>
             </View>
           </View>
         </View>
@@ -312,19 +314,19 @@ export default function HomeScreen() {
         <View style={styles.actionsSection}>
           <View style={styles.actionsGrid}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.startWorkout]}
+              style={[styles.actionButton, styles.startWorkout, { backgroundColor: theme.card }]}
               onPress={handleStartWorkout}
             >
               <View style={styles.actionIconContainer}>
                 <Text style={styles.actionIcon}>🔥</Text>
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionButtonText}>
+                <Text style={[styles.actionButtonText, { color: theme.text }]}>
                   Iniciar Entrenamiento
                 </Text>
-                <Text style={styles.actionButtonSubtext}>Comienza ahora</Text>
+                <Text style={[styles.actionButtonSubtext, { color: theme.textSecondary }]}>Comienza ahora</Text>
               </View>
-              <Text style={styles.actionArrow}>→</Text>
+              <Text style={[styles.actionArrow, { color: theme.primary }]}>→</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -332,29 +334,29 @@ export default function HomeScreen() {
         {/* Histórico de Sesiones */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Histórico de Sesiones</Text>
-            <Text style={styles.sectionSubtitle}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Histórico de Sesiones</Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
               Tus entrenamientos recientes
             </Text>
           </View>
 
           {sessions.length === 0 ? (
-            <View style={styles.emptyState}>
+            <View style={[styles.emptyState, { backgroundColor: theme.card }]}>
               <Text style={styles.emptyStateEmoji}>📊</Text>
-              <Text style={styles.emptyStateTitle}>
+              <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
                 No hay sesiones registradas
               </Text>
-              <Text style={styles.emptyStateText}>
+              <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
                 Comienza tu primer entrenamiento para ver estadísticas aquí
               </Text>
             </View>
           ) : (
             sessions.map((session) => (
-              <View key={session.id} style={styles.sessionCard}>
+              <View key={session.id} style={[styles.sessionCard, { backgroundColor: theme.card }]}>
                 <View style={styles.sessionHeader}>
                   <View style={styles.sessionDateContainer}>
                     <Text style={styles.sessionDateIcon}>📅</Text>
-                    <Text style={styles.sessionDate}>
+                    <Text style={[styles.sessionDate, { color: theme.textSecondary }]}>
                       {new Date(session.createdAt).toLocaleDateString("es-ES", {
                         weekday: "long",
                         year: "numeric",
@@ -363,35 +365,35 @@ export default function HomeScreen() {
                       })}
                     </Text>
                   </View>
-                  <Text style={styles.sessionTitle}>
+                  <Text style={[styles.sessionTitle, { color: theme.text }]}>
                     {session.routine?.title || "Entrenamiento sin título"}
                   </Text>
                 </View>
 
-                <View style={styles.sessionStats}>
+                <View style={[styles.sessionStats, { backgroundColor: theme.backgroundSecondary }]}>
                   <View style={styles.sessionStat}>
                     <Text style={styles.sessionStatIcon}>⏱️</Text>
-                    <Text style={styles.sessionStatText}>
+                    <Text style={[styles.sessionStatText, { color: theme.textSecondary }]}>
                       {formatTime(session.totalTime)}
                     </Text>
                   </View>
                   <View style={styles.sessionStat}>
                     <Text style={styles.sessionStatIcon}>🏋️</Text>
-                    <Text style={styles.sessionStatText}>
+                    <Text style={[styles.sessionStatText, { color: theme.textSecondary }]}>
                       {session.totalWeight} kg
                     </Text>
                   </View>
                   <View style={styles.sessionStat}>
                     <Text style={styles.sessionStatIcon}>✅</Text>
-                    <Text style={styles.sessionStatText}>
+                    <Text style={[styles.sessionStatText, { color: theme.textSecondary }]}>
                       {session.completedSets} series
                     </Text>
                   </View>
                 </View>
 
                 {session.exercises?.length > 0 && (
-                  <View style={styles.exercisesSection}>
-                    <Text style={styles.exercisesTitle}>
+                  <View style={[styles.exercisesSection, { borderTopColor: theme.divider }]}>
+                    <Text style={[styles.exercisesTitle, { color: theme.textSecondary }]}>
                       Ejercicios realizados:
                     </Text>
                     <View style={styles.exercisesList}>
@@ -405,10 +407,10 @@ export default function HomeScreen() {
                             style={styles.exerciseImage}
                           />
                           <View style={styles.exerciseInfo}>
-                            <Text style={styles.exerciseName} numberOfLines={1}>
+                            <Text style={[styles.exerciseName, { color: theme.text }]} numberOfLines={1}>
                               {exercise.name}
                             </Text>
-                            <Text style={styles.exerciseSets}>
+                            <Text style={[styles.exerciseSets, { color: theme.textSecondary }]}>
                               {exercise.sets?.length || 0} series
                             </Text>
                           </View>
@@ -416,7 +418,7 @@ export default function HomeScreen() {
                       ))}
                       {session.exercises.length > 4 && (
                         <View style={styles.moreExercises}>
-                          <Text style={styles.moreExercisesText}>
+                          <Text style={[styles.moreExercisesText, { color: theme.primary }]}>
                             +{session.exercises.length - 4} más
                           </Text>
                         </View>
