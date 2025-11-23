@@ -14,6 +14,9 @@
       "backgroundColor": "#ffffff"
     },
     "scheme": "app",
+    "notification": {
+      "icon": "./assets/notification-icon.png"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.smy862.app",
