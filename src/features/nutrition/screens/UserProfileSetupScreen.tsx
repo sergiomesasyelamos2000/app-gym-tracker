@@ -29,6 +29,7 @@ import {
 } from "../../../utils/macroCalculator";
 import { createUserProfile } from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -41,6 +42,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const currentUser = useAuthStore((state) => state.user);
   const userId = route.params?.userId || currentUser?.id;
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
+  const { theme, isDark } = useTheme();
 
   // Validar que tenemos un userId válido
   React.useEffect(() => {
@@ -246,26 +248,28 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 1:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>¿Cuál es tu género?</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>¿Cuál es tu género?</Text>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               Esto nos ayuda a calcular tus necesidades calóricas
             </Text>
             <View style={styles.optionsRow}>
               <TouchableOpacity
                 style={[
                   styles.genderOption,
-                  gender === "male" && styles.optionSelected,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  gender === "male" && { backgroundColor: theme.primary, borderColor: theme.primary },
                 ]}
                 onPress={() => setGender("male")}
               >
                 <Ionicons
                   name="male"
                   size={40}
-                  color={gender === "male" ? "#fff" : "#6C3BAA"}
+                  color={gender === "male" ? "#fff" : theme.primary}
                 />
                 <Text
                   style={[
                     styles.optionText,
+                    { color: theme.text },
                     gender === "male" && styles.optionTextSelected,
                   ]}
                 >
@@ -275,18 +279,20 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
               <TouchableOpacity
                 style={[
                   styles.genderOption,
-                  gender === "female" && styles.optionSelected,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  gender === "female" && { backgroundColor: theme.primary, borderColor: theme.primary },
                 ]}
                 onPress={() => setGender("female")}
               >
                 <Ionicons
                   name="female"
                   size={40}
-                  color={gender === "female" ? "#fff" : "#6C3BAA"}
+                  color={gender === "female" ? "#fff" : theme.primary}
                 />
                 <Text
                   style={[
                     styles.optionText,
+                    { color: theme.text },
                     gender === "female" && styles.optionTextSelected,
                   ]}
                 >
@@ -296,18 +302,20 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
               <TouchableOpacity
                 style={[
                   styles.genderOption,
-                  gender === "other" && styles.optionSelected,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  gender === "other" && { backgroundColor: theme.primary, borderColor: theme.primary },
                 ]}
                 onPress={() => setGender("other")}
               >
                 <Ionicons
                   name="male-female"
                   size={40}
-                  color={gender === "other" ? "#fff" : "#6C3BAA"}
+                  color={gender === "other" ? "#fff" : theme.primary}
                 />
                 <Text
                   style={[
                     styles.optionText,
+                    { color: theme.text },
                     gender === "other" && styles.optionTextSelected,
                   ]}
                 >
@@ -316,12 +324,13 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
               </TouchableOpacity>
             </View>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>¿Cuántos años tienes?</Text>
+              <Text style={[styles.inputLabel, { color: theme.text }]}>¿Cuántos años tienes?</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                 value={age}
                 onChangeText={setAge}
                 placeholder="Ej: 25"
+                placeholderTextColor={theme.textTertiary}
                 keyboardType="numeric"
                 maxLength={2}
               />
@@ -519,15 +528,15 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           {currentStep > 1 && (
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-back" size={28} color="#6C3BAA" />
+              <Ionicons name="chevron-back" size={28} color={theme.primary} />
             </TouchableOpacity>
           )}
-          <Text style={styles.headerTitle}>Configura tu Perfil</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Configura tu Perfil</Text>
         </View>
 
         {renderProgressBar()}

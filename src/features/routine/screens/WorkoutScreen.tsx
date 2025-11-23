@@ -15,6 +15,7 @@ import {
   ExerciseRequestDto,
   RoutineResponseDto,
 } from "../../../models/index.js";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 import { MaterialIcons } from "@expo/vector-icons";
@@ -37,6 +38,7 @@ type WorkoutScreenNavigationProp = NativeStackNavigationProp<
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { width } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,11 +178,11 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F4F4F8" }}>
+    <View style={{ flex: 1, backgroundColor: theme.backgroundSecondary }}>
       {/* Encabezado */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rutinas de entrenamiento</Text>
-        <Text style={styles.headerSubtitle}>
+      <View style={[styles.header, { backgroundColor: theme.backgroundSecondary }]}>
+        <Text style={[styles.headerTitle, { color: theme.primary }]}>Rutinas de entrenamiento</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
           Selecciona una rutina para comenzar o crea una nueva
         </Text>
       </View>
@@ -188,7 +190,7 @@ export default function WorkoutScreen() {
       {/* Botón principal */}
       <View style={styles.topActions}>
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => {
             navigation.navigate("ExerciseList", {
               onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
@@ -212,27 +214,27 @@ export default function WorkoutScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
         {loading ? (
-          <Text style={{ textAlign: "center", marginTop: 40 }}>
+          <Text style={{ textAlign: "center", marginTop: 40, color: theme.text }}>
             Cargando rutinas...
           </Text>
         ) : routines.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 40, color: "#888" }}>
+          <Text style={{ textAlign: "center", marginTop: 40, color: theme.textSecondary }}>
             No tienes rutinas guardadas.
           </Text>
         ) : (
           routines.map((routine) => (
-            <View key={routine.id} style={styles.routineCard}>
+            <View key={routine.id} style={[styles.routineCard, { backgroundColor: theme.card, shadowColor: theme.shadowColor }]}>
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={() => openRoutineOptions(routine)}
               >
-                <MaterialIcons name="more-vert" size={20} color="#6C3BAA" />
+                <MaterialIcons name="more-vert" size={20} color={theme.primary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -244,17 +246,17 @@ export default function WorkoutScreen() {
                   })
                 }
               >
-                <Text style={styles.routineName}>{routine.title}</Text>
+                <Text style={[styles.routineName, { color: theme.text }]}>{routine.title}</Text>
                 {/* Opcional: Mostrar fecha de creación */}
                 {routine.createdAt && (
-                  <Text style={styles.routineDate}>
+                  <Text style={[styles.routineDate, { color: theme.textSecondary }]}>
                     Creada: {new Date(routine.createdAt).toLocaleDateString()}
                   </Text>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.startRoutineButton}
+                style={[styles.startRoutineButton, { backgroundColor: theme.primary }]}
                 onPress={() =>
                   navigation.navigate("RoutineDetail", {
                     routineId: routine.id,
@@ -279,28 +281,28 @@ export default function WorkoutScreen() {
         swipeDirection="down"
         style={styles.modalContainer}
       >
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Acciones de rutina</Text>
+        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.primary }]}>Acciones de rutina</Text>
           <TouchableOpacity
             style={styles.modalItem}
             onPress={() => handleRoutineAction("duplicate")}
           >
-            <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Duplicar rutina</Text>
+            <MaterialIcons name="content-copy" size={20} color={theme.primary} />
+            <Text style={[styles.modalItemText, { color: theme.text }]}>Duplicar rutina</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.modalItem}
             onPress={() => handleRoutineAction("edit")}
           >
-            <MaterialIcons name="edit" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Editar rutina</Text>
+            <MaterialIcons name="edit" size={20} color={theme.primary} />
+            <Text style={[styles.modalItemText, { color: theme.text }]}>Editar rutina</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.modalItem}
             onPress={() => handleRoutineAction("delete")}
           >
-            <MaterialIcons name="delete" size={20} color="red" />
-            <Text style={[styles.modalItemText, { color: "red" }]}>
+            <MaterialIcons name="delete" size={20} color={theme.error} />
+            <Text style={[styles.modalItemText, { color: theme.error }]}>
               Borrar rutina
             </Text>
           </TouchableOpacity>
@@ -310,7 +312,7 @@ export default function WorkoutScreen() {
       {/* Banner de entrenamiento en progreso - MEJORADO */}
       {showWorkoutBanner && workoutInProgress && (
         <View style={styles.workoutBannerContainer}>
-          <View style={styles.workoutBanner}>
+          <View style={[styles.workoutBanner, { backgroundColor: theme.primaryDark, borderColor: theme.border }]}>
             {/* Icono y texto */}
             <View style={styles.bannerContent}>
               <View style={styles.bannerIcon}>
@@ -340,14 +342,15 @@ export default function WorkoutScreen() {
                 ]}
                 onPress={handleDiscardWorkout}
               >
-                <MaterialIcons name="close" size={16} color="#FF6B6B" />
-                <Text style={styles.discardButtonText}>Descartar</Text>
+                <MaterialIcons name="close" size={16} color={theme.error} />
+                <Text style={[styles.discardButtonText, { color: theme.error }]}>Descartar</Text>
               </Pressable>
 
               <Pressable
                 style={({ pressed }) => [
                   styles.bannerButton,
                   styles.resumeButton,
+                  { backgroundColor: theme.primary },
                   pressed && styles.buttonPressed,
                 ]}
                 onPress={handleResumeWorkout}
@@ -368,17 +371,14 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 16,
     paddingHorizontal: 24,
-    backgroundColor: "#F4F4F8",
   },
   headerTitle: {
     fontSize: RFValue(22),
     fontWeight: "bold",
-    color: "#4E2A84",
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: RFValue(15),
-    color: "#666",
   },
   topActions: {
     paddingHorizontal: 24,
@@ -387,7 +387,6 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6C3BAA",
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 10,
@@ -408,11 +407,9 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Espacio extra cuando el banner está visible
   },
   routineCard: {
-    backgroundColor: "#fff",
     borderRadius: 14,
     padding: 18,
     marginBottom: 16,
-    shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
@@ -422,18 +419,15 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: RFValue(18),
     fontWeight: "600",
-    color: "#222",
     marginBottom: 6,
   },
   routineDate: {
     fontSize: RFValue(12),
-    color: "#888",
     fontStyle: "italic",
   },
   startRoutineButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6C3BAA",
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
@@ -458,7 +452,6 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   modalContent: {
-    backgroundColor: "#fff",
     padding: 24,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -466,7 +459,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: RFValue(16),
     fontWeight: "600",
-    color: "#4E2A84",
     marginBottom: 18,
     textAlign: "center",
   },
@@ -478,7 +470,6 @@ const styles = StyleSheet.create({
   },
   modalItemText: {
     fontSize: RFValue(16),
-    color: "#333",
   },
 
   // Banner mejorado
@@ -492,7 +483,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   workoutBanner: {
-    backgroundColor: "#4E2A84",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
@@ -507,7 +497,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   bannerContent: {
     flexDirection: "row",
@@ -559,12 +548,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 107, 107, 0.3)",
   },
   discardButtonText: {
-    color: "#FF6B6B",
     fontSize: RFValue(13),
     fontWeight: "600",
   },
   resumeButton: {
-    backgroundColor: "#6C3BAA",
     paddingHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: {
