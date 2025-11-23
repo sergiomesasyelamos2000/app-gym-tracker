@@ -20,6 +20,7 @@ import {
   useAppSelector,
 } from "../features/common/hooks/useStore";
 import { ChatInput } from "../features/chat/components/ChatInput";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function NutritionScreen() {
   const [chatInput, setChatInput] = useState("");
@@ -31,6 +32,7 @@ export default function NutritionScreen() {
   const messages = useAppSelector((state) => state.chat.messages);
   const loading = useAppSelector((state) => state.chat.loading);
   const dispatch = useAppDispatch();
+  const { theme } = useTheme();
 
   const handleSend = async () => {
     if (!chatInput.trim() || loading) return;
@@ -76,7 +78,7 @@ export default function NutritionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
       {showCamera ? (
         <ReusableCameraView
           onPhotoTaken={handlePhotoTaken}
@@ -84,7 +86,7 @@ export default function NutritionScreen() {
         />
       ) : (
         <View style={styles.container}>
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: theme.success }]}>
             <Text style={styles.headerTitle}>Nutrición</Text>
             <Text style={styles.headerSubtitle}>
               Crea dietas personalizadas con la ayuda de tu asistente de IA.
@@ -99,9 +101,9 @@ export default function NutritionScreen() {
               />
             ))}
             {loadingMessage && (
-              <View style={styles.spinnerContainer}>
-                <Text style={styles.spinnerText}>Pensando...</Text>
-                <ActivityIndicator size="small" color="#4CAF50" />
+              <View style={[styles.spinnerContainer, { backgroundColor: theme.primaryLight + '20' }]}>
+                <Text style={[styles.spinnerText, { color: theme.text }]}>Pensando...</Text>
+                <ActivityIndicator size="small" color={theme.success} />
               </View>
             )}
           </ScrollView>

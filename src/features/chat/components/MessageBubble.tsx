@@ -1,6 +1,7 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 export type Message = {
   id: number;
@@ -17,6 +18,7 @@ type Props = {
 export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
   const isUser = message.sender === "user";
   const isBot = message.sender === "bot";
+  const { theme } = useTheme();
 
   const renderContent = () => {
     if (message.imageUri) {
@@ -42,7 +44,9 @@ export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
     <View
       style={[
         styles.messageBubble,
-        isUser ? styles.userBubble : styles.botBubble,
+        isUser
+          ? [styles.userBubble, { backgroundColor: theme.success }]
+          : [styles.botBubble, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }],
       ]}
     >
       {renderContent()}

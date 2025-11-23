@@ -30,12 +30,27 @@ const toastConfig = {
 };
 
 function AppContent() {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <NavigationContainer
+        theme={{
+          dark: isDark,
+          colors: {
+            primary: theme.primary,
+            background: theme.background,
+            card: theme.card,
+            text: theme.text,
+            border: theme.border,
+            notification: theme.error,
+          },
+        }}
+      >
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.background}
+        />
         <RootNavigator />
       </NavigationContainer>
       <Toast config={toastConfig} />
