@@ -23,6 +23,7 @@ import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useShallow } from "zustand/react/shallow";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   deleteRoutine,
   duplicateRoutine,
@@ -37,6 +38,7 @@ type WorkoutScreenNavigationProp = NativeStackNavigationProp<
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { width } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,11 +178,11 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F4F4F8" }}>
+    <View style={{ flex: 1, backgroundColor: theme.backgroundSecondary }}>
       {/* Encabezado */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rutinas de entrenamiento</Text>
-        <Text style={styles.headerSubtitle}>
+      <View style={[styles.header, { backgroundColor: theme.card }]}>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Rutinas de entrenamiento</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
           Selecciona una rutina para comenzar o crea una nueva
         </Text>
       </View>
@@ -188,7 +190,7 @@ export default function WorkoutScreen() {
       {/* Botón principal */}
       <View style={styles.topActions}>
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => {
             navigation.navigate("ExerciseList", {
               onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
@@ -212,27 +214,27 @@ export default function WorkoutScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
         {loading ? (
-          <Text style={{ textAlign: "center", marginTop: 40 }}>
+          <Text style={{ textAlign: "center", marginTop: 40, color: theme.textSecondary }}>
             Cargando rutinas...
           </Text>
         ) : routines.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 40, color: "#888" }}>
+          <Text style={{ textAlign: "center", marginTop: 40, color: theme.textTertiary }}>
             No tienes rutinas guardadas.
           </Text>
         ) : (
           routines.map((routine) => (
-            <View key={routine.id} style={styles.routineCard}>
+            <View key={routine.id} style={[styles.routineCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={() => openRoutineOptions(routine)}
               >
-                <MaterialIcons name="more-vert" size={20} color="#6C3BAA" />
+                <MaterialIcons name="more-vert" size={20} color={theme.primary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -244,17 +246,17 @@ export default function WorkoutScreen() {
                   })
                 }
               >
-                <Text style={styles.routineName}>{routine.title}</Text>
+                <Text style={[styles.routineName, { color: theme.text }]}>{routine.title}</Text>
                 {/* Opcional: Mostrar fecha de creación */}
                 {routine.createdAt && (
-                  <Text style={styles.routineDate}>
+                  <Text style={[styles.routineDate, { color: theme.textTertiary }]}>
                     Creada: {new Date(routine.createdAt).toLocaleDateString()}
                   </Text>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.startRoutineButton}
+                style={[styles.startRoutineButton, { backgroundColor: theme.primary }]}
                 onPress={() =>
                   navigation.navigate("RoutineDetail", {
                     routineId: routine.id,
@@ -279,28 +281,28 @@ export default function WorkoutScreen() {
         swipeDirection="down"
         style={styles.modalContainer}
       >
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Acciones de rutina</Text>
+        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.text }]}>Acciones de rutina</Text>
           <TouchableOpacity
-            style={styles.modalItem}
+            style={[styles.modalItem, { borderBottomColor: theme.divider }]}
             onPress={() => handleRoutineAction("duplicate")}
           >
-            <MaterialIcons name="content-copy" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Duplicar rutina</Text>
+            <MaterialIcons name="content-copy" size={20} color={theme.primary} />
+            <Text style={[styles.modalItemText, { color: theme.text }]}>Duplicar rutina</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.modalItem}
+            style={[styles.modalItem, { borderBottomColor: theme.divider }]}
             onPress={() => handleRoutineAction("edit")}
           >
-            <MaterialIcons name="edit" size={20} color="#4E2A84" />
-            <Text style={styles.modalItemText}>Editar rutina</Text>
+            <MaterialIcons name="edit" size={20} color={theme.primary} />
+            <Text style={[styles.modalItemText, { color: theme.text }]}>Editar rutina</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.modalItem}
             onPress={() => handleRoutineAction("delete")}
           >
-            <MaterialIcons name="delete" size={20} color="red" />
-            <Text style={[styles.modalItemText, { color: "red" }]}>
+            <MaterialIcons name="delete" size={20} color={theme.error} />
+            <Text style={[styles.modalItemText, { color: theme.error }]}>
               Borrar rutina
             </Text>
           </TouchableOpacity>
