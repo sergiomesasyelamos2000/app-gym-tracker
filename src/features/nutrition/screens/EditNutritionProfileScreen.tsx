@@ -105,22 +105,22 @@ export default function EditNutritionProfileScreen({
       description: "Poco o ningún ejercicio",
     },
     {
-      value: "lightly_active", // ← Cambio
+      value: "lightly_active",
       label: "Ligero",
       description: "Ejercicio ligero 1-3 días/semana",
     },
     {
-      value: "moderately_active", // ← Cambio
+      value: "moderately_active",
       label: "Moderado",
       description: "Ejercicio moderado 3-5 días/semana",
     },
     {
-      value: "very_active", // ← Cambio
+      value: "very_active",
       label: "Activo",
       description: "Ejercicio intenso 6-7 días/semana",
     },
     {
-      value: "extra_active", // ← Cambio
+      value: "extra_active",
       label: "Muy Activo",
       description: "Ejercicio muy intenso y trabajo físico",
     },
@@ -338,7 +338,7 @@ export default function EditNutritionProfileScreen({
             <Text style={styles.stepSubtitle}>
               Ingresa tu peso en kilogramos
             </Text>
-            <View style={styles.inputContainer}>
+            <View style={styles.inputWithUnit}>
               <TextInput
                 style={[styles.input, styles.largeInput]}
                 value={weight}
@@ -358,7 +358,7 @@ export default function EditNutritionProfileScreen({
             <Text style={styles.stepSubtitle}>
               Ingresa tu estatura en centímetros
             </Text>
-            <View style={styles.inputContainer}>
+            <View style={styles.inputWithUnit}>
               <TextInput
                 style={[styles.input, styles.largeInput]}
                 value={height}
@@ -436,14 +436,16 @@ export default function EditNutritionProfileScreen({
                 <Text style={styles.inputLabel}>
                   ¿Cuál es tu peso objetivo?
                 </Text>
-                <TextInput
-                  style={styles.input}
-                  value={targetWeight}
-                  onChangeText={setTargetWeight}
-                  placeholder={`Ej: ${weightGoal === "lose" ? "65" : "75"}`}
-                  keyboardType="decimal-pad"
-                />
-                <Text style={styles.unitLabel}>kg</Text>
+                <View style={styles.inputWithUnit}>
+                  <TextInput
+                    style={styles.input}
+                    value={targetWeight}
+                    onChangeText={setTargetWeight}
+                    placeholder={`Ej: ${weightGoal === "lose" ? "65" : "75"}`}
+                    keyboardType="decimal-pad"
+                  />
+                  <Text style={styles.unitLabelSmall}>kg</Text>
+                </View>
               </View>
             )}
           </View>
@@ -694,6 +696,9 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
     marginBottom: 12,
   },
+  inputWithUnit: {
+    position: "relative",
+  },
   input: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -706,12 +711,24 @@ const styles = StyleSheet.create({
     fontSize: RFValue(32),
     fontWeight: "700",
     textAlign: "center",
+    paddingRight: 60,
   },
   unitLabel: {
     position: "absolute",
     right: 20,
-    top: 20,
+    top: "50%",
+    transform: [{ translateY: -12 }],
+    fontSize: RFValue(20),
+    fontWeight: "600",
+    color: "#808080",
+  },
+  unitLabelSmall: {
+    position: "absolute",
+    right: 20,
+    top: "50%",
+    transform: [{ translateY: -10 }],
     fontSize: RFValue(16),
+    fontWeight: "600",
     color: "#808080",
   },
   activitySelector: {
