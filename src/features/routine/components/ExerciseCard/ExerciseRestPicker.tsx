@@ -10,6 +10,7 @@ import {
 import { TimerPickerModal } from "react-native-timer-picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { formatTime, parseRestTime } from "./helpers";
+import { useTheme } from "../../../../contexts/ThemeContext";
 
 interface Props {
   restTime: string;
@@ -22,6 +23,7 @@ const ExerciseRestPicker = ({
   setRestTime,
   readonly = false,
 }: Props) => {
+  const { theme } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const { width, height } = useWindowDimensions();
 
@@ -62,6 +64,8 @@ const ExerciseRestPicker = ({
         style={[
           styles.timerContainer,
           {
+            backgroundColor: theme.backgroundSecondary,
+            borderColor: theme.border,
             padding: dynamicStyles.containerPadding,
             borderRadius: dynamicStyles.borderRadius,
             marginBottom: dynamicStyles.marginBottom,
@@ -72,11 +76,11 @@ const ExerciseRestPicker = ({
         activeOpacity={0.7}
         disabled={readonly}
       >
-        <View style={styles.iconWrapper}>
+        <View style={[styles.iconWrapper, { backgroundColor: theme.border }]}>
           <Icon
             name="timer"
             size={dynamicStyles.iconSize}
-            color={readonly ? "#9CA3AF" : "#6B7280"}
+            color={readonly ? theme.textTertiary : theme.textSecondary}
           />
         </View>
 
@@ -85,6 +89,7 @@ const ExerciseRestPicker = ({
             style={[
               styles.timerLabel,
               {
+                color: theme.textSecondary,
                 fontSize: dynamicStyles.fontSize * 0.85,
               },
             ]}
@@ -96,7 +101,7 @@ const ExerciseRestPicker = ({
               styles.timerValue,
               {
                 fontSize: dynamicStyles.fontSize,
-                color: readonly ? "#999" : "#333",
+                color: readonly ? theme.textTertiary : theme.text,
               },
             ]}
           >
@@ -108,7 +113,7 @@ const ExerciseRestPicker = ({
           <Icon
             name="chevron-right"
             size={dynamicStyles.iconSize}
-            color="#999"
+            color={theme.textTertiary}
             style={styles.chevronIcon}
           />
         )}
@@ -130,11 +135,11 @@ const ExerciseRestPicker = ({
         confirmButtonText="Confirmar"
         styles={{
           theme: "light",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: theme.card,
           modalTitle: {
             fontSize: modalFontSizes.title,
             fontWeight: "700",
-            color: "#1F2937",
+            color: theme.text,
             marginBottom: isSmallScreen ? 16 : 20,
             marginTop: isSmallScreen ? 8 : 12,
             textAlign: "center",
@@ -143,21 +148,21 @@ const ExerciseRestPicker = ({
           pickerLabel: {
             fontSize: modalFontSizes.label,
             marginTop: 4,
-            color: "#6B7280",
+            color: theme.textSecondary,
             fontWeight: "600",
             textTransform: "lowercase",
           },
           pickerItem: {
             fontSize: modalFontSizes.pickerItem,
             fontWeight: "600",
-            color: "#111827",
+            color: theme.text,
           },
           cancelButton: {
             fontSize: modalFontSizes.button,
             paddingVertical: isSmallScreen ? 10 : 12,
             paddingHorizontal: isSmallScreen ? 16 : 20,
-            backgroundColor: "#F3F4F6",
-            color: "#6B7280",
+            backgroundColor: theme.backgroundSecondary,
+            color: theme.textSecondary,
             fontWeight: "600",
             borderRadius: 10,
             borderWidth: 0,
@@ -168,7 +173,7 @@ const ExerciseRestPicker = ({
             fontSize: modalFontSizes.button,
             paddingVertical: isSmallScreen ? 10 : 12,
             paddingHorizontal: isSmallScreen ? 16 : 20,
-            backgroundColor: "#111827",
+            backgroundColor: theme.primary,
             color: "#FFFFFF",
             fontWeight: "700",
             borderRadius: 10,
@@ -190,13 +195,13 @@ const ExerciseRestPicker = ({
           },
           contentContainer: {
             padding: modalPadding,
-            backgroundColor: "#FFFFFF",
+            backgroundColor: theme.card,
             borderRadius: 16,
             maxWidth: modalWidth,
             width: "100%",
             ...Platform.select({
               ios: {
-                shadowColor: "#000",
+                shadowColor: theme.shadowColor,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.15,
                 shadowRadius: 12,
@@ -216,9 +221,7 @@ const styles = StyleSheet.create({
   timerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     justifyContent: "space-between",
     ...Platform.select({
       ios: {
@@ -236,7 +239,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -248,7 +250,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   timerLabel: {
-    color: "#6B7280",
     fontWeight: "500",
     textTransform: "uppercase",
     letterSpacing: 0.5,

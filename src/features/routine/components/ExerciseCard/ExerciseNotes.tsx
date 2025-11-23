@@ -9,6 +9,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import uuid from "react-native-uuid";
+import { useTheme } from "../../../../contexts/ThemeContext";
 
 export interface ExerciseNote {
   id: string;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
+  const { theme } = useTheme();
   const [newNoteText, setNewNoteText] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -59,19 +61,19 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
       {notes.length > 0 && (
         <View style={styles.notesList}>
           {notes.map((note) => (
-            <View key={note.id} style={styles.noteItem}>
+            <View key={note.id} style={[styles.noteItem, { backgroundColor: theme.backgroundSecondary }]}>
               <View style={styles.noteContent}>
-                <Text style={styles.noteText}>{note.text}</Text>
-                <Text style={styles.noteDate}>
+                <Text style={[styles.noteText, { color: theme.text }]}>{note.text}</Text>
+                <Text style={[styles.noteDate, { color: theme.textSecondary }]}>
                   {formatDate(note.createdAt)}
                 </Text>
               </View>
               {!readonly && (
                 <TouchableOpacity
                   onPress={() => deleteNote(note.id)}
-                  style={styles.deleteButton}
+                  style={[styles.deleteButton, { backgroundColor: theme.error + '20' }]}
                 >
-                  <Icon name="close" size={18} color="#EF4444" />
+                  <Icon name="close" size={18} color={theme.error} />
                 </TouchableOpacity>
               )}
             </View>
@@ -85,8 +87,9 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
           {isAdding ? (
             <View style={styles.inputContainer}>
               <TextInput
-                style={styles.noteInput}
+                style={[styles.noteInput, { backgroundColor: theme.inputBackground, borderColor: theme.border, color: theme.text }]}
                 placeholder="Escribe tu nota..."
+                placeholderTextColor={theme.textTertiary}
                 value={newNoteText}
                 onChangeText={setNewNoteText}
                 multiline
@@ -98,14 +101,15 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                     setIsAdding(false);
                     setNewNoteText("");
                   }}
-                  style={styles.cancelButton}
+                  style={[styles.cancelButton, { backgroundColor: theme.backgroundSecondary }]}
                 >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={addNote}
                   style={[
                     styles.saveButton,
+                    { backgroundColor: theme.primary },
                     !newNoteText.trim() && styles.saveButtonDisabled,
                   ]}
                   disabled={!newNoteText.trim()}
@@ -117,10 +121,10 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
           ) : (
             <TouchableOpacity
               onPress={() => setIsAdding(true)}
-              style={styles.addNoteButton}
+              style={[styles.addNoteButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
             >
-              <Icon name="add" size={20} color="#6C3BAA" />
-              <Text style={styles.addNoteButtonText}>
+              <Icon name="add" size={20} color={theme.primary} />
+              <Text style={[styles.addNoteButtonText, { color: theme.primary }]}>
                 {notes.length > 0 ? "Añadir otra nota" : "Añadir nota"}
               </Text>
             </TouchableOpacity>
@@ -142,7 +146,6 @@ const styles = StyleSheet.create({
   noteItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     padding: 12,
     gap: 8,
@@ -153,19 +156,16 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: RFValue(14),
-    color: "#333",
     lineHeight: RFValue(20),
   },
   noteDate: {
     fontSize: RFValue(11),
-    color: "#6B7280",
     fontWeight: "500",
   },
   deleteButton: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -174,12 +174,9 @@ const styles = StyleSheet.create({
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#FFFFFF",
     fontSize: RFValue(14),
-    color: "#333",
     minHeight: 80,
     textAlignVertical: "top",
   },
@@ -192,18 +189,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
   },
   cancelButtonText: {
     fontSize: RFValue(13),
-    color: "#6B7280",
     fontWeight: "600",
   },
   saveButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#6C3BAA",
   },
   saveButtonDisabled: {
     backgroundColor: "#D1D5DB",
@@ -217,9 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     borderRadius: 12,
     padding: 12,
     gap: 6,
@@ -227,7 +219,6 @@ const styles = StyleSheet.create({
   },
   addNoteButtonText: {
     fontSize: RFValue(13),
-    color: "#6C3BAA",
     fontWeight: "600",
   },
 });

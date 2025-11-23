@@ -19,6 +19,7 @@ import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
+import { useTheme } from "../../../../contexts/ThemeContext";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -79,6 +80,7 @@ const ExerciseCard = ({
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
+  const { theme } = useTheme();
 
   useEffect(() => {
     onChangeSets?.(sets);
@@ -159,6 +161,8 @@ const ExerciseCard = ({
       style={[
         styles.card,
         {
+          backgroundColor: theme.card,
+          shadowColor: theme.shadowColor,
           padding: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
           marginVertical: isSmallScreen ? 8 : 16,
         },
@@ -176,17 +180,19 @@ const ExerciseCard = ({
             style={[
               styles.supersetTag,
               {
+                backgroundColor: theme.primary + '20',
+                borderColor: theme.primary + '40',
                 paddingHorizontal: isSmallScreen ? 10 : 12,
                 paddingVertical: isSmallScreen ? 6 : 8,
                 marginBottom: isSmallScreen ? 8 : 12,
               },
             ]}
           >
-            <Icon name="link" size={isSmallScreen ? 14 : 16} color="#7C3AED" />
+            <Icon name="link" size={isSmallScreen ? 14 : 16} color={theme.primary} />
             <Text
               style={[
                 styles.supersetTagText,
-                { fontSize: RFValue(isSmallScreen ? 11 : 12) },
+                { color: theme.primary, fontSize: RFValue(isSmallScreen ? 11 : 12) },
               ]}
             >
               Superserie: {supersetExerciseName}
@@ -196,9 +202,9 @@ const ExerciseCard = ({
             {showOptions && onRemoveSuperset && (
               <TouchableOpacity
                 onPress={onRemoveSuperset}
-                style={styles.removeSuperset}
+                style={[styles.removeSuperset, { backgroundColor: theme.primary + '33' }]}
               >
-                <Icon name="close" size={16} color="#7C3AED" />
+                <Icon name="close" size={16} color={theme.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -244,6 +250,7 @@ const ExerciseCard = ({
             style={[
               styles.addButton,
               {
+                backgroundColor: theme.primary,
                 paddingVertical: isSmallScreen ? 4 : 8,
                 marginTop: isSmallScreen ? 12 : 20,
               },
@@ -264,19 +271,16 @@ const ExerciseCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
     marginVertical: 16,
     padding: 20,
     borderRadius: 20,
     elevation: 4,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
   addButton: {
     marginTop: 20,
-    backgroundColor: "#6C3BAA",
     borderRadius: 12,
     paddingVertical: 8,
     elevation: 2,
@@ -284,7 +288,6 @@ const styles = StyleSheet.create({
   supersetTag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EDE9FE",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -292,20 +295,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: "#C4B5FD",
     minWidth: 0,
   },
   supersetTagText: {
     fontSize: RFValue(12),
     fontWeight: "600",
-    color: "#7C3AED",
     flexShrink: 1,
   },
   removeSuperset: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 4,

@@ -13,6 +13,7 @@ import { Portal } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ExerciseRequestDto } from "../../../../models";
+import { useTheme } from "../../../../contexts/ThemeContext";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -40,6 +41,7 @@ const ExerciseHeader = ({
   hasSuperset = false,
 }: Props) => {
   const navigation = useNavigation<any>();
+  const { theme } = useTheme();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [isSupersetModalVisible, setSupersetModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -109,7 +111,7 @@ const ExerciseHeader = ({
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
+          <Text style={[styles.title, { color: theme.text }]} numberOfLines={3} ellipsizeMode="tail">
             {exercise.name}
           </Text>
         </View>
@@ -117,7 +119,7 @@ const ExerciseHeader = ({
         {/* 🔥 CAMBIO: Solo mostrar si showOptions es true Y no es readonly */}
         {showOptions && !readonly && (
           <TouchableOpacity onPress={openExerciseOptions}>
-            <Icon name="more-vert" size={24} color="#000" />
+            <Icon name="more-vert" size={24} color={theme.text} />
           </TouchableOpacity>
         )}
       </View>
@@ -137,24 +139,24 @@ const ExerciseHeader = ({
           useNativeDriver
           hideModalContentWhileAnimating
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Opciones de ejercicio</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Opciones de ejercicio</Text>
 
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleExerciseAction("reorder")}
             >
-              <Icon name="swap-vert" size={22} color="#4E2A84" />
-              <Text style={styles.modalItemText}>Reordenar ejercicios</Text>
+              <Icon name="swap-vert" size={22} color={theme.primary} />
+              <Text style={[styles.modalItemText, { color: theme.text }]}>Reordenar ejercicios</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleExerciseAction("replace")}
             >
-              <Icon name="sync" size={22} color="#4E2A84" />
-              <Text style={styles.modalItemText}>Reemplazar ejercicio</Text>
+              <Icon name="sync" size={22} color={theme.primary} />
+              <Text style={[styles.modalItemText, { color: theme.text }]}>Reemplazar ejercicio</Text>
             </TouchableOpacity>
 
             {hasSuperset ? (
@@ -165,8 +167,8 @@ const ExerciseHeader = ({
                   onRemoveSuperset?.();
                 }}
               >
-                <Icon name="link-off" size={22} color="#EF4444" />
-                <Text style={[styles.modalItemText, { color: "#EF4444" }]}>
+                <Icon name="link-off" size={22} color={theme.error} />
+                <Text style={[styles.modalItemText, { color: theme.error }]}>
                   Eliminar superserie
                 </Text>
               </TouchableOpacity>
@@ -175,19 +177,19 @@ const ExerciseHeader = ({
                 style={styles.modalItem}
                 onPress={() => handleExerciseAction("superset")}
               >
-                <Icon name="link" size={22} color="#4E2A84" />
-                <Text style={styles.modalItemText}>Agregar a superserie</Text>
+                <Icon name="link" size={22} color={theme.primary} />
+                <Text style={[styles.modalItemText, { color: theme.text }]}>Agregar a superserie</Text>
               </TouchableOpacity>
             )}
 
-            <View style={styles.modalDivider} />
+            <View style={[styles.modalDivider, { backgroundColor: theme.divider }]} />
 
             <TouchableOpacity
               style={styles.modalItem}
               onPress={() => handleExerciseAction("delete")}
             >
-              <Icon name="delete" size={22} color="#EF4444" />
-              <Text style={[styles.modalItemText, styles.deleteText]}>
+              <Icon name="delete" size={22} color={theme.error} />
+              <Text style={[styles.modalItemText, styles.deleteText, { color: theme.error }]}>
                 Eliminar ejercicio
               </Text>
             </TouchableOpacity>
@@ -209,19 +211,19 @@ const ExerciseHeader = ({
           useNativeDriver
           hideModalContentWhileAnimating
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
               Superserie de {exercise.name} con...
             </Text>
-            <Text style={styles.modalSubtitle}>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
               Selecciona el ejercicio con el que deseas hacer superserie
             </Text>
 
             {filteredExercises.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Icon name="fitness-center" size={48} color="#D1D5DB" />
-                <Text style={styles.emptyText}>
+                <Icon name="fitness-center" size={48} color={theme.textTertiary} />
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
                   No hay otros ejercicios en esta rutina
                 </Text>
               </View>
@@ -230,7 +232,7 @@ const ExerciseHeader = ({
                 {filteredExercises.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.supersetItem}
+                    style={[styles.supersetItem, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
                     onPress={() => handleSelectSupersetExercise(item)}
                   >
                     <Image
@@ -239,12 +241,12 @@ const ExerciseHeader = ({
                           ? { uri: `data:image/png;base64,${item.imageUrl}` }
                           : require("./../../../../../assets/not-image.png")
                       }
-                      style={styles.supersetImage}
+                      style={[styles.supersetImage, { backgroundColor: theme.border }]}
                     />
-                    <Text style={styles.supersetName} numberOfLines={2}>
+                    <Text style={[styles.supersetName, { color: theme.text }]} numberOfLines={2}>
                       {item.name}
                     </Text>
-                    <Icon name="chevron-right" size={24} color="#9CA3AF" />
+                    <Icon name="chevron-right" size={24} color={theme.textTertiary} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -270,7 +272,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(22),
     fontWeight: "600",
-    color: "#1A1A1A",
     flexShrink: 1,
     maxWidth: 180,
   },
@@ -285,7 +286,6 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   modalContent: {
-    backgroundColor: "white",
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -294,7 +294,6 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#D1D5DB",
     borderRadius: 2,
     alignSelf: "center",
     marginBottom: 16,
@@ -303,11 +302,9 @@ const styles = StyleSheet.create({
     fontSize: RFValue(20),
     fontWeight: "700",
     marginBottom: 8,
-    color: "#1A1A1A",
   },
   modalSubtitle: {
     fontSize: RFValue(14),
-    color: "#6B7280",
     marginBottom: 16,
   },
   modalItem: {
@@ -319,15 +316,12 @@ const styles = StyleSheet.create({
   modalItemText: {
     fontSize: RFValue(16),
     marginLeft: 12,
-    color: "#374151",
     fontWeight: "500",
   },
   deleteText: {
-    color: "#EF4444",
   },
   modalDivider: {
     height: 1,
-    backgroundColor: "#E5E7EB",
     marginVertical: 8,
   },
   supersetList: {
@@ -340,22 +334,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   supersetImage: {
     width: 48,
     height: 48,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: "#E5E7EB",
   },
   supersetName: {
     flex: 1,
     fontSize: RFValue(15),
     fontWeight: "600",
-    color: "#374151",
   },
   emptyContainer: {
     alignItems: "center",
@@ -364,7 +354,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: RFValue(14),
-    color: "#9CA3AF",
     marginTop: 12,
     textAlign: "center",
   },

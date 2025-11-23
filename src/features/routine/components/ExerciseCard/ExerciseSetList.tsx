@@ -20,6 +20,7 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SetRequestDto } from "../../../../models";
 import ExerciseSetRow from "./ExerciseSetRow";
+import { useTheme } from "../../../../contexts/ThemeContext";
 
 interface Props {
   sets: SetRequestDto[];
@@ -48,6 +49,7 @@ const ExerciseSetList = ({
   readonly = false,
   started = false,
 }: Props) => {
+  const { theme } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
 
@@ -306,13 +308,14 @@ const ExerciseSetList = ({
       <View
         style={[
           styles.columnTitles,
-          { paddingHorizontal: isSmallScreen ? 4 : 8 },
+          { backgroundColor: theme.backgroundSecondary, paddingHorizontal: isSmallScreen ? 4 : 8 },
         ]}
       >
         <Text
           style={[
             styles.columnTitle,
             {
+              color: theme.textSecondary,
               flex: isSmallScreen ? 0.7 : 0.8,
               fontSize: RFValue(isSmallScreen ? 10 : 12),
             },
@@ -326,6 +329,7 @@ const ExerciseSetList = ({
             style={[
               styles.columnTitle,
               {
+                color: theme.textSecondary,
                 flex: isSmallScreen ? 1.3 : 1.5,
                 fontSize: RFValue(isSmallScreen ? 10 : 12),
               },
@@ -345,7 +349,7 @@ const ExerciseSetList = ({
             <Text
               style={[
                 styles.columnTitle,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+                { color: theme.textSecondary, fontSize: RFValue(isSmallScreen ? 10 : 12) },
               ]}
             >
               {weightUnit}
@@ -354,7 +358,7 @@ const ExerciseSetList = ({
               <Icon
                 name="arrow-drop-down"
                 size={isSmallScreen ? 14 : 16}
-                color="#777"
+                color={theme.textTertiary}
               />
             )}
           </View>
@@ -369,7 +373,7 @@ const ExerciseSetList = ({
             <Text
               style={[
                 styles.columnTitle,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+                { color: theme.textSecondary, fontSize: RFValue(isSmallScreen ? 10 : 12) },
               ]}
               numberOfLines={1}
             >
@@ -379,7 +383,7 @@ const ExerciseSetList = ({
               <Icon
                 name="arrow-drop-down"
                 size={isSmallScreen ? 14 : 16}
-                color="#777"
+                color={theme.textTertiary}
               />
             )}
           </View>
@@ -389,7 +393,7 @@ const ExerciseSetList = ({
           <View
             style={[styles.checkHeader, { flex: isSmallScreen ? 0.7 : 0.8 }]}
           >
-            <Icon name="done" size={isSmallScreen ? 16 : 18} color="#6C3BAA" />
+            <Icon name="done" size={isSmallScreen ? 16 : 18} color={theme.primary} />
           </View>
         )}
       </View>

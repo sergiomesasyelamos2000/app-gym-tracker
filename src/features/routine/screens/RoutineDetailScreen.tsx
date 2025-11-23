@@ -575,14 +575,14 @@ export default function RoutineDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <Text style={styles.loadingText}>Cargando rutina...</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
+        <Text style={[styles.loadingText, { color: theme.text }]}>Cargando rutina...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
       {started && (
         <RoutineMetrics
           duration={duration}
@@ -611,7 +611,7 @@ export default function RoutineDetailScreen() {
       />
 
       {!routineData?.id && !started && (
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.primary }]} onPress={handleSaveRoutine}>
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}
@@ -642,16 +642,13 @@ export default function RoutineDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
   },
   loadingText: {
     textAlign: "center",
     marginTop: 40,
     fontSize: RFValue(16),
-    color: "#6B7280",
   },
   saveButton: {
-    backgroundColor: "#6C3BAA",
     padding: 16,
     margin: 16,
     borderRadius: 20,
