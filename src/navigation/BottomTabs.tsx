@@ -8,11 +8,13 @@ import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import { useNavigationStore } from "../store/useNavigationStore";
+import { useTheme } from "../contexts/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
 export const BottomTabs = () => {
   const hiddenTabs = useNavigationStore((state) => state.hiddenTabs);
+  const { theme } = useTheme();
 
   return (
     <Tab.Navigator
@@ -31,12 +33,15 @@ export const BottomTabs = () => {
               return <User color={color} size={size} />;
           }
         },
-        tabBarActiveTintColor: "#6C3BAA",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
         // Aplicar visibilidad específica por tab
         tabBarStyle: {
           display: hiddenTabs[route.name] ? "none" : "flex",
+          backgroundColor: theme.tabBarBackground,
+          borderTopColor: theme.tabBarBorder,
+          borderTopWidth: 1,
         },
       })}
     >

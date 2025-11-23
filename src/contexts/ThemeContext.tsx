@@ -1,94 +1,112 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// contexts/ThemeContext.tsx
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type ThemeMode = 'light' | 'dark' | 'auto';
+type ThemeMode = "light" | "dark" | "auto";
 
-export interface Theme {
-  // Background colors
+interface Theme {
+  // Colores base
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+
+  // Backgrounds
   background: string;
   backgroundSecondary: string;
   card: string;
 
-  // Text colors
+  // Textos
   text: string;
   textSecondary: string;
   textTertiary: string;
 
-  // Primary color
-  primary: string;
-  primaryDark: string;
-  primaryLight: string;
-
-  // Status colors
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-
-  // UI elements
+  // Borders y dividers
   border: string;
   divider: string;
-  shadow: string;
 
-  // Input elements
+  // Inputs
   inputBackground: string;
   inputBorder: string;
-  placeholder: string;
+
+  // Estados
+  success: string;
+  error: string;
+  warning: string;
+  info: string;
+
+  // Shadows
+  shadowColor: string;
+
+  // Tab bar
+  tabBarBackground: string;
+  tabBarBorder: string;
+  tabBarActive: string;
+  tabBarInactive: string;
 }
 
 const lightTheme: Theme = {
-  background: '#FFFFFF',
-  backgroundSecondary: '#F8FAFC',
-  card: '#FFFFFF',
+  primary: "#6C3BAA",
+  primaryLight: "#8B5CF6",
+  primaryDark: "#5B2E91",
 
-  text: '#1A1A1A',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
+  background: "#FFFFFF",
+  backgroundSecondary: "#F8FAFC",
+  card: "#FFFFFF",
 
-  primary: '#6C3BAA',
-  primaryDark: '#5A2F91',
-  primaryLight: '#9F7AC9',
+  text: "#1E293B",
+  textSecondary: "#64748B",
+  textTertiary: "#94A3B8",
 
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#FF6B6B',
-  info: '#2196F3',
+  border: "#E2E8F0",
+  divider: "#F1F5F9",
 
-  border: '#E5E7EB',
-  divider: '#F3F4F6',
-  shadow: '#000000',
+  inputBackground: "#F8FAFC",
+  inputBorder: "#E2E8F0",
 
-  inputBackground: '#FFFFFF',
-  inputBorder: '#E5E7EB',
-  placeholder: '#9CA3AF',
+  success: "#10B981",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
+
+  shadowColor: "#000000",
+
+  tabBarBackground: "#FFFFFF",
+  tabBarBorder: "#E2E8F0",
+  tabBarActive: "#6C3BAA",
+  tabBarInactive: "#94A3B8",
 };
 
 const darkTheme: Theme = {
-  background: '#121212',
-  backgroundSecondary: '#1E1E1E',
-  card: '#1E1E1E',
+  primary: "#8B5CF6",
+  primaryLight: "#A78BFA",
+  primaryDark: "#7C3AED",
 
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  textTertiary: '#808080',
+  background: "#0F172A",
+  backgroundSecondary: "#1E293B",
+  card: "#1E293B",
 
-  primary: '#9F7AC9',
-  primaryDark: '#8B5FC7',
-  primaryLight: '#B794D9',
+  text: "#F1F5F9",
+  textSecondary: "#CBD5E1",
+  textTertiary: "#94A3B8",
 
-  success: '#66BB6A',
-  warning: '#FFA726',
-  error: '#EF5350',
-  info: '#42A5F5',
+  border: "#334155",
+  divider: "#1E293B",
 
-  border: '#2C2C2C',
-  divider: '#242424',
-  shadow: '#000000',
+  inputBackground: "#1E293B",
+  inputBorder: "#334155",
 
-  inputBackground: '#2C2C2C',
-  inputBorder: '#3C3C3C',
-  placeholder: '#666666',
+  success: "#10B981",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
+
+  shadowColor: "#000000",
+
+  tabBarBackground: "#1E293B",
+  tabBarBorder: "#334155",
+  tabBarActive: "#8B5CF6",
+  tabBarInactive: "#64748B",
 };
 
 interface ThemeContextType {
@@ -100,55 +118,52 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = '@app_theme_mode';
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('auto');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("auto");
 
-  // Determine actual theme based on mode
-  const isDark = themeMode === 'auto'
-    ? systemColorScheme === 'dark'
-    : themeMode === 'dark';
-
-  const theme = isDark ? darkTheme : lightTheme;
-
-  // Load saved theme mode on mount
   useEffect(() => {
     loadThemeMode();
   }, []);
 
   const loadThemeMode = async () => {
     try {
-      const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedMode && (savedMode === 'light' || savedMode === 'dark' || savedMode === 'auto')) {
+      const savedMode = await AsyncStorage.getItem("themeMode");
+      if (savedMode) {
         setThemeModeState(savedMode as ThemeMode);
       }
     } catch (error) {
-      console.error('Error loading theme mode:', error);
+      console.error("Error loading theme mode:", error);
     }
   };
 
   const setThemeMode = async (mode: ThemeMode) => {
     try {
+      await AsyncStorage.setItem("themeMode", mode);
       setThemeModeState(mode);
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch (error) {
-      console.error('Error saving theme mode:', error);
+      console.error("Error saving theme mode:", error);
     }
   };
+
+  const isDark =
+    themeMode === "auto" ? systemColorScheme === "dark" : themeMode === "dark";
+
+  const theme = isDark ? darkTheme : lightTheme;
 
   return (
     <ThemeContext.Provider value={{ theme, isDark, themeMode, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );
-}
+};
 
-export function useTheme() {
+export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within ThemeProvider");
   }
   return context;
-}
+};
