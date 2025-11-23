@@ -1,6 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -9,19 +12,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  ActivityIndicator,
-  Dimensions,
 } from "react-native";
+import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
-import Modal from "react-native-modal";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { Ionicons } from "@expo/vector-icons";
+import { FoodEntry, FoodUnit, MealType } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
-import { FoodEntry, MealType, FoodUnit } from "../../../models/nutrition.model";
 import * as nutritionService from "../services/nutritionService";
+import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
 
 const { width } = Dimensions.get("window");
 

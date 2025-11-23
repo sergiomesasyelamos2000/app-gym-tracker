@@ -1,11 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useTheme } from "../../../contexts/ThemeContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useTheme } from "../../../contexts/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -19,16 +16,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
-import Modal from "react-native-modal";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { FoodUnit } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
-import { FoodUnit } from "../../../models/nutrition.model";
 
 interface NutritionalValues {
   calories: string;

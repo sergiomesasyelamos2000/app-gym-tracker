@@ -1,25 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  Alert,
-  RefreshControl,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { Ionicons } from "@expo/vector-icons";
-import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { useNavigation } from "@react-navigation/native";
-import { useTheme } from "../../../contexts/ThemeContext";
-import * as nutritionService from "../services/nutritionService";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import * as nutritionService from "../services/nutritionService";
 
 interface ShoppingListItem {
   id: string;

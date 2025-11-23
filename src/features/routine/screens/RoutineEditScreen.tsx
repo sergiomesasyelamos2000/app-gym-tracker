@@ -1,9 +1,6 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useTheme } from "../../../contexts/ThemeContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useTheme } from "../../../contexts/ThemeContext";
 import React, { useEffect, useState } from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
 import {
   Alert,
   Image,
@@ -19,7 +16,6 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";

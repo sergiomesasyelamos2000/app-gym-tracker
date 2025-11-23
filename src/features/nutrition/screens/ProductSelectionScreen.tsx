@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { useTheme } from "../../../contexts/ThemeContext";
 import {
   RouteProp,
   useFocusEffect,
@@ -8,9 +7,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useTheme } from "../../../contexts/ThemeContext";
 import React, { useCallback, useEffect, useState } from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
