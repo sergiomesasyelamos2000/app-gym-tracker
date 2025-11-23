@@ -36,12 +36,6 @@ export async function apiFetch<T = any>(
   });
 
   if (!response.ok) {
-    // Handle 401 Unauthorized - clear auth state
-    if (response.status === 401) {
-      const authStore = useAuthStore.getState();
-      authStore.clearAuth();
-    }
-
     // ✅ Intentar parsear el error como JSON
     const errorText = await response.text();
     let errorMessage = `Error ${response.status}`;
