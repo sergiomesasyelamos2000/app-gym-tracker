@@ -513,10 +513,10 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Loading inicial mientras verifica perfil
   if (checkingProfile) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando...</Text>
         </View>
       </SafeAreaView>
     );
@@ -525,8 +525,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Renderizar prompt de configuración
   if (showSetupPrompt && !hasProfile) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.setupPromptContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.setupPromptContainer, { backgroundColor: theme.background }]}>
           <Ionicons name="nutrition-outline" size={80} color="#6C3BAA" />
           <Text style={styles.setupPromptTitle}>
             Configura tu Perfil Nutricional
@@ -1133,7 +1133,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  safeArea: { flex: 1 },
   screen: { flex: 1 },
   loadingContainer: {
     flex: 1,
@@ -1152,7 +1152,6 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   loadingText: {
-    color: "#6B7280",
     marginTop: 12,
     fontSize: 16,
     fontWeight: "600",
