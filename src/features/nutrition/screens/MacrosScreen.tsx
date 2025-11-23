@@ -31,6 +31,7 @@ import {
   getProductDetail,
   scanBarcode,
 } from "../services/nutritionService";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -94,6 +95,7 @@ const MEAL_CONFIG: Record<
 };
 
 export default function MacrosScreen({ navigation }: { navigation: any }) {
+  const { theme } = useTheme();
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const todayEntries = useNutritionStore((state) => state.todayEntries);

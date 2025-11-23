@@ -32,10 +32,12 @@ import {
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { notificationService } from "../../../services/notificationService";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
 export default function RoutineDetailScreen() {
+  const { theme } = useTheme();
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const {

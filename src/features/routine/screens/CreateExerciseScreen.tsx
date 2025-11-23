@@ -7,6 +7,7 @@ import * as FileSystem from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useRef, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +27,9 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import {
   createExercise,
@@ -47,6 +50,7 @@ interface CreateExerciseRouteProps {
 }
 
 export default function CreateExerciseScreen() {
+  const { theme } = useTheme();
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
   const route = useRoute();

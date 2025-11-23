@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +21,9 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -35,6 +40,7 @@ type CreateMealScreenRouteProp = RouteProp<
 >;
 
 export default function CreateMealScreen() {
+  const { theme } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<CreateMealScreenRouteProp>();

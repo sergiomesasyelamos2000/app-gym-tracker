@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   RouteProp,
   useFocusEffect,
@@ -7,7 +8,9 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -547,6 +551,7 @@ function CustomProductsTab({
 
 // Componente Principal
 export default function ProductSelectionScreen() {
+  const { theme } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<ProductSelectionScreenRouteProp>();

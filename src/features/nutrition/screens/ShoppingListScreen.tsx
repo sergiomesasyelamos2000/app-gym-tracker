@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   View,
   Text,
@@ -11,9 +12,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "../../../contexts/ThemeContext";
 import * as nutritionService from "../services/nutritionService";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 
@@ -26,6 +30,7 @@ interface ShoppingListItem {
 }
 
 export default function ShoppingListScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [items, setItems] = useState<ShoppingListItem[]>([]);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   View,
   Text,
@@ -12,9 +13,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import Modal from "react-native-modal";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { NutritionStackParamList } from "./NutritionStack";
 import {
   ActivityLevel,
@@ -39,6 +43,7 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function EditNutritionProfileScreen({
+  const { theme } = useTheme();
   navigation,
   route,
 }: Props) {

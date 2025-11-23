@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Alert,
@@ -17,8 +20,11 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../../contexts/ThemeContext";
 import Modal from "react-native-modal";
+import { useTheme } from "../../../contexts/ThemeContext";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 import { FoodUnit } from "../../../models/nutrition.model";
@@ -64,6 +70,7 @@ const UNITS_CONFIG = [
 ];
 
 export default function EditProductScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation<EditProductScreenNavigationProp>();
   const route = useRoute<EditProductScreenRouteProp>();
   const product = route.params.product;

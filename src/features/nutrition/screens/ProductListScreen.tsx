@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   RouteProp,
   useFocusEffect,
@@ -7,7 +8,9 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Dimensions,
@@ -23,6 +26,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -934,6 +938,7 @@ type ProductDetailScreenRouteProp = RouteProp<
 
 // Componente Principal
 export default function ProductListScreen() {
+  const { theme } = useTheme();
   const [searchText, setSearchText] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [initialTab, setInitialTab] = useState<string | undefined>(undefined);

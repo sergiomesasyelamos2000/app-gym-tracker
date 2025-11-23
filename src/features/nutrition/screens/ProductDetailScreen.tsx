@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   Image,
   SafeAreaView,
@@ -13,7 +14,9 @@ import {
   Dimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import Modal from "react-native-modal";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
@@ -76,6 +79,7 @@ const MEALS_CONFIG = [
 ];
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
+  const { theme } = useTheme();
   const {
     producto,
     fromDiary = false,

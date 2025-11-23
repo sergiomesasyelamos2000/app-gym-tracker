@@ -1,5 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityIndicator,
   Animated,
@@ -15,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
