@@ -38,7 +38,7 @@ type WorkoutScreenNavigationProp = NativeStackNavigationProp<
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { width } = useWindowDimensions();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   const [routines, setRoutines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +229,7 @@ export default function WorkoutScreen() {
           </Text>
         ) : (
           routines.map((routine) => (
-            <View key={routine.id} style={[styles.routineCard, { backgroundColor: theme.card, shadowColor: theme.shadowColor }]}>
+            <View key={routine.id} style={[styles.routineCard, { backgroundColor: theme.card, shadowColor: theme.shadowColor, borderWidth: isDark ? 1 : 0, borderColor: theme.border }]}>
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={() => openRoutineOptions(routine)}

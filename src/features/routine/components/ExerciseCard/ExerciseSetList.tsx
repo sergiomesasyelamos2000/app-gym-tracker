@@ -50,7 +50,7 @@ const ExerciseSetList = ({
   readonly = false,
   started = false,
 }: Props) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
 
@@ -279,7 +279,12 @@ const ExerciseSetList = ({
       <View
         style={[
           styles.columnTitles,
-          { backgroundColor: theme.backgroundSecondary, paddingHorizontal: isSmallScreen ? 4 : 8 },
+          { 
+            backgroundColor: theme.background, 
+            paddingHorizontal: isSmallScreen ? 4 : 8,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: theme.border,
+          },
         ]}
       >
         <Text

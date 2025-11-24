@@ -106,6 +106,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const calculateNutrients = useMemo(() => {
     const qty = parseFloat(quantity) || 0;
     const baseGrams = producto.grams || 100;
@@ -317,7 +319,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {fromDiary ? "Editar Alimento" : "Detalle del Producto"}
@@ -328,16 +330,16 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               disabled={addingToCart}
             >
               {addingToCart ? (
-                <ActivityIndicator color="#6C3BAA" />
+                <ActivityIndicator color={theme.primary} />
               ) : (
-                <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="cart-outline" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={handleToggleFavorite}>
               <Ionicons
                 name={isFavorite ? "heart" : "heart-outline"}
                 size={28}
-                color={isFavorite ? "#E74C3C" : "#6C3BAA"}
+                color={isFavorite ? theme.error : theme.primary}
               />
             </TouchableOpacity>
           </View>
@@ -431,7 +433,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 }}
               >
                 <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
-                <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -464,7 +466,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   {selectedMeal.label}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+              <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -481,7 +483,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               <Ionicons
                 name={showMore ? "chevron-up" : "chevron-down"}
                 size={20}
-                color="#6C3BAA"
+                color={theme.primary}
               />
             </TouchableOpacity>
             {showMore && (
@@ -553,7 +555,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Seleccionar Unidad</Text>
             <TouchableOpacity onPress={() => setIsModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#6B7280" />
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           {UNITS_CONFIG.map((unitOption) => (
@@ -617,7 +619,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 }
               }}
             >
-              <Ionicons name="close" size={24} color="#6B7280" />
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           {MEALS_CONFIG.map((mealOption) => (
@@ -642,7 +644,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.modalOptionText}>{mealOption.label}</Text>
               </View>
               {meal === mealOption.value && (
-                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+                <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
           ))}
@@ -652,71 +654,72 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  imageContainer: {
-    backgroundColor: "#fff",
-    paddingVertical: 30,
-    alignItems: "center",
-  },
-  productImage: {
-    resizeMode: "contain",
-  },
-  nameContainer: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  productName: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    textAlign: "center",
-  },
-  nutritionSection: {
-    backgroundColor: "#fff",
-    padding: 20,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 16,
-  },
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      paddingBottom: 100,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    imageContainer: {
+      backgroundColor: theme.card,
+      paddingVertical: 30,
+      alignItems: "center",
+    },
+    productImage: {
+      resizeMode: "contain",
+    },
+    nameContainer: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    productName: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "center",
+    },
+    nutritionSection: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginTop: 12,
+    },
+    sectionTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 16,
+    },
   nutritionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -735,12 +738,12 @@ const styles = StyleSheet.create({
   },
   nutritionLabel: {
     fontSize: RFValue(12),
-    color: "#6B7280",
+    color: theme.textSecondary,
     marginTop: 4,
     fontWeight: "500",
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     padding: 20,
     marginTop: 12,
   },
@@ -750,18 +753,18 @@ const styles = StyleSheet.create({
   },
   quantityInput: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: theme.inputBackground,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 56,
     fontSize: RFValue(18),
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   unitButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: theme.inputBackground,
     borderRadius: 12,
     paddingHorizontal: 16,
     gap: 8,
@@ -770,13 +773,13 @@ const styles = StyleSheet.create({
   unitButtonText: {
     fontSize: RFValue(14),
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   mealSelector: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: theme.inputBackground,
     borderRadius: 12,
     padding: 16,
   },
@@ -795,7 +798,7 @@ const styles = StyleSheet.create({
   mealSelectorText: {
     fontSize: RFValue(15),
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   showMoreButton: {
     flexDirection: "row",
@@ -807,7 +810,7 @@ const styles = StyleSheet.create({
   showMoreText: {
     fontSize: RFValue(14),
     fontWeight: "600",
-    color: "#6C3BAA",
+    color: theme.primary,
   },
   additionalNutrients: {
     marginTop: 16,
@@ -819,11 +822,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: theme.border,
   },
   nutrientLabel: {
     fontSize: RFValue(13),
-    color: "#6B7280",
+    color: theme.textSecondary,
     fontWeight: "500",
     flex: 1,
     paddingRight: 12,
@@ -831,7 +834,7 @@ const styles = StyleSheet.create({
   nutrientValue: {
     fontSize: RFValue(14),
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: theme.text,
     textAlign: "right",
   },
   footer: {
@@ -839,27 +842,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderTopColor: theme.border,
   },
   addButton: {
     flexDirection: "row",
-    backgroundColor: "#6C3BAA",
+    backgroundColor: theme.primary,
     borderRadius: 14,
     height: 56,
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
     elevation: 4,
-    shadowColor: "#6C3BAA",
+    shadowColor: theme.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
   addButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: theme.textTertiary,
   },
   addButtonText: {
     fontSize: RFValue(16),
@@ -871,7 +874,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 30,
@@ -882,12 +885,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: theme.border,
   },
   modalTitle: {
     fontSize: RFValue(18),
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   modalOption: {
     flexDirection: "row",
@@ -895,7 +898,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: theme.backgroundSecondary,
   },
   modalOptionLeft: {
     flexDirection: "row",
@@ -912,6 +915,6 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: RFValue(15),
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: theme.text,
   },
 });

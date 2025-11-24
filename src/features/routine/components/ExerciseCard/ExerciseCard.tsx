@@ -80,7 +80,7 @@ const ExerciseCard = ({
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   useEffect(() => {
     onChangeSets?.(sets);
@@ -165,6 +165,8 @@ const ExerciseCard = ({
           shadowColor: theme.shadowColor,
           padding: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
           marginVertical: isSmallScreen ? 8 : 16,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: theme.border,
         },
       ]}
     >

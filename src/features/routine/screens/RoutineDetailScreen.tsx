@@ -270,16 +270,28 @@ export default function RoutineDetailScreen() {
     if (!parent?.setOptions) return;
 
     parent.setOptions({
-      tabBarStyle: started ? { display: "none" } : undefined,
+      tabBarStyle: started
+        ? { display: "none" }
+        : {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
     });
 
     return () => {
       const p = (navigation as any).getParent?.();
       if (p?.setOptions) {
-        p.setOptions({ tabBarStyle: undefined });
+        p.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
     };
-  }, [started, navigation]);
+  }, [started, navigation, theme]);
 
   useEffect(() => {
     if (showRestToast) {
@@ -305,10 +317,16 @@ export default function RoutineDetailScreen() {
       }
       const parent = (navigation as any).getParent?.();
       if (parent?.setOptions) {
-        parent.setOptions({ tabBarStyle: undefined });
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
     };
-  }, [navigation]);
+  }, [navigation, theme]);
 
   const handleStartRoutine = () => {
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
@@ -348,7 +366,13 @@ export default function RoutineDetailScreen() {
 
       const parent = (navigation as any).getParent?.();
       if (parent?.setOptions) {
-        parent.setOptions({ tabBarStyle: undefined });
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
 
       clearWorkoutInProgress();
@@ -411,7 +435,10 @@ export default function RoutineDetailScreen() {
     });
   };
 
-  const handleStartRestTimer = async (restSeconds: number, exerciseName?: string) => {
+  const handleStartRestTimer = async (
+    restSeconds: number,
+    exerciseName?: string
+  ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
     setShowRestToast(true);
@@ -575,14 +602,23 @@ export default function RoutineDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
-        <Text style={[styles.loadingText, { color: theme.text }]}>Cargando rutina...</Text>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.backgroundSecondary },
+        ]}
+      >
+        <Text style={[styles.loadingText, { color: theme.text }]}>
+          Cargando rutina...
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    >
       {started && (
         <RoutineMetrics
           duration={duration}
@@ -611,7 +647,10 @@ export default function RoutineDetailScreen() {
       />
 
       {!routineData?.id && !started && (
-        <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.primary }]} onPress={handleSaveRoutine}>
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: theme.primary }]}
+          onPress={handleSaveRoutine}
+        >
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}

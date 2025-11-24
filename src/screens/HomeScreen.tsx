@@ -293,6 +293,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -320,6 +322,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -347,6 +351,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -380,6 +386,9 @@ export default function HomeScreen() {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
                   borderLeftColor: theme.error,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
+                  borderLeftWidth: 4,
                 },
               ]}
               onPress={handleStartWorkout}
@@ -446,6 +455,8 @@ export default function HomeScreen() {
                   {
                     backgroundColor: theme.card,
                     shadowColor: theme.shadowColor,
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: theme.border,
                   },
                 ]}
               >
@@ -474,7 +485,7 @@ export default function HomeScreen() {
                 <View
                   style={[
                     styles.sessionStats,
-                    { backgroundColor: theme.backgroundSecondary },
+                    { backgroundColor: theme.background },
                   ]}
                 >
                   <View style={styles.sessionStat}>

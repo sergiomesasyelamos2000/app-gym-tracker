@@ -44,6 +44,8 @@ export default function EditMealScreen() {
   const route = useRoute<EditMealScreenRouteProp>();
   const meal = route.params.meal as CustomMeal;
 
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState(meal?.name || "");
@@ -377,7 +379,7 @@ export default function EditMealScreen() {
             <Ionicons
               name="nutrition-outline"
               size={RFValue(22)}
-              color="#999"
+              color={theme.textTertiary}
             />
           </View>
         )}
@@ -396,7 +398,7 @@ export default function EditMealScreen() {
             }
             keyboardType="decimal-pad"
             placeholder="0"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.textTertiary}
           />
           <Text style={styles.unitText}>{item.unit}</Text>
         </View>
@@ -430,7 +432,7 @@ export default function EditMealScreen() {
         onPress={() => handleRemoveProduct(item.productCode)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="trash-outline" size={RFValue(20)} color="#E74C3C" />
+        <Ionicons name="trash-outline" size={RFValue(20)} color={theme.error} />
       </TouchableOpacity>
     </View>
   );
@@ -447,7 +449,7 @@ export default function EditMealScreen() {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
+            <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Editar Comida</Text>
@@ -462,12 +464,12 @@ export default function EditMealScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             {deleting ? (
-              <ActivityIndicator size="small" color="#E74C3C" />
+              <ActivityIndicator size="small" color={theme.error} />
             ) : (
               <Ionicons
                 name="trash-outline"
                 size={RFValue(24)}
-                color="#E74C3C"
+                color={theme.error}
               />
             )}
           </TouchableOpacity>
@@ -511,7 +513,7 @@ export default function EditMealScreen() {
                   <Ionicons
                     name="camera-outline"
                     size={RFValue(32)}
-                    color="#6C3BAA"
+                    color={theme.primary}
                   />
                 </View>
                 <Text style={styles.imagePlaceholderText}>Agregar Foto</Text>
@@ -533,7 +535,7 @@ export default function EditMealScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholder="ej. Desayuno Alto en Proteína"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textTertiary}
               />
             </View>
 
@@ -544,7 +546,7 @@ export default function EditMealScreen() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Agrega notas o detalles sobre esta comida..."
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textTertiary}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -573,7 +575,7 @@ export default function EditMealScreen() {
                 <Ionicons
                   name="add-circle"
                   size={RFValue(22)}
-                  color="#6C3BAA"
+                  color={theme.primary}
                 />
                 <Text style={styles.addProductsText}>Añadir</Text>
               </TouchableOpacity>
@@ -594,7 +596,7 @@ export default function EditMealScreen() {
                   <Ionicons
                     name="restaurant-outline"
                     size={RFValue(48)}
-                    color="#6C3BAA"
+                    color={theme.primary}
                   />
                 </View>
                 <Text style={styles.emptyProductsText}>
@@ -700,21 +702,22 @@ export default function EditMealScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E8E8",
-  },
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
   headerButton: {
     width: 40,
     height: 40,
@@ -728,11 +731,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: RFValue(18),
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   headerSubtitle: {
     fontSize: RFValue(12),
-    color: "#666",
+    color: theme.textSecondary,
     marginTop: 2,
   },
   content: {
@@ -746,9 +749,9 @@ const styles = StyleSheet.create({
   mealImagePlaceholder: {
     height: 200,
     borderRadius: 16,
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderWidth: 2,
-    borderColor: "#E8E8E8",
+    borderColor: theme.border,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -757,7 +760,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#F0E6FF",
+    backgroundColor: theme.backgroundSecondary,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -765,12 +768,12 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     fontSize: RFValue(16),
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
     marginTop: 4,
   },
   imagePlaceholderSubtext: {
     fontSize: RFValue(12),
-    color: "#999",
+    color: theme.textSecondary,
     marginTop: 4,
   },
   imagePreviewContainer: {
@@ -794,17 +797,17 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(108, 59, 170, 0.9)",
+    backgroundColor: `${theme.primary}E6`,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
   deleteImageButton: {
-    backgroundColor: "rgba(231, 76, 60, 0.9)",
+    backgroundColor: `${theme.error}E6`,
   },
   section: {
     paddingHorizontal: 16,
@@ -816,21 +819,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: RFValue(14),
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
     marginBottom: 8,
   },
   required: {
-    color: "#E74C3C",
+    color: theme.error,
   },
   input: {
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: RFValue(15),
-    color: "#333",
+    color: theme.text,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: theme.border,
   },
   textArea: {
     minHeight: 100,
@@ -851,18 +854,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: RFValue(18),
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: theme.text,
   },
   sectionSubtitle: {
     fontSize: RFValue(13),
-    color: "#666",
+    color: theme.textSecondary,
     marginTop: 2,
     flexWrap: "wrap",
   },
   addProductsButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0E6FF",
+    backgroundColor: theme.backgroundSecondary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -872,13 +875,13 @@ const styles = StyleSheet.create({
   addProductsText: {
     fontSize: RFValue(14),
     fontWeight: "600",
-    color: "#6C3BAA",
+    color: theme.primary,
   },
   productsList: {
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: theme.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -889,7 +892,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: theme.backgroundSecondary,
   },
   lastProductItem: {
     borderBottomWidth: 0,
@@ -903,11 +906,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   productPlaceholder: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: theme.backgroundSecondary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: theme.border,
   },
   productInfo: {
     flex: 1,
@@ -916,7 +919,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: RFValue(15),
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: theme.text,
     marginBottom: 6,
   },
   productQuantityContainer: {
@@ -925,7 +928,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quantityInput: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: theme.backgroundSecondary,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -934,12 +937,12 @@ const styles = StyleSheet.create({
     width: 70,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
-    color: "#333",
+    borderColor: theme.border,
+    color: theme.text,
   },
   unitText: {
     fontSize: RFValue(14),
-    color: "#666",
+    color: theme.textSecondary,
     fontWeight: "500",
   },
   macrosChips: {
@@ -950,7 +953,7 @@ const styles = StyleSheet.create({
   macroChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: theme.backgroundSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -958,7 +961,7 @@ const styles = StyleSheet.create({
   },
   macroChipText: {
     fontSize: RFValue(11),
-    color: "#666",
+    color: theme.textSecondary,
     fontWeight: "500",
   },
   proteinText: {
@@ -974,12 +977,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: `${theme.error}15`,
     justifyContent: "center",
     alignItems: "center",
   },
   emptyProducts: {
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderRadius: 16,
     padding: 48,
     alignItems: "center",
@@ -988,7 +991,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#F0E6FF",
+    backgroundColor: theme.backgroundSecondary,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -996,21 +999,21 @@ const styles = StyleSheet.create({
   emptyProductsText: {
     fontSize: RFValue(17),
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
     marginBottom: 8,
     textAlign: "center",
   },
   emptyProductsSubtext: {
     fontSize: RFValue(14),
-    color: "#999",
+    color: theme.textTertiary,
     textAlign: "center",
     lineHeight: 20,
   },
   macrosCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderRadius: 16,
     padding: 20,
-    shadowColor: "#000",
+    shadowColor: theme.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -1023,7 +1026,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: theme.backgroundSecondary,
   },
   mainMacroValue: {
     fontSize: RFValue(32),
@@ -1033,7 +1036,7 @@ const styles = StyleSheet.create({
   },
   mainMacroLabel: {
     fontSize: RFValue(14),
-    color: "#666",
+    color: theme.textSecondary,
     marginTop: 4,
     fontWeight: "500",
   },
@@ -1055,29 +1058,29 @@ const styles = StyleSheet.create({
   secondaryMacroValue: {
     fontSize: RFValue(18),
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: theme.text,
     marginBottom: 4,
   },
   secondaryMacroLabel: {
     fontSize: RFValue(11),
-    color: "#666",
+    color: theme.textSecondary,
     textAlign: "center",
   },
   footer: {
     padding: 16,
-    backgroundColor: "#FFF",
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: "#E8E8E8",
+    borderTopColor: theme.border,
   },
   saveButton: {
     flexDirection: "row",
-    backgroundColor: "#6C3BAA",
+    backgroundColor: theme.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    shadowColor: "#6C3BAA",
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

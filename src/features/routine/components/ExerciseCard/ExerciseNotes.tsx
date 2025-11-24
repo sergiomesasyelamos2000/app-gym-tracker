@@ -24,7 +24,7 @@ interface Props {
 }
 
 const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [newNoteText, setNewNoteText] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -61,9 +61,22 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
       {notes.length > 0 && (
         <View style={styles.notesList}>
           {notes.map((note) => (
-            <View key={note.id} style={[styles.noteItem, { backgroundColor: theme.backgroundSecondary }]}>
+            <View
+              key={note.id}
+              style={[
+                styles.noteItem,
+                {
+                  backgroundColor: theme.card,
+                  shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
               <View style={styles.noteContent}>
-                <Text style={[styles.noteText, { color: theme.text }]}>{note.text}</Text>
+                <Text style={[styles.noteText, { color: theme.text }]}>
+                  {note.text}
+                </Text>
                 <Text style={[styles.noteDate, { color: theme.textSecondary }]}>
                   {formatDate(note.createdAt)}
                 </Text>
@@ -71,7 +84,10 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
               {!readonly && (
                 <TouchableOpacity
                   onPress={() => deleteNote(note.id)}
-                  style={[styles.deleteButton, { backgroundColor: theme.error + '20' }]}
+                  style={[
+                    styles.deleteButton,
+                    { backgroundColor: theme.error + "20" },
+                  ]}
                 >
                   <Icon name="close" size={18} color={theme.error} />
                 </TouchableOpacity>
@@ -87,7 +103,14 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
           {isAdding ? (
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.noteInput, { backgroundColor: theme.inputBackground, borderColor: theme.border, color: theme.text }]}
+                style={[
+                  styles.noteInput,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: theme.border,
+                    color: theme.text,
+                  },
+                ]}
                 placeholder="Escribe tu nota..."
                 placeholderTextColor={theme.textTertiary}
                 value={newNoteText}
@@ -101,9 +124,19 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                     setIsAdding(false);
                     setNewNoteText("");
                   }}
-                  style={[styles.cancelButton, { backgroundColor: theme.backgroundSecondary }]}
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: theme.backgroundSecondary },
+                  ]}
                 >
-                  <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancelar</Text>
+                  <Text
+                    style={[
+                      styles.cancelButtonText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Cancelar
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={addNote}
@@ -121,10 +154,18 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
           ) : (
             <TouchableOpacity
               onPress={() => setIsAdding(true)}
-              style={[styles.addNoteButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+              style={[
+                styles.addNoteButton,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
             >
               <Icon name="add" size={20} color={theme.primary} />
-              <Text style={[styles.addNoteButtonText, { color: theme.primary }]}>
+              <Text
+                style={[styles.addNoteButtonText, { color: theme.primary }]}
+              >
                 {notes.length > 0 ? "Añadir otra nota" : "Añadir nota"}
               </Text>
             </TouchableOpacity>

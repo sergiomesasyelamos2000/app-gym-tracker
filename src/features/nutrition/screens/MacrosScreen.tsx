@@ -96,6 +96,7 @@ const MEAL_CONFIG: Record<
 
 export default function MacrosScreen({ navigation }: { navigation: any }) {
   const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const todayEntries = useNutritionStore((state) => state.todayEntries);
@@ -683,7 +684,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={24}
-            color={isSelected ? "#6C3BAA" : "#B0B0B0"}
+            color={isSelected ? theme.primary : theme.textTertiary}
           />
         </TouchableOpacity>
       </View>
@@ -747,7 +748,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => handleAddToMeal(mealType)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add-circle-outline" size={32} color="#6C3BAA" />
+                <Ionicons name="add-circle-outline" size={32} color={theme.primary} />
                 <Text style={styles.emptyMealText}>
                   Toca para añadir alimentos
                 </Text>
@@ -780,7 +781,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     <SafeAreaView style={styles.safeArea}>
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>
             {duplicating ? "Duplicando alimentos..." : "Cargando..."}
           </Text>
@@ -799,12 +800,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Ionicons
             name="information-circle-outline"
             size={20}
-            color="#6C3BAA"
+            color={theme.primary}
           />
           <Text style={styles.noBannerText}>
             Configura tu perfil para objetivos personalizados
           </Text>
-          <Ionicons name="chevron-forward" size={20} color="#6C3BAA" />
+          <Ionicons name="chevron-forward" size={20} color={theme.primary} />
         </TouchableOpacity>
       )}
 
@@ -814,8 +815,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       >
@@ -832,19 +833,19 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => setShowScanner(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="barcode-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="barcode-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowCalendar(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="calendar-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="calendar-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("ShoppingListScreen")}
                 style={styles.iconButton}
               >
-                <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="cart-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -918,9 +919,9 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                   maxValue={goal}
                   title={label}
                   titleStyle={styles.circleTitle}
-                  progressValueColor={"#1A1A1A"}
+                  progressValueColor={theme.text}
                   activeStrokeColor={color}
-                  inActiveStrokeColor={"#E0E0E0"}
+                  inActiveStrokeColor={theme.border}
                   inActiveStrokeOpacity={0.3}
                   valueSuffix="g"
                 />
@@ -967,7 +968,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => setShowCalendar(false)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="close" size={24} color="#1A1A1A" />
+                <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
 
@@ -977,7 +978,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={handleTodayPress}
                 activeOpacity={0.7}
               >
-                <Ionicons name="today-outline" size={20} color="#6C3BAA" />
+                <Ionicons name="today-outline" size={20} color={theme.primary} />
                 <Text style={styles.todayButtonText}>Ir a Hoy</Text>
               </TouchableOpacity>
             )}
@@ -989,15 +990,15 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               markedDates={{
                 [selectedDate]: {
                   selected: true,
-                  selectedColor: "#6C3BAA",
+                  selectedColor: theme.primary,
                   selectedTextColor: "#ffffff",
                 },
                 [new Date().toISOString().split("T")[0]]: {
                   marked: true,
-                  dotColor: "#6C3BAA",
+                  dotColor: theme.primary,
                   selected:
                     selectedDate === new Date().toISOString().split("T")[0],
-                  selectedColor: "#6C3BAA",
+                  selectedColor: theme.primary,
                 },
               }}
               enableSwipeMonths={true}
@@ -1016,24 +1017,24 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                       direction === "left" ? "chevron-back" : "chevron-forward"
                     }
                     size={24}
-                    color="#6C3BAA"
+                    color={theme.primary}
                   />
                 </View>
               )}
               theme={{
-                backgroundColor: "#ffffff",
-                calendarBackground: "#ffffff",
-                textSectionTitleColor: "#6B7280",
-                selectedDayBackgroundColor: "#6C3BAA",
+                backgroundColor: theme.card,
+                calendarBackground: theme.card,
+                textSectionTitleColor: theme.textSecondary,
+                selectedDayBackgroundColor: theme.primary,
                 selectedDayTextColor: "#ffffff",
-                todayTextColor: "#6C3BAA",
-                dayTextColor: "#1A1A1A",
-                textDisabledColor: "#D1D5DB",
-                dotColor: "#6C3BAA",
+                todayTextColor: theme.primary,
+                dayTextColor: theme.text,
+                textDisabledColor: theme.textTertiary,
+                dotColor: theme.primary,
                 selectedDotColor: "#ffffff",
-                arrowColor: "#6C3BAA",
-                monthTextColor: "#1A1A1A",
-                indicatorColor: "#6C3BAA",
+                arrowColor: theme.primary,
+                monthTextColor: theme.text,
+                indicatorColor: theme.primary,
                 textDayFontFamily: "System",
                 textMonthFontFamily: "System",
                 textDayHeaderFontFamily: "System",
@@ -1132,348 +1133,350 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  screen: { flex: 1 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  // ✅ Estilos para el prompt de configuración
-  setupPromptContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-    backgroundColor: "#FFFFFF",
-  },
-  setupPromptTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginTop: 24,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  setupPromptText: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  setupPromptButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  setupPromptButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  setupPromptSkipButton: {
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  setupPromptSkipText: {
-    fontSize: 14,
-    color: "#6C3BAA",
-    fontWeight: "600",
-  },
-  setupPromptNote: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginTop: 8,
-  },
-  // ✅ Banner informativo
-  noBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3E8FF",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E9D5FF",
-  },
-  noBannerText: {
-    flex: 1,
-    fontSize: 13,
-    color: "#6C3BAA",
-    fontWeight: "600",
-  },
-  header: { backgroundColor: "#fff", padding: 20, marginBottom: 12 },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 4,
-  },
-  headerDate: { fontSize: 14, color: "#6B7280", textTransform: "capitalize" },
-  headerActions: { flexDirection: "row", gap: 8 },
-  iconButton: { padding: 8 },
-  caloriesCard: { alignItems: "center", marginBottom: 16 },
-  caloriesLabel: { fontSize: 14, color: "#6B7280", marginBottom: 8 },
-  caloriesValue: { fontSize: 48, fontWeight: "700", color: "#4CAF50" },
-  caloriesValueExceeded: { color: "#FF6B6B" },
-  caloriesSubtext: { fontSize: 14, color: "#9CA3AF", marginTop: 4 },
-  caloriesProgressBar: {
-    width: "100%",
-    height: 8,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  caloriesProgressFill: { height: "100%", borderRadius: 4 },
-  macrosSection: { backgroundColor: "#fff", padding: 20, marginBottom: 12 },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 16,
-  },
-  macrosRow: { flexDirection: "row", justifyContent: "space-between" },
-  macroCircle: { alignItems: "center" },
-  circleTitle: { fontSize: 12, color: "#6B7280" },
-  macrosRemaining: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  diarySection: { backgroundColor: "#fff", padding: 20, marginBottom: 20 },
-  mealSection: {
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  mealHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#F9FAFB",
-  },
-  mealHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  mealIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mealTitle: { fontSize: 16, fontWeight: "600", color: "#1A1A1A" },
-  mealSubtitle: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  mealHeaderRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  mealCalories: { fontSize: 14, fontWeight: "600", color: "#6C3BAA" },
-  mealEntries: { backgroundColor: "#fff" },
-  foodEntry: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  foodEntrySelected: { backgroundColor: "#F3E8FF" },
-  foodEntryNotEaten: { opacity: 0.5 },
-  foodEntryContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  foodEntryLeft: { flex: 1 },
-  foodEntryName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 4,
-  },
-  foodEntryNameNotEaten: {
-    textDecorationLine: "line-through",
-    color: "#9CA3AF",
-  },
-  foodEntryDetails: { fontSize: 13, color: "#6B7280" },
-  foodEntryDetailsNotEaten: {
-    textDecorationLine: "line-through",
-    color: "#9CA3AF",
-  },
-  foodEntryMacros: { flexDirection: "row", gap: 4 },
-  macroChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  macroChipText: { fontSize: 11, fontWeight: "600", color: "#1A1A1A" },
-  checkboxContainer: { padding: 8, marginLeft: 8 },
-  emptyMealContainer: { alignItems: "center", paddingVertical: 32 },
-  emptyMealText: {
-    fontSize: 14,
-    color: "#6C3BAA",
-    marginTop: 8,
-    fontWeight: "500",
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  floatingActionBar: {
-    position: "absolute",
-    bottom: 80,
-    left: 16,
-    right: 16,
-    backgroundColor: "#6C3BAA",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  actionButton: { alignItems: "center", flex: 1 },
-  actionButtonText: {
-    fontSize: 11,
-    color: "#fff",
-    marginTop: 4,
-    fontWeight: "600",
-  },
-  addButton: { position: "absolute", bottom: 20, right: 20 },
-  addButtonTouchable: {
-    backgroundColor: "#6C3BAA",
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 8,
-    shadowColor: "#6C3BAA",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  calendarModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  calendarModalTitle: { fontSize: 20, fontWeight: "700", color: "#1A1A1A" },
-  todayButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    backgroundColor: "#F3E8FF",
-    borderRadius: 12,
-  },
-  todayButtonText: { fontSize: 16, fontWeight: "600", color: "#6C3BAA" },
-  calendar: {
-    marginTop: 8,
-    paddingBottom: 12,
-  },
-  calendarFooter: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  selectedDateText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 12,
-    textTransform: "capitalize",
-  },
-  confirmButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  confirmButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  arrowButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  calendarModalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    width: "100%",
-    maxWidth: 400,
-    overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    screen: { flex: 1 },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 9999,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    // ✅ Estilos para el prompt de configuración
+    setupPromptContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+      backgroundColor: theme.background,
+    },
+    setupPromptTitle: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: theme.text,
+      marginTop: 24,
+      marginBottom: 16,
+      textAlign: "center",
+    },
+    setupPromptText: {
+      fontSize: 16,
+      color: theme.textSecondary,
+      textAlign: "center",
+      lineHeight: 24,
+      marginBottom: 32,
+    },
+    setupPromptButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 48,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    setupPromptButtonText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+    setupPromptSkipButton: {
+      paddingVertical: 12,
+      marginBottom: 8,
+    },
+    setupPromptSkipText: {
+      fontSize: 14,
+      color: theme.primary,
+      fontWeight: "600",
+    },
+    setupPromptNote: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      textAlign: "center",
+      marginTop: 8,
+    },
+    // ✅ Banner informativo
+    noBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#F3E8FF",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: "#E9D5FF",
+    },
+    noBannerText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.primary,
+      fontWeight: "600",
+    },
+    header: { backgroundColor: theme.card, padding: 20, marginBottom: 12 },
+    headerTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    headerTitleContainer: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 4,
+    },
+    headerDate: { fontSize: 14, color: theme.textSecondary, textTransform: "capitalize" },
+    headerActions: { flexDirection: "row", gap: 8 },
+    iconButton: { padding: 8 },
+    caloriesCard: { alignItems: "center", marginBottom: 16 },
+    caloriesLabel: { fontSize: 14, color: theme.textSecondary, marginBottom: 8 },
+    caloriesValue: { fontSize: 48, fontWeight: "700", color: theme.success },
+    caloriesValueExceeded: { color: theme.error },
+    caloriesSubtext: { fontSize: 14, color: theme.textTertiary, marginTop: 4 },
+    caloriesProgressBar: {
+      width: "100%",
+      height: 8,
+      backgroundColor: theme.border,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    caloriesProgressFill: { height: "100%", borderRadius: 4 },
+    macrosSection: { backgroundColor: theme.card, padding: 20, marginBottom: 12 },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    macrosRow: { flexDirection: "row", justifyContent: "space-between" },
+    macroCircle: { alignItems: "center" },
+    circleTitle: { fontSize: 12, color: theme.textSecondary },
+    macrosRemaining: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 8,
+      textAlign: "center",
+    },
+    diarySection: { backgroundColor: theme.card, padding: 20, marginBottom: 20 },
+    mealSection: {
+      borderRadius: 12,
+      marginBottom: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    mealHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    mealHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+    mealIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    mealTitle: { fontSize: 16, fontWeight: "600", color: theme.text },
+    mealSubtitle: { fontSize: 12, color: theme.textTertiary, marginTop: 2 },
+    mealHeaderRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+    mealCalories: { fontSize: 14, fontWeight: "600", color: theme.primary },
+    mealEntries: { backgroundColor: theme.card },
+    foodEntry: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    foodEntrySelected: { backgroundColor: "#F3E8FF" },
+    foodEntryNotEaten: { opacity: 0.5 },
+    foodEntryContent: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    foodEntryLeft: { flex: 1 },
+    foodEntryName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 4,
+    },
+    foodEntryNameNotEaten: {
+      textDecorationLine: "line-through",
+      color: theme.textTertiary,
+    },
+    foodEntryDetails: { fontSize: 13, color: theme.textSecondary },
+    foodEntryDetailsNotEaten: {
+      textDecorationLine: "line-through",
+      color: theme.textTertiary,
+    },
+    foodEntryMacros: { flexDirection: "row", gap: 4 },
+    macroChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    macroChipText: { fontSize: 11, fontWeight: "600", color: "#1A1A1A" },
+    checkboxContainer: { padding: 8, marginLeft: 8 },
+    emptyMealContainer: { alignItems: "center", paddingVertical: 32 },
+    emptyMealText: {
+      fontSize: 14,
+      color: theme.primary,
+      marginTop: 8,
+      fontWeight: "500",
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 48,
+      paddingHorizontal: 32,
+    },
+    emptyStateTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: theme.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    emptyStateText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    floatingActionBar: {
+      position: "absolute",
+      bottom: 80,
+      left: 16,
+      right: 16,
+      backgroundColor: theme.primary,
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderRadius: 16,
+      elevation: 8,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    actionButton: { alignItems: "center", flex: 1 },
+    actionButtonText: {
+      fontSize: 11,
+      color: "#fff",
+      marginTop: 4,
+      fontWeight: "600",
+    },
+    addButton: { position: "absolute", bottom: 20, right: 20 },
+    addButtonTouchable: {
+      backgroundColor: theme.primary,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 8,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 16,
+    },
+    calendarModalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    calendarModalTitle: { fontSize: 20, fontWeight: "700", color: theme.text },
+    todayButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      marginHorizontal: 20,
+      marginTop: 16,
+      marginBottom: 8,
+      backgroundColor: "#F3E8FF",
+      borderRadius: 12,
+    },
+    todayButtonText: { fontSize: 16, fontWeight: "600", color: theme.primary },
+    calendar: {
+      marginTop: 8,
+      paddingBottom: 12,
+    },
+    calendarFooter: {
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    selectedDateText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: "center",
+      marginBottom: 12,
+      textTransform: "capitalize",
+    },
+    confirmButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    confirmButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+    arrowButton: {
+      padding: 8,
+      borderRadius: 8,
+    },
+    calendarModalContainer: {
+      backgroundColor: theme.card,
+      borderRadius: 24,
+      width: "100%",
+      maxWidth: 400,
+      overflow: "hidden",
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+        },
+        android: {
+          elevation: 8,
+        },
+      }),
+    },
+  });

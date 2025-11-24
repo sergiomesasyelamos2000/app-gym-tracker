@@ -1,5 +1,5 @@
 // themeStyles.ts - Utilidades de estilos globales para temas
-import { ViewStyle, TextStyle } from 'react-native';
+import { ViewStyle, TextStyle } from "react-native";
 
 interface Theme {
   primary: string;
@@ -35,7 +35,7 @@ export const withOpacity = (color: string, opacity: number): string => {
   // Convertir opacidad de 0-100 a hex (0-255)
   const alpha = Math.round((opacity / 100) * 255)
     .toString(16)
-    .padStart(2, '0');
+    .padStart(2, "0");
   return `${color}${alpha}`;
 };
 
@@ -62,8 +62,8 @@ export const getInputStyle = (theme: Theme): ViewStyle => ({
   borderColor: theme.inputBorder,
   borderRadius: 12,
   padding: 12,
-  fontSize: 15,
-  color: theme.text,
+  // fontSize is not valid for ViewStyle, so it has been removed
+  // color property removed as it is not valid for ViewStyle
 });
 
 /**
@@ -74,8 +74,8 @@ export const getPrimaryButtonStyle = (theme: Theme): ViewStyle => ({
   borderRadius: 12,
   paddingVertical: 12,
   paddingHorizontal: 24,
-  alignItems: 'center',
-  justifyContent: 'center',
+  alignItems: "center",
+  justifyContent: "center",
 });
 
 /**
@@ -88,8 +88,8 @@ export const getSecondaryButtonStyle = (theme: Theme): ViewStyle => ({
   borderRadius: 12,
   paddingVertical: 12,
   paddingHorizontal: 24,
-  alignItems: 'center',
-  justifyContent: 'center',
+  alignItems: "center",
+  justifyContent: "center",
 });
 
 /**
@@ -98,8 +98,8 @@ export const getSecondaryButtonStyle = (theme: Theme): ViewStyle => ({
 export const getModalStyle = (theme: Theme) => ({
   overlay: {
     flex: 1,
-    backgroundColor: withOpacity('#000000', 50),
-    justifyContent: 'flex-end',
+    backgroundColor: withOpacity("#000000", 50),
+    justifyContent: "flex-end",
   } as ViewStyle,
   content: {
     backgroundColor: theme.card,
@@ -113,14 +113,14 @@ export const getModalStyle = (theme: Theme) => ({
     height: 4,
     backgroundColor: theme.border,
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 16,
   } as ViewStyle,
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: theme.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   } as TextStyle,
 });
@@ -153,12 +153,12 @@ export const getTextStyles = (theme: Theme) => ({
   title: {
     color: theme.text,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   } as TextStyle,
   subtitle: {
     color: theme.textSecondary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   } as TextStyle,
 });
 
@@ -167,16 +167,16 @@ export const getTextStyles = (theme: Theme) => ({
  */
 export const getStatusColor = (
   theme: Theme,
-  status: 'success' | 'error' | 'warning' | 'info'
+  status: "success" | "error" | "warning" | "info"
 ): string => {
   switch (status) {
-    case 'success':
+    case "success":
       return theme.success;
-    case 'error':
+    case "error":
       return theme.error;
-    case 'warning':
+    case "warning":
       return theme.warning;
-    case 'info':
+    case "info":
       return theme.info;
     default:
       return theme.text;
@@ -208,15 +208,20 @@ export const getListStyles = (theme: Theme) => ({
 /**
  * Estilos para chips/tags
  */
-export const getChipStyle = (theme: Theme, selected: boolean = false): ViewStyle => ({
-  backgroundColor: selected ? withOpacity(theme.primary, 20) : theme.backgroundSecondary,
+export const getChipStyle = (
+  theme: Theme,
+  selected: boolean = false
+): ViewStyle => ({
+  backgroundColor: selected
+    ? withOpacity(theme.primary, 20)
+    : theme.backgroundSecondary,
   borderWidth: 1,
   borderColor: selected ? withOpacity(theme.primary, 40) : theme.border,
   borderRadius: 20,
   paddingVertical: 8,
   paddingHorizontal: 12,
-  flexDirection: 'row',
-  alignItems: 'center',
+  flexDirection: "row",
+  alignItems: "center",
 });
 
 /**
@@ -224,20 +229,22 @@ export const getChipStyle = (theme: Theme, selected: boolean = false): ViewStyle
  */
 export const getOptionStyle = (theme: Theme, selected: boolean = false) => ({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: selected ? withOpacity(theme.primary, 10) : theme.backgroundSecondary,
+    backgroundColor: selected
+      ? withOpacity(theme.primary, 10)
+      : theme.backgroundSecondary,
     borderWidth: 2,
-    borderColor: selected ? theme.primary : 'transparent',
+    borderColor: selected ? theme.primary : "transparent",
   } as ViewStyle,
   text: {
     fontSize: 15,
     color: selected ? theme.primary : theme.textSecondary,
-    fontWeight: selected ? '600' : '500',
+    fontWeight: selected ? "600" : "500",
   } as TextStyle,
   iconColor: selected ? theme.primary : theme.textTertiary,
   checkCircle: {
@@ -245,8 +252,8 @@ export const getOptionStyle = (theme: Theme, selected: boolean = false) => ({
     height: 24,
     borderRadius: 12,
     backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   } as ViewStyle,
 });
 
@@ -262,7 +269,7 @@ export const getCompletedRowStyle = (
     : theme.backgroundSecondary,
   borderRadius: 16,
   borderWidth: completed ? 1 : 0,
-  borderColor: completed ? withOpacity(theme.success, 30) : 'transparent',
+  borderColor: completed ? withOpacity(theme.success, 30) : "transparent",
 });
 
 /**
@@ -284,6 +291,6 @@ export const getDestructiveButtonStyle = (theme: Theme): ViewStyle => ({
   borderRadius: 12,
   paddingVertical: 12,
   paddingHorizontal: 24,
-  alignItems: 'center',
-  justifyContent: 'center',
+  alignItems: "center",
+  justifyContent: "center",
 });

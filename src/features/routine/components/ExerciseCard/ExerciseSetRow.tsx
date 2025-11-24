@@ -33,7 +33,7 @@ const ExerciseSetRow = ({
   previousMark,
   started = false,
 }: Props) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   // Estados locales
   const [localWeight, setLocalWeight] = useState<string>(
     started ? "" : item.weight?.toString() || ""
@@ -151,7 +151,7 @@ const ExerciseSetRow = ({
   };
 
   return (
-    <View style={[styles.row, getCompletedRowStyle(theme, item.completed)]}>
+    <View style={[styles.row, getCompletedRowStyle(theme, item.completed ?? false)]}>
       <Text style={[styles.label, { flex: 1, color: theme.text }]}>{item.order}</Text>
 
       {/* Marca anterior - Ahora es clickable */}
@@ -177,7 +177,16 @@ const ExerciseSetRow = ({
 
       {/* Peso */}
       <TextInput
-        style={[styles.input, { flex: 2, backgroundColor: theme.inputBackground, color: theme.text }]}
+        style={[
+          styles.input, 
+          { 
+            flex: 2, 
+            backgroundColor: theme.inputBackground, 
+            color: theme.text,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: theme.border,
+          }
+        ]}
         keyboardType="numeric"
         value={localWeight}
         placeholder={
@@ -191,7 +200,16 @@ const ExerciseSetRow = ({
       {/* Repeticiones */}
       {started ? (
         <TextInput
-          style={[styles.input, { flex: 2, backgroundColor: theme.inputBackground, color: theme.text }]}
+          style={[
+            styles.input, 
+            { 
+              flex: 2, 
+              backgroundColor: theme.inputBackground, 
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+            }
+          ]}
           keyboardType="numeric"
           value={localReps}
           placeholder={
@@ -204,7 +222,15 @@ const ExerciseSetRow = ({
           editable={!readonly}
         />
       ) : repsType === "range" ? (
-        <View style={[styles.rangeContainer, { flex: 2, backgroundColor: theme.inputBackground }]}>
+        <View style={[
+          styles.rangeContainer, 
+          { 
+            flex: 2, 
+            backgroundColor: theme.inputBackground,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: theme.border,
+          }
+        ]}>
           <TextInput
             style={[styles.rangeInput, { flex: 1, color: theme.text }]}
             keyboardType="numeric"
@@ -227,7 +253,16 @@ const ExerciseSetRow = ({
         </View>
       ) : (
         <TextInput
-          style={[styles.input, { flex: 2, backgroundColor: theme.inputBackground, color: theme.text }]}
+          style={[
+            styles.input, 
+            { 
+              flex: 2, 
+              backgroundColor: theme.inputBackground, 
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+            }
+          ]}
           keyboardType="numeric"
           value={localReps}
           placeholder="Reps"

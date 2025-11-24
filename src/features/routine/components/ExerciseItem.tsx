@@ -2,6 +2,7 @@ import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 
 interface Props {
@@ -17,9 +18,19 @@ export default function ExerciseItem({
   onSelect,
   onRedirect,
 }: Props) {
+  const { theme, isDark } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity
-      style={[styles.exerciseItem, isSelected && styles.selectedItem]}
+      style={[
+        styles.exerciseItem,
+        isSelected && styles.selectedItem,
+        {
+          borderWidth: isDark ? 1 : (isSelected ? 2 : 0),
+          borderColor: isSelected ? theme.primary : theme.border,
+        },
+      ]}
       onPress={() => onSelect(item)}
     >
       <Image
@@ -40,47 +51,51 @@ export default function ExerciseItem({
         style={styles.redirectButton}
         onPress={() => onRedirect?.(item)}
       >
-        <Icon name="arrow-forward" size={24} color="#6C3BAA" />
+        <Icon name="arrow-forward" size={24} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  exerciseItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  selectedItem: {
-    backgroundColor: "#f3e8ff",
-    borderColor: "#6C3BAA",
-    borderWidth: 2,
-  },
-  exerciseImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "bold",
-    color: "#333",
-  },
-  exerciseMuscleGroup: {
-    fontSize: RFValue(14),
-    color: "#777",
-    marginTop: 4,
-  },
-  redirectButton: {
-    padding: 8,
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    exerciseItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      elevation: 2,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+    },
+    selectedItem: {
+      backgroundColor: theme.isDark ? theme.primaryDark + "40" : theme.primary + "20",
+    },
+    exerciseImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      marginRight: 12,
+    },
+    exerciseInfo: {
+      flex: 1,
+    },
+    exerciseTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "bold",
+      color: theme.text,
+    },
+    exerciseMuscleGroup: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    redirectButton: {
+      padding: 8,
+    },
+  });
+
