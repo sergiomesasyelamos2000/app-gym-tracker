@@ -1,6 +1,8 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { withOpacity } from "../../../utils/themeStyles";
 
 export type Message = {
   id: number;
@@ -15,6 +17,7 @@ type Props = {
 };
 
 export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
+  const { theme } = useTheme();
   const isUser = message.sender === "user";
   const isBot = message.sender === "bot";
 
@@ -22,7 +25,7 @@ export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
     if (message.imageUri) {
       return (
         <TouchableOpacity onPress={() => onImagePress?.(message.imageUri!)}>
-          <Text style={styles.messageText}>{message.text}</Text>
+          <Text style={[styles.messageText, { color: isUser ? "#FFFFFF" : theme.text }]}>{message.text}</Text>
           <Image
             source={{ uri: message.imageUri }}
             style={styles.imagePreview}
@@ -32,17 +35,25 @@ export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
     }
 
     if (isBot) {
-      return <Markdown>{message.text}</Markdown>;
+      return (
+        <Markdown style={{
+          body: { color: theme.text },
+          code_block: { backgroundColor: theme.inputBackground, color: theme.text },
+          fence: { backgroundColor: theme.inputBackground, color: theme.text },
+        }}>
+          {message.text}
+        </Markdown>
+      );
     }
 
-    return <Text style={styles.messageText}>{message.text}</Text>;
+    return <Text style={[styles.messageText, { color: "#FFFFFF" }]}>{message.text}</Text>;
   };
 
   return (
     <View
       style={[
         styles.messageBubble,
-        isUser ? styles.userBubble : styles.botBubble,
+        isUser ? { backgroundColor: theme.primary, alignSelf: "flex-end" } : { backgroundColor: theme.card, alignSelf: "flex-start" },
       ]}
     >
       {renderContent()}
@@ -57,17 +68,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     maxWidth: "80%",
   },
-  userBubble: {
-    backgroundColor: "#4CAF50",
-    alignSelf: "flex-end",
-  },
-  botBubble: {
-    backgroundColor: "#e0f2fe",
-    alignSelf: "flex-start",
-  },
   messageText: {
     fontSize: 16,
-    color: "#333",
   },
   imagePreview: {
     width: 200,

@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: "#D1D5DB",
+    opacity: 0.5,
   },
   saveButtonText: {
     fontSize: RFValue(13),

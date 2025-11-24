@@ -10,6 +10,8 @@ import {
   BackHandler,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { withOpacity } from "../../../utils/themeStyles";
 
 const { width } = Dimensions.get("window");
 const SCAN_AREA_SIZE = Math.min(width * 0.7, 300);
@@ -23,6 +25,7 @@ export default function ReusableCameraView({
   onBarCodeScanned,
   onCloseCamera,
 }: Props) {
+  const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [scanned, setScanned] = useState(false);
@@ -118,22 +121,22 @@ export default function ReusableCameraView({
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
-        <View style={styles.permissionIconContainer}>
-          <Icon name="qr-code-scanner" size={80} color="#6C3BAA" />
+        <View style={[styles.permissionIconContainer, { backgroundColor: withOpacity(theme.primary, 10) }]}>
+          <Icon name="qr-code-scanner" size={80} color={theme.primary} />
         </View>
-        <Text style={styles.permissionTitle}>Permiso de Cámara</Text>
-        <Text style={styles.permissionText}>
+        <Text style={[styles.permissionTitle, { color: theme.text }]}>Permiso de Cámara</Text>
+        <Text style={[styles.permissionText, { color: theme.textSecondary }]}>
           Necesitamos acceso a tu cámara para escanear códigos de barras
         </Text>
         <TouchableOpacity
           onPress={handleRequestPermission}
-          style={styles.permissionButton}
+          style={[styles.permissionButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
         >
           <Text style={styles.permissionButtonText}>Permitir Cámara</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleClose} style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Cancelar</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textSecondary }]}>Cancelar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -142,18 +145,18 @@ export default function ReusableCameraView({
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <View style={styles.errorIconContainer}>
-          <Icon name="error-outline" size={80} color="#FF6B6B" />
+        <View style={[styles.errorIconContainer, { backgroundColor: withOpacity(theme.error, 10) }]}>
+          <Icon name="error-outline" size={80} color={theme.error} />
         </View>
-        <Text style={styles.errorTitle}>Error</Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorTitle, { color: theme.text }]}>Error</Text>
+        <Text style={[styles.errorText, { color: theme.textSecondary }]}>{error}</Text>
 
-        <TouchableOpacity onPress={handleClose} style={styles.errorButton}>
+        <TouchableOpacity onPress={handleClose} style={[styles.errorButton, { backgroundColor: theme.error }]}>
           <Text style={styles.errorButtonText}>Cerrar</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleRetry} style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Reintentar</Text>
+          <Text style={[styles.secondaryButtonText, { color: theme.textSecondary }]}>Reintentar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -163,10 +166,10 @@ export default function ReusableCameraView({
     position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
   ) => {
     const styleMap = {
-      topLeft: [styles.corner, styles.cornerTopLeft],
-      topRight: [styles.corner, styles.cornerTopRight],
-      bottomLeft: [styles.corner, styles.cornerBottomLeft],
-      bottomRight: [styles.corner, styles.cornerBottomRight],
+      topLeft: [styles.corner, styles.cornerTopLeft, { borderColor: theme.primary }],
+      topRight: [styles.corner, styles.cornerTopRight, { borderColor: theme.primary }],
+      bottomLeft: [styles.corner, styles.cornerBottomLeft, { borderColor: theme.primary }],
+      bottomRight: [styles.corner, styles.cornerBottomRight, { borderColor: theme.primary }],
     };
 
     return <View style={styleMap[position]} />;
@@ -225,9 +228,9 @@ export default function ReusableCameraView({
                 {renderCorner("bottomLeft")}
                 {renderCorner("bottomRight")}
 
-                <View style={styles.scanLine} />
+                <View style={[styles.scanLine, { backgroundColor: theme.primary, shadowColor: theme.primary }]} />
 
-                <View style={styles.scanGlow} />
+                <View style={[styles.scanGlow, { borderColor: withOpacity(theme.primary, 30), shadowColor: theme.primary }]} />
               </View>
 
               <Text style={styles.instructionText}>
@@ -327,10 +330,8 @@ const styles = StyleSheet.create({
   scanLine: {
     width: "100%",
     height: 3,
-    backgroundColor: "#6C3BAA",
     position: "absolute",
     top: "50%",
-    shadowColor: "#6C3BAA",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 10,
@@ -340,8 +341,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: "rgba(108, 59, 170, 0.3)",
-    shadowColor: "#6C3BAA",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 15,
@@ -351,7 +350,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 25,
     height: 25,
-    borderColor: "#6C3BAA",
     opacity: 0.85,
   },
   cornerTopLeft: {
@@ -412,10 +410,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "black",
+    backgroundColor: "#000000",
   },
   loadingText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 16,
   },
   cameraLoading: {
@@ -434,38 +432,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "black",
+    backgroundColor: "#000000",
     paddingHorizontal: 40,
   },
   permissionIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(108, 59, 170, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
   },
   permissionTitle: {
-    color: "white",
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 15,
     textAlign: "center",
   },
   permissionText: {
-    color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 40,
   },
   permissionButton: {
-    backgroundColor: "#6C3BAA",
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: "#6C3BAA",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -473,7 +466,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   permissionButtonText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -482,48 +475,43 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   secondaryButtonText: {
-    color: "rgba(255,255,255,0.8)",
     fontSize: 16,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "black",
+    backgroundColor: "#000000",
     paddingHorizontal: 40,
   },
   errorIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(255, 107, 107, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
   },
   errorTitle: {
-    color: "white",
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 15,
     textAlign: "center",
   },
   errorText: {
-    color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 40,
   },
   errorButton: {
-    backgroundColor: "#FF6B6B",
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 15,
   },
   errorButtonText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },

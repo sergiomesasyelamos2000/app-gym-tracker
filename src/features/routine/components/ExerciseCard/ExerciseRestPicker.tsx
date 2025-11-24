@@ -224,12 +224,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "space-between",
     ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
       android: {
         elevation: 1,
       },
