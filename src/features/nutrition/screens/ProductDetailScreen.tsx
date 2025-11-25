@@ -145,8 +145,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
     try {
       const favorite = await nutritionService.isFavorite(
-        userProfile.userId,
-        producto.code
+        producto.code,
+        userProfile.userId
       );
       setIsFavorite(favorite);
     } catch (error) {
@@ -163,8 +163,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     try {
       if (isFavorite) {
         await nutritionService.removeFavoriteByProductCode(
-          userProfile.userId,
-          producto.code
+          producto.code,
+          userProfile.userId
         );
         setIsFavorite(false);
         Alert.alert("Eliminado", "Producto eliminado de favoritos");
@@ -433,7 +433,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 }}
               >
                 <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
-                <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -466,7 +470,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   {selectedMeal.label}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={20} color={theme.textSecondary} />
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
           </View>
         )}
@@ -644,7 +652,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.modalOptionText}>{mealOption.label}</Text>
               </View>
               {meal === mealOption.value && (
-                <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={theme.primary}
+                />
               )}
             </TouchableOpacity>
           ))}
@@ -720,201 +732,201 @@ const createStyles = (theme: any) =>
       color: theme.text,
       marginBottom: 16,
     },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  nutritionCard: {
-    width: (width - 56) / 2,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-  },
-  nutritionValue: {
-    fontSize: RFValue(24),
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  nutritionLabel: {
-    fontSize: RFValue(12),
-    color: theme.textSecondary,
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  section: {
-    backgroundColor: theme.card,
-    padding: 20,
-    marginTop: 12,
-  },
-  quantityInputContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  quantityInput: {
-    flex: 1,
-    backgroundColor: theme.inputBackground,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
-    fontSize: RFValue(18),
-    fontWeight: "600",
-    color: theme.text,
-  },
-  unitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.inputBackground,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-    minWidth: 120,
-  },
-  unitButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: theme.text,
-  },
-  mealSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.inputBackground,
-    borderRadius: 12,
-    padding: 16,
-  },
-  mealSelectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  mealIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mealSelectorText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: theme.text,
-  },
-  showMoreButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    gap: 8,
-  },
-  showMoreText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: theme.primary,
-  },
-  additionalNutrients: {
-    marginTop: 16,
-  },
-  nutrientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  nutrientLabel: {
-    fontSize: RFValue(13),
-    color: theme.textSecondary,
-    fontWeight: "500",
-    flex: 1,
-    paddingRight: 12,
-  },
-  nutrientValue: {
-    fontSize: RFValue(14),
-    fontWeight: "700",
-    color: theme.text,
-    textAlign: "right",
-  },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.card,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-  },
-  addButton: {
-    flexDirection: "row",
-    backgroundColor: theme.primary,
-    borderRadius: 14,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    elevation: 4,
-    shadowColor: theme.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  addButtonDisabled: {
-    backgroundColor: theme.textTertiary,
-  },
-  addButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#fff",
-  },
-  modal: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    backgroundColor: theme.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  modalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-  },
-  modalOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.backgroundSecondary,
-  },
-  modalOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  unitIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalOptionText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: theme.text,
-  },
-});
+    nutritionGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    nutritionCard: {
+      width: (width - 56) / 2,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: "center",
+    },
+    nutritionValue: {
+      fontSize: RFValue(24),
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    nutritionLabel: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    section: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginTop: 12,
+    },
+    quantityInputContainer: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    quantityInput: {
+      flex: 1,
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 56,
+      fontSize: RFValue(18),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    unitButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      gap: 8,
+      minWidth: 120,
+    },
+    unitButtonText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    mealSelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      padding: 16,
+    },
+    mealSelectorLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    mealIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    mealSelectorText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    showMoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      gap: 8,
+    },
+    showMoreText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.primary,
+    },
+    additionalNutrients: {
+      marginTop: 16,
+    },
+    nutrientRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    nutrientLabel: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      fontWeight: "500",
+      flex: 1,
+      paddingRight: 12,
+    },
+    nutrientValue: {
+      fontSize: RFValue(14),
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "right",
+    },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.card,
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    addButton: {
+      flexDirection: "row",
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      height: 56,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 12,
+      elevation: 4,
+      shadowColor: theme.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    addButtonDisabled: {
+      backgroundColor: theme.textTertiary,
+    },
+    addButtonText: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: "#fff",
+    },
+    modal: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    modalOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    unitIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalOptionText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+  });

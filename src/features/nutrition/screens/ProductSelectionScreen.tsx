@@ -56,7 +56,7 @@ function AllProductsTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [productos, setProductos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -66,7 +66,10 @@ function AllProductsTab({
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useEffect(() => {
     loadProducts(1, true);
@@ -160,11 +163,15 @@ function AllProductsTab({
           </Text>
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>{item.calories || 0} kcal</Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>{item.grams || 100}g</Text>
             </View>
           </View>
@@ -192,6 +199,7 @@ function AllProductsTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredProducts}
       renderItem={renderItem}
       keyExtractor={(item) => item.code}
@@ -201,7 +209,11 @@ function AllProductsTab({
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron productos</Text>
           <Text style={styles.emptySubtitle}>
             {searchText
@@ -220,14 +232,17 @@ function FavoritesTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -325,13 +340,17 @@ function FavoritesTab({
           </Text>
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>
                 {Math.round(item.calories) || 0} kcal
               </Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>100g</Text>
             </View>
           </View>
@@ -360,7 +379,7 @@ function FavoritesTab({
   if (favorites.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="heart-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="heart-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>No tienes favoritos</Text>
         <Text style={styles.emptySubtitle}>
           Agrega productos a tus favoritos para verlos aquí
@@ -371,6 +390,7 @@ function FavoritesTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredFavorites}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
@@ -378,7 +398,11 @@ function FavoritesTab({
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron favoritos</Text>
           <Text style={styles.emptySubtitle}>
             Intenta con otros términos de búsqueda
@@ -395,14 +419,17 @@ function CustomProductsTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -462,10 +489,10 @@ function CustomProductsTab({
               ]}
             />
           ) : (
-            <Ionicons name="cube" size={28} color="#6C3BAA" />
+            <Ionicons name="cube" size={28} color={theme.primary} />
           )}
           <View style={styles.customBadge}>
-            <Ionicons name="create" size={14} color="#6C3BAA" />
+            <Ionicons name="create" size={14} color={theme.primary} />
           </View>
         </View>
         <View style={{ flex: 1 }}>
@@ -485,13 +512,17 @@ function CustomProductsTab({
           )}
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>
                 {Math.round(item.caloriesPer100)} kcal
               </Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>100g</Text>
             </View>
           </View>
@@ -522,7 +553,7 @@ function CustomProductsTab({
   if (customProducts.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="cube-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="cube-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>
           No tienes productos personalizados
         </Text>
@@ -535,6 +566,7 @@ function CustomProductsTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredProducts}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
@@ -557,7 +589,7 @@ function CustomProductsTab({
 
 // Componente Principal
 export default function ProductSelectionScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<ProductSelectionScreenRouteProp>();
@@ -571,7 +603,10 @@ export default function ProductSelectionScreen() {
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
 
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   // Determinar de dónde viene la navegación
   const sourceScreen = route.params?.from; // 'CreateMealScreen' o 'EditMealScreen'
@@ -691,7 +726,11 @@ export default function ProductSelectionScreen() {
             />
             {searchText.length > 0 && (
               <TouchableOpacity onPress={() => setSearchText("")}>
-                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -787,11 +826,11 @@ export default function ProductSelectionScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: any, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: theme.card,
+      backgroundColor: theme.background,
     },
     container: {
       flex: 1,
@@ -855,11 +894,13 @@ const createStyles = (theme: any) =>
     searchBar: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.backgroundSecondary,
+      backgroundColor: theme.inputBackground,
       borderRadius: 12,
       paddingHorizontal: 16,
       height: 48,
       gap: 12,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
     },
     searchInput: {
       flex: 1,
@@ -893,8 +934,8 @@ const createStyles = (theme: any) =>
       shadowOpacity: 0.08,
       shadowRadius: 8,
       shadowOffset: { width: 0, height: 2 },
-      borderWidth: 2,
-      borderColor: "transparent",
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
     },
     productCardSelected: {
       borderColor: theme.primary,

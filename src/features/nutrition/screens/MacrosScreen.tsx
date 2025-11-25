@@ -143,6 +143,8 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const [displayFat, setDisplayFat] = useState(0);
   const [actionBarAnim] = useState(new Animated.Value(0));
   const [addButtonAnim] = useState(new Animated.Value(1));
+  const calendarSlideAnim = useRef(new Animated.Value(0)).current;
+  const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   const isSelectionMode = selectedEntries.size > 0;
   const isAllNotEatenSelected = Array.from(selectedEntries).every((id) =>
@@ -514,10 +516,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Loading inicial mientras verifica perfil
   if (checkingProfile) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: theme.background }]}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando...</Text>
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Cargando...
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -526,8 +532,15 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   // ✅ Renderizar prompt de configuración
   if (showSetupPrompt && !hasProfile) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-        <View style={[styles.setupPromptContainer, { backgroundColor: theme.background }]}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: theme.background }]}
+      >
+        <View
+          style={[
+            styles.setupPromptContainer,
+            { backgroundColor: theme.background },
+          ]}
+        >
           <Ionicons name="nutrition-outline" size={80} color="#6C3BAA" />
           <Text style={styles.setupPromptTitle}>
             Configura tu Perfil Nutricional
@@ -605,17 +618,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     acc[entry.mealType].push(entry);
     return acc;
   }, {} as Record<MealType, FoodEntry[]>);
-
-  if (showScanner) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ReusableCameraView
-          onBarCodeScanned={handleBarCodeScanned}
-          onCloseCamera={() => setShowScanner(false)}
-        />
-      </SafeAreaView>
-    );
-  }
 
   const renderFoodEntry = (entry: FoodEntry) => {
     const isSelected = selectedEntries.has(entry.id || "");
@@ -748,7 +750,11 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => handleAddToMeal(mealType)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add-circle-outline" size={32} color={theme.primary} />
+                <Ionicons
+                  name="add-circle-outline"
+                  size={32}
+                  color={theme.primary}
+                />
                 <Text style={styles.emptyMealText}>
                   Toca para añadir alimentos
                 </Text>
@@ -833,13 +839,21 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={() => setShowScanner(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="barcode-outline" size={24} color={theme.primary} />
+                <Ionicons
+                  name="barcode-outline"
+                  size={24}
+                  color={theme.primary}
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowCalendar(true)}
                 style={styles.iconButton}
               >
-                <Ionicons name="calendar-outline" size={24} color={theme.primary} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={24}
+                  color={theme.primary}
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("ShoppingListScreen")}
@@ -953,6 +967,19 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         <View style={{ height: 120 }} />
       </ScrollView>
 
+      {/* Scanner Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        onRequestClose={() => setShowScanner(false)}
+        presentationStyle="fullScreen"
+      >
+        <ReusableCameraView
+          onBarCodeScanned={handleBarCodeScanned}
+          onCloseCamera={() => setShowScanner(false)}
+        />
+      </Modal>
+
       {/* Calendar Modal */}
       <Modal visible={showCalendar} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -978,75 +1005,99 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 onPress={handleTodayPress}
                 activeOpacity={0.7}
               >
-                <Ionicons name="today-outline" size={20} color={theme.primary} />
+                <Ionicons
+                  name="today-outline"
+                  size={20}
+                  color={theme.primary}
+                />
                 <Text style={styles.todayButtonText}>Ir a Hoy</Text>
               </TouchableOpacity>
             )}
 
-            <Calendar
-              key={calendarKey}
-              current={selectedDate}
-              onDayPress={handleDateSelect}
-              markedDates={{
-                [selectedDate]: {
-                  selected: true,
-                  selectedColor: theme.primary,
-                  selectedTextColor: "#ffffff",
-                },
-                [new Date().toISOString().split("T")[0]]: {
-                  marked: true,
+            <Animated.View
+              style={{
+                transform: [{ translateX: calendarSlideAnim }],
+              }}
+            >
+              <Calendar
+                key={calendarKey}
+                current={selectedDate}
+                onDayPress={handleDateSelect}
+                markedDates={{
+                  [selectedDate]: {
+                    selected: true,
+                    selectedColor: theme.primary,
+                    selectedTextColor: "#ffffff",
+                  },
+                  [new Date().toISOString().split("T")[0]]: {
+                    marked: true,
+                    dotColor: theme.primary,
+                    selected:
+                      selectedDate === new Date().toISOString().split("T")[0],
+                    selectedColor: theme.primary,
+                  },
+                }}
+                enableSwipeMonths={true}
+                hideExtraDays={false}
+                disableAllTouchEventsForDisabledDays={true}
+                monthFormat={"MMMM yyyy"}
+                onMonthChange={(month) => {
+                  // Determinar dirección del swipe
+                  const currentMonthDate = new Date(currentMonth);
+                  const newMonthDate = new Date(month.dateString);
+                  const direction = newMonthDate > currentMonthDate ? 1 : -1;
+
+                  // Animar desde el lado correspondiente
+                  calendarSlideAnim.setValue(direction * 50);
+                  Animated.spring(calendarSlideAnim, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                    tension: 50,
+                    friction: 8,
+                  }).start();
+
+                  setCurrentMonth(month.dateString);
+                }}
+                renderArrow={(direction) => (
+                  <View style={styles.arrowButton}>
+                    <Ionicons
+                      name={
+                        direction === "left"
+                          ? "chevron-back"
+                          : "chevron-forward"
+                      }
+                      size={24}
+                      color={theme.primary}
+                    />
+                  </View>
+                )}
+                theme={{
+                  backgroundColor: theme.card,
+                  calendarBackground: theme.card,
+                  textSectionTitleColor: theme.textSecondary,
+                  selectedDayBackgroundColor: theme.primary,
+                  selectedDayTextColor: "#ffffff",
+                  todayTextColor: theme.primary,
+                  dayTextColor: theme.text,
+                  textDisabledColor: theme.textTertiary,
                   dotColor: theme.primary,
-                  selected:
-                    selectedDate === new Date().toISOString().split("T")[0],
-                  selectedColor: theme.primary,
-                },
-              }}
-              enableSwipeMonths={true}
-              hideExtraDays={false}
-              disableAllTouchEventsForDisabledDays={true}
-              monthFormat={"MMMM yyyy"}
-              onMonthChange={(month) => {
-                LayoutAnimation.configureNext(
-                  LayoutAnimation.Presets.easeInEaseOut
-                );
-              }}
-              renderArrow={(direction) => (
-                <View style={styles.arrowButton}>
-                  <Ionicons
-                    name={
-                      direction === "left" ? "chevron-back" : "chevron-forward"
-                    }
-                    size={24}
-                    color={theme.primary}
-                  />
-                </View>
-              )}
-              theme={{
-                backgroundColor: theme.card,
-                calendarBackground: theme.card,
-                textSectionTitleColor: theme.textSecondary,
-                selectedDayBackgroundColor: theme.primary,
-                selectedDayTextColor: "#ffffff",
-                todayTextColor: theme.primary,
-                dayTextColor: theme.text,
-                textDisabledColor: theme.textTertiary,
-                dotColor: theme.primary,
-                selectedDotColor: "#ffffff",
-                arrowColor: theme.primary,
-                monthTextColor: theme.text,
-                indicatorColor: theme.primary,
-                textDayFontFamily: "System",
-                textMonthFontFamily: "System",
-                textDayHeaderFontFamily: "System",
-                textDayFontWeight: "400",
-                textMonthFontWeight: "700",
-                textDayHeaderFontWeight: "600",
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 13,
-              }}
-              style={styles.calendar}
-            />
+                  selectedDotColor: "#ffffff",
+                  arrowColor: theme.primary,
+                  monthTextColor: theme.text,
+                  indicatorColor: theme.primary,
+                  textDayFontFamily: "System",
+                  textMonthFontFamily: "System",
+                  textDayHeaderFontFamily: "System",
+                  textDayFontWeight: "400",
+                  textMonthFontWeight: "700",
+                  textDayHeaderFontWeight: "600",
+                  textDayFontSize: 16,
+                  textMonthFontSize: 18,
+                  textDayHeaderFontSize: 13,
+                }}
+                style={styles.calendar}
+              />
+            </Animated.View>
 
             <View style={styles.calendarFooter}>
               <Text style={styles.selectedDateText}>
@@ -1242,11 +1293,19 @@ const createStyles = (theme: any) =>
       color: theme.text,
       marginBottom: 4,
     },
-    headerDate: { fontSize: 14, color: theme.textSecondary, textTransform: "capitalize" },
+    headerDate: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textTransform: "capitalize",
+    },
     headerActions: { flexDirection: "row", gap: 8 },
     iconButton: { padding: 8 },
     caloriesCard: { alignItems: "center", marginBottom: 16 },
-    caloriesLabel: { fontSize: 14, color: theme.textSecondary, marginBottom: 8 },
+    caloriesLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
     caloriesValue: { fontSize: 48, fontWeight: "700", color: theme.success },
     caloriesValueExceeded: { color: theme.error },
     caloriesSubtext: { fontSize: 14, color: theme.textTertiary, marginTop: 4 },
@@ -1258,7 +1317,11 @@ const createStyles = (theme: any) =>
       overflow: "hidden",
     },
     caloriesProgressFill: { height: "100%", borderRadius: 4 },
-    macrosSection: { backgroundColor: theme.card, padding: 20, marginBottom: 12 },
+    macrosSection: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginBottom: 12,
+    },
     sectionTitle: {
       fontSize: 18,
       fontWeight: "700",
@@ -1274,7 +1337,11 @@ const createStyles = (theme: any) =>
       marginTop: 8,
       textAlign: "center",
     },
-    diarySection: { backgroundColor: theme.card, padding: 20, marginBottom: 20 },
+    diarySection: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginBottom: 20,
+    },
     mealSection: {
       borderRadius: 12,
       marginBottom: 12,
