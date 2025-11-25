@@ -6,6 +6,7 @@ import {
   MealProduct,
   Product,
 } from "../../../models/nutrition.model";
+import { useTheme } from "../../../contexts/ThemeContext";
 import CreateMealScreen from "./CreateMealScreen";
 import CreateProductScreen from "./CreateProductScreen";
 import EditMealScreen from "./EditMealScreen";
@@ -61,8 +62,18 @@ export type NutritionStackParamList = {
 const Stack = createNativeStackNavigator<NutritionStackParamList>();
 
 export default function NutritionStack() {
+  const { theme } = useTheme();
+
   return (
-    <Stack.Navigator initialRouteName="MacrosScreen">
+    <Stack.Navigator
+      initialRouteName="MacrosScreen"
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.background },
+        headerTintColor: theme.text,
+        contentStyle: { backgroundColor: theme.background },
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen
         name="MacrosScreen"
         component={MacrosScreen}

@@ -17,18 +17,25 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById, updateRoutineById } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 export default function RoutineEditScreen() {
+  const { theme, isDark } = useTheme();
   const route = useRoute();
   const navigation =
     useNavigation<NativeStackNavigationProp<WorkoutStackParamList>>();
   const { id, title, exercises, onUpdate } =
     route.params as WorkoutStackParamList["RoutineEdit"];
   const [editTitle, setEditTitle] = React.useState(title);
+
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>(
     exercises || []
   );
@@ -351,7 +358,11 @@ export default function RoutineEditScreen() {
           >
             <View style={styles.reorderContent}>
               <View style={styles.dragHandle}>
-                <Icon name="drag-indicator" size={24} color="#6B7280" />
+                <Icon
+                  name="drag-indicator"
+                  size={24}
+                  color={theme.textSecondary}
+                />
               </View>
 
               <Image
@@ -435,7 +446,7 @@ export default function RoutineEditScreen() {
 
           {reorderMode && reorderFromButton && (
             <View style={styles.reorderHint}>
-              <Icon name="info-outline" size={16} color="#92400E" />
+              <Icon name="info-outline" size={16} color={theme.warning} />
               <Text style={styles.reorderHintText}>
                 Arrastra para reordenar. Pulsa "Listo" para guardar los cambios
               </Text>
@@ -444,7 +455,7 @@ export default function RoutineEditScreen() {
 
           {reorderMode && !reorderFromButton && (
             <View style={styles.reorderHint}>
-              <Icon name="info-outline" size={16} color="#92400E" />
+              <Icon name="info-outline" size={16} color={theme.warning} />
               <Text style={styles.reorderHintText}>
                 Arrastra para reordenar. Se guardará automáticamente al soltar
               </Text>
@@ -452,8 +463,18 @@ export default function RoutineEditScreen() {
           )}
 
           {!reorderMode && (
-            <View style={styles.normalHint}>
-              <Icon name="touch-app" size={16} color="#1E40AF" />
+            <View
+              style={[
+                styles.normalHint,
+                {
+                  backgroundColor: theme.card,
+                  shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              <Icon name="touch-app" size={16} color={theme.info} />
               <Text style={styles.normalHintText}>
                 Usa las opciones de cada ejercicio para editarlos
               </Text>
@@ -501,7 +522,11 @@ export default function RoutineEditScreen() {
                 });
               }}
             >
-              <Icon name="add-circle-outline" size={20} color="#374151" />
+              <Icon
+                name="add-circle-outline"
+                size={20}
+                color={theme.textSecondary}
+              />
               <Text style={styles.addExerciseButtonText}>Añadir ejercicio</Text>
             </TouchableOpacity>
           )}
@@ -539,226 +564,229 @@ export default function RoutineEditScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  headerSection: {
-    paddingTop: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  titleInput: {
-    backgroundColor: "#f4f4f4",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: RFValue(16),
-    color: "#333",
-    marginBottom: 16,
-    marginHorizontal: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    marginHorizontal: 16,
-  },
-  subTitle: {
-    fontWeight: "bold",
-    fontSize: RFValue(16),
-    color: "#111827",
-  },
-  reorderButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  doneButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#10B981",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  doneButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  reorderHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FEF3C7",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#F59E0B",
-    gap: 8,
-  },
-  reorderHintText: {
-    flex: 1,
-    fontSize: RFValue(12),
-    color: "#92400E",
-    fontWeight: "500",
-  },
-  normalHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EFF6FF",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#3B82F6",
-    gap: 8,
-  },
-  normalHintText: {
-    flex: 1,
-    fontSize: RFValue(12),
-    color: "#1E40AF",
-    fontWeight: "500",
-  },
-  listContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  listContent: {
-    paddingTop: 8,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
-  listFooter: {
-    height: 20,
-  },
-  reorderCard: {
-    backgroundColor: "#FFFFFF",
-    marginVertical: 6,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  reorderCardActive: {
-    borderColor: "#6366F1",
-    backgroundColor: "#EEF2FF",
-    elevation: 8,
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    transform: [{ scale: 1.02 }],
-  },
-  reorderContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dragHandle: {
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  reorderImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: "#F3F4F6",
-  },
-  reorderInfo: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  reorderName: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: "#111827",
-    lineHeight: RFValue(20),
-  },
-  footerSection: {
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  addExerciseButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#e5e7eb",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    gap: 8,
-  },
-  addExerciseButtonText: {
-    color: "#374151",
-    fontWeight: "600",
-    fontSize: RFValue(16),
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    gap: 12,
-  },
-  cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    flex: 1,
-  },
-  cancelText: {
-    color: "#6b7280",
-    fontWeight: "600",
-    fontSize: RFValue(16),
-  },
-  updateButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    flex: 1,
-  },
-  updateButtonDisabled: {
-    backgroundColor: "#d1d5db",
-  },
-  updateButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: RFValue(16),
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  textDisabled: {
-    opacity: 0.4,
-  },
-});
+const createStyles = (theme: any, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.card,
+    },
+    headerSection: {
+      paddingTop: 12,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    titleInput: {
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: RFValue(16),
+      color: theme.text,
+      marginBottom: 16,
+      marginHorizontal: 16,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      marginHorizontal: 16,
+    },
+    subTitle: {
+      fontWeight: "bold",
+      fontSize: RFValue(16),
+      color: theme.text,
+    },
+    reorderButtons: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    doneButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.success,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      gap: 6,
+    },
+    doneButtonText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: "#FFFFFF",
+    },
+    reorderHint: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.warning,
+      gap: 8,
+    },
+    reorderHintText: {
+      flex: 1,
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    normalHint: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.info,
+      gap: 8,
+    },
+    normalHintText: {
+      flex: 1,
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    listContainer: {
+      flex: 1,
+      backgroundColor: theme.card,
+    },
+    listContent: {
+      paddingTop: 8,
+      paddingBottom: 20,
+      paddingHorizontal: 16,
+    },
+    listFooter: {
+      height: 20,
+    },
+    reorderCard: {
+      backgroundColor: theme.card,
+      marginVertical: 6,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: theme.border,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 3,
+    },
+    reorderCardActive: {
+      borderColor: theme.primary,
+      backgroundColor: theme.backgroundSecondary,
+      elevation: 8,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      transform: [{ scale: 1.02 }],
+    },
+    reorderContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    dragHandle: {
+      width: 32,
+      height: 32,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    reorderImage: {
+      width: 56,
+      height: 56,
+      borderRadius: 8,
+      marginRight: 12,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    reorderInfo: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    reorderName: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+      lineHeight: RFValue(20),
+    },
+    footerSection: {
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      paddingTop: 12,
+      paddingBottom: 20,
+    },
+    addExerciseButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.backgroundSecondary,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      marginHorizontal: 16,
+      marginBottom: 12,
+      gap: 8,
+    },
+    addExerciseButtonText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+      fontSize: RFValue(16),
+    },
+    buttonRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginHorizontal: 16,
+      marginBottom: 8,
+      gap: 12,
+    },
+    cancelButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      alignItems: "center",
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      flex: 1,
+    },
+    cancelText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+      fontSize: RFValue(16),
+    },
+    updateButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: "center",
+      flex: 1,
+    },
+    updateButtonDisabled: {
+      backgroundColor: theme.border,
+    },
+    updateButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: RFValue(16),
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    textDisabled: {
+      opacity: 0.4,
+    },
+  });

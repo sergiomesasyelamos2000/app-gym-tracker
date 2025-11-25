@@ -1,5 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -8,17 +12,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  ActivityIndicator,
-  Dimensions,
 } from "react-native";
-import { RFValue } from "react-native-responsive-fontsize";
 import Modal from "react-native-modal";
-import { Ionicons } from "@expo/vector-icons";
+import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { FoodEntry, FoodUnit, MealType } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
-import { FoodEntry, MealType, FoodUnit } from "../../../models/nutrition.model";
 import * as nutritionService from "../services/nutritionService";
+import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
 
 const { width } = Dimensions.get("window");
 
@@ -76,6 +77,7 @@ const MEALS_CONFIG = [
 ];
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
+  const { theme } = useTheme();
   const {
     producto,
     fromDiary = false,
@@ -103,6 +105,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const calculateNutrients = useMemo(() => {
     const qty = parseFloat(quantity) || 0;
@@ -141,8 +145,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
     try {
       const favorite = await nutritionService.isFavorite(
-        userProfile.userId,
-        producto.code
+        producto.code,
+        userProfile.userId
       );
       setIsFavorite(favorite);
     } catch (error) {
@@ -159,8 +163,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     try {
       if (isFavorite) {
         await nutritionService.removeFavoriteByProductCode(
-          userProfile.userId,
-          producto.code
+          producto.code,
+          userProfile.userId
         );
         setIsFavorite(false);
         Alert.alert("Eliminado", "Producto eliminado de favoritos");
@@ -315,7 +319,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {fromDiary ? "Editar Alimento" : "Detalle del Producto"}
@@ -326,16 +330,16 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               disabled={addingToCart}
             >
               {addingToCart ? (
-                <ActivityIndicator color="#6C3BAA" />
+                <ActivityIndicator color={theme.primary} />
               ) : (
-                <Ionicons name="cart-outline" size={24} color="#6C3BAA" />
+                <Ionicons name="cart-outline" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={handleToggleFavorite}>
               <Ionicons
                 name={isFavorite ? "heart" : "heart-outline"}
                 size={28}
-                color={isFavorite ? "#E74C3C" : "#6C3BAA"}
+                color={isFavorite ? theme.error : theme.primary}
               />
             </TouchableOpacity>
           </View>
@@ -429,7 +433,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 }}
               >
                 <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
-                <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -462,7 +470,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   {selectedMeal.label}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
           </View>
         )}
@@ -479,7 +491,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               <Ionicons
                 name={showMore ? "chevron-up" : "chevron-down"}
                 size={20}
-                color="#6C3BAA"
+                color={theme.primary}
               />
             </TouchableOpacity>
             {showMore && (
@@ -546,12 +558,16 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         style={styles.modal}
         animationIn="slideInUp"
         animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Seleccionar Unidad</Text>
             <TouchableOpacity onPress={() => setIsModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#6B7280" />
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           {UNITS_CONFIG.map((unitOption) => (
@@ -601,6 +617,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         style={styles.modal}
         animationIn="slideInUp"
         animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -615,7 +635,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 }
               }}
             >
-              <Ionicons name="close" size={24} color="#6B7280" />
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           {MEALS_CONFIG.map((mealOption) => (
@@ -640,7 +660,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.modalOptionText}>{mealOption.label}</Text>
               </View>
               {meal === mealOption.value && (
-                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={theme.primary}
+                />
               )}
             </TouchableOpacity>
           ))}
@@ -650,266 +674,267 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  imageContainer: {
-    backgroundColor: "#fff",
-    paddingVertical: 30,
-    alignItems: "center",
-  },
-  productImage: {
-    resizeMode: "contain",
-  },
-  nameContainer: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  productName: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    textAlign: "center",
-  },
-  nutritionSection: {
-    backgroundColor: "#fff",
-    padding: 20,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 16,
-  },
-  nutritionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  nutritionCard: {
-    width: (width - 56) / 2,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-  },
-  nutritionValue: {
-    fontSize: RFValue(24),
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  nutritionLabel: {
-    fontSize: RFValue(12),
-    color: "#6B7280",
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  section: {
-    backgroundColor: "#fff",
-    padding: 20,
-    marginTop: 12,
-  },
-  quantityInputContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  quantityInput: {
-    flex: 1,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
-    fontSize: RFValue(18),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  unitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-    minWidth: 120,
-  },
-  unitButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  mealSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 16,
-  },
-  mealSelectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  mealIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mealSelectorText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  showMoreButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    gap: 8,
-  },
-  showMoreText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#6C3BAA",
-  },
-  additionalNutrients: {
-    marginTop: 16,
-  },
-  nutrientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  nutrientLabel: {
-    fontSize: RFValue(13),
-    color: "#6B7280",
-    fontWeight: "500",
-    flex: 1,
-    paddingRight: 12,
-  },
-  nutrientValue: {
-    fontSize: RFValue(14),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    textAlign: "right",
-  },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  addButton: {
-    flexDirection: "row",
-    backgroundColor: "#6C3BAA",
-    borderRadius: 14,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    elevation: 4,
-    shadowColor: "#6C3BAA",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  addButtonDisabled: {
-    backgroundColor: "#9CA3AF",
-  },
-  addButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#fff",
-  },
-  modal: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  modalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  modalOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  modalOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  unitIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalOptionText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      paddingBottom: 100,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    imageContainer: {
+      backgroundColor: theme.card,
+      paddingVertical: 30,
+      alignItems: "center",
+    },
+    productImage: {
+      resizeMode: "contain",
+    },
+    nameContainer: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    productName: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "center",
+    },
+    nutritionSection: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginTop: 12,
+    },
+    sectionTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    nutritionGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    nutritionCard: {
+      width: (width - 56) / 2,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: "center",
+    },
+    nutritionValue: {
+      fontSize: RFValue(24),
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    nutritionLabel: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    section: {
+      backgroundColor: theme.card,
+      padding: 20,
+      marginTop: 12,
+    },
+    quantityInputContainer: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    quantityInput: {
+      flex: 1,
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 56,
+      fontSize: RFValue(18),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    unitButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      gap: 8,
+      minWidth: 120,
+    },
+    unitButtonText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    mealSelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      padding: 16,
+    },
+    mealSelectorLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    mealIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    mealSelectorText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    showMoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      gap: 8,
+    },
+    showMoreText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.primary,
+    },
+    additionalNutrients: {
+      marginTop: 16,
+    },
+    nutrientRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    nutrientLabel: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      fontWeight: "500",
+      flex: 1,
+      paddingRight: 12,
+    },
+    nutrientValue: {
+      fontSize: RFValue(14),
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "right",
+    },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.card,
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    addButton: {
+      flexDirection: "row",
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      height: 56,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 12,
+      elevation: 4,
+      shadowColor: theme.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    addButtonDisabled: {
+      backgroundColor: theme.textTertiary,
+    },
+    addButtonText: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: "#fff",
+    },
+    modal: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    modalOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    unitIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalOptionText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+  });

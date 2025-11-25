@@ -1,4 +1,5 @@
 import { ScrollView, View, Button, Text, StyleSheet } from "react-native";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 const cardStyle = {
   backgroundColor: "#fff",
@@ -13,6 +14,7 @@ const cardStyle = {
 };
 
 export default function ProgressScreen() {
+  const { theme } = useTheme();
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <View style={cardStyle}>

@@ -15,6 +15,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { NutritionStackParamList } from "./NutritionStack";
 import {
   ActivityLevel,
@@ -42,6 +43,7 @@ export default function EditNutritionProfileScreen({
   navigation,
   route,
 }: Props) {
+  const { theme } = useTheme();
   const currentUser = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
@@ -559,9 +561,20 @@ export default function EditNutritionProfileScreen({
         isVisible={showActivityModal}
         onBackdropPress={() => setShowActivityModal(false)}
         style={styles.modal}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        backdropColor="#000"
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Nivel de Actividad</Text>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Nivel de Actividad</Text>
+            <TouchableOpacity onPress={() => setShowActivityModal(false)}>
+              <Ionicons name="close" size={24} color="#808080" />
+            </TouchableOpacity>
+          </View>
           {activityLevels.map((level) => (
             <TouchableOpacity
               key={level.value}
@@ -843,23 +856,30 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   modalTitle: {
     fontSize: RFValue(18),
     fontWeight: "700",
     color: "#1A1A1A",
-    marginBottom: 20,
   },
   modalOption: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: "#F3F4F6",
   },
   modalOptionLabel: {
     fontSize: RFValue(16),

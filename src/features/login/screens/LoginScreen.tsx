@@ -13,11 +13,13 @@ import {
   View,
 } from "react-native";
 import { apiFetch } from "../../../api"; // Ajusta la ruta según tu estructura
+import { useTheme } from "../../../contexts/ThemeContext";
 
 // Es necesario para completar la sesión de autenticación en web
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
 

@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import { ExerciseRequestDto, RoutineRequestDto } from "../../../models";
+import { useTheme } from "../../../contexts/ThemeContext";
 import ExerciseListScreen from "../components/ExerciseList";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";
@@ -38,10 +39,16 @@ export type WorkoutStackParamList = {
 const Stack = createNativeStackNavigator<WorkoutStackParamList>();
 
 export default function WorkoutStack() {
+  const { theme } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerBackButtonDisplayMode: "minimal",
+        headerStyle: { backgroundColor: theme.background },
+        headerTintColor: theme.text,
+        contentStyle: { backgroundColor: theme.backgroundSecondary },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen

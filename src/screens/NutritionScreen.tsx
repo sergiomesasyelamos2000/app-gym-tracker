@@ -20,6 +20,7 @@ import {
   useAppSelector,
 } from "../features/common/hooks/useStore";
 import { ChatInput } from "../features/chat/components/ChatInput";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function NutritionScreen() {
   const [chatInput, setChatInput] = useState("");
@@ -31,6 +32,7 @@ export default function NutritionScreen() {
   const messages = useAppSelector((state) => state.chat.messages);
   const loading = useAppSelector((state) => state.chat.loading);
   const dispatch = useAppDispatch();
+  const { theme } = useTheme();
 
   const handleSend = async () => {
     if (!chatInput.trim() || loading) return;
@@ -76,7 +78,7 @@ export default function NutritionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
       {showCamera ? (
         <ReusableCameraView
           onPhotoTaken={handlePhotoTaken}
@@ -84,9 +86,9 @@ export default function NutritionScreen() {
         />
       ) : (
         <View style={styles.container}>
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: theme.primary }]}>
             <Text style={styles.headerTitle}>Nutrición</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerSubtitle, { color: "#E0F2FE" }]}>
               Crea dietas personalizadas con la ayuda de tu asistente de IA.
             </Text>
           </View>
@@ -99,9 +101,9 @@ export default function NutritionScreen() {
               />
             ))}
             {loadingMessage && (
-              <View style={styles.spinnerContainer}>
-                <Text style={styles.spinnerText}>Pensando...</Text>
-                <ActivityIndicator size="small" color="#4CAF50" />
+              <View style={[styles.spinnerContainer, { backgroundColor: theme.card }]}>
+                <Text style={[styles.spinnerText, { color: theme.text }]}>Pensando...</Text>
+                <ActivityIndicator size="small" color={theme.primary} />
               </View>
             )}
           </ScrollView>
@@ -126,7 +128,6 @@ export default function NutritionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f9fafb",
   },
   container: {
     flex: 1,
@@ -136,7 +137,6 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: "#4CAF50",
     borderRadius: 12,
   },
   headerTitle: {
@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "#e0f2fe",
     marginTop: 4,
   },
   chatContainer: {
@@ -159,12 +158,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#e0f2fe",
     alignSelf: "flex-start",
   },
   spinnerText: {
     fontSize: 16,
-    color: "#333",
     marginRight: 8,
   },
   messageBubble: {

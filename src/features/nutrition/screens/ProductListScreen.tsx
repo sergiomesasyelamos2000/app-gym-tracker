@@ -7,12 +7,19 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -20,9 +27,9 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-  RefreshControl,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -70,6 +77,8 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 // Tab de Todos los Productos
 function AllProductsTab({ searchText, navigation }: TabProps) {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const [productos, setProductos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -177,7 +186,12 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
           }
           style={[
             styles.productImage,
-            { width: width * 0.12, height: width * 0.12 },
+            {
+              width: width * 0.12,
+              height: width * 0.12,
+              tintColor:
+                !item.image && isDark ? theme.textSecondary : undefined,
+            },
           ]}
         />
       </View>
@@ -197,7 +211,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
             <Text style={styles.macroText}>{item.calories || 0} kcal</Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={14} color="#808080" />
+            <Ionicons name="analytics" size={14} color={theme.textSecondary} />
             <Text style={styles.macroText}>{item.grams || 100}g</Text>
           </View>
         </View>
@@ -206,7 +220,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
         style={styles.addButton}
         onPress={(e) => handleQuickAdd(item, e)}
       >
-        <Ionicons name="add" size={24} color="#6C3BAA" />
+        <Ionicons name="add" size={24} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -214,7 +228,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Cargando productos...</Text>
       </View>
     );
@@ -222,6 +236,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredProducts}
       renderItem={renderItem}
       keyExtractor={(item) => item.code}
@@ -231,7 +246,11 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron productos</Text>
           <Text style={styles.emptySubtitle}>
             {searchText
@@ -255,6 +274,8 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
 
 // Tab de Favoritos
 function FavoritesTab({ searchText, navigation }: TabProps) {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -307,6 +328,33 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
   );
 
   const handleProductPress = async (item: FavoriteProduct) => {
+    // Check if productCode is a UUID (indicates data issue where favorite ID was stored instead of product code)
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        item.productCode
+      );
+
+    if (isUUID) {
+      // Skip API call for UUIDs and use cached favorite data directly
+      console.warn(
+        `Favorite product has UUID as productCode (${item.productCode}), using cached data`
+      );
+      navigation.navigate("ProductDetailScreen", {
+        producto: {
+          code: item.productCode,
+          name: item.productName,
+          image: item.productImage,
+          calories: item.calories,
+          protein: item.protein,
+          carbohydrates: item.carbs,
+          fat: item.fat,
+          grams: 100,
+          others: [],
+        },
+      });
+      return;
+    }
+
     try {
       const productDetail = await nutritionService.getProductDetail(
         item.productCode
@@ -323,6 +371,8 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
           protein: item.protein,
           carbohydrates: item.carbs,
           fat: item.fat,
+          grams: 100,
+          others: [],
         },
       });
     }
@@ -400,7 +450,7 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Cargando favoritos...</Text>
       </View>
     );
@@ -409,7 +459,7 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
   if (favorites.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="heart-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="heart-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>No tienes favoritos</Text>
         <Text style={styles.emptySubtitle}>
           Agrega productos a tus favoritos para verlos aquí
@@ -420,6 +470,7 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredFavorites}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
@@ -427,7 +478,11 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron favoritos</Text>
           <Text style={styles.emptySubtitle}>
             Intenta con otros términos de búsqueda
@@ -444,6 +499,8 @@ function CustomProductsTab({
   navigation,
   route,
 }: TabProps & { route?: any }) {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -577,10 +634,10 @@ function CustomProductsTab({
             ]}
           />
         ) : (
-          <Ionicons name="cube" size={28} color="#6C3BAA" />
+          <Ionicons name="cube" size={28} color={theme.primary} />
         )}
         <View style={styles.customBadge}>
-          <Ionicons name="create" size={14} color="#6C3BAA" />
+          <Ionicons name="create" size={14} color={theme.primary} />
         </View>
       </View>
       <View style={{ flex: 1 }}>
@@ -606,7 +663,7 @@ function CustomProductsTab({
             </Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={14} color="#808080" />
+            <Ionicons name="analytics" size={14} color={theme.textSecondary} />
             <Text style={styles.macroText}>100g</Text>
           </View>
         </View>
@@ -618,7 +675,7 @@ function CustomProductsTab({
           navigation.navigate("EditProductScreen", { product: item });
         }}
       >
-        <Ionicons name="create-outline" size={20} color="#6C3BAA" />
+        <Ionicons name="create-outline" size={20} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -627,16 +684,16 @@ function CustomProductsTab({
     <RefreshControl
       refreshing={refreshing}
       onRefresh={handleRefresh}
-      colors={["#6C3BAA"]}
-      tintColor="#6C3BAA"
-      progressBackgroundColor="#ffffff"
+      colors={[theme.primary]}
+      tintColor={theme.primary}
+      progressBackgroundColor={theme.card}
     />
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>
           Cargando productos personalizados...
         </Text>
@@ -647,7 +704,7 @@ function CustomProductsTab({
   if (customProducts.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="cube-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="cube-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>
           No tienes productos personalizados
         </Text>
@@ -666,7 +723,7 @@ function CustomProductsTab({
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => item.id}
@@ -702,6 +759,8 @@ function CustomMealsTab({
   navigation,
   route,
 }: TabProps & { route?: any }) {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -810,10 +869,10 @@ function CustomMealsTab({
             ]}
           />
         ) : (
-          <Ionicons name="restaurant" size={28} color="#6C3BAA" />
+          <Ionicons name="restaurant" size={28} color={theme.primary} />
         )}
         <View style={styles.customBadge}>
-          <Ionicons name="restaurant" size={14} color="#6C3BAA" />
+          <Ionicons name="restaurant" size={14} color={theme.primary} />
         </View>
       </View>
       <View style={{ flex: 1 }}>
@@ -838,8 +897,9 @@ function CustomMealsTab({
               {Math.round(item.totalCalories)} kcal
             </Text>
           </View>
+          <View style={styles.macroItem}></View>
           <View style={styles.macroItem}>
-            <Ionicons name="fast-food" size={14} color="#6C3BAA" />
+            <Ionicons name="fast-food" size={14} color={theme.primary} />
             <Text style={styles.macroText}>{item.products.length} items</Text>
           </View>
         </View>
@@ -851,7 +911,7 @@ function CustomMealsTab({
           navigation.navigate("EditMealScreen", { meal: item });
         }}
       >
-        <Ionicons name="create-outline" size={20} color="#6C3BAA" />
+        <Ionicons name="create-outline" size={20} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -860,16 +920,16 @@ function CustomMealsTab({
     <RefreshControl
       refreshing={refreshing}
       onRefresh={handleRefresh}
-      colors={["#6C3BAA"]}
-      tintColor="#6C3BAA"
-      progressBackgroundColor="#ffffff"
+      colors={[theme.primary]}
+      tintColor={theme.primary}
+      progressBackgroundColor={theme.card}
     />
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>
           Cargando comidas personalizadas...
         </Text>
@@ -880,7 +940,11 @@ function CustomMealsTab({
   if (customMeals.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="restaurant-outline" size={64} color="#D1D5DB" />
+        <Ionicons
+          name="restaurant-outline"
+          size={64}
+          color={theme.textTertiary}
+        />
         <Text style={styles.emptyTitle}>No tienes comidas personalizadas</Text>
         <Text style={styles.emptySubtitle}>
           Crea comidas personalizadas para verlas aquí
@@ -897,7 +961,7 @@ function CustomMealsTab({
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <FlatList
         data={filteredMeals}
         keyExtractor={(item) => item.id}
@@ -934,6 +998,8 @@ type ProductDetailScreenRouteProp = RouteProp<
 
 // Componente Principal
 export default function ProductListScreen() {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const [searchText, setSearchText] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [initialTab, setInitialTab] = useState<string | undefined>(undefined);
@@ -998,7 +1064,7 @@ export default function ProductListScreen() {
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Buscar Producto</Text>
           <View style={styles.headerButton} />
@@ -1007,17 +1073,21 @@ export default function ProductListScreen() {
         {/* Barra de Búsqueda Global */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color="#808080" />
+            <Ionicons name="search" size={20} color={theme.textTertiary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar alimento..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.textTertiary}
               value={searchText}
               onChangeText={setSearchText}
             />
             {searchText.length > 0 && (
               <TouchableOpacity onPress={() => setSearchText("")}>
-                <Ionicons name="close-circle" size={20} color="#808080" />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={theme.textTertiary}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -1035,8 +1105,8 @@ export default function ProductListScreen() {
           screenOptions={{
             lazy: true, // Lazy loading activado
             lazyPreloadDistance: 1, // Pre-cargar solo el tab adyacente
-            tabBarActiveTintColor: "#6C3BAA",
-            tabBarInactiveTintColor: "#9CA3AF",
+            tabBarActiveTintColor: theme.primary,
+            tabBarInactiveTintColor: theme.textTertiary,
             tabBarLabelStyle: {
               fontSize: tabConfig.fontSize,
               fontWeight: "600",
@@ -1048,15 +1118,15 @@ export default function ProductListScreen() {
               paddingVertical: 4,
             },
             tabBarIndicatorStyle: {
-              backgroundColor: "#6C3BAA",
+              backgroundColor: theme.primary,
               height: 3,
             },
             tabBarStyle: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.card,
               elevation: 0,
               shadowOpacity: 0,
               borderBottomWidth: 1,
-              borderBottomColor: "#E5E7EB",
+              borderBottomColor: theme.border,
             },
             tabBarScrollEnabled: false,
           }}
@@ -1134,238 +1204,243 @@ export default function ProductListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 48,
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: RFValue(15),
-    color: "#1A1A1A",
-  },
-  scanButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#6C3BAA",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: RFValue(14),
-    color: "#6B7280",
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  productCard: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
-    alignItems: "center",
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  productImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  productImage: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
-  },
-  productName: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 6,
-  },
-  productMacros: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  macroItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  macroText: {
-    fontSize: RFValue(12),
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#374151",
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: RFValue(14),
-    color: "#9CA3AF",
-    marginTop: 8,
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
-  favoriteBadge: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  floatingButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#6C3BAA",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-    shadowColor: "#6C3BAA",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#6C3BAA",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 16,
-    gap: 8,
-    elevation: 3,
-    shadowColor: "#6C3BAA",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  createButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#fff",
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  customBadge: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  brandText: {
-    fontSize: RFValue(11),
-    color: "#9CA3AF",
-    marginBottom: 4,
-  },
-});
+const createStyles = (theme: Theme, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      gap: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 48,
+      gap: 12,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: RFValue(15),
+      color: theme.text,
+    },
+    scanButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: theme.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.background,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+    },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    productCard: {
+      flexDirection: "row",
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 12,
+      alignItems: "center",
+      marginBottom: 12,
+      elevation: 2,
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    productImageContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 10,
+      backgroundColor: theme.background,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    productImage: {
+      width: 50,
+      height: 50,
+      resizeMode: "contain",
+    },
+    productName: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    productMacros: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    macroItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    macroText: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    addButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.background,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+    },
+    emptyTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginTop: 16,
+    },
+    emptySubtitle: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginTop: 8,
+      textAlign: "center",
+      paddingHorizontal: 40,
+    },
+    favoriteBadge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 2,
+    },
+    floatingButton: {
+      position: "absolute",
+      bottom: 20,
+      right: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 6,
+      shadowColor: theme.primary,
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    createButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 16,
+      gap: 8,
+      elevation: 3,
+      shadowColor: theme.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    createButtonText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: "#fff",
+    },
+    editButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.background,
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 8,
+    },
+    customBadge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 2,
+    },
+    brandText: {
+      fontSize: RFValue(11),
+      color: theme.textSecondary,
+      marginBottom: 4,
+    },
+  });

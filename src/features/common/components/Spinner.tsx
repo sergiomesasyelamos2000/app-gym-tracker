@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 const Spinner: React.FC = () => {
+  const { theme } = useTheme();
   const [dots, setDots] = useState("");
   useEffect(() => {
     const interval = setInterval(() => {
@@ -11,7 +13,7 @@ const Spinner: React.FC = () => {
   }, []);
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Pensando{dots}</Text>
+      <Text style={[styles.text, { color: theme.textSecondary }]}>Pensando{dots}</Text>
     </View>
   );
 };
@@ -24,8 +26,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   text: {
-    fontStyle: "italic", // por ejemplo
-    color: "#555",
+    fontStyle: "italic",
   },
 });
 

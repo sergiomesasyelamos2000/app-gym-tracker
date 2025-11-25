@@ -32,10 +32,12 @@ import {
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { notificationService } from "../../../services/notificationService";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
 export default function RoutineDetailScreen() {
+  const { theme } = useTheme();
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const {
@@ -268,16 +270,28 @@ export default function RoutineDetailScreen() {
     if (!parent?.setOptions) return;
 
     parent.setOptions({
-      tabBarStyle: started ? { display: "none" } : undefined,
+      tabBarStyle: started
+        ? { display: "none" }
+        : {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
     });
 
     return () => {
       const p = (navigation as any).getParent?.();
       if (p?.setOptions) {
-        p.setOptions({ tabBarStyle: undefined });
+        p.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
     };
-  }, [started, navigation]);
+  }, [started, navigation, theme]);
 
   useEffect(() => {
     if (showRestToast) {
@@ -303,10 +317,16 @@ export default function RoutineDetailScreen() {
       }
       const parent = (navigation as any).getParent?.();
       if (parent?.setOptions) {
-        parent.setOptions({ tabBarStyle: undefined });
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
     };
-  }, [navigation]);
+  }, [navigation, theme]);
 
   const handleStartRoutine = () => {
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
@@ -346,7 +366,13 @@ export default function RoutineDetailScreen() {
 
       const parent = (navigation as any).getParent?.();
       if (parent?.setOptions) {
-        parent.setOptions({ tabBarStyle: undefined });
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+        });
       }
 
       clearWorkoutInProgress();
@@ -409,7 +435,10 @@ export default function RoutineDetailScreen() {
     });
   };
 
-  const handleStartRestTimer = async (restSeconds: number, exerciseName?: string) => {
+  const handleStartRestTimer = async (
+    restSeconds: number,
+    exerciseName?: string
+  ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
     setShowRestToast(true);
@@ -573,14 +602,23 @@ export default function RoutineDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <Text style={styles.loadingText}>Cargando rutina...</Text>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.backgroundSecondary },
+        ]}
+      >
+        <Text style={[styles.loadingText, { color: theme.text }]}>
+          Cargando rutina...
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    >
       {started && (
         <RoutineMetrics
           duration={duration}
@@ -609,7 +647,10 @@ export default function RoutineDetailScreen() {
       />
 
       {!routineData?.id && !started && (
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine}>
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: theme.primary }]}
+          onPress={handleSaveRoutine}
+        >
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
         </TouchableOpacity>
       )}
@@ -640,16 +681,13 @@ export default function RoutineDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
   },
   loadingText: {
     textAlign: "center",
     marginTop: 40,
     fontSize: RFValue(16),
-    color: "#6B7280",
   },
   saveButton: {
-    backgroundColor: "#6C3BAA",
     padding: 16,
     margin: 16,
     borderRadius: 20,

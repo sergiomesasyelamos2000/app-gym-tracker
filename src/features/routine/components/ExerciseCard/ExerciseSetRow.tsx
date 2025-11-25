@@ -9,6 +9,8 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SetRequestDto } from "../../../../models";
+import { useTheme } from "../../../../contexts/ThemeContext";
+import { withOpacity, getCompletedRowStyle } from "../../../../utils/themeStyles";
 
 interface Props {
   item: SetRequestDto;
@@ -31,6 +33,7 @@ const ExerciseSetRow = ({
   previousMark,
   started = false,
 }: Props) => {
+  const { theme, isDark } = useTheme();
   // Estados locales
   const [localWeight, setLocalWeight] = useState<string>(
     started ? "" : item.weight?.toString() || ""
@@ -147,13 +150,9 @@ const ExerciseSetRow = ({
     onUpdate(item.id, "repsMax", value);
   };
 
-  const completedStyle = item.completed
-    ? { backgroundColor: "#b3f5c2ff" }
-    : { backgroundColor: "#f9f9f9" };
-
   return (
-    <View style={[styles.row, completedStyle]}>
-      <Text style={[styles.label, { flex: 1 }]}>{item.order}</Text>
+    <View style={[styles.row, getCompletedRowStyle(theme, item.completed ?? false)]}>
+      <Text style={[styles.label, { flex: 1, color: theme.text }]}>{item.order}</Text>
 
       {/* Marca anterior - Ahora es clickable */}
       {started && (
@@ -165,6 +164,7 @@ const ExerciseSetRow = ({
           <Text
             style={[
               styles.previousMark,
+              { color: theme.textSecondary },
               previousMark &&
                 previousMark !== "-" &&
                 styles.clickablePreviousMark,
@@ -177,13 +177,22 @@ const ExerciseSetRow = ({
 
       {/* Peso */}
       <TextInput
-        style={[styles.input, { flex: 2 }]}
+        style={[
+          styles.input, 
+          { 
+            flex: 2, 
+            backgroundColor: theme.inputBackground, 
+            color: theme.text,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: theme.border,
+          }
+        ]}
         keyboardType="numeric"
         value={localWeight}
         placeholder={
           started ? previousMark?.split("kg")[0]?.trim() || "Kg" : "Kg"
         }
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.textTertiary}
         onChangeText={handleWeightChange}
         editable={!readonly}
       />
@@ -191,7 +200,16 @@ const ExerciseSetRow = ({
       {/* Repeticiones */}
       {started ? (
         <TextInput
-          style={[styles.input, { flex: 2 }]}
+          style={[
+            styles.input, 
+            { 
+              flex: 2, 
+              backgroundColor: theme.inputBackground, 
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+            }
+          ]}
           keyboardType="numeric"
           value={localReps}
           placeholder={
@@ -199,39 +217,56 @@ const ExerciseSetRow = ({
               ? `${item.repsMin || ""}-${item.repsMax || ""}`
               : previousMark?.split("x")[1]?.trim() || "Reps"
           }
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.textTertiary}
           onChangeText={handleRepsChange}
           editable={!readonly}
         />
       ) : repsType === "range" ? (
-        <View style={[styles.rangeContainer, { flex: 2 }]}>
+        <View style={[
+          styles.rangeContainer, 
+          { 
+            flex: 2, 
+            backgroundColor: theme.inputBackground,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: theme.border,
+          }
+        ]}>
           <TextInput
-            style={[styles.rangeInput, { flex: 1 }]}
+            style={[styles.rangeInput, { flex: 1, color: theme.text }]}
             keyboardType="numeric"
             value={localRepsMin}
             placeholder="8"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsMinChange}
             editable={!readonly}
           />
-          <Text style={styles.rangeSeparator}>-</Text>
+          <Text style={[styles.rangeSeparator, { color: theme.textSecondary }]}>-</Text>
           <TextInput
-            style={[styles.rangeInput, { flex: 1 }]}
+            style={[styles.rangeInput, { flex: 1, color: theme.text }]}
             keyboardType="numeric"
             value={localRepsMax}
             placeholder="10"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsMaxChange}
             editable={!readonly}
           />
         </View>
       ) : (
         <TextInput
-          style={[styles.input, { flex: 2 }]}
+          style={[
+            styles.input, 
+            { 
+              flex: 2, 
+              backgroundColor: theme.inputBackground, 
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+            }
+          ]}
           keyboardType="numeric"
           value={localReps}
           placeholder="Reps"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.textTertiary}
           onChangeText={handleRepsChange}
           editable={!readonly}
         />
@@ -246,7 +281,7 @@ const ExerciseSetRow = ({
           <Icon
             name={item.completed ? "check-circle" : "radio-button-unchecked"}
             size={24}
-            color={item.completed ? "#4CAF50" : "#9E9E9E"}
+            color={item.completed ? theme.success : theme.textTertiary}
           />
         </TouchableOpacity>
       )}
@@ -259,24 +294,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    backgroundColor: "#f9f9f9",
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 16,
   },
   input: {
-    backgroundColor: "#e8e8ed",
     borderRadius: 12,
     padding: 8,
     marginHorizontal: 6,
     textAlign: "center",
     fontSize: RFValue(15),
-    color: "#333",
   },
   rangeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e8e8ed",
     borderRadius: 12,
     paddingHorizontal: 4,
     marginHorizontal: 6,
@@ -285,23 +316,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     padding: 8,
     fontSize: RFValue(15),
-    color: "#333",
   },
   rangeSeparator: {
     marginHorizontal: 4,
     fontSize: RFValue(16),
-    color: "#555",
   },
   label: {
     textAlign: "center",
     fontWeight: "500",
-    color: "#444",
     fontSize: RFValue(15),
   },
   previousMark: {
     textAlign: "center",
     fontSize: RFValue(14),
-    color: "#777",
   },
   clickablePreviousMark: {
     fontWeight: "600",

@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { fetchExercises } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
@@ -24,6 +25,7 @@ import { WorkoutStackParamList } from "../screens/WorkoutStack";
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
 export default function ExerciseList() {
+  const { theme } = useTheme();
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
@@ -34,6 +36,8 @@ export default function ExerciseList() {
   } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseRequestDto[]
   >([]);
@@ -103,7 +107,7 @@ export default function ExerciseList() {
     <SafeAreaView style={styles.safeArea}>
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Cargando ejercicios...</Text>
         </View>
       ) : error ? (
@@ -129,7 +133,7 @@ export default function ExerciseList() {
               placeholder="Buscar ejercicio..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textTertiary}
             />
           </View>
 
@@ -183,97 +187,99 @@ export default function ExerciseList() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: RFValue(24),
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
-  },
-  searchInput: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    elevation: 2,
-    fontSize: RFValue(16),
-  },
-  confirmButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: RFValue(18),
-    fontWeight: "bold",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: RFValue(16),
-    color: "#666",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: RFValue(16),
-    color: "#d32f2f",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: "#6C3BAA",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: RFValue(16),
-  },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 20,
-    fontSize: RFValue(16),
-    color: "#666",
-  },
-  emptyContainer: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  createButton: {
-    marginTop: 16,
-    backgroundColor: "#6C3BAA",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontSize: RFValue(16),
-    fontWeight: "bold",
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    container: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 24,
+    },
+    header: {
+      marginBottom: 16,
+    },
+    headerTitle: {
+      fontSize: RFValue(24),
+      fontWeight: "bold",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    searchInput: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      elevation: 2,
+      fontSize: RFValue(16),
+      color: theme.text,
+    },
+    confirmButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 16,
+    },
+    confirmButtonText: {
+      color: "#fff",
+      fontSize: RFValue(18),
+      fontWeight: "bold",
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: RFValue(16),
+      color: theme.textSecondary,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    errorText: {
+      fontSize: RFValue(16),
+      color: theme.error,
+      textAlign: "center",
+      marginBottom: 16,
+    },
+    retryButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: "#fff",
+      fontSize: RFValue(16),
+    },
+    emptyText: {
+      textAlign: "center",
+      marginTop: 20,
+      fontSize: RFValue(16),
+      color: theme.textSecondary,
+    },
+    emptyContainer: {
+      marginTop: 20,
+      alignItems: "center",
+    },
+    createButton: {
+      marginTop: 16,
+      backgroundColor: theme.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    createButtonText: {
+      color: "#fff",
+      fontSize: RFValue(16),
+      fontWeight: "bold",
+    },
+  });

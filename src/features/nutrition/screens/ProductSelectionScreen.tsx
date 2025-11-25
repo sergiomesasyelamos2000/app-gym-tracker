@@ -22,6 +22,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -55,6 +56,7 @@ function AllProductsTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
+  const { theme, isDark } = useTheme();
   const [productos, setProductos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -63,6 +65,11 @@ function AllProductsTab({
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useEffect(() => {
     loadProducts(1, true);
@@ -156,11 +163,15 @@ function AllProductsTab({
           </Text>
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>{item.calories || 0} kcal</Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>{item.grams || 100}g</Text>
             </View>
           </View>
@@ -180,7 +191,7 @@ function AllProductsTab({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Cargando productos...</Text>
       </View>
     );
@@ -188,6 +199,7 @@ function AllProductsTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredProducts}
       renderItem={renderItem}
       keyExtractor={(item) => item.code}
@@ -197,7 +209,11 @@ function AllProductsTab({
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron productos</Text>
           <Text style={styles.emptySubtitle}>
             {searchText
@@ -216,11 +232,17 @@ function FavoritesTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
+  const { theme, isDark } = useTheme();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -318,13 +340,17 @@ function FavoritesTab({
           </Text>
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>
                 {Math.round(item.calories) || 0} kcal
               </Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>100g</Text>
             </View>
           </View>
@@ -344,7 +370,7 @@ function FavoritesTab({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Cargando favoritos...</Text>
       </View>
     );
@@ -353,7 +379,7 @@ function FavoritesTab({
   if (favorites.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="heart-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="heart-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>No tienes favoritos</Text>
         <Text style={styles.emptySubtitle}>
           Agrega productos a tus favoritos para verlos aquí
@@ -364,6 +390,7 @@ function FavoritesTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredFavorites}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
@@ -371,7 +398,11 @@ function FavoritesTab({
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+          <Ionicons
+            name="search-outline"
+            size={64}
+            color={theme.textTertiary}
+          />
           <Text style={styles.emptyTitle}>No se encontraron favoritos</Text>
           <Text style={styles.emptySubtitle}>
             Intenta con otros términos de búsqueda
@@ -388,11 +419,17 @@ function CustomProductsTab({
   selectedProducts,
   onToggleProduct,
 }: TabProps) {
+  const { theme, isDark } = useTheme();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -452,10 +489,10 @@ function CustomProductsTab({
               ]}
             />
           ) : (
-            <Ionicons name="cube" size={28} color="#6C3BAA" />
+            <Ionicons name="cube" size={28} color={theme.primary} />
           )}
           <View style={styles.customBadge}>
-            <Ionicons name="create" size={14} color="#6C3BAA" />
+            <Ionicons name="create" size={14} color={theme.primary} />
           </View>
         </View>
         <View style={{ flex: 1 }}>
@@ -475,13 +512,17 @@ function CustomProductsTab({
           )}
           <View style={styles.productMacros}>
             <View style={styles.macroItem}>
-              <Ionicons name="flame" size={14} color="#6FCF97" />
+              <Ionicons name="flame" size={14} color={theme.success} />
               <Text style={styles.macroText}>
                 {Math.round(item.caloriesPer100)} kcal
               </Text>
             </View>
             <View style={styles.macroItem}>
-              <Ionicons name="analytics" size={14} color="#808080" />
+              <Ionicons
+                name="analytics"
+                size={14}
+                color={theme.textSecondary}
+              />
               <Text style={styles.macroText}>100g</Text>
             </View>
           </View>
@@ -501,7 +542,7 @@ function CustomProductsTab({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>
           Cargando productos personalizados...
         </Text>
@@ -512,7 +553,7 @@ function CustomProductsTab({
   if (customProducts.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="cube-outline" size={64} color="#D1D5DB" />
+        <Ionicons name="cube-outline" size={64} color={theme.textTertiary} />
         <Text style={styles.emptyTitle}>
           No tienes productos personalizados
         </Text>
@@ -525,6 +566,7 @@ function CustomProductsTab({
 
   return (
     <FlatList
+      style={styles.container}
       data={filteredProducts}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
@@ -547,6 +589,7 @@ function CustomProductsTab({
 
 // Componente Principal
 export default function ProductSelectionScreen() {
+  const { theme, isDark } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<ProductSelectionScreenRouteProp>();
@@ -559,6 +602,11 @@ export default function ProductSelectionScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
+
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   // Determinar de dónde viene la navegación
   const sourceScreen = route.params?.from; // 'CreateMealScreen' o 'EditMealScreen'
@@ -636,7 +684,7 @@ export default function ProductSelectionScreen() {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={28} color="#1A1A1A" />
+            <Ionicons name="close" size={28} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Seleccionar Productos</Text>
@@ -668,17 +716,21 @@ export default function ProductSelectionScreen() {
         {/* Barra de Búsqueda */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color="#808080" />
+            <Ionicons name="search" size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar productos..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.textTertiary}
               value={searchText}
               onChangeText={setSearchText}
             />
             {searchText.length > 0 && (
               <TouchableOpacity onPress={() => setSearchText("")}>
-                <Ionicons name="close-circle" size={20} color="#808080" />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -687,8 +739,8 @@ export default function ProductSelectionScreen() {
         {/* Navegador de Tabs */}
         <Tab.Navigator
           screenOptions={{
-            tabBarActiveTintColor: "#6C3BAA",
-            tabBarInactiveTintColor: "#9CA3AF",
+            tabBarActiveTintColor: theme.primary,
+            tabBarInactiveTintColor: theme.textTertiary,
             tabBarLabelStyle: {
               fontSize: tabConfig.fontSize,
               fontWeight: "600",
@@ -700,15 +752,15 @@ export default function ProductSelectionScreen() {
               paddingVertical: 4,
             },
             tabBarIndicatorStyle: {
-              backgroundColor: "#6C3BAA",
+              backgroundColor: theme.primary,
               height: 3,
             },
             tabBarStyle: {
-              backgroundColor: "#fff",
+              backgroundColor: theme.card,
               elevation: 0,
               shadowOpacity: 0,
               borderBottomWidth: 1,
-              borderBottomColor: "#E5E7EB",
+              borderBottomColor: theme.border,
             },
             tabBarScrollEnabled: false,
           }}
@@ -774,220 +826,223 @@ export default function ProductSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E8E8",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  headerSubtitle: {
-    fontSize: RFValue(12),
-    color: "#666",
-    marginTop: 2,
-  },
-  confirmButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: "#6C3BAA",
-    borderRadius: 20,
-  },
-  confirmButtonDisabled: {
-    backgroundColor: "#E8E8E8",
-  },
-  confirmButtonText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#FFF",
-  },
-  confirmButtonTextDisabled: {
-    color: "#999",
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E8E8",
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 48,
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: RFValue(15),
-    color: "#1A1A1A",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: RFValue(14),
-    color: "#6B7280",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  productCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    borderRadius: 14,
-    padding: 12,
-    alignItems: "center",
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  productCardSelected: {
-    borderColor: "#6C3BAA",
-    backgroundColor: "#F0E6FF",
-  },
-  productImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  productImage: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
-  },
-  productName: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 6,
-  },
-  productMacros: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  macroItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  macroText: {
-    fontSize: RFValue(12),
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  checkboxContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 12,
-  },
-  checkboxContainerSelected: {
-    backgroundColor: "#6C3BAA",
-    borderColor: "#6C3BAA",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#374151",
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: RFValue(14),
-    color: "#9CA3AF",
-    marginTop: 8,
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
-  favoriteBadge: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  customBadge: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  brandText: {
-    fontSize: RFValue(11),
-    color: "#9CA3AF",
-    marginBottom: 4,
-  },
-});
+const createStyles = (theme: any, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: 16,
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerSubtitle: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    confirmButton: {
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      backgroundColor: theme.primary,
+      borderRadius: 20,
+    },
+    confirmButtonDisabled: {
+      backgroundColor: theme.border,
+    },
+    confirmButtonText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: "#FFF",
+    },
+    confirmButtonTextDisabled: {
+      color: theme.textTertiary,
+    },
+    searchContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 48,
+      gap: 12,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: RFValue(15),
+      color: theme.text,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.background,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+    },
+    listContent: {
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    productCard: {
+      flexDirection: "row",
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 12,
+      alignItems: "center",
+      marginBottom: 12,
+      elevation: 2,
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    productCardSelected: {
+      borderColor: theme.primary,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    productImageContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 10,
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    productImage: {
+      width: 50,
+      height: 50,
+      resizeMode: "contain",
+    },
+    productName: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    productMacros: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    macroItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    macroText: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    checkboxContainer: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 12,
+    },
+    checkboxContainerSelected: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+    },
+    emptyTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginTop: 16,
+    },
+    emptySubtitle: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginTop: 8,
+      textAlign: "center",
+      paddingHorizontal: 40,
+    },
+    favoriteBadge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 2,
+    },
+    customBadge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 2,
+    },
+    brandText: {
+      fontSize: RFValue(11),
+      color: theme.textTertiary,
+      marginBottom: 4,
+    },
+  });

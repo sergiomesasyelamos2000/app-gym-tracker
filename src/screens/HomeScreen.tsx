@@ -26,6 +26,7 @@ import {
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
+import { useAuthStore } from "../store/useAuthStore";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -86,6 +87,7 @@ export default function HomeScreen() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [motivationalQuote, setMotivationalQuote] = useState<string>("");
   const { theme, isDark } = useTheme();
+  const user = useAuthStore((state) => state.user);
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -149,6 +151,8 @@ export default function HomeScreen() {
 
   // Cargar datos
   const fetchData = useCallback(async () => {
+    if (!user?.id) return;
+
     try {
       const [globalStats, sessionsData] = await Promise.all([
         getGlobalStats(),
@@ -293,6 +297,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -320,6 +326,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -347,6 +355,8 @@ export default function HomeScreen() {
                 {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
                 },
               ]}
             >
@@ -380,6 +390,9 @@ export default function HomeScreen() {
                   backgroundColor: theme.card,
                   shadowColor: theme.shadowColor,
                   borderLeftColor: theme.error,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
+                  borderLeftWidth: 4,
                 },
               ]}
               onPress={handleStartWorkout}
@@ -446,6 +459,8 @@ export default function HomeScreen() {
                   {
                     backgroundColor: theme.card,
                     shadowColor: theme.shadowColor,
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: theme.border,
                   },
                 ]}
               >
@@ -474,7 +489,7 @@ export default function HomeScreen() {
                 <View
                   style={[
                     styles.sessionStats,
-                    { backgroundColor: theme.backgroundSecondary },
+                    { backgroundColor: theme.background },
                   ]}
                 >
                   <View style={styles.sessionStat}>

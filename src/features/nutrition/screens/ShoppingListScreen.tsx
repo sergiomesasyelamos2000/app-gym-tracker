@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  Alert,
-  RefreshControl,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { RFValue } from "react-native-responsive-fontsize";
 import { useNavigation } from "@react-navigation/native";
-import * as nutritionService from "../services/nutritionService";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import * as nutritionService from "../services/nutritionService";
 
 interface ShoppingListItem {
   id: string;
@@ -26,11 +27,14 @@ interface ShoppingListItem {
 }
 
 export default function ShoppingListScreen() {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const loadShoppingList = useCallback(async () => {
     if (!userProfile) {
@@ -187,7 +191,7 @@ export default function ShoppingListScreen() {
         <Ionicons
           name={item.purchased ? "checkbox" : "square-outline"}
           size={RFValue(24)}
-          color={item.purchased ? "#6C3BAA" : "#999"}
+          color={item.purchased ? theme.primary : theme.textTertiary}
         />
       </TouchableOpacity>
 
@@ -198,7 +202,7 @@ export default function ShoppingListScreen() {
         />
       ) : (
         <View style={[styles.productImage, styles.placeholderImage]}>
-          <Ionicons name="nutrition" size={RFValue(20)} color="#CCC" />
+          <Ionicons name="nutrition" size={RFValue(20)} color={theme.border} />
         </View>
       )}
 
@@ -216,14 +220,14 @@ export default function ShoppingListScreen() {
         onPress={() => handleDeleteItem(item.id)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="trash-outline" size={RFValue(20)} color="#E74C3C" />
+        <Ionicons name="trash-outline" size={RFValue(20)} color={theme.error} />
       </TouchableOpacity>
     </View>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="cart-outline" size={RFValue(64)} color="#D1D5DB" />
+      <Ionicons name="cart-outline" size={RFValue(64)} color={theme.border} />
       <Text style={styles.emptyTitle}>Lista de compras vacía</Text>
       <Text style={styles.emptySubtitle}>
         Agrega productos desde el rastreador nutricional para construir tu lista
@@ -241,13 +245,13 @@ export default function ShoppingListScreen() {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={RFValue(20)} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Lista de Compras</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C3BAA" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -261,7 +265,7 @@ export default function ShoppingListScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={RFValue(20)} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lista de Compras</Text>
         <View style={styles.headerRight} />
@@ -275,7 +279,7 @@ export default function ShoppingListScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: "#4CAF50" }]}>
+            <Text style={[styles.statValue, { color: theme.success }]}>
               {stats.purchased}
             </Text>
             <Text style={styles.statLabel}>Comprados</Text>
@@ -301,8 +305,8 @@ export default function ShoppingListScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#6C3BAA"]}
-            tintColor="#6C3BAA"
+            colors={[theme.primary]}
+            tintColor={theme.primary}
           />
         }
       />
@@ -339,173 +343,174 @@ export default function ShoppingListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  headerRight: {
-    width: 32,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    marginTop: 12,
-    marginHorizontal: 16,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: RFValue(20),
-    fontWeight: "700",
-    color: "#6C3BAA",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: RFValue(10),
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: "#E5E7EB",
-    marginHorizontal: 12,
-  },
-  listContent: {
-    paddingVertical: 12,
-  },
-  emptyListContent: {
-    flexGrow: 1,
-  },
-  itemContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  checkbox: {
-    marginRight: 12,
-  },
-  productImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    marginRight: 16,
-  },
-  placeholderImage: {
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  productName: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#1A1A1A",
-    lineHeight: RFValue(18),
-  },
-  purchasedText: {
-    textDecorationLine: "line-through",
-    color: "#9CA3AF",
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: RFValue(13),
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: RFValue(18),
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    padding: 16,
-    backgroundColor: "#FFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    gap: 6,
-    minHeight: 50,
-  },
-  clearPurchasedButton: {
-    backgroundColor: "#6C3BAA",
-  },
-  clearAllButton: {
-    backgroundColor: "#E74C3C",
-  },
-  actionButtonDisabled: {
-    backgroundColor: "#9CA3AF",
-    opacity: 0.5,
-  },
-  actionButtonText: {
-    fontSize: RFValue(12),
-    fontWeight: "700",
-    color: "#FFF",
-    flexShrink: 1,
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backButton: {
+      padding: 4,
+    },
+    headerTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerRight: {
+      width: 32,
+    },
+    statsContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.card,
+      marginTop: 12,
+      marginHorizontal: 16,
+      padding: 20,
+      borderRadius: 16,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    statItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: RFValue(20),
+      fontWeight: "700",
+      color: theme.primary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: RFValue(10),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: theme.border,
+      marginHorizontal: 12,
+    },
+    listContent: {
+      paddingVertical: 12,
+    },
+    emptyListContent: {
+      flexGrow: 1,
+    },
+    itemContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.card,
+      marginHorizontal: 16,
+      marginVertical: 6,
+      padding: 16,
+      borderRadius: 12,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    checkbox: {
+      marginRight: 12,
+    },
+    productImage: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      marginRight: 16,
+    },
+    placeholderImage: {
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    itemInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    productName: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      lineHeight: RFValue(18),
+    },
+    purchasedText: {
+      textDecorationLine: "line-through",
+      color: theme.textTertiary,
+    },
+    deleteButton: {
+      padding: 4,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 40,
+    },
+    emptyTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      marginTop: 20,
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      textAlign: "center",
+      lineHeight: RFValue(18),
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    actionsContainer: {
+      flexDirection: "row",
+      padding: 16,
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      gap: 12,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      gap: 6,
+      minHeight: 50,
+    },
+    clearPurchasedButton: {
+      backgroundColor: theme.primary,
+    },
+    clearAllButton: {
+      backgroundColor: theme.error,
+    },
+    actionButtonDisabled: {
+      backgroundColor: theme.textTertiary,
+      opacity: 0.5,
+    },
+    actionButtonText: {
+      fontSize: RFValue(12),
+      fontWeight: "700",
+      color: "#FFF",
+      flexShrink: 1,
+    },
+  });

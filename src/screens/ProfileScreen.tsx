@@ -157,7 +157,7 @@ export default function ProfileScreen() {
         <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
           <View style={styles.avatarContainer}>
             {user.picture ? (
-              <Image source={{ uri: user.picture }} style={styles.avatar} />
+              <Image source={{ uri: user.picture }} style={[styles.avatar, { borderColor: theme.primary }]} />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary }]}>
                 <User color="#FFFFFF" size={48} />
@@ -407,7 +407,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -424,7 +423,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#6C3BAA",
   },
   avatarPlaceholder: {
     width: 100,
@@ -464,7 +462,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -477,7 +474,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -541,7 +537,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,

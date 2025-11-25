@@ -26,6 +26,7 @@ import {
 import { useAuthStore } from "../../../store/useAuthStore";
 import { login, register, googleAuth } from "../services/authService";
 import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,6 +38,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const { theme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -165,7 +167,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
@@ -179,6 +181,8 @@ export default function AuthScreen() {
             style={[
               styles.header,
               {
+                backgroundColor: theme.primary,
+                shadowColor: theme.primary,
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }],
               },
@@ -209,10 +213,10 @@ export default function AuthScreen() {
             ]}
           >
             <View style={styles.welcomeSection}>
-              <Text style={styles.welcomeTitle}>
+              <Text style={[styles.welcomeTitle, { color: theme.text }]}>
                 {mode === "login" ? "¡Bienvenido!" : "Crear cuenta"}
               </Text>
-              <Text style={styles.welcomeSubtitle}>
+              <Text style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}>
                 {mode === "login"
                   ? "Inicia sesión para continuar"
                   : "Regístrate para comenzar tu journey fitness"}
@@ -223,11 +227,11 @@ export default function AuthScreen() {
             <View style={styles.formContainer}>
               {mode === "register" && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Nombre completo</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>Nombre completo</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                     placeholder="Ingresa tu nombre"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={theme.textTertiary}
                     value={name}
                     onChangeText={setName}
                     autoCapitalize="words"
@@ -237,11 +241,11 @@ export default function AuthScreen() {
               )}
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Email</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                   placeholder="tucorreo@ejemplo.com"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={theme.textTertiary}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -252,11 +256,11 @@ export default function AuthScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Contraseña</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Contraseña</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                   placeholder="••••••••"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={theme.textTertiary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -266,7 +270,7 @@ export default function AuthScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+                style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }, isLoading && styles.buttonDisabled]}
                 onPress={handleEmailAuth}
                 disabled={isLoading}
               >
@@ -282,15 +286,16 @@ export default function AuthScreen() {
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o continúa con</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: theme.divider }]} />
+              <Text style={[styles.dividerText, { color: theme.textSecondary }]}>o continúa con</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.divider }]} />
             </View>
 
             {/* Google Login Button */}
             <TouchableOpacity
               style={[
                 styles.googleButton,
+                { backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadowColor },
                 (isLoading || !request) && styles.buttonDisabled,
               ]}
               onPress={loginWithGoogle}
@@ -300,7 +305,7 @@ export default function AuthScreen() {
                 <View style={styles.googleIconContainer}>
                   <Text style={styles.buttonIcon}>G</Text>
                 </View>
-                <Text style={styles.googleButtonText}>Continuar con Google</Text>
+                <Text style={[styles.googleButtonText, { color: theme.text }]}>Continuar con Google</Text>
               </View>
             </TouchableOpacity>
 
@@ -310,11 +315,11 @@ export default function AuthScreen() {
               onPress={toggleMode}
               disabled={isLoading}
             >
-              <Text style={styles.toggleModeText}>
+              <Text style={[styles.toggleModeText, { color: theme.textSecondary }]}>
                 {mode === "login"
                   ? "¿No tienes cuenta? "
                   : "¿Ya tienes cuenta? "}
-                <Text style={styles.toggleModeLink}>
+                <Text style={[styles.toggleModeLink, { color: theme.primary }]}>
                   {mode === "login" ? "Regístrate" : "Inicia sesión"}
                 </Text>
               </Text>
@@ -322,10 +327,10 @@ export default function AuthScreen() {
 
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>
+              <Text style={[styles.footerText, { color: theme.textSecondary }]}>
                 Al continuar, aceptas nuestros{" "}
-                <Text style={styles.footerLink}>Términos de servicio</Text> y{" "}
-                <Text style={styles.footerLink}>Política de privacidad</Text>
+                <Text style={[styles.footerLink, { color: theme.primary }]}>Términos de servicio</Text> y{" "}
+                <Text style={[styles.footerLink, { color: theme.primary }]}>Política de privacidad</Text>
               </Text>
             </View>
           </Animated.View>
@@ -338,7 +343,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   container: {
     flex: 1,
@@ -347,13 +351,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    backgroundColor: "#6C3BAA",
     paddingHorizontal: 30,
     paddingTop: 60,
     paddingBottom: 40,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
-    shadowColor: "#6C3BAA",
     shadowOffset: {
       width: 0,
       height: 10,
@@ -410,13 +412,11 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#1E293B",
     marginBottom: 8,
     textAlign: "center",
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: "#64748B",
     textAlign: "center",
     lineHeight: 22,
   },
@@ -429,26 +429,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#1E293B",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   primaryButton: {
-    backgroundColor: "#6C3BAA",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 8,
-    shadowColor: "#6C3BAA",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -470,18 +464,14 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E2E8F0",
   },
   dividerText: {
     marginHorizontal: 12,
     fontSize: 14,
-    color: "#64748B",
   },
   googleButton: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -490,7 +480,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   buttonContent: {
     flexDirection: "row",
@@ -514,7 +503,6 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1E293B",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -525,10 +513,8 @@ const styles = StyleSheet.create({
   },
   toggleModeText: {
     fontSize: 14,
-    color: "#64748B",
   },
   toggleModeLink: {
-    color: "#6C3BAA",
     fontWeight: "600",
   },
   footer: {
@@ -537,12 +523,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: "#64748B",
     textAlign: "center",
     lineHeight: 18,
   },
   footerLink: {
-    color: "#6C3BAA",
     fontWeight: "600",
   },
 });

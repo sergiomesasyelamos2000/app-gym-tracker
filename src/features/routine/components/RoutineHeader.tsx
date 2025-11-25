@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 type Props = {
   routineTitle: string;
@@ -27,29 +28,32 @@ export const RoutineHeader: React.FC<Props> = ({
   onChangeTitle,
   readonly,
 }) => {
+  const { theme } = useTheme();
+
   if (started) return null;
 
   return (
     <View style={styles.header}>
       {routineId && readonly ? (
         <>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: theme.text }]}>
             {routineTitle || "Rutina sin nombre"}
           </Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.startButton} onPress={onStart}>
+            <TouchableOpacity style={[styles.startButton, { backgroundColor: theme.primary }]} onPress={onStart}>
               <Text style={styles.startButtonText}>Iniciar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-              <Text style={styles.editButtonText}>Editar</Text>
+            <TouchableOpacity style={[styles.editButton, { backgroundColor: theme.primary + '20' }]} onPress={onEdit}>
+              <Text style={[styles.editButtonText, { color: theme.primary }]}>Editar</Text>
             </TouchableOpacity>
           </View>
         </>
       ) : (
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.titleInput}
+            style={[styles.titleInput, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
             placeholder="Nombre de la rutina"
+            placeholderTextColor={theme.textTertiary}
             value={routineTitle}
             onChangeText={onChangeTitle}
           />

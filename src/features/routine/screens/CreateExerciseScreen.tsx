@@ -27,6 +27,7 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import {
   createExercise,
@@ -47,6 +48,7 @@ interface CreateExerciseRouteProps {
 }
 
 export default function CreateExerciseScreen() {
+  const { theme, isDark } = useTheme();
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
   const route = useRoute();
@@ -55,6 +57,8 @@ export default function CreateExerciseScreen() {
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+
+  const styles = React.useMemo(() => createStyles(theme, isDark), [theme, isDark]);
 
   // ==================== STATE ====================
   const [name, setName] = useState("");
@@ -475,7 +479,7 @@ export default function CreateExerciseScreen() {
                 { fontSize: RFValue(isSmallScreen ? 14 : 15) },
               ]}
               placeholder="Ej: Press de banca con barra"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.textTertiary}
               value={name}
               onChangeText={setName}
               maxLength={100}
@@ -682,269 +686,274 @@ export default function CreateExerciseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 20,
-  },
-  section: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: RFValue(15),
-    color: "#1F2937",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  imageContainer: {
-    borderRadius: 16,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    borderStyle: "dashed",
-    overflow: "hidden",
-    alignSelf: "center",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    padding: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  imageOverlayText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: RFValue(14),
-  },
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  imagePlaceholderIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#EDE9FE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  imagePlaceholderText: {
-    fontSize: RFValue(14),
-    fontWeight: "500",
-    color: "#6B7280",
-    textAlign: "center",
-  },
-  selector: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  selectorContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
-  selectorText: {
-    fontSize: RFValue(15),
-    color: "#1F2937",
-    fontWeight: "500",
-  },
-  selectorPlaceholder: {
-    fontSize: RFValue(15),
-    color: "#9CA3AF",
-  },
-  selectedMusclesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  muscleTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EDE9FE",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#C4B5FD",
-    gap: 6,
-  },
-  muscleTagText: {
-    fontSize: RFValue(13),
-    color: "#7C3AED",
-    fontWeight: "600",
-  },
-  muscleTagRemove: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 4,
-  },
-  footer: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  saveButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 3,
-    shadowColor: "#6C3BAA",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#D1D5DB",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: RFValue(16),
-    fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 40,
-    maxHeight: "80%",
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#1F2937",
-    paddingHorizontal: 20,
-  },
-  optionsList: {
-    maxHeight: 400,
-  },
-  optionButton: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  optionButtonSelected: {
-    backgroundColor: "#F3F4FF",
-    borderColor: "#6C3BAA",
-  },
-  optionContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  optionText: {
-    fontSize: RFValue(15),
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  optionTextSelected: {
-    color: "#6C3BAA",
-    fontWeight: "600",
-  },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#6C3BAA",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalActions: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  modalConfirmButton: {
-    backgroundColor: "#6C3BAA",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  modalConfirmText: {
-    color: "#fff",
-    fontSize: RFValue(16),
-    fontWeight: "600",
-  },
-});
+
+const createStyles = (theme: any, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 20,
+    },
+    section: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      marginBottom: 12,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    sectionTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    inputLabel: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: RFValue(15),
+      color: theme.text,
+      borderWidth: isDark ? 1 : 1,
+      borderColor: isDark ? theme.border : theme.inputBorder,
+    },
+    imageContainer: {
+      borderRadius: 16,
+      backgroundColor: theme.inputBackground,
+      borderWidth: 2,
+      borderColor: isDark ? theme.border : theme.inputBorder,
+      borderStyle: "dashed",
+      overflow: "hidden",
+      alignSelf: "center",
+    },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+    imageOverlay: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "rgba(0,0,0,0.7)",
+      padding: 12,
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
+    },
+    imageOverlayText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: RFValue(14),
+    },
+    imagePlaceholder: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    imagePlaceholderIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.primary + "20",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    imagePlaceholderText: {
+      fontSize: RFValue(14),
+      fontWeight: "500",
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    selector: {
+      backgroundColor: theme.inputBackground,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderWidth: isDark ? 1 : 1,
+      borderColor: isDark ? theme.border : theme.inputBorder,
+    },
+    selectorContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: 12,
+    },
+    selectorText: {
+      fontSize: RFValue(15),
+      color: theme.text,
+      fontWeight: "500",
+    },
+    selectorPlaceholder: {
+      fontSize: RFValue(15),
+      color: theme.textTertiary,
+    },
+    selectedMusclesContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 12,
+    },
+    muscleTag: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.primary + "20",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.primary + "40",
+      gap: 6,
+    },
+    muscleTagText: {
+      fontSize: RFValue(13),
+      color: theme.primary,
+      fontWeight: "600",
+    },
+    muscleTagRemove: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.primary + "33",
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 4,
+    },
+    footer: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    saveButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      elevation: 3,
+      shadowColor: theme.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    saveButtonDisabled: {
+      backgroundColor: theme.textTertiary,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    saveButtonText: {
+      color: "#fff",
+      fontSize: RFValue(16),
+      fontWeight: "600",
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 40,
+      maxHeight: "80%",
+    },
+    modalHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: theme.border,
+      borderRadius: 2,
+      alignSelf: "center",
+      marginTop: 12,
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      textAlign: "center",
+      marginBottom: 20,
+      color: theme.text,
+      paddingHorizontal: 20,
+    },
+    optionsList: {
+      maxHeight: 400,
+    },
+    optionButton: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      marginHorizontal: 20,
+      borderRadius: 12,
+      marginBottom: 8,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: isDark ? 1 : 2,
+      borderColor: isDark ? theme.border : "transparent",
+    },
+    optionButtonSelected: {
+      backgroundColor: theme.primary + "20",
+      borderColor: theme.primary,
+      borderWidth: 2,
+    },
+    optionContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    optionText: {
+      fontSize: RFValue(15),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    optionTextSelected: {
+      color: theme.primary,
+      fontWeight: "600",
+    },
+    checkCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalActions: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+    },
+    modalConfirmButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    modalConfirmText: {
+      color: "#fff",
+      fontSize: RFValue(16),
+      fontWeight: "600",
+    },
+  });
