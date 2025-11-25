@@ -1,5 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -45,6 +45,8 @@ const ExerciseHeader = ({
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [isSupersetModalVisible, setSupersetModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handleImagePress = () => {
     navigation.navigate("ExerciseDetail", { exercise });
@@ -111,7 +113,11 @@ const ExerciseHeader = ({
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: theme.text }]} numberOfLines={3} ellipsizeMode="tail">
+          <Text
+            style={[styles.title, { color: theme.text }]}
+            numberOfLines={3}
+            ellipsizeMode="tail"
+          >
             {exercise.name}
           </Text>
         </View>
@@ -135,63 +141,81 @@ const ExerciseHeader = ({
           animationIn="slideInUp"
           animationOut="slideOutDown"
           onModalHide={handleActionModalHide}
+          backdropColor={theme.shadowColor}
           backdropOpacity={0.5}
+          backdropTransitionOutTiming={0}
           useNativeDriver
           hideModalContentWhileAnimating
         >
-          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-            <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Opciones de ejercicio</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Opciones de ejercicio</Text>
+              <TouchableOpacity onPress={closeExerciseOptions}>
+                <Icon name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              style={styles.modalItem}
+              style={styles.modalOption}
               onPress={() => handleExerciseAction("reorder")}
             >
-              <Icon name="swap-vert" size={22} color={theme.primary} />
-              <Text style={[styles.modalItemText, { color: theme.text }]}>Reordenar ejercicios</Text>
+              <View style={styles.modalOptionLeft}>
+                <Icon name="swap-vert" size={24} color={theme.primary} />
+                <Text style={styles.modalOptionText}>Reordenar ejercicios</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.modalItem}
+              style={styles.modalOption}
               onPress={() => handleExerciseAction("replace")}
             >
-              <Icon name="sync" size={22} color={theme.primary} />
-              <Text style={[styles.modalItemText, { color: theme.text }]}>Reemplazar ejercicio</Text>
+              <View style={styles.modalOptionLeft}>
+                <Icon name="sync" size={24} color={theme.primary} />
+                <Text style={styles.modalOptionText}>Reemplazar ejercicio</Text>
+              </View>
             </TouchableOpacity>
 
             {hasSuperset ? (
               <TouchableOpacity
-                style={styles.modalItem}
+                style={styles.modalOption}
                 onPress={() => {
                   setActionModalVisible(false);
                   onRemoveSuperset?.();
                 }}
               >
-                <Icon name="link-off" size={22} color={theme.error} />
-                <Text style={[styles.modalItemText, { color: theme.error }]}>
-                  Eliminar superserie
-                </Text>
+                <View style={styles.modalOptionLeft}>
+                  <Icon name="link-off" size={24} color={theme.error} />
+                  <Text
+                    style={[styles.modalOptionText, { color: theme.error }]}
+                  >
+                    Eliminar superserie
+                  </Text>
+                </View>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.modalItem}
+                style={styles.modalOption}
                 onPress={() => handleExerciseAction("superset")}
               >
-                <Icon name="link" size={22} color={theme.primary} />
-                <Text style={[styles.modalItemText, { color: theme.text }]}>Agregar a superserie</Text>
+                <View style={styles.modalOptionLeft}>
+                  <Icon name="link" size={24} color={theme.primary} />
+                  <Text style={styles.modalOptionText}>
+                    Agregar a superserie
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
 
-            <View style={[styles.modalDivider, { backgroundColor: theme.divider }]} />
-
             <TouchableOpacity
-              style={styles.modalItem}
+              style={styles.modalOption}
               onPress={() => handleExerciseAction("delete")}
             >
-              <Icon name="delete" size={22} color={theme.error} />
-              <Text style={[styles.modalItemText, styles.deleteText, { color: theme.error }]}>
-                Eliminar ejercicio
-              </Text>
+              <View style={styles.modalOptionLeft}>
+                <Icon name="delete" size={24} color={theme.error} />
+                <Text style={[styles.modalOptionText, { color: theme.error }]}>
+                  Eliminar ejercicio
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </Modal>
@@ -199,31 +223,41 @@ const ExerciseHeader = ({
         {/* Modal de superseries */}
         <Modal
           isVisible={isSupersetModalVisible}
-          onBackdropPress={() => {
-            setSupersetModalVisible(false);
-          }}
+          onBackdropPress={() => setSupersetModalVisible(false)}
           onSwipeComplete={() => setSupersetModalVisible(false)}
           swipeDirection="down"
           style={styles.modalContainer}
           animationIn="slideInUp"
           animationOut="slideOutDown"
+          backdropColor={theme.shadowColor}
           backdropOpacity={0.5}
+          backdropTransitionOutTiming={0}
           useNativeDriver
           hideModalContentWhileAnimating
         >
-          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-            <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Superserie de {exercise.name} con...
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Superserie de {exercise.name} con...
+              </Text>
+              <TouchableOpacity onPress={() => setSupersetModalVisible(false)}>
+                <Icon name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
               Selecciona el ejercicio con el que deseas hacer superserie
             </Text>
 
             {filteredExercises.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Icon name="fitness-center" size={48} color={theme.textTertiary} />
-                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                <Icon
+                  name="fitness-center"
+                  size={48}
+                  color={theme.textTertiary}
+                />
+                <Text
+                  style={[styles.emptyText, { color: theme.textSecondary }]}
+                >
                   No hay otros ejercicios en esta rutina
                 </Text>
               </View>
@@ -232,7 +266,13 @@ const ExerciseHeader = ({
                 {filteredExercises.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={[styles.supersetItem, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+                    style={[
+                      styles.supersetItem,
+                      {
+                        backgroundColor: theme.backgroundSecondary,
+                        borderColor: theme.border,
+                      },
+                    ]}
                     onPress={() => handleSelectSupersetExercise(item)}
                   >
                     <Image
@@ -241,12 +281,22 @@ const ExerciseHeader = ({
                           ? { uri: `data:image/png;base64,${item.imageUrl}` }
                           : require("./../../../../../assets/not-image.png")
                       }
-                      style={[styles.supersetImage, { backgroundColor: theme.border }]}
+                      style={[
+                        styles.supersetImage,
+                        { backgroundColor: theme.border },
+                      ]}
                     />
-                    <Text style={[styles.supersetName, { color: theme.text }]} numberOfLines={2}>
+                    <Text
+                      style={[styles.supersetName, { color: theme.text }]}
+                      numberOfLines={2}
+                    >
                       {item.name}
                     </Text>
-                    <Icon name="chevron-right" size={24} color={theme.textTertiary} />
+                    <Icon
+                      name="chevron-right"
+                      size={24}
+                      color={theme.textTertiary}
+                    />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -258,105 +308,112 @@ const ExerciseHeader = ({
   );
 };
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  titleContainer: {
-    flex: 1,
-    paddingVertical: 8,
-  },
-  title: {
-    fontSize: RFValue(22),
-    fontWeight: "600",
-    flexShrink: 1,
-    maxWidth: 180,
-  },
-  exerciseImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  modalContainer: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: RFValue(20),
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: RFValue(14),
-    marginBottom: 16,
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-  },
-  modalItemText: {
-    fontSize: RFValue(16),
-    marginLeft: 12,
-    fontWeight: "500",
-  },
-  deleteText: {
-  },
-  modalDivider: {
-    height: 1,
-    marginVertical: 8,
-  },
-  supersetList: {
-    maxHeight: 400,
-  },
-  supersetItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  supersetImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  supersetName: {
-    flex: 1,
-    fontSize: RFValue(15),
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: RFValue(14),
-    marginTop: 12,
-    textAlign: "center",
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    titleContainer: {
+      flex: 1,
+      paddingVertical: 8,
+    },
+    title: {
+      fontSize: RFValue(22),
+      fontWeight: "600",
+      flexShrink: 1,
+      maxWidth: 180,
+    },
+    exerciseImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      marginRight: 12,
+    },
+    modalContainer: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+      maxHeight: "70%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      flex: 1,
+    },
+    modalSubtitle: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    modalOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    modalOptionText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    supersetList: {
+      maxHeight: 400,
+    },
+    supersetItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+    },
+    supersetImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 8,
+      marginRight: 12,
+    },
+    supersetName: {
+      flex: 1,
+      fontSize: RFValue(15),
+      fontWeight: "600",
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 40,
+    },
+    emptyText: {
+      fontSize: RFValue(14),
+      marginTop: 12,
+      textAlign: "center",
+    },
+  });
 
 export default ExerciseHeader;

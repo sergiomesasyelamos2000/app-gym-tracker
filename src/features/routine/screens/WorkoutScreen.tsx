@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ExerciseRequestDto,
   RoutineResponseDto,
@@ -54,6 +55,8 @@ export default function WorkoutScreen() {
       }))
     );
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Elimina el useFocusEffect existente y reemplázalo con:
   useEffect(() => {
@@ -180,8 +183,12 @@ export default function WorkoutScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundSecondary }}>
       {/* Encabezado */}
-      <View style={[styles.header, { backgroundColor: theme.backgroundSecondary }]}>
-        <Text style={[styles.headerTitle, { color: theme.primary }]}>Rutinas de entrenamiento</Text>
+      <View
+        style={[styles.header, { backgroundColor: theme.backgroundSecondary }]}
+      >
+        <Text style={[styles.headerTitle, { color: theme.primary }]}>
+          Rutinas de entrenamiento
+        </Text>
         <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
           Selecciona una rutina para comenzar o crea una nueva
         </Text>
@@ -220,21 +227,44 @@ export default function WorkoutScreen() {
         }
       >
         {loading ? (
-          <Text style={{ textAlign: "center", marginTop: 40, color: theme.text }}>
+          <Text
+            style={{ textAlign: "center", marginTop: 40, color: theme.text }}
+          >
             Cargando rutinas...
           </Text>
         ) : routines.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 40, color: theme.textSecondary }}>
+          <Text
+            style={{
+              textAlign: "center",
+              marginTop: 40,
+              color: theme.textSecondary,
+            }}
+          >
             No tienes rutinas guardadas.
           </Text>
         ) : (
           routines.map((routine) => (
-            <View key={routine.id} style={[styles.routineCard, { backgroundColor: theme.card, shadowColor: theme.shadowColor, borderWidth: isDark ? 1 : 0, borderColor: theme.border }]}>
+            <View
+              key={routine.id}
+              style={[
+                styles.routineCard,
+                {
+                  backgroundColor: theme.card,
+                  shadowColor: theme.shadowColor,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={styles.moreButton}
                 onPress={() => openRoutineOptions(routine)}
               >
-                <MaterialIcons name="more-vert" size={20} color={theme.primary} />
+                <MaterialIcons
+                  name="more-vert"
+                  size={20}
+                  color={theme.primary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -246,17 +276,24 @@ export default function WorkoutScreen() {
                   })
                 }
               >
-                <Text style={[styles.routineName, { color: theme.text }]}>{routine.title}</Text>
+                <Text style={[styles.routineName, { color: theme.text }]}>
+                  {routine.title}
+                </Text>
                 {/* Opcional: Mostrar fecha de creación */}
                 {routine.createdAt && (
-                  <Text style={[styles.routineDate, { color: theme.textSecondary }]}>
+                  <Text
+                    style={[styles.routineDate, { color: theme.textSecondary }]}
+                  >
                     Creada: {new Date(routine.createdAt).toLocaleDateString()}
                   </Text>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.startRoutineButton, { backgroundColor: theme.primary }]}
+                style={[
+                  styles.startRoutineButton,
+                  { backgroundColor: theme.primary },
+                ]}
                 onPress={() =>
                   navigation.navigate("RoutineDetail", {
                     routineId: routine.id,
@@ -280,31 +317,52 @@ export default function WorkoutScreen() {
         onSwipeComplete={closeRoutineOptions}
         swipeDirection="down"
         style={styles.modalContainer}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
-        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-          <Text style={[styles.modalTitle, { color: theme.primary }]}>Acciones de rutina</Text>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Acciones de rutina</Text>
+            <TouchableOpacity onPress={closeRoutineOptions}>
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
-            style={styles.modalItem}
+            style={styles.modalOption}
             onPress={() => handleRoutineAction("duplicate")}
           >
-            <MaterialIcons name="content-copy" size={20} color={theme.primary} />
-            <Text style={[styles.modalItemText, { color: theme.text }]}>Duplicar rutina</Text>
+            <View style={styles.modalOptionLeft}>
+              <MaterialIcons
+                name="content-copy"
+                size={24}
+                color={theme.primary}
+              />
+              <Text style={styles.modalOptionText}>Duplicar rutina</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.modalItem}
+            style={styles.modalOption}
             onPress={() => handleRoutineAction("edit")}
           >
-            <MaterialIcons name="edit" size={20} color={theme.primary} />
-            <Text style={[styles.modalItemText, { color: theme.text }]}>Editar rutina</Text>
+            <View style={styles.modalOptionLeft}>
+              <MaterialIcons name="edit" size={24} color={theme.primary} />
+              <Text style={styles.modalOptionText}>Editar rutina</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.modalItem}
+            style={styles.modalOption}
             onPress={() => handleRoutineAction("delete")}
           >
-            <MaterialIcons name="delete" size={20} color={theme.error} />
-            <Text style={[styles.modalItemText, { color: theme.error }]}>
-              Borrar rutina
-            </Text>
+            <View style={styles.modalOptionLeft}>
+              <MaterialIcons name="delete" size={24} color={theme.error} />
+              <Text style={[styles.modalOptionText, { color: theme.error }]}>
+                Borrar rutina
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -312,7 +370,12 @@ export default function WorkoutScreen() {
       {/* Banner de entrenamiento en progreso - MEJORADO */}
       {showWorkoutBanner && workoutInProgress && (
         <View style={styles.workoutBannerContainer}>
-          <View style={[styles.workoutBanner, { backgroundColor: theme.primaryDark, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.workoutBanner,
+              { backgroundColor: theme.primaryDark, borderColor: theme.border },
+            ]}
+          >
             {/* Icono y texto */}
             <View style={styles.bannerContent}>
               <View style={styles.bannerIcon}>
@@ -343,7 +406,11 @@ export default function WorkoutScreen() {
                 onPress={handleDiscardWorkout}
               >
                 <MaterialIcons name="close" size={16} color={theme.error} />
-                <Text style={[styles.discardButtonText, { color: theme.error }]}>Descartar</Text>
+                <Text
+                  style={[styles.discardButtonText, { color: theme.error }]}
+                >
+                  Descartar
+                </Text>
               </Pressable>
 
               <Pressable
@@ -366,209 +433,227 @@ export default function WorkoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    paddingTop: 32,
-    paddingBottom: 16,
-    paddingHorizontal: 24,
-  },
-  headerTitle: {
-    fontSize: RFValue(22),
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: RFValue(15),
-  },
-  topActions: {
-    paddingHorizontal: 24,
-    marginBottom: 10,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-    marginTop: 8,
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: RFValue(16),
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  listContainerWithBanner: {
-    paddingBottom: 100, // Espacio extra cuando el banner está visible
-  },
-  routineCard: {
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 16,
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-    position: "relative",
-  },
-  routineName: {
-    fontSize: RFValue(18),
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  routineDate: {
-    fontSize: RFValue(12),
-    fontStyle: "italic",
-  },
-  startRoutineButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginTop: 8,
-  },
-  startRoutineButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: RFValue(15),
-    marginLeft: 4,
-  },
-  moreButton: {
-    position: "absolute",
-    right: 10,
-    top: 10,
-    padding: 6,
-    zIndex: 10,
-  },
-  modalContainer: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    padding: 24,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  modalTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    marginBottom: 18,
-    textAlign: "center",
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: 12,
-  },
-  modalItemText: {
-    fontSize: RFValue(16),
-  },
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    header: {
+      paddingTop: 32,
+      paddingBottom: 16,
+      paddingHorizontal: 24,
+    },
+    headerTitle: {
+      fontSize: RFValue(22),
+      fontWeight: "bold",
+      marginBottom: 4,
+    },
+    headerSubtitle: {
+      fontSize: RFValue(15),
+    },
+    topActions: {
+      paddingHorizontal: 24,
+      marginBottom: 10,
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 10,
+      alignSelf: "flex-start",
+      marginTop: 8,
+    },
+    addButtonText: {
+      color: "#fff",
+      fontSize: RFValue(16),
+      fontWeight: "bold",
+      marginLeft: 8,
+    },
+    listContainer: {
+      paddingHorizontal: 16,
+      paddingBottom: 20,
+    },
+    listContainerWithBanner: {
+      paddingBottom: 100, // Espacio extra cuando el banner está visible
+    },
+    routineCard: {
+      borderRadius: 14,
+      padding: 18,
+      marginBottom: 16,
+      shadowOpacity: 0.04,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 2,
+      position: "relative",
+    },
+    routineName: {
+      fontSize: RFValue(18),
+      fontWeight: "600",
+      marginBottom: 6,
+    },
+    routineDate: {
+      fontSize: RFValue(12),
+      fontStyle: "italic",
+    },
+    startRoutineButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      alignSelf: "flex-start",
+      marginTop: 8,
+    },
+    startRoutineButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: RFValue(15),
+      marginLeft: 4,
+    },
+    moreButton: {
+      position: "absolute",
+      right: 10,
+      top: 10,
+      padding: 6,
+      zIndex: 10,
+    },
+    modalContainer: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    modalOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    modalOptionText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
 
-  // Banner mejorado
-  workoutBannerContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    backgroundColor: "transparent",
-    zIndex: 1000,
-  },
-  workoutBanner: {
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
+    // Banner mejorado
+    workoutBannerContainer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 16,
+      backgroundColor: "transparent",
+      zIndex: 1000,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-  },
-  bannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
-  },
-  bannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  bannerTextContainer: {
-    flex: 1,
-  },
-  bannerTitle: {
-    fontSize: RFValue(12),
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 2,
-  },
-  bannerRoutineName: {
-    fontSize: RFValue(15),
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  bannerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  bannerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 6,
-    minHeight: 40,
-  },
-  discardButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 107, 107, 0.3)",
-  },
-  discardButtonText: {
-    fontSize: RFValue(13),
-    fontWeight: "600",
-  },
-  resumeButton: {
-    paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    workoutBanner: {
+      borderRadius: 16,
+      padding: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+      borderWidth: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  resumeButtonText: {
-    color: "#FFFFFF",
-    fontSize: RFValue(13),
-    fontWeight: "700",
-  },
-  buttonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.96 }],
-  },
-});
+    bannerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      marginRight: 12,
+    },
+    bannerIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    bannerTextContainer: {
+      flex: 1,
+    },
+    bannerTitle: {
+      fontSize: RFValue(12),
+      fontWeight: "600",
+      color: "rgba(255, 255, 255, 0.8)",
+      marginBottom: 2,
+    },
+    bannerRoutineName: {
+      fontSize: RFValue(15),
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+    bannerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    bannerButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      gap: 6,
+      minHeight: 40,
+    },
+    discardButton: {
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 107, 107, 0.3)",
+    },
+    discardButtonText: {
+      fontSize: RFValue(13),
+      fontWeight: "600",
+    },
+    resumeButton: {
+      paddingHorizontal: 16,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    resumeButtonText: {
+      color: "#FFFFFF",
+      fontSize: RFValue(13),
+      fontWeight: "700",
+    },
+    buttonPressed: {
+      opacity: 0.8,
+      transform: [{ scale: 0.96 }],
+    },
+  });

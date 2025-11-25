@@ -558,6 +558,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         style={styles.modal}
         animationIn="slideInUp"
         animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -613,6 +617,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         style={styles.modal}
         animationIn="slideInUp"
         animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>

@@ -475,7 +475,11 @@ export default function EditProductScreen() {
                     {selectedUnit.label}
                   </Text>
                 </View>
-                <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
+                <Ionicons
+                  name="chevron-down"
+                  size={18}
+                  color={theme.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -628,6 +632,10 @@ export default function EditProductScreen() {
         style={styles.modal}
         animationIn="slideInUp"
         animationOut="slideOutDown"
+        backdropColor={theme.shadowColor}
+        backdropOpacity={0.5}
+        backdropTransitionOutTiming={0}
+        useNativeDriver
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -675,252 +683,253 @@ export default function EditProductScreen() {
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: theme.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-  },
-  headerSubtitle: {
-    fontSize: RFValue(12),
-    color: theme.textSecondary,
-    marginTop: 2,
-  },
-  content: {
-    flex: 1,
-  },
-  imageSection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  productImagePlaceholder: {
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: theme.card,
-    borderWidth: 2,
-    borderColor: theme.border,
-    borderStyle: "dashed",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  placeholderIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  imagePlaceholderText: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: theme.text,
-    marginTop: 4,
-  },
-  imagePlaceholderSubtext: {
-    fontSize: RFValue(12),
-    color: theme.textSecondary,
-    marginTop: 4,
-  },
-  imagePreviewContainer: {
-    position: "relative",
-    height: 200,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  productImagePreview: {
-    width: "100%",
-    height: "100%",
-  },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    flexDirection: "row",
-    gap: 8,
-  },
-  imageActionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${theme.primary}E6`,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: theme.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  deleteImageButton: {
-    backgroundColor: `${theme.error}E6`,
-  },
-  section: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  sectionTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-    marginBottom: 16,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: theme.text,
-    marginBottom: 8,
-  },
-  required: {
-    color: theme.error,
-  },
-  input: {
-    backgroundColor: theme.card,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: RFValue(15),
-    color: theme.text,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 14,
-    textAlignVertical: "top",
-  },
-  row: {
-    flexDirection: "row",
-  },
-  unitSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.card,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  unitSelectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  unitIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  unitSelectorText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: theme.text,
-    flex: 1,
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: theme.card,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-  },
-  saveButton: {
-    flexDirection: "row",
-    backgroundColor: theme.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  bottomPadding: {
-    height: 32,
-  },
-  modal: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    backgroundColor: theme.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  modalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-  },
-  modalOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.backgroundSecondary,
-  },
-  modalOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  modalOptionText: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: theme.text,
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerSubtitle: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    content: {
+      flex: 1,
+    },
+    imageSection: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 12,
+    },
+    productImagePlaceholder: {
+      height: 200,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      borderWidth: 2,
+      borderColor: theme.border,
+      borderStyle: "dashed",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    placeholderIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    imagePlaceholderText: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginTop: 4,
+    },
+    imagePlaceholderSubtext: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    imagePreviewContainer: {
+      position: "relative",
+      height: 200,
+      borderRadius: 16,
+      overflow: "hidden",
+    },
+    productImagePreview: {
+      width: "100%",
+      height: "100%",
+    },
+    imageOverlay: {
+      position: "absolute",
+      bottom: 12,
+      right: 12,
+      flexDirection: "row",
+      gap: 8,
+    },
+    imageActionButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: `${theme.primary}E6`,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    deleteImageButton: {
+      backgroundColor: `${theme.error}E6`,
+    },
+    section: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    sectionTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    inputGroup: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    required: {
+      color: theme.error,
+    },
+    input: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: RFValue(15),
+      color: theme.text,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    textArea: {
+      minHeight: 100,
+      paddingTop: 14,
+      textAlignVertical: "top",
+    },
+    row: {
+      flexDirection: "row",
+    },
+    unitSelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    unitSelectorLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    unitIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    unitSelectorText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+      flex: 1,
+    },
+    footer: {
+      padding: 16,
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    saveButton: {
+      flexDirection: "row",
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: "#FFF",
+    },
+    bottomPadding: {
+      height: 32,
+    },
+    modal: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    modalOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    modalOptionText: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+    },
+  });
