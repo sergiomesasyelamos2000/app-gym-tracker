@@ -38,7 +38,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -61,12 +61,12 @@ export default function AuthScreen() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
@@ -106,7 +106,6 @@ export default function AuthScreen() {
       setAuth(authResponse.user, authResponse.tokens);
 
       Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
-      // Navigation will be handled by the navigator based on auth state
     } catch (error: any) {
       console.error("Error en la autenticación con Google:", error);
       Alert.alert(
@@ -138,17 +137,16 @@ export default function AuthScreen() {
       } else {
         const authResponse = await register({ email, password, name });
         setAuth(authResponse.user, authResponse.tokens);
-        Alert.alert(
-          "¡Cuenta creada!",
-          `Bienvenido ${authResponse.user.name}`
-        );
+        Alert.alert("¡Cuenta creada!", `Bienvenido ${authResponse.user.name}`);
       }
     } catch (error: any) {
       console.error("Error en autenticación:", error);
       Alert.alert(
         "Error",
         error.message ||
-          `No se pudo ${mode === "login" ? "iniciar sesión" : "crear la cuenta"}`
+          `No se pudo ${
+            mode === "login" ? "iniciar sesión" : "crear la cuenta"
+          }`
       );
     } finally {
       setIsLoading(false);
@@ -156,6 +154,19 @@ export default function AuthScreen() {
   };
 
   const toggleMode = () => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0.5,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     setMode(mode === "login" ? "register" : "login");
     setEmail("");
     setPassword("");
@@ -167,7 +178,9 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
@@ -175,6 +188,7 @@ export default function AuthScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Header Section */}
           <Animated.View
@@ -182,7 +196,7 @@ export default function AuthScreen() {
               styles.header,
               {
                 backgroundColor: theme.primary,
-                shadowColor: theme.primary,
+                shadowColor: isDark ? "#000" : theme.primary,
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }],
               },
@@ -208,7 +222,6 @@ export default function AuthScreen() {
               styles.authSection,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
               },
             ]}
           >
@@ -216,7 +229,9 @@ export default function AuthScreen() {
               <Text style={[styles.welcomeTitle, { color: theme.text }]}>
                 {mode === "login" ? "¡Bienvenido!" : "Crear cuenta"}
               </Text>
-              <Text style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}>
+              <Text
+                style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}
+              >
                 {mode === "login"
                   ? "Inicia sesión para continuar"
                   : "Regístrate para comenzar tu journey fitness"}
@@ -227,9 +242,18 @@ export default function AuthScreen() {
             <View style={styles.formContainer}>
               {mode === "register" && (
                 <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Nombre completo</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>
+                    Nombre completo
+                  </Text>
                   <TextInput
-                    style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.inputBackground,
+                        borderColor: theme.inputBorder,
+                        color: theme.text,
+                      },
+                    ]}
                     placeholder="Ingresa tu nombre"
                     placeholderTextColor={theme.textTertiary}
                     value={name}
@@ -243,7 +267,14 @@ export default function AuthScreen() {
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: theme.text }]}>Email</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.inputBackground,
+                      borderColor: theme.inputBorder,
+                      color: theme.text,
+                    },
+                  ]}
                   placeholder="tucorreo@ejemplo.com"
                   placeholderTextColor={theme.textTertiary}
                   value={email}
@@ -256,9 +287,18 @@ export default function AuthScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Contraseña</Text>
+                <Text style={[styles.label, { color: theme.text }]}>
+                  Contraseña
+                </Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.inputBackground,
+                      borderColor: theme.inputBorder,
+                      color: theme.text,
+                    },
+                  ]}
                   placeholder="••••••••"
                   placeholderTextColor={theme.textTertiary}
                   value={password}
@@ -270,9 +310,17 @@ export default function AuthScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: theme.primary, shadowColor: theme.primary }, isLoading && styles.buttonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  {
+                    backgroundColor: theme.primary,
+                    shadowColor: theme.primary,
+                    opacity: isLoading ? 0.7 : 1,
+                  },
+                ]}
                 onPress={handleEmailAuth}
                 disabled={isLoading}
+                activeOpacity={0.8}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -286,26 +334,41 @@ export default function AuthScreen() {
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: theme.divider }]} />
-              <Text style={[styles.dividerText, { color: theme.textSecondary }]}>o continúa con</Text>
-              <View style={[styles.dividerLine, { backgroundColor: theme.divider }]} />
+              <View
+                style={[styles.dividerLine, { backgroundColor: theme.divider }]}
+              />
+              <Text
+                style={[styles.dividerText, { color: theme.textSecondary }]}
+              >
+                o continúa con
+              </Text>
+              <View
+                style={[styles.dividerLine, { backgroundColor: theme.divider }]}
+              />
             </View>
 
             {/* Google Login Button */}
             <TouchableOpacity
               style={[
                 styles.googleButton,
-                { backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadowColor },
-                (isLoading || !request) && styles.buttonDisabled,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  shadowColor: theme.shadowColor,
+                  opacity: isLoading || !request ? 0.6 : 1,
+                },
               ]}
               onPress={loginWithGoogle}
               disabled={isLoading || !request}
+              activeOpacity={0.7}
             >
               <View style={styles.buttonContent}>
                 <View style={styles.googleIconContainer}>
                   <Text style={styles.buttonIcon}>G</Text>
                 </View>
-                <Text style={[styles.googleButtonText, { color: theme.text }]}>Continuar con Google</Text>
+                <Text style={[styles.googleButtonText, { color: theme.text }]}>
+                  Continuar con Google
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -314,8 +377,11 @@ export default function AuthScreen() {
               style={styles.toggleModeButton}
               onPress={toggleMode}
               disabled={isLoading}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.toggleModeText, { color: theme.textSecondary }]}>
+              <Text
+                style={[styles.toggleModeText, { color: theme.textSecondary }]}
+              >
                 {mode === "login"
                   ? "¿No tienes cuenta? "
                   : "¿Ya tienes cuenta? "}
@@ -329,8 +395,13 @@ export default function AuthScreen() {
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.textSecondary }]}>
                 Al continuar, aceptas nuestros{" "}
-                <Text style={[styles.footerLink, { color: theme.primary }]}>Términos de servicio</Text> y{" "}
-                <Text style={[styles.footerLink, { color: theme.primary }]}>Política de privacidad</Text>
+                <Text style={[styles.footerLink, { color: theme.primary }]}>
+                  Términos de servicio
+                </Text>{" "}
+                y{" "}
+                <Text style={[styles.footerLink, { color: theme.primary }]}>
+                  Política de privacidad
+                </Text>
               </Text>
             </View>
           </Animated.View>
@@ -354,13 +425,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingTop: 60,
     paddingBottom: 40,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -381,7 +452,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "500",
     textAlign: "center",
-    opacity: 0.9,
+    opacity: 0.95,
   },
   logoContainer: {
     alignItems: "center",
@@ -401,13 +472,13 @@ const styles = StyleSheet.create({
   },
   authSection: {
     flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 40,
+    paddingHorizontal: 24,
+    paddingTop: 32,
     paddingBottom: 20,
   },
   welcomeSection: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 32,
   },
   welcomeTitle: {
     fontSize: 28,
@@ -424,7 +495,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
@@ -434,9 +505,9 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     fontSize: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   primaryButton: {
     borderRadius: 12,
@@ -468,6 +539,7 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 12,
     fontSize: 14,
+    fontWeight: "500",
   },
   googleButton: {
     borderRadius: 12,
@@ -504,21 +576,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
   toggleModeButton: {
     marginTop: 24,
     alignItems: "center",
+    paddingVertical: 8,
   },
   toggleModeText: {
-    fontSize: 14,
+    fontSize: 15,
   },
   toggleModeLink: {
-    fontWeight: "600",
+    fontWeight: "700",
   },
   footer: {
-    marginTop: 24,
+    marginTop: 32,
     paddingHorizontal: 20,
   },
   footerText: {

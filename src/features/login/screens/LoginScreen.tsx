@@ -12,21 +12,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { apiFetch } from "../../../api"; // Ajusta la ruta según tu estructura
+import { apiFetch } from "../../../api";
 import { useTheme } from "../../../contexts/ThemeContext";
 
 // Es necesario para completar la sesión de autenticación en web
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingType, setLoadingType] = useState(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // 1. Configura la solicitud de autenticación con Google :cite[4]:cite[8]
+  // Configura la solicitud de autenticación con Google
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId:
       "1019156813901-996dkn9dvnedm2bb7k2huapr3lsb98rt.apps.googleusercontent.com",
@@ -38,7 +37,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     const redirectUri = AuthSession.makeRedirectUri({
-      scheme: "app", // This should match the "scheme" in your app.json
+      scheme: "app",
     });
   }, []);
 
@@ -47,18 +46,18 @@ export default function LoginScreen() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
-  // 2. Maneja la respuesta de autenticación de Google :cite[4]
+  // Maneja la respuesta de autenticación de Google
   useEffect(() => {
     if (response?.type === "success") {
       handleGoogleAuthSuccess(response.authentication);
@@ -68,7 +67,7 @@ export default function LoginScreen() {
   const handleGoogleAuthSuccess = async (authentication: any) => {
     setIsLoading(true);
     try {
-      // 1. Obtener información del perfil del usuario
+      // Obtener información del perfil del usuario
       const userInfoResponse = await fetch(
         "https://www.googleapis.com/userinfo/v2/me",
         {
@@ -77,7 +76,7 @@ export default function LoginScreen() {
       );
       const userInfo = await userInfoResponse.json();
 
-      // 2. Enviar token e información a TU backend
+      // Enviar token e información a TU backend
       const backendData = await apiFetch("auth/google/callback", {
         method: "POST",
         body: JSON.stringify({
@@ -86,7 +85,6 @@ export default function LoginScreen() {
         }),
       });
 
-      // 3. Manejar la respuesta de tu backend (ej. guardar token, navegar a pantalla principal)
       Alert.alert("¡Bienvenido!", `Hola ${userInfo.name}`);
     } catch (error) {
       console.error("Error en la autenticación:", error);
@@ -96,32 +94,22 @@ export default function LoginScreen() {
     }
   };
 
-  const getUserInfo = async (token: any) => {
-    const response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Error al obtener información del usuario: ${response.status}`
-      );
-    }
-
-    return await response.json();
-  };
-
   const loginWithGoogle = () => {
     promptAsync();
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    >
       <View style={styles.container}>
         {/* Header Section */}
         <Animated.View
           style={[
             styles.header,
             {
+              backgroundColor: theme.primary,
+              shadowColor: isDark ? "#000" : theme.primary,
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             },
@@ -147,13 +135,16 @@ export default function LoginScreen() {
             styles.loginSection,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
             },
           ]}
         >
           <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
-            <Text style={styles.welcomeSubtitle}>
+            <Text style={[styles.welcomeTitle, { color: theme.text }]}>
+              ¡Bienvenido!
+            </Text>
+            <Text
+              style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}
+            >
               Inicia sesión para comenzar tu journey fitness
             </Text>
           </View>
@@ -164,32 +155,40 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[
                 styles.loginButton,
-                styles.googleButton,
-                (isLoading || !request) && styles.buttonDisabled,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  shadowColor: theme.shadowColor,
+                  opacity: isLoading || !request ? 0.6 : 1,
+                },
               ]}
               onPress={loginWithGoogle}
               disabled={isLoading || !request}
+              activeOpacity={0.7}
             >
               <View style={styles.buttonContent}>
-                <View
-                  style={[styles.iconContainer, styles.googleIconContainer]}
-                >
+                <View style={styles.googleIconContainer}>
                   <Text style={styles.buttonIcon}>G</Text>
                 </View>
                 <View style={styles.textContainer}>
-                  <Text style={styles.buttonText}>
-                    {isLoading && loadingType === "google"
-                      ? "Conectando..."
-                      : "Continuar con Google"}
+                  <Text style={[styles.buttonText, { color: theme.text }]}>
+                    {isLoading ? "Conectando..." : "Continuar con Google"}
                   </Text>
-                  <Text style={styles.buttonSubtext}>
+                  <Text
+                    style={[
+                      styles.buttonSubtext,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
                     Inicia sesión rápidamente
                   </Text>
                 </View>
-                {!isLoading ? (
-                  <Text style={styles.arrow}>→</Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
                 ) : (
-                  <ActivityIndicator size="small" color="#6C3BAA" />
+                  <Text style={[styles.arrow, { color: theme.primary }]}>
+                    →
+                  </Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -197,10 +196,15 @@ export default function LoginScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
               Al continuar, aceptas nuestros{" "}
-              <Text style={styles.footerLink}>Términos de servicio</Text> y{" "}
-              <Text style={styles.footerLink}>Política de privacidad</Text>
+              <Text style={[styles.footerLink, { color: theme.primary }]}>
+                Términos de servicio
+              </Text>{" "}
+              y{" "}
+              <Text style={[styles.footerLink, { color: theme.primary }]}>
+                Política de privacidad
+              </Text>
             </Text>
           </View>
         </Animated.View>
@@ -209,29 +213,24 @@ export default function LoginScreen() {
   );
 }
 
-// Tus estilos se mantienen igual. Asegúrate de que están definidos.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   container: {
     flex: 1,
   },
-  // ... (Tus estilos existentes para header, logo, loginSection, etc.)
   header: {
-    backgroundColor: "#6C3BAA",
     paddingHorizontal: 30,
     paddingTop: 60,
     paddingBottom: 40,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    shadowColor: "#6C3BAA",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -252,7 +251,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "500",
     textAlign: "center",
-    opacity: 0.9,
+    opacity: 0.95,
   },
   logoContainer: {
     alignItems: "center",
@@ -272,8 +271,9 @@ const styles = StyleSheet.create({
   },
   loginSection: {
     flex: 1,
-    paddingHorizontal: 30,
+    paddingHorizontal: 24,
     paddingTop: 40,
+    justifyContent: "space-between",
   },
   welcomeSection: {
     alignItems: "center",
@@ -282,13 +282,11 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#1E293B",
     marginBottom: 8,
     textAlign: "center",
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: "#64748B",
     textAlign: "center",
     lineHeight: 22,
   },
@@ -297,39 +295,29 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   loginButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 8,
-    borderLeftWidth: 4,
-  },
-  googleButton: {
-    borderLeftColor: "#4285F4",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    elevation: 6,
+    borderWidth: 1.5,
   },
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
   },
-  iconContainer: {
+  googleIconContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: "#4285F4",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
-  },
-  googleIconContainer: {
-    backgroundColor: "#4285F4",
   },
   buttonIcon: {
     fontSize: 20,
@@ -342,30 +330,26 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1E293B",
     marginBottom: 4,
   },
   buttonSubtext: {
-    fontSize: 12,
-    color: "#64748B",
+    fontSize: 13,
     fontWeight: "500",
   },
   arrow: {
-    fontSize: 20,
-    color: "#6C3BAA",
+    fontSize: 24,
     fontWeight: "bold",
   },
   footer: {
     paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   footerText: {
     fontSize: 12,
-    color: "#64748B",
     textAlign: "center",
     lineHeight: 18,
   },
   footerLink: {
-    color: "#6C3BAA",
     fontWeight: "600",
   },
 });
