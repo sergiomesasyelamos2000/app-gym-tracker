@@ -169,14 +169,39 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       setUserProfile(profile);
       setHasProfile(true);
       setShowSetupPrompt(false);
-    } catch (error) {
-      console.log("No se encontró perfil nutricional");
+    } catch (error: any) {
+      console.log("No se encontró perfil nutricional:", error.message);
+
+      // ✅ Check if it's a 401 Unauthorized error (real auth issue)
+      if (error.status === 401) {
+        const messageLower = error.message?.toLowerCase() || "";
+
+        // Check if it's truly an auth error (token expired, invalid, etc)
+        // Generic "Unauthorized" without context is treated as missing profile
+        const isAuthError =
+          (messageLower.includes("token") ||
+          messageLower.includes("authentication") ||
+          messageLower.includes("jwt") ||
+          messageLower.includes("expired") ||
+          messageLower.includes("invalid")) &&
+          messageLower !== "unauthorized";
+
+        if (isAuthError) {
+          // True auth error - session expired, redirect to login
+          Alert.alert(
+            "Sesión Expirada",
+            "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+          );
+          return;
+        }
+      }
+
+      // ✅ 404 Not Found or any other error = Missing profile
+      // Show setup prompt to guide user to configuration
       setHasProfile(false);
       setUserProfile(null);
-      // Mostrar prompt solo si es la primera vez o si ya hay entradas
-      if (todayEntries.length > 0) {
-        setShowSetupPrompt(true);
-      }
+      setShowSetupPrompt(true);
     } finally {
       setCheckingProfile(false);
     }
@@ -276,38 +301,48 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   );
 
   const loadEntriesForDate = async (date: string) => {
-    if (!user?.id || !user?.id) return;
+    if (!user?.id) return;
 
     try {
       const data = await nutritionService.getDailyEntries(user.id, date);
       setTodayEntries(data.entries);
       setHasProfile(data.hasProfile);
 
-      // Si no tiene perfil y hay entradas, mostrar prompt
-      if (!data.hasProfile && data.entries.length > 0) {
+      // Si no tiene perfil, mostrar prompt
+      if (!data.hasProfile) {
         setShowSetupPrompt(true);
       }
-    } catch (error) {
-      console.error("Error loading entries:", error);
-      // Si el error es porque no hay perfil, redirigir a configuración
-      if (
-        error instanceof Error &&
-        error.message.includes("Perfil no encontrado")
-      ) {
-        Alert.alert(
-          "Perfil Incompleto",
-          "Necesitas completar tu perfil de nutrición para continuar.",
-          [
-            {
-              text: "Configurar Ahora",
-              onPress: () =>
-                navigation.replace("UserProfileSetupScreen", {
-                  userId: user.id,
-                }),
-            },
-          ]
-        );
+    } catch (error: any) {
+      console.log("Error loading entries:", error.message);
+
+      // ✅ Handle 401 Unauthorized (real authentication error)
+      if (error.status === 401) {
+        const messageLower = error.message?.toLowerCase() || "";
+
+        // Check if it's truly an auth error (token expired, invalid, etc)
+        // Generic "Unauthorized" without context is treated as missing profile
+        const isAuthError =
+          (messageLower.includes("token") ||
+          messageLower.includes("authentication") ||
+          messageLower.includes("jwt") ||
+          messageLower.includes("expired") ||
+          messageLower.includes("invalid")) &&
+          messageLower !== "unauthorized";
+
+        if (isAuthError) {
+          // True auth error - session expired, redirect to login
+          Alert.alert(
+            "Sesión Expirada",
+            "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+          );
+          return;
+        }
       }
+
+      // ✅ Any other error (404, 500, etc) or non-auth 401 = Show setup prompt
+      setHasProfile(false);
+      setShowSetupPrompt(true);
     }
   };
 
@@ -541,24 +576,52 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             { backgroundColor: theme.background },
           ]}
         >
-          <Ionicons name="nutrition-outline" size={80} color="#6C3BAA" />
-          <Text style={styles.setupPromptTitle}>
-            Configura tu Perfil Nutricional
+          <Ionicons name="nutrition-outline" size={80} color={theme.primary} />
+          <Text style={[styles.setupPromptTitle, { color: theme.text }]}>
+            ¡Bienvenido a Nutrición! 🎯
           </Text>
-          <Text style={styles.setupPromptText}>
-            Para calcular tus macros personalizados y objetivos calóricos,
-            necesitamos algunos datos básicos sobre ti.
+          <Text
+            style={[styles.setupPromptText, { color: theme.textSecondary }]}
+          >
+            Para comenzar a usar esta sección y calcular tus macros personalizados,
+            necesitas configurar tu perfil nutricional. Solo te tomará unos minutos
+            y podrás ajustarlo cuando quieras.
           </Text>
 
+          <View style={[styles.setupFeaturesList, { marginVertical: 20 }]}>
+            <View style={styles.setupFeatureItem}>
+              <Ionicons name="fitness" size={24} color={theme.success} />
+              <Text style={[styles.setupFeatureText, { color: theme.text }]}>
+                Objetivos personalizados según tu meta
+              </Text>
+            </View>
+            <View style={styles.setupFeatureItem}>
+              <Ionicons name="calculator" size={24} color={theme.success} />
+              <Text style={[styles.setupFeatureText, { color: theme.text }]}>
+                Cálculo automático de macros
+              </Text>
+            </View>
+            <View style={styles.setupFeatureItem}>
+              <Ionicons name="stats-chart" size={24} color={theme.success} />
+              <Text style={[styles.setupFeatureText, { color: theme.text }]}>
+                Seguimiento diario de calorías
+              </Text>
+            </View>
+          </View>
+
           <TouchableOpacity
-            style={styles.setupPromptButton}
+            style={[
+              styles.setupPromptButton,
+              { backgroundColor: theme.primary },
+            ]}
             onPress={() => {
               navigation.navigate("UserProfileSetupScreen", {
                 userId: user!.id,
               });
             }}
           >
-            <Text style={styles.setupPromptButtonText}>Configurar Ahora</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.setupPromptButtonText}>Configurar Mi Perfil</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -567,13 +630,18 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               setShowSetupPrompt(false);
             }}
           >
-            <Text style={styles.setupPromptSkipText}>
+            <Text
+              style={[
+                styles.setupPromptSkipText,
+                { color: theme.textSecondary },
+              ]}
+            >
               Continuar sin configurar
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.setupPromptNote}>
-            Podrás configurarlo más tarde desde Ajustes
+          <Text style={[styles.setupPromptNote, { color: theme.textTertiary }]}>
+            💡 Podrás configurarlo más tarde desde tu perfil
           </Text>
         </View>
       </SafeAreaView>
@@ -797,19 +865,19 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       {/* ✅ Banner informativo si no tiene perfil */}
       {!hasProfile && !showSetupPrompt && (
         <TouchableOpacity
-          style={styles.noBanner}
+          style={[styles.noBanner, { backgroundColor: theme.primary + "15" }]}
           onPress={() =>
             navigation.navigate("UserProfileSetupScreen", { userId: user!.id })
           }
           activeOpacity={0.8}
         >
           <Ionicons
-            name="information-circle-outline"
-            size={20}
+            name="alert-circle-outline"
+            size={22}
             color={theme.primary}
           />
-          <Text style={styles.noBannerText}>
-            Configura tu perfil para objetivos personalizados
+          <Text style={[styles.noBannerText, { color: theme.primary }]}>
+            Completa tu perfil para ver objetivos personalizados
           </Text>
           <Ionicons name="chevron-forward" size={20} color={theme.primary} />
         </TouchableOpacity>
@@ -1233,12 +1301,35 @@ const createStyles = (theme: any) =>
       lineHeight: 24,
       marginBottom: 32,
     },
+    setupFeaturesList: {
+      gap: 16,
+      width: "100%",
+      paddingHorizontal: 16,
+    },
+    setupFeatureItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    setupFeatureText: {
+      fontSize: 15,
+      fontWeight: "500",
+      flex: 1,
+    },
     setupPromptButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       backgroundColor: theme.primary,
       paddingVertical: 16,
       paddingHorizontal: 48,
       borderRadius: 12,
       marginBottom: 16,
+      elevation: 4,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
     },
     setupPromptButtonText: {
       fontSize: 16,
@@ -1264,18 +1355,17 @@ const createStyles = (theme: any) =>
     noBanner: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#F3E8FF",
-      paddingVertical: 12,
+      paddingVertical: 14,
       paddingHorizontal: 16,
-      gap: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: "#E9D5FF",
+      gap: 10,
+      borderBottomWidth: 2,
+      borderBottomColor: theme.primary + "30",
     },
     noBannerText: {
       flex: 1,
-      fontSize: 13,
-      color: theme.primary,
+      fontSize: 14,
       fontWeight: "600",
+      lineHeight: 20,
     },
     header: { backgroundColor: theme.card, padding: 20, marginBottom: 12 },
     headerTop: {

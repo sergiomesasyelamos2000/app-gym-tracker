@@ -524,10 +524,304 @@ export default function EditNutritionProfileScreen({
     }
   };
 
+  // Styles using theme
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    centerContent: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 100,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 10,
+    },
+    backButton: {
+      marginRight: 10,
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    progressContainer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 20,
+      gap: 8,
+    },
+    progressDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    progressDotActive: {
+      backgroundColor: theme.primary,
+    },
+    progressDotInactive: {
+      backgroundColor: theme.border,
+    },
+    stepContainer: {
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+    },
+    stepTitle: {
+      fontSize: RFValue(22),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    stepSubtitle: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginBottom: 30,
+    },
+    optionsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      marginBottom: 30,
+    },
+    genderOption: {
+      width: width * 0.28,
+      aspectRatio: 1,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: theme.border,
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    optionSelected: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    optionText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginTop: 8,
+    },
+    optionTextSelected: {
+      color: "#fff",
+    },
+    inputContainer: {
+      marginBottom: 20,
+    },
+    inputLabel: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 12,
+    },
+    inputWithUnit: {
+      position: "relative",
+    },
+    input: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: RFValue(16),
+      borderWidth: 1,
+      borderColor: theme.border,
+      color: theme.text,
+    },
+    largeInput: {
+      fontSize: RFValue(32),
+      fontWeight: "700",
+      textAlign: "center",
+      paddingRight: 60,
+    },
+    unitLabel: {
+      position: "absolute",
+      right: 20,
+      top: "50%",
+      transform: [{ translateY: -12 }],
+      fontSize: RFValue(20),
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    unitLabelSmall: {
+      position: "absolute",
+      right: 20,
+      top: "50%",
+      transform: [{ translateY: -10 }],
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    activitySelector: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 20,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    activityLabel: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    activityDescription: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    goalsContainer: {
+      gap: 12,
+      marginBottom: 20,
+    },
+    goalOption: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: theme.border,
+      gap: 16,
+    },
+    goalText: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    rateContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      marginTop: 20,
+      marginBottom: 20,
+    },
+    rateOption: {
+      width: (width - 56) / 2,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 20,
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: theme.border,
+    },
+    rateText: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    rateSubtext: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    estimateCard: {
+      backgroundColor: theme.success,
+      borderRadius: 12,
+      padding: 20,
+      alignItems: "center",
+    },
+    estimateTitle: {
+      fontSize: RFValue(14),
+      color: "#fff",
+      fontWeight: "600",
+    },
+    estimateValue: {
+      fontSize: RFValue(24),
+      color: "#fff",
+      fontWeight: "700",
+      marginTop: 4,
+    },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.card,
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    nextButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 8,
+    },
+    nextButtonText: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: "#fff",
+    },
+    modal: {
+      justifyContent: "flex-end",
+      margin: 0,
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingBottom: 30,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    modalOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalOptionLabel: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    modalOptionDescription: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+  });
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Actualizando perfil...</Text>
       </SafeAreaView>
     );
@@ -538,7 +832,7 @@ export default function EditNutritionProfileScreen({
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color="#6C3BAA" />
+            <Ionicons name="chevron-back" size={28} color={theme.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Editar Perfil de Nutrición</Text>
         </View>
@@ -572,7 +866,7 @@ export default function EditNutritionProfileScreen({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Nivel de Actividad</Text>
             <TouchableOpacity onPress={() => setShowActivityModal(false)}>
-              <Ionicons name="close" size={24} color="#808080" />
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           {activityLevels.map((level) => (
@@ -591,7 +885,11 @@ export default function EditNutritionProfileScreen({
                 </Text>
               </View>
               {activityLevel === level.value && (
-                <Ionicons name="checkmark-circle" size={24} color="#6C3BAA" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={theme.primary}
+                />
               )}
             </TouchableOpacity>
           ))}
@@ -600,295 +898,3 @@ export default function EditNutritionProfileScreen({
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  centerContent: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: RFValue(14),
-    color: "#808080",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  progressContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 20,
-    gap: 8,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  progressDotActive: {
-    backgroundColor: "#6C3BAA",
-  },
-  progressDotInactive: {
-    backgroundColor: "#D1D5DB",
-  },
-  stepContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  stepTitle: {
-    fontSize: RFValue(22),
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  stepSubtitle: {
-    fontSize: RFValue(14),
-    color: "#808080",
-    marginBottom: 30,
-  },
-  optionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 30,
-  },
-  genderOption: {
-    width: width * 0.28,
-    aspectRatio: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  optionSelected: {
-    backgroundColor: "#6C3BAA",
-    borderColor: "#6C3BAA",
-  },
-  optionText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginTop: 8,
-  },
-  optionTextSelected: {
-    color: "#fff",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 12,
-  },
-  inputWithUnit: {
-    position: "relative",
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: RFValue(16),
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  largeInput: {
-    fontSize: RFValue(32),
-    fontWeight: "700",
-    textAlign: "center",
-    paddingRight: 60,
-  },
-  unitLabel: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    transform: [{ translateY: -12 }],
-    fontSize: RFValue(20),
-    fontWeight: "600",
-    color: "#808080",
-  },
-  unitLabelSmall: {
-    position: "absolute",
-    right: 20,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#808080",
-  },
-  activitySelector: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  activityLabel: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  activityDescription: {
-    fontSize: RFValue(13),
-    color: "#808080",
-    marginTop: 4,
-  },
-  goalsContainer: {
-    gap: 12,
-    marginBottom: 20,
-  },
-  goalOption: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    gap: 16,
-  },
-  goalText: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  rateContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  rateOption: {
-    width: (width - 56) / 2,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-  },
-  rateText: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  rateSubtext: {
-    fontSize: RFValue(12),
-    color: "#808080",
-    marginTop: 4,
-  },
-  estimateCard: {
-    backgroundColor: "#6FCF97",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-  },
-  estimateTitle: {
-    fontSize: RFValue(14),
-    color: "#fff",
-    fontWeight: "600",
-  },
-  estimateValue: {
-    fontSize: RFValue(24),
-    color: "#fff",
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  nextButton: {
-    backgroundColor: "#6C3BAA",
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-  },
-  nextButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#fff",
-  },
-  modal: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  modalTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  modalOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  modalOptionLabel: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  modalOptionDescription: {
-    fontSize: RFValue(13),
-    color: "#808080",
-    marginTop: 4,
-  },
-});
