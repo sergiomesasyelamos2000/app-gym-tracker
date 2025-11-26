@@ -20,6 +20,7 @@ import {
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import CircularProgress from "react-native-circular-progress-indicator";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { FoodEntry, MealType } from "../../../models/nutrition.model";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
@@ -31,7 +32,6 @@ import {
   getProductDetail,
   scanBarcode,
 } from "../services/nutritionService";
-import { useTheme } from "../../../contexts/ThemeContext";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -170,8 +170,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       setHasProfile(true);
       setShowSetupPrompt(false);
     } catch (error: any) {
-      console.log("No se encontró perfil nutricional:", error.message);
-
       // ✅ Check if it's a 401 Unauthorized error (real auth issue)
       if (error.status === 401) {
         const messageLower = error.message?.toLowerCase() || "";
@@ -180,10 +178,10 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         // Generic "Unauthorized" without context is treated as missing profile
         const isAuthError =
           (messageLower.includes("token") ||
-          messageLower.includes("authentication") ||
-          messageLower.includes("jwt") ||
-          messageLower.includes("expired") ||
-          messageLower.includes("invalid")) &&
+            messageLower.includes("authentication") ||
+            messageLower.includes("jwt") ||
+            messageLower.includes("expired") ||
+            messageLower.includes("invalid")) &&
           messageLower !== "unauthorized";
 
         if (isAuthError) {
@@ -313,8 +311,6 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         setShowSetupPrompt(true);
       }
     } catch (error: any) {
-      console.log("Error loading entries:", error.message);
-
       // ✅ Handle 401 Unauthorized (real authentication error)
       if (error.status === 401) {
         const messageLower = error.message?.toLowerCase() || "";
@@ -323,10 +319,10 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         // Generic "Unauthorized" without context is treated as missing profile
         const isAuthError =
           (messageLower.includes("token") ||
-          messageLower.includes("authentication") ||
-          messageLower.includes("jwt") ||
-          messageLower.includes("expired") ||
-          messageLower.includes("invalid")) &&
+            messageLower.includes("authentication") ||
+            messageLower.includes("jwt") ||
+            messageLower.includes("expired") ||
+            messageLower.includes("invalid")) &&
           messageLower !== "unauthorized";
 
         if (isAuthError) {
@@ -583,9 +579,9 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           <Text
             style={[styles.setupPromptText, { color: theme.textSecondary }]}
           >
-            Para comenzar a usar esta sección y calcular tus macros personalizados,
-            necesitas configurar tu perfil nutricional. Solo te tomará unos minutos
-            y podrás ajustarlo cuando quieras.
+            Para comenzar a usar esta sección y calcular tus macros
+            personalizados, necesitas configurar tu perfil nutricional. Solo te
+            tomará unos minutos y podrás ajustarlo cuando quieras.
           </Text>
 
           <View style={[styles.setupFeaturesList, { marginVertical: 20 }]}>
@@ -620,8 +616,15 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               });
             }}
           >
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.setupPromptButtonText}>Configurar Mi Perfil</Text>
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color="#FFFFFF"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.setupPromptButtonText}>
+              Configurar Mi Perfil
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

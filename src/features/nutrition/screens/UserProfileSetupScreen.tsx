@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityLevel,
   Gender,
@@ -29,7 +30,6 @@ import {
 } from "../../../utils/macroCalculator";
 import { createUserProfile } from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
-import { useTheme } from "../../../contexts/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -175,16 +175,8 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         },
       };
 
-      console.log("📝 Attempting to create user profile...");
-      console.log("User ID:", userId);
-      console.log("Anthropometrics:", anthropometrics);
-      console.log("Goals:", goals);
-      console.log("Macro Goals:", macroGoals);
-
       // Save to backend
       const savedProfile = await createUserProfile(profile);
-
-      console.log("✅ Profile created successfully:", savedProfile);
 
       // Save to local store
       setUserProfile(savedProfile);
@@ -192,13 +184,6 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       // Navigate to MacrosScreen
       navigation.replace("MacrosScreen");
     } catch (error: any) {
-      console.error("❌ Error saving profile:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        data: error.data,
-      });
-
       let errorMessage =
         "No se pudo guardar tu perfil. Por favor, intenta nuevamente.";
 

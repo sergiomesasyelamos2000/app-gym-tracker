@@ -27,11 +27,6 @@ export async function apiFetch<T = any>(
 
   // 🔍 DEBUG: Log token being sent
   const accessToken = useAuthStore.getState().accessToken;
-  console.log("🔍 API Request:", {
-    endpoint,
-    hasToken: !!accessToken,
-    tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...` : "none",
-  });
 
   const response = await fetch(`${BASE_URL}/${endpoint}`, {
     headers: {
@@ -54,23 +49,9 @@ export async function apiFetch<T = any>(
       // Extraer el mensaje del error del backend
       errorMessage = errorData.message || errorData.error || errorText;
       errorDetails = errorData;
-
-      console.log("❌ API Error Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        endpoint,
-        errorData,
-      });
     } catch {
       // Si no es JSON, usar el texto completo
       errorMessage = errorText || errorMessage;
-
-      console.log("❌ API Error (non-JSON):", {
-        status: response.status,
-        statusText: response.statusText,
-        endpoint,
-        errorText,
-      });
     }
     // ✅ Handle 401 Unauthorized
     if (response.status === 401) {
@@ -89,15 +70,8 @@ export async function apiFetch<T = any>(
 
       // If it's not a resource-not-found endpoint, treat it as an auth error
       if (!isResourceNotFound) {
-        console.log(
-          "🔒 Authentication error detected (401 Unauthorized) - clearing auth state"
-        );
         const authStore = useAuthStore.getState();
         authStore.clearAuth();
-      } else {
-        console.log(
-          "⚠️ 401 error but not an auth failure - likely missing resource"
-        );
       }
     }
 

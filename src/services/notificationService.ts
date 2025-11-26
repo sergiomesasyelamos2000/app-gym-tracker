@@ -37,7 +37,6 @@ class NotificationService {
       }
 
       if (finalStatus !== "granted") {
-        console.log("❌ Notification permissions not granted");
         return false;
       }
 
@@ -53,10 +52,8 @@ class NotificationService {
         });
       }
 
-      console.log("✅ Notification permissions granted");
       return true;
     } catch (error) {
-      console.error("Error requesting notification permissions:", error);
       return false;
     }
   }
@@ -71,7 +68,6 @@ class NotificationService {
     try {
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) {
-        console.log("Cannot start rest timer: No notification permissions");
         return null;
       }
 
@@ -137,14 +133,8 @@ class NotificationService {
 
       this.activeTimers.set(timerId, interval);
 
-      console.log(
-        `✅ Rest timer started: ${restSeconds}s${
-          exerciseName ? ` for ${exerciseName}` : ""
-        }`
-      );
       return timerId;
     } catch (error) {
-      console.error("Error starting rest timer:", error);
       return null;
     }
   }
@@ -172,11 +162,7 @@ class NotificationService {
         },
         trigger: null,
       });
-
-      console.log("✅ Rest timer completed");
-    } catch (error) {
-      console.error("Error completing rest timer:", error);
-    }
+    } catch (error) {}
   }
 
   /**
@@ -193,11 +179,7 @@ class NotificationService {
       await Notifications.dismissNotificationAsync(timerId);
       await Notifications.cancelScheduledNotificationAsync(timerId);
       this.notificationIds.delete(timerId);
-
-      console.log(`✅ Rest timer cancelled: ${timerId}`);
-    } catch (error) {
-      console.error("Error cancelling rest timer:", error);
-    }
+    } catch (error) {}
   }
 
   /**
@@ -213,11 +195,7 @@ class NotificationService {
 
       this.activeTimers.clear();
       this.notificationIds.clear();
-
-      console.log("✅ All rest timers cancelled");
-    } catch (error) {
-      console.error("Error cancelling all rest timers:", error);
-    }
+    } catch (error) {}
   }
 
   /**
