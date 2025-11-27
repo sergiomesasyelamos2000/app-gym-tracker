@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  AppState,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -74,6 +75,8 @@ export default function RoutineDetailScreen() {
   const [activeNotificationId, setActiveNotificationId] = useState<
     string | null
   >(null);
+  const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
+  const restTimerEndTimeRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -323,7 +326,31 @@ export default function RoutineDetailScreen() {
   }, [showRestToast, slideAnim]);
 
   useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        const endTime = restTimerEndTimeRef.current;
+        if (endTime) {
+          const now = Date.now();
+          const remaining = Math.ceil((endTime - now) / 1000);
+
+          if (remaining <= 0) {
+            // Time has passed
+            setShowRestToast(false);
+            setActiveNotificationId(null);
+            setRestTimerEndTime(null);
+            restTimerEndTimeRef.current = null;
+            setRestTimeRemaining(0);
+            if (countdownRef.current) clearInterval(countdownRef.current);
+          } else {
+            // Update remaining time
+            setRestTimeRemaining(remaining);
+          }
+        }
+      }
+    });
+
     return () => {
+      subscription.remove();
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
       }
@@ -453,6 +480,9 @@ export default function RoutineDetailScreen() {
   ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
+    const endTime = Date.now() + restSeconds * 1000;
+    setRestTimerEndTime(endTime);
+    restTimerEndTimeRef.current = endTime;
     setCurrentExerciseName(exerciseName);
     setShowRestToast(true);
 
@@ -487,9 +517,11 @@ export default function RoutineDetailScreen() {
   const handleAddRestTime = async () => {
     const newTime = restTimeRemaining + 15;
     setRestTimeRemaining(newTime);
-    setTotalRestTime(newTime);
+    setTotalRestTime((prev) => prev + 15);
+    const endTime = Date.now() + newTime * 1000;
+    setRestTimerEndTime(endTime);
+    restTimerEndTimeRef.current = endTime;
 
-    // Reschedule notification with new time
     // Reschedule notification with new time
     if (restTimerNotificationsEnabled) {
       // startRestTimer now handles cancellation of previous timers internally
@@ -504,7 +536,10 @@ export default function RoutineDetailScreen() {
   const handleSubtractRestTime = async () => {
     const newTime = Math.max(0, restTimeRemaining - 15);
     setRestTimeRemaining(newTime);
-    setTotalRestTime(newTime);
+    setTotalRestTime((prev) => Math.max(0, prev - 15));
+    const endTime = Date.now() + newTime * 1000;
+    setRestTimerEndTime(endTime);
+    restTimerEndTimeRef.current = endTime;
 
     // Reschedule notification with new time
     if (restTimerNotificationsEnabled) {
@@ -528,6 +563,8 @@ export default function RoutineDetailScreen() {
       setActiveNotificationId(null);
     }
 
+    setRestTimerEndTime(null);
+    restTimerEndTimeRef.current = null;
     setShowRestToast(false);
   };
 
