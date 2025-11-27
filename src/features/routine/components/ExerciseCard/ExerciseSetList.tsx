@@ -37,6 +37,7 @@ interface Props {
   onRepsTypeChange: (type: "reps" | "range") => void;
   readonly?: boolean;
   started?: boolean;
+  recordSetTypes?: { [id: string]: "1RM" | "maxWeight" | "maxVolume" };
 }
 
 const ExerciseSetList = ({
@@ -49,6 +50,7 @@ const ExerciseSetList = ({
   onRepsTypeChange,
   readonly = false,
   started = false,
+  recordSetTypes = {},
 }: Props) => {
   const { theme, isDark } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
@@ -173,9 +175,13 @@ const ExerciseSetList = ({
                   <Icon
                     name="fitness-center"
                     size={20}
-                    color={getOptionStyle(theme, weightUnit === "lbs").iconColor}
+                    color={
+                      getOptionStyle(theme, weightUnit === "lbs").iconColor
+                    }
                   />
-                  <Text style={getOptionStyle(theme, weightUnit === "lbs").text}>
+                  <Text
+                    style={getOptionStyle(theme, weightUnit === "lbs").text}
+                  >
                     Libras (lbs)
                   </Text>
                 </View>
@@ -255,9 +261,13 @@ const ExerciseSetList = ({
                   <Icon
                     name="view-week"
                     size={20}
-                    color={getOptionStyle(theme, repsType === "range").iconColor}
+                    color={
+                      getOptionStyle(theme, repsType === "range").iconColor
+                    }
                   />
-                  <Text style={getOptionStyle(theme, repsType === "range").text}>
+                  <Text
+                    style={getOptionStyle(theme, repsType === "range").text}
+                  >
                     Rango de Repeticiones
                   </Text>
                 </View>
@@ -279,8 +289,8 @@ const ExerciseSetList = ({
       <View
         style={[
           styles.columnTitles,
-          { 
-            backgroundColor: theme.background, 
+          {
+            backgroundColor: theme.background,
             paddingHorizontal: isSmallScreen ? 4 : 8,
             borderWidth: isDark ? 1 : 0,
             borderColor: theme.border,
@@ -325,7 +335,10 @@ const ExerciseSetList = ({
             <Text
               style={[
                 styles.columnTitle,
-                { color: theme.textSecondary, fontSize: RFValue(isSmallScreen ? 10 : 12) },
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 10 : 12),
+                },
               ]}
             >
               {weightUnit}
@@ -349,7 +362,10 @@ const ExerciseSetList = ({
             <Text
               style={[
                 styles.columnTitle,
-                { color: theme.textSecondary, fontSize: RFValue(isSmallScreen ? 10 : 12) },
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 10 : 12),
+                },
               ]}
               numberOfLines={1}
             >
@@ -369,7 +385,11 @@ const ExerciseSetList = ({
           <View
             style={[styles.checkHeader, { flex: isSmallScreen ? 0.7 : 0.8 }]}
           >
-            <Icon name="done" size={isSmallScreen ? 16 : 18} color={theme.primary} />
+            <Icon
+              name="done"
+              size={isSmallScreen ? 16 : 18}
+              color={theme.primary}
+            />
           </View>
         )}
       </View>
@@ -400,6 +420,7 @@ const ExerciseSetList = ({
                     : undefined
                 }
                 started={started}
+                recordType={recordSetTypes[item.id]} // Pass record type if exists
               />
             </Swipeable>
           )}

@@ -10,7 +10,11 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SetRequestDto } from "../../../../models";
 import { useTheme } from "../../../../contexts/ThemeContext";
-import { withOpacity, getCompletedRowStyle } from "../../../../utils/themeStyles";
+import {
+  withOpacity,
+  getCompletedRowStyle,
+} from "../../../../utils/themeStyles";
+import { Trophy, TrendingUp, Zap } from "lucide-react-native";
 
 interface Props {
   item: SetRequestDto;
@@ -23,6 +27,7 @@ interface Props {
   readonly?: boolean;
   previousMark?: string;
   started?: boolean;
+  recordType?: "1RM" | "maxWeight" | "maxVolume";
 }
 
 const ExerciseSetRow = ({
@@ -32,6 +37,7 @@ const ExerciseSetRow = ({
   readonly = false,
   previousMark,
   started = false,
+  recordType,
 }: Props) => {
   const { theme, isDark } = useTheme();
   // Estados locales
@@ -151,8 +157,12 @@ const ExerciseSetRow = ({
   };
 
   return (
-    <View style={[styles.row, getCompletedRowStyle(theme, item.completed ?? false)]}>
-      <Text style={[styles.label, { flex: 1, color: theme.text }]}>{item.order}</Text>
+    <View
+      style={[styles.row, getCompletedRowStyle(theme, item.completed ?? false)]}
+    >
+      <Text style={[styles.label, { flex: 1, color: theme.text }]}>
+        {item.order}
+      </Text>
 
       {/* Marca anterior - Ahora es clickable */}
       {started && (
@@ -178,14 +188,14 @@ const ExerciseSetRow = ({
       {/* Peso */}
       <TextInput
         style={[
-          styles.input, 
-          { 
-            flex: 2, 
-            backgroundColor: theme.inputBackground, 
+          styles.input,
+          {
+            flex: 2,
+            backgroundColor: theme.inputBackground,
             color: theme.text,
             borderWidth: isDark ? 1 : 0,
             borderColor: theme.border,
-          }
+          },
         ]}
         keyboardType="numeric"
         value={localWeight}
@@ -201,14 +211,14 @@ const ExerciseSetRow = ({
       {started ? (
         <TextInput
           style={[
-            styles.input, 
-            { 
-              flex: 2, 
-              backgroundColor: theme.inputBackground, 
+            styles.input,
+            {
+              flex: 2,
+              backgroundColor: theme.inputBackground,
               color: theme.text,
               borderWidth: isDark ? 1 : 0,
               borderColor: theme.border,
-            }
+            },
           ]}
           keyboardType="numeric"
           value={localReps}
@@ -222,15 +232,17 @@ const ExerciseSetRow = ({
           editable={!readonly}
         />
       ) : repsType === "range" ? (
-        <View style={[
-          styles.rangeContainer, 
-          { 
-            flex: 2, 
-            backgroundColor: theme.inputBackground,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: theme.border,
-          }
-        ]}>
+        <View
+          style={[
+            styles.rangeContainer,
+            {
+              flex: 2,
+              backgroundColor: theme.inputBackground,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+            },
+          ]}
+        >
           <TextInput
             style={[styles.rangeInput, { flex: 1, color: theme.text }]}
             keyboardType="numeric"
@@ -240,7 +252,9 @@ const ExerciseSetRow = ({
             onChangeText={handleRepsMinChange}
             editable={!readonly}
           />
-          <Text style={[styles.rangeSeparator, { color: theme.textSecondary }]}>-</Text>
+          <Text style={[styles.rangeSeparator, { color: theme.textSecondary }]}>
+            -
+          </Text>
           <TextInput
             style={[styles.rangeInput, { flex: 1, color: theme.text }]}
             keyboardType="numeric"
@@ -254,14 +268,14 @@ const ExerciseSetRow = ({
       ) : (
         <TextInput
           style={[
-            styles.input, 
-            { 
-              flex: 2, 
-              backgroundColor: theme.inputBackground, 
+            styles.input,
+            {
+              flex: 2,
+              backgroundColor: theme.inputBackground,
               color: theme.text,
               borderWidth: isDark ? 1 : 0,
               borderColor: theme.border,
-            }
+            },
           ]}
           keyboardType="numeric"
           value={localReps}
@@ -284,6 +298,17 @@ const ExerciseSetRow = ({
             color={item.completed ? theme.success : theme.textTertiary}
           />
         </TouchableOpacity>
+      )}
+
+      {/* Record Icon */}
+      {recordType && item.completed && (
+        <View style={{ marginLeft: 8 }}>
+          {recordType === "1RM" && <Trophy size={20} color="#FFD700" />}
+          {recordType === "maxWeight" && (
+            <TrendingUp size={20} color="#FFD700" />
+          )}
+          {recordType === "maxVolume" && <Zap size={20} color="#FFD700" />}
+        </View>
       )}
     </View>
   );

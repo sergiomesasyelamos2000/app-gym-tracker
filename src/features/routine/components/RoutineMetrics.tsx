@@ -15,6 +15,7 @@ type Props = {
   duration: number;
   volume: number;
   completedSets: number;
+  records: number;
   onFinish?: () => void;
 };
 
@@ -22,6 +23,7 @@ export const RoutineMetrics: React.FC<Props> = ({
   duration,
   volume,
   completedSets,
+  records,
   onFinish,
 }) => {
   const { width } = useWindowDimensions();
@@ -29,13 +31,26 @@ export const RoutineMetrics: React.FC<Props> = ({
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.card, borderBottomColor: theme.border, shadowColor: theme.shadowColor }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.card,
+          borderBottomColor: theme.border,
+          shadowColor: theme.shadowColor,
+        },
+      ]}
+    >
       {/* Métricas en fila */}
       <View style={styles.metricsContainer}>
         {/* Tiempo */}
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: theme.text }]}>{formatTime(duration)}</Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Tiempo</Text>
+          <Text style={[styles.metricValue, { color: theme.text }]}>
+            {formatTime(duration)}
+          </Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+            Tiempo
+          </Text>
         </View>
 
         <View style={[styles.separator, { backgroundColor: theme.divider }]} />
@@ -45,21 +60,43 @@ export const RoutineMetrics: React.FC<Props> = ({
           <Text style={[styles.metricValue, { color: theme.text }]}>
             {volume.toLocaleString("es-ES")}
           </Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Kg Total</Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+            Kg Total
+          </Text>
         </View>
 
         <View style={[styles.separator, { backgroundColor: theme.divider }]} />
 
         {/* Series */}
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: theme.text }]}>{completedSets}</Text>
-          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Series</Text>
+          <Text style={[styles.metricValue, { color: theme.text }]}>
+            {completedSets}
+          </Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+            Series
+          </Text>
+        </View>
+
+        <View style={[styles.separator, { backgroundColor: theme.divider }]} />
+
+        {/* Récords */}
+        <View style={styles.metricItem}>
+          <Text style={[styles.metricValue, { color: "#FFD700" }]}>
+            {records}
+          </Text>
+          <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+            Récords
+          </Text>
         </View>
       </View>
 
       {/* Botón Finalizar */}
       <TouchableOpacity
-        style={[styles.finishButton, { backgroundColor: theme.primary, shadowColor: theme.primary }, isSmallScreen && styles.finishButtonSmall]}
+        style={[
+          styles.finishButton,
+          { backgroundColor: theme.primary, shadowColor: theme.primary },
+          isSmallScreen && styles.finishButtonSmall,
+        ]}
         onPress={onFinish}
         activeOpacity={0.8}
       >

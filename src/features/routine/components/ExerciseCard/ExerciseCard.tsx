@@ -20,6 +20,8 @@ import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { detectRecord, RecordData } from "../../../../services/recordsService";
+import { useRecordsStore } from "../../../../store/useRecordsStore";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -41,6 +43,7 @@ interface Props {
   supersetWith?: string;
   supersetExerciseName?: string;
   showOptions?: boolean;
+  previousSessions?: any[]; // For record detection
 }
 
 const ExerciseCard = ({
@@ -63,6 +66,7 @@ const ExerciseCard = ({
   supersetWith,
   supersetExerciseName,
   showOptions = false,
+  previousSessions = [],
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [notes, setNotes] = useState<ExerciseNote[]>(exercise.notes || []);
@@ -76,6 +80,12 @@ const ExerciseCard = ({
     }
     return "00:00";
   });
+
+  // Record detection state (no modal, just tracking)
+  const [recordSetTypes, setRecordSetTypes] = useState<{
+    [id: string]: "1RM" | "maxWeight" | "maxVolume";
+  }>({});
+  const addRecord = useRecordsStore((state) => state.addRecord);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -133,11 +143,32 @@ const ExerciseCard = ({
       prev.map((set) => (set.id === id ? { ...set, [field]: value } : set))
     );
 
-    if (field === "completed" && value === true && onStartRestTimer) {
-      const { minutes, seconds } = parseTime(restTime);
-      const totalSeconds = minutes * 60 + seconds;
-      if (totalSeconds > 0) {
-        onStartRestTimer(totalSeconds, exercise.name);
+    if (field === "completed" && value === true) {
+      // Start rest timer
+      if (onStartRestTimer) {
+        const { minutes, seconds } = parseTime(restTime);
+        const totalSeconds = minutes * 60 + seconds;
+        if (totalSeconds > 0) {
+          onStartRestTimer(totalSeconds, exercise.name);
+        }
+      }
+
+      // Detect record (no modal, just mark the set)
+      if (started && previousSessions.length > 0) {
+        const completedSet = sets.find((s) => s.id === id);
+        if (completedSet) {
+          const record = detectRecord(
+            exercise.id,
+            exercise.name,
+            completedSet,
+            previousSessions
+          );
+
+          if (record) {
+            setRecordSetTypes((prev) => ({ ...prev, [id]: record.type }));
+            addRecord(record);
+          }
+        }
       }
     }
   };
@@ -182,19 +213,26 @@ const ExerciseCard = ({
             style={[
               styles.supersetTag,
               {
-                backgroundColor: theme.primary + '20',
-                borderColor: theme.primary + '40',
+                backgroundColor: theme.primary + "20",
+                borderColor: theme.primary + "40",
                 paddingHorizontal: isSmallScreen ? 10 : 12,
                 paddingVertical: isSmallScreen ? 6 : 8,
                 marginBottom: isSmallScreen ? 8 : 12,
               },
             ]}
           >
-            <Icon name="link" size={isSmallScreen ? 14 : 16} color={theme.primary} />
+            <Icon
+              name="link"
+              size={isSmallScreen ? 14 : 16}
+              color={theme.primary}
+            />
             <Text
               style={[
                 styles.supersetTagText,
-                { color: theme.primary, fontSize: RFValue(isSmallScreen ? 11 : 12) },
+                {
+                  color: theme.primary,
+                  fontSize: RFValue(isSmallScreen ? 11 : 12),
+                },
               ]}
             >
               Superserie: {supersetExerciseName}
@@ -204,7 +242,10 @@ const ExerciseCard = ({
             {showOptions && onRemoveSuperset && (
               <TouchableOpacity
                 onPress={onRemoveSuperset}
-                style={[styles.removeSuperset, { backgroundColor: theme.primary + '33' }]}
+                style={[
+                  styles.removeSuperset,
+                  { backgroundColor: theme.primary + "33" },
+                ]}
               >
                 <Icon name="close" size={16} color={theme.primary} />
               </TouchableOpacity>
@@ -243,6 +284,7 @@ const ExerciseCard = ({
           onRepsTypeChange={handleRepsTypeChange}
           readonly={readonly}
           started={started}
+          recordSetTypes={recordSetTypes} // Pass record set types
         />
 
         {!readonly && (

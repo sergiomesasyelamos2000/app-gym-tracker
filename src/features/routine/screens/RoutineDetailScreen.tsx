@@ -30,11 +30,13 @@ import {
   saveRoutine,
   saveRoutineSession,
   updateRoutineById,
+  findAllRoutineSessions,
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { notificationService } from "../../../services/notificationService";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { useRecordsStore } from "../../../store/useRecordsStore";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -79,6 +81,7 @@ export default function RoutineDetailScreen() {
   const restTimerEndTimeRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const [previousSessions, setPreviousSessions] = useState<any[]>([]);
 
   const {
     workoutInProgress,
@@ -94,6 +97,19 @@ export default function RoutineDetailScreen() {
     () => allSets.filter((s) => s.completed).length,
     [allSets]
   );
+
+  // Calculate records achieved in this session
+  const allRecords = useRecordsStore((state) => state.records);
+  const sessionRecordsCount = useMemo(() => {
+    if (!started) return 0;
+
+    // If we have a workout in progress, use its start time, otherwise use current time minus duration
+    const startTime = workoutInProgress?.startedAt
+      ? new Date(workoutInProgress.startedAt)
+      : new Date(Date.now() - duration * 1000);
+
+    return allRecords.filter((r) => new Date(r.date) >= startTime).length;
+  }, [allRecords, started, workoutInProgress?.startedAt, duration]);
 
   useEffect(() => {
     if (routine) {
@@ -246,6 +262,19 @@ export default function RoutineDetailScreen() {
       setStarted(true);
     }
   }, [route.params?.start]);
+
+  // Load previous sessions for record detection
+  useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const sessions = await findAllRoutineSessions();
+        setPreviousSessions(sessions);
+      } catch (error) {
+        console.error("Error loading sessions:", error);
+      }
+    };
+    loadSessions();
+  }, []);
 
   useEffect(() => {
     if (!started) return;
@@ -617,29 +646,50 @@ export default function RoutineDetailScreen() {
     })),
   });
 
-  const buildSessionPayload = () => ({
-    totalTime: duration,
-    totalWeight: volume,
-    completedSets,
-    exercises: exercisesState.map((exercise) => ({
-      exerciseId: exercise.id,
-      exerciseName: exercise.name,
-      imageUrl: exercise.imageUrl,
-      totalWeight: (sets[exercise.id] || []).reduce(
-        (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
-        0
-      ),
-      totalReps: (sets[exercise.id] || []).reduce(
-        (acc, s) => acc + (s.reps || 0),
-        0
-      ),
-      sets: (sets[exercise.id] || []).map((s) => ({
-        weight: s.weight || 0,
-        reps: s.reps || 0,
-        completed: s.completed ?? false,
+  const buildSessionPayload = () => {
+    const allRecords = useRecordsStore.getState().records;
+    const startTime = workoutInProgress?.startedAt
+      ? new Date(workoutInProgress.startedAt)
+      : new Date(Date.now() - duration * 1000);
+
+    const sessionRecords = allRecords.filter(
+      (r) => new Date(r.date) >= startTime
+    );
+
+    return {
+      totalTime: duration,
+      totalWeight: volume,
+      completedSets,
+      exercises: exercisesState.map((exercise) => ({
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        imageUrl: exercise.imageUrl,
+        totalWeight: (sets[exercise.id] || []).reduce(
+          (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
+          0
+        ),
+        totalReps: (sets[exercise.id] || []).reduce(
+          (acc, s) => acc + (s.reps || 0),
+          0
+        ),
+        sets: (sets[exercise.id] || []).map((s) => {
+          const isRecord = sessionRecords.some(
+            (r) =>
+              r.exerciseId === exercise.id &&
+              r.setData.weight === (s.weight || 0) &&
+              r.setData.reps === (s.reps || 0)
+          );
+
+          return {
+            weight: s.weight || 0,
+            reps: s.reps || 0,
+            completed: s.completed ?? false,
+            isRecord,
+          };
+        }),
       })),
-    })),
-  });
+    };
+  };
 
   const resetSetsCompletionStatus = () => {
     const resetSets: { [exerciseId: string]: SetRequestDto[] } = {};
@@ -678,6 +728,7 @@ export default function RoutineDetailScreen() {
         showOptions={false}
         supersetWith={item.supersetWith} // 🔥 PASAR PROP
         supersetExerciseName={supersetExercise?.name} // 🔥 PASAR PROP
+        previousSessions={previousSessions} // For record detection
       />
     );
   };
@@ -706,6 +757,7 @@ export default function RoutineDetailScreen() {
           duration={duration}
           volume={volume}
           completedSets={completedSets}
+          records={sessionRecordsCount}
           onFinish={handleFinishAndSaveRoutine}
         />
       )}

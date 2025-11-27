@@ -5,7 +5,13 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Image,
@@ -16,6 +22,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  FlatList,
+  Pressable,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../contexts/ThemeContext";
@@ -27,6 +35,7 @@ import {
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { ExerciseRequestDto } from "../models";
 import { useAuthStore } from "../store/useAuthStore";
+import { useResponsive } from "../hooks/useResponsive";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -88,8 +97,10 @@ export default function HomeScreen() {
   const [motivationalQuote, setMotivationalQuote] = useState<string>("");
   const { theme, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const responsive = useResponsive();
 
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const scaleAnim = useState(new Animated.Value(1))[0];
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -111,23 +122,40 @@ export default function HomeScreen() {
   }, []);
 
   // Actualizar hora cada minuto
+  const [currentHour, setCurrentHour] = useState(new Date().getHours());
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      const now = new Date();
+      setCurrentTime(now);
+      setCurrentHour(now.getHours());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Saludo según hora
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "¡Buenos días! ☀️";
-    if (hour < 20) return "¡Buenas tardes! 🌤️";
-    return "¡Buenas noches! 🌙";
-  };
+  // Período del día (solo cambia cuando el saludo debe cambiar)
+  const dayPeriod = useMemo(() => {
+    if (currentHour < 12) return "morning";
+    if (currentHour < 20) return "afternoon";
+    return "night";
+  }, [currentHour]);
+
+  // Saludo según período del día
+  const greeting = useMemo(() => {
+    switch (dayPeriod) {
+      case "morning":
+        return "¡Buenos días! ☀️";
+      case "afternoon":
+        return "¡Buenas tardes! 🌤️";
+      case "night":
+        return "¡Buenas noches! 🌙";
+      default:
+        return "¡Hola! 👋";
+    }
+  }, [dayPeriod]);
 
   // Generar quote motivacional
-  const generateMotivationalQuote = () => {
+  const generateMotivationalQuote = useCallback(() => {
     const quotes = [
       "El único límite es tu mente",
       "Cada repetición te acerca a tu meta",
@@ -136,12 +164,12 @@ export default function HomeScreen() {
       "Tu cuerpo puede lograr lo que tu mente cree",
     ];
     return quotes[Math.floor(Math.random() * quotes.length)];
-  };
+  }, []);
 
   // Actualizar quote solo cuando cambia el saludo
   useEffect(() => {
     setMotivationalQuote(generateMotivationalQuote());
-  }, [getGreeting()]);
+  }, [greeting, generateMotivationalQuote]);
 
   // Formato de hora sin segundos
   const formattedTime = currentTime.toLocaleTimeString("es-ES", {
@@ -188,7 +216,7 @@ export default function HomeScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -208,10 +236,183 @@ export default function HomeScreen() {
   }, [fetchData]);
 
   const handleStartWorkout = () => {
+    // Animación de press
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     navigation.navigate("Entreno", {
       screen: "WorkoutList",
     });
   };
+
+  // Renderizar SessionCard como componente separado para mejor performance
+  const renderSessionCard = useCallback(
+    ({ item: session, index }: { item: any; index: number }) => {
+      const cardWidth =
+        responsive.sessionColumns === 2
+          ? (responsive.width - 60) / 2
+          : responsive.width - 40;
+
+      return (
+        <Pressable
+          key={session.id}
+          style={[
+            styles.sessionCard,
+            {
+              backgroundColor: theme.card,
+              shadowColor: theme.shadowColor,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+              width: cardWidth,
+            },
+          ]}
+          android_ripple={{ color: theme.primary + "20" }}
+        >
+          <View style={styles.sessionHeader}>
+            <View style={styles.sessionDateContainer}>
+              <Text style={styles.sessionDateIcon}>📅</Text>
+              <Text
+                style={[styles.sessionDate, { color: theme.textSecondary }]}
+              >
+                {new Date(session.createdAt).toLocaleDateString("es-ES", {
+                  weekday: responsive.isTablet ? "long" : "short",
+                  year: "numeric",
+                  month: responsive.isTablet ? "long" : "short",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
+            <Text style={[styles.sessionTitle, { color: theme.text }]}>
+              {session.routine?.title || "Entrenamiento sin título"}
+            </Text>
+          </View>
+
+          <View
+            style={[styles.sessionStats, { backgroundColor: theme.background }]}
+          >
+            <View style={styles.sessionStat}>
+              <Text style={styles.sessionStatIcon}>⏱️</Text>
+              <Text
+                style={[styles.sessionStatText, { color: theme.textSecondary }]}
+              >
+                {formatTime(session.totalTime)}
+              </Text>
+            </View>
+            <View style={styles.sessionStat}>
+              <Text style={styles.sessionStatIcon}>🏋️</Text>
+              <Text
+                style={[styles.sessionStatText, { color: theme.textSecondary }]}
+              >
+                {session.totalWeight} kg
+              </Text>
+            </View>
+            <View style={styles.sessionStat}>
+              <Text style={styles.sessionStatIcon}>✅</Text>
+              <Text
+                style={[styles.sessionStatText, { color: theme.textSecondary }]}
+              >
+                {session.completedSets} series
+              </Text>
+            </View>
+            {/* Récords en la sesión */}
+            {(() => {
+              const totalRecords =
+                session.exercises?.reduce((acc: number, ex: any) => {
+                  return (
+                    acc + (ex.sets?.filter((s: any) => s.isRecord).length || 0)
+                  );
+                }, 0) || 0;
+
+              if (totalRecords > 0) {
+                return (
+                  <View style={styles.sessionStat}>
+                    <Text style={styles.sessionStatIcon}>🏆</Text>
+                    <Text
+                      style={[
+                        styles.sessionStatText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {totalRecords}
+                    </Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
+          </View>
+
+          {session.exercises?.length > 0 && (
+            <View
+              style={[
+                styles.exercisesSection,
+                { borderTopColor: theme.divider },
+              ]}
+            >
+              <Text
+                style={[styles.exercisesTitle, { color: theme.textSecondary }]}
+              >
+                Ejercicios realizados:
+              </Text>
+              <View style={styles.exercisesList}>
+                {session.exercises
+                  .slice(0, responsive.isTablet ? 3 : 4)
+                  .map((exercise: any) => (
+                    <View key={exercise.exerciseId} style={styles.exerciseItem}>
+                      <ExerciseImage
+                        exercise={exercise}
+                        style={styles.exerciseImage}
+                      />
+                      <View style={styles.exerciseInfo}>
+                        <Text
+                          style={[styles.exerciseName, { color: theme.text }]}
+                          numberOfLines={1}
+                        >
+                          {exercise.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.exerciseSets,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {exercise.sets?.length || 0} series
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                {session.exercises.length > (responsive.isTablet ? 3 : 4) && (
+                  <View style={styles.moreExercises}>
+                    <Text
+                      style={[
+                        styles.moreExercisesText,
+                        { color: theme.primary },
+                      ]}
+                    >
+                      +
+                      {session.exercises.length - (responsive.isTablet ? 3 : 4)}{" "}
+                      más
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+        </Pressable>
+      );
+    },
+    [theme, isDark, responsive]
+  );
 
   return (
     <SafeAreaView
@@ -246,7 +447,7 @@ export default function HomeScreen() {
         >
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerGreeting}>{getGreeting()}</Text>
+              <Text style={styles.headerGreeting}>{greeting}</Text>
               <Text style={styles.headerTitle}>Atleta 💪</Text>
               <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
             </View>
@@ -382,46 +583,51 @@ export default function HomeScreen() {
         {/* Acciones Rápidas */}
         <View style={styles.actionsSection}>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.startWorkout,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderLeftColor: theme.error,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                  borderLeftWidth: 4,
-                },
-              ]}
-              onPress={handleStartWorkout}
-            >
-              <View
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <Pressable
                 style={[
-                  styles.actionIconContainer,
-                  { backgroundColor: theme.error },
+                  styles.actionButton,
+                  styles.startWorkout,
+                  {
+                    backgroundColor: theme.card,
+                    shadowColor: theme.shadowColor,
+                    borderLeftColor: theme.error,
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: theme.border,
+                    borderLeftWidth: 4,
+                  },
                 ]}
+                onPress={handleStartWorkout}
+                android_ripple={{ color: theme.error + "20" }}
               >
-                <Text style={styles.actionIcon}>🔥</Text>
-              </View>
-              <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionButtonText, { color: theme.text }]}>
-                  Iniciar Entrenamiento
-                </Text>
-                <Text
+                <View
                   style={[
-                    styles.actionButtonSubtext,
-                    { color: theme.textSecondary },
+                    styles.actionIconContainer,
+                    { backgroundColor: theme.error },
                   ]}
                 >
-                  Comienza ahora
+                  <Text style={styles.actionIcon}>🔥</Text>
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text
+                    style={[styles.actionButtonText, { color: theme.text }]}
+                  >
+                    Iniciar Entrenamiento
+                  </Text>
+                  <Text
+                    style={[
+                      styles.actionButtonSubtext,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Comienza ahora
+                  </Text>
+                </View>
+                <Text style={[styles.actionArrow, { color: theme.primary }]}>
+                  →
                 </Text>
-              </View>
-              <Text style={[styles.actionArrow, { color: theme.primary }]}>
-                →
-              </Text>
-            </TouchableOpacity>
+              </Pressable>
+            </Animated.View>
           </View>
         </View>
 
@@ -434,12 +640,32 @@ export default function HomeScreen() {
             <Text
               style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
             >
-              Tus entrenamientos recientes
+              {sessions.length > 0
+                ? `${sessions.length} entrenamiento${
+                    sessions.length > 1 ? "s" : ""
+                  } registrado${sessions.length > 1 ? "s" : ""}`
+                : "Tus entrenamientos recientes"}
             </Text>
           </View>
 
           {sessions.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: theme.card }]}>
+            <Animated.View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: theme.card,
+                  opacity: fadeAnim,
+                  transform: [
+                    {
+                      translateY: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
               <Text style={styles.emptyStateEmoji}>📊</Text>
               <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
                 No hay sesiones registradas
@@ -449,147 +675,29 @@ export default function HomeScreen() {
               >
                 Comienza tu primer entrenamiento para ver estadísticas aquí
               </Text>
-            </View>
-          ) : (
-            sessions.map((session) => (
-              <View
-                key={session.id}
+              <TouchableOpacity
                 style={[
-                  styles.sessionCard,
-                  {
-                    backgroundColor: theme.card,
-                    shadowColor: theme.shadowColor,
-                    borderWidth: isDark ? 1 : 0,
-                    borderColor: theme.border,
-                  },
+                  styles.emptyStateCTA,
+                  { backgroundColor: theme.primary },
                 ]}
+                onPress={handleStartWorkout}
               >
-                <View style={styles.sessionHeader}>
-                  <View style={styles.sessionDateContainer}>
-                    <Text style={styles.sessionDateIcon}>📅</Text>
-                    <Text
-                      style={[
-                        styles.sessionDate,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {new Date(session.createdAt).toLocaleDateString("es-ES", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                  <Text style={[styles.sessionTitle, { color: theme.text }]}>
-                    {session.routine?.title || "Entrenamiento sin título"}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.sessionStats,
-                    { backgroundColor: theme.background },
-                  ]}
-                >
-                  <View style={styles.sessionStat}>
-                    <Text style={styles.sessionStatIcon}>⏱️</Text>
-                    <Text
-                      style={[
-                        styles.sessionStatText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {formatTime(session.totalTime)}
-                    </Text>
-                  </View>
-                  <View style={styles.sessionStat}>
-                    <Text style={styles.sessionStatIcon}>🏋️</Text>
-                    <Text
-                      style={[
-                        styles.sessionStatText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {session.totalWeight} kg
-                    </Text>
-                  </View>
-                  <View style={styles.sessionStat}>
-                    <Text style={styles.sessionStatIcon}>✅</Text>
-                    <Text
-                      style={[
-                        styles.sessionStatText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {session.completedSets} series
-                    </Text>
-                  </View>
-                </View>
-
-                {session.exercises?.length > 0 && (
-                  <View
-                    style={[
-                      styles.exercisesSection,
-                      { borderTopColor: theme.divider },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.exercisesTitle,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      Ejercicios realizados:
-                    </Text>
-                    <View style={styles.exercisesList}>
-                      {session.exercises.slice(0, 4).map((exercise: any) => (
-                        <View
-                          key={exercise.exerciseId}
-                          style={styles.exerciseItem}
-                        >
-                          <ExerciseImage
-                            exercise={exercise}
-                            style={styles.exerciseImage}
-                          />
-                          <View style={styles.exerciseInfo}>
-                            <Text
-                              style={[
-                                styles.exerciseName,
-                                { color: theme.text },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {exercise.name}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.exerciseSets,
-                                { color: theme.textSecondary },
-                              ]}
-                            >
-                              {exercise.sets?.length || 0} series
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                      {session.exercises.length > 4 && (
-                        <View style={styles.moreExercises}>
-                          <Text
-                            style={[
-                              styles.moreExercisesText,
-                              { color: theme.primary },
-                            ]}
-                          >
-                            +{session.exercises.length - 4} más
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                )}
-              </View>
-            ))
+                <Text style={styles.emptyStateCTAText}>Empezar ahora 🚀</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ) : (
+            <FlatList
+              data={sessions}
+              renderItem={renderSessionCard}
+              keyExtractor={(item) => item.id}
+              numColumns={responsive.sessionColumns}
+              key={responsive.sessionColumns} // Force remount when columns change
+              scrollEnabled={false}
+              columnWrapperStyle={
+                responsive.sessionColumns === 2 ? styles.sessionRow : undefined
+              }
+              contentContainerStyle={styles.sessionsContainer}
+            />
           )}
         </View>
       </ScrollView>
@@ -626,24 +734,25 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
+    marginRight: 12,
   },
   headerGreeting: {
     color: "#FFFFFF",
-    fontSize: RFValue(16),
+    fontSize: RFValue(14),
     fontWeight: "600",
     marginBottom: 4,
     opacity: 0.9,
   },
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: RFValue(28),
+    fontSize: RFValue(26),
     fontWeight: "bold",
     marginBottom: 8,
   },
   headerSubtitle: {
     color: "#E0D7F5",
-    fontSize: RFValue(14),
-    lineHeight: 20,
+    fontSize: RFValue(13),
+    lineHeight: 18,
     fontWeight: "500",
     opacity: 0.9,
   },
@@ -701,15 +810,16 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 120,
   },
   timeCard: {
     borderLeftWidth: 4,
@@ -724,31 +834,32 @@ const styles = StyleSheet.create({
     borderLeftColor: "#F59E0B",
   },
   statIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   timeIconContainer: {},
   setsIconContainer: {},
   weightIconContainer: {},
   statIcon: {
-    fontSize: RFValue(20),
+    fontSize: RFValue(18),
   },
   statValue: {
-    fontSize: RFValue(22),
+    fontSize: RFValue(20),
     fontWeight: "bold",
     marginBottom: 4,
     flexShrink: 1,
     textAlign: "center",
   },
   statLabel: {
-    fontSize: RFValue(12),
+    fontSize: RFValue(11),
     fontWeight: "600",
     textAlign: "center",
     flexShrink: 1,
+    //numberOfLines: 2,
   },
   actionsSection: {
     paddingHorizontal: 20,
@@ -924,5 +1035,29 @@ const styles = StyleSheet.create({
     fontSize: RFValue(14),
     textAlign: "center",
     lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyStateCTA: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyStateCTAText: {
+    color: "#FFFFFF",
+    fontSize: RFValue(16),
+    fontWeight: "700",
+  },
+  sessionRow: {
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  sessionsContainer: {
+    gap: 12,
   },
 });
