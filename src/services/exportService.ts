@@ -1,0 +1,151 @@
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import {
+  findAllRoutines,
+  findAllRoutineSessions,
+} from "../features/routine/services/routineService";
+import { getMonthlySummary } from "../features/nutrition/services/nutritionService";
+import { Platform } from "react-native";
+
+export type ExportFormat = "json" | "csv";
+export type DataType = "workouts" | "nutrition" | "all";
+
+export interface ExportOptions {
+  startDate: Date;
+  endDate: Date;
+  format: ExportFormat;
+  dataType: DataType;
+}
+
+export const exportService = {
+  async exportData(options: ExportOptions): Promise<void> {
+    try {
+      const data = await this.fetchData(options);
+      const fileUri = await this.generateFile(data, options.format);
+      await this.shareFile(fileUri);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      throw error;
+    }
+  },
+
+  async fetchData(options: ExportOptions): Promise<any> {
+    const { dataType } = options;
+    const data: any = {};
+
+    // Normalize dates to include full days
+    // Set startDate to beginning of day (00:00:00)
+    const startDate = new Date(options.startDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Set endDate to end of day (23:59:59.999)
+    const endDate = new Date(options.endDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (dataType === "workouts" || dataType === "all") {
+      const [routines, sessions] = await Promise.all([
+        findAllRoutines(),
+        findAllRoutineSessions(),
+      ]);
+
+      // Filter sessions by date and attach routine title
+      // The backend returns session.routine (not session.routineId) with the full routine object
+      const filteredSessions = sessions
+        .filter((session: any) => {
+          const sessionDate = new Date(session.createdAt);
+          return sessionDate >= startDate && sessionDate <= endDate;
+        })
+        .map((session: any) => ({
+          ...session,
+          routineTitle: session.routine?.title || "Unknown",
+        }));
+
+      data.workouts = {
+        routines,
+        sessions: filteredSessions,
+      };
+    }
+
+    if (dataType === "nutrition" || dataType === "all") {
+      // Fetch nutrition data month by month
+      const nutritionData = [];
+      let currentDate = new Date(startDate);
+      const endMonth = new Date(endDate);
+
+      while (currentDate <= endMonth) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+
+        try {
+          const monthlyData = await getMonthlySummary(year, month);
+          nutritionData.push(...monthlyData);
+        } catch (e) {
+          console.warn(
+            `Could not fetch nutrition data for ${year}-${month}`,
+            e
+          );
+        }
+
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      // Filter strictly by date range (since monthly fetch might include extra days)
+      data.nutrition = nutritionData.filter((entry: any) => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+    }
+
+    return data;
+  },
+
+  async generateFile(data: any, format: ExportFormat): Promise<string> {
+    const fileName = `gym-tracker-export-${
+      new Date().toISOString().split("T")[0]
+    }.${format}`;
+    const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+
+    let content = "";
+    if (format === "json") {
+      content = JSON.stringify(data, null, 2);
+    } else {
+      content = this.convertToCSV(data);
+    }
+
+    await FileSystem.writeAsStringAsync(fileUri, content, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    return fileUri;
+  },
+
+  convertToCSV(data: any): string {
+    let csv = "";
+
+    if (data.workouts) {
+      csv += "WORKOUT SESSIONS\n";
+      csv += "Date,Routine,Duration (s),Volume (kg),Completed Sets\n";
+      data.workouts.sessions.forEach((session: any) => {
+        csv += `${session.createdAt},${session.routineTitle},${session.totalTime},${session.totalWeight},${session.completedSets}\n`;
+      });
+      csv += "\n";
+    }
+
+    if (data.nutrition) {
+      csv += "NUTRITION LOG\n";
+      csv += "Date,Calories,Protein (g),Carbs (g),Fat (g)\n";
+      data.nutrition.forEach((day: any) => {
+        csv += `${day.date},${day.totals.calories},${day.totals.protein},${day.totals.carbs},${day.totals.fat}\n`;
+      });
+    }
+
+    return csv;
+  },
+
+  async shareFile(fileUri: string): Promise<void> {
+    if (!(await Sharing.isAvailableAsync())) {
+      throw new Error("Sharing is not available on this device");
+    }
+    await Sharing.shareAsync(fileUri);
+  },
+};

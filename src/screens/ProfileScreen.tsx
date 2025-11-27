@@ -95,15 +95,7 @@ export default function ProfileScreen() {
   };
 
   const handleExportData = () => {
-    Alert.alert(
-      "Exportar Datos",
-      "Exporta tus datos de nutrición como CSV o JSON",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "CSV", onPress: () => console.log("Export as CSV") },
-        { text: "JSON", onPress: () => console.log("Export as JSON") },
-      ]
-    );
+    navigation.navigate("ExportData");
   };
 
   const handleClearCache = () => {
@@ -490,7 +482,7 @@ export default function ProfileScreen() {
                     { color: theme.textSecondary },
                   ]}
                 >
-                  Descarga tus datos de nutrición
+                  Descarga tus datos de nutrición y entrenamiento
                 </Text>
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />

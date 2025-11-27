@@ -7,6 +7,7 @@ import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import ProfileStack from "../features/profile/screens/ProfileStack";
 import { useNavigationStore } from "../store/useNavigationStore";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -49,7 +50,7 @@ export const BottomTabs = () => {
       <Tab.Screen name="Entreno" component={WorkoutStack} />
       <Tab.Screen name="Nutrición" component={NutritionScreen} />
       <Tab.Screen name="Macros" component={NutritionStack} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
+      <Tab.Screen name="Perfil" component={ProfileStack} />
     </Tab.Navigator>
   );
 };
