@@ -6,7 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 
 interface CustomToastProps {
   text1: string;
@@ -29,7 +31,7 @@ const CustomToast = ({
   const { width } = useWindowDimensions();
 
   useEffect(() => {
-    // Animar la barra de progreso suavemente
+    // Animate progress bar smoothly
     Animated.timing(animatedProgress, {
       toValue: progress,
       duration: 300,
@@ -42,14 +44,53 @@ const CustomToast = ({
     outputRange: ["0%", "100%"],
   });
 
+  const handleAddTime = async () => {
+    if (onAddTime) {
+      // Haptic feedback
+      if (Platform.OS === "ios") {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      onAddTime();
+    }
+  };
+
+  const handleSubtractTime = async () => {
+    if (onSubtractTime) {
+      // Haptic feedback
+      if (Platform.OS === "ios") {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      onSubtractTime();
+    }
+  };
+
+  const handleCancel = async () => {
+    if (onCancel) {
+      // Haptic feedback for cancel
+      if (Platform.OS === "ios") {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning
+        );
+      } else {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }
+      onCancel();
+    }
+  };
+
   return (
     <View style={[styles.toastContainer, { width: width * 0.92 }]}>
       <View style={styles.contentRow}>
         {progress > 0 && (
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={onSubtractTime}
+            onPress={handleSubtractTime}
             accessibilityLabel="-15 segundos"
+            activeOpacity={0.7}
           >
             <Text style={styles.actionButtonText}>−15s</Text>
           </TouchableOpacity>
@@ -69,8 +110,9 @@ const CustomToast = ({
         {progress > 0 && (
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={onAddTime}
+            onPress={handleAddTime}
             accessibilityLabel="+15 segundos"
+            activeOpacity={0.7}
           >
             <Text style={styles.actionButtonText}>+15s</Text>
           </TouchableOpacity>
@@ -79,8 +121,9 @@ const CustomToast = ({
         {onCancel && (
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={onCancel}
+            onPress={handleCancel}
             accessibilityLabel="Cancelar"
+            activeOpacity={0.8}
           >
             <Text style={styles.cancelButtonText}>X</Text>
           </TouchableOpacity>

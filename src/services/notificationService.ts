@@ -40,15 +40,18 @@ class NotificationService {
         return false;
       }
 
-      // For Android, create notification channel
+      // For Android, create notification channel with MAX importance for lock screen
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("rest-timer", {
           name: "Temporizador de Descanso",
-          importance: Notifications.AndroidImportance.HIGH,
+          importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
           sound: "default",
           enableVibrate: true,
-          showBadge: false,
+          showBadge: true,
+          lockscreenVisibility:
+            Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: false,
         });
       }
 
@@ -60,6 +63,7 @@ class NotificationService {
 
   /**
    * Start rest timer with notification
+   * Schedules a notification to fire when the rest time completes
    */
   async startRestTimer(
     restSeconds: number,
@@ -71,98 +75,49 @@ class NotificationService {
         return null;
       }
 
+      // Cancel ALL existing rest timer notifications to prevent duplicates
+      // This is safer than relying on a single ID
       await this.cancelAllRestTimers();
 
       const timerId = `rest-timer-${Date.now()}`;
 
+      // Schedule notification to fire after restSeconds
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
-          title: "⏱️ Tiempo de Descanso",
+          title: "✅ Descanso Completado!",
           body: exerciseName
-            ? `${exerciseName} - ${this.formatTime(restSeconds)} restantes`
-            : `${this.formatTime(restSeconds)} restantes`,
-          sound: false,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          sticky: true,
+            ? `Listo para la siguiente serie de ${exerciseName} 💪`
+            : "Listo para la siguiente serie 💪",
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          vibrate: [0, 250, 250, 250],
+          // Android specific for lock screen
+          ...(Platform.OS === "android" && {
+            categoryIdentifier: "rest-complete",
+            badge: 1,
+          }),
           data: {
-            type: "rest-timer",
-            timerId,
-            remainingSeconds: restSeconds,
+            type: "rest-complete",
             exerciseName,
+            timerId,
           },
         },
-        trigger: null,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: restSeconds,
+          channelId: Platform.OS === "android" ? "rest-timer" : undefined,
+          repeats: false, // Explicitly set repeats to false
+        },
         identifier: timerId,
       });
 
       this.notificationIds.set(timerId, notificationId);
 
-      let remainingSeconds = restSeconds;
-      const interval = setInterval(async () => {
-        remainingSeconds--;
-
-        if (remainingSeconds <= 0) {
-          clearInterval(interval);
-          this.activeTimers.delete(timerId);
-          await this.onRestTimerComplete(timerId, exerciseName);
-          return;
-        }
-
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "⏱️ Tiempo de Descanso",
-            body: exerciseName
-              ? `${exerciseName} - ${this.formatTime(
-                  remainingSeconds
-                )} restantes`
-              : `${this.formatTime(remainingSeconds)} restantes`,
-            sound: false,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-            sticky: true,
-            data: {
-              type: "rest-timer",
-              timerId,
-              remainingSeconds,
-              exerciseName,
-            },
-          },
-          trigger: null,
-          identifier: timerId,
-        });
-      }, 1000);
-
-      this.activeTimers.set(timerId, interval);
-
       return timerId;
     } catch (error) {
+      console.error("Error scheduling rest timer notification:", error);
       return null;
     }
-  }
-
-  /**
-   * Called when rest timer completes
-   */
-  private async onRestTimerComplete(timerId: string, exerciseName?: string) {
-    try {
-      await Notifications.dismissNotificationAsync(timerId);
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "✅ Descanso Completado!",
-          body: exerciseName
-            ? `Listo para la siguiente serie de ${exerciseName}`
-            : "Listo para la siguiente serie",
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          vibrate: [0, 250, 250, 250],
-          data: {
-            type: "rest-complete",
-            exerciseName,
-          },
-        },
-        trigger: null,
-      });
-    } catch (error) {}
   }
 
   /**
@@ -170,16 +125,11 @@ class NotificationService {
    */
   async cancelRestTimer(timerId: string) {
     try {
-      const interval = this.activeTimers.get(timerId);
-      if (interval) {
-        clearInterval(interval);
-        this.activeTimers.delete(timerId);
-      }
-
-      await Notifications.dismissNotificationAsync(timerId);
       await Notifications.cancelScheduledNotificationAsync(timerId);
       this.notificationIds.delete(timerId);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error canceling rest timer:", error);
+    }
   }
 
   /**
@@ -187,15 +137,23 @@ class NotificationService {
    */
   async cancelAllRestTimers() {
     try {
-      for (const [timerId, interval] of this.activeTimers.entries()) {
-        clearInterval(interval);
-        await Notifications.dismissNotificationAsync(timerId);
-        await Notifications.cancelScheduledNotificationAsync(timerId);
+      // Get all scheduled notifications
+      const scheduledNotifications =
+        await Notifications.getAllScheduledNotificationsAsync();
+
+      // Cancel only rest timer notifications
+      for (const notification of scheduledNotifications) {
+        if (notification.content.data?.type === "rest-complete") {
+          await Notifications.cancelScheduledNotificationAsync(
+            notification.identifier
+          );
+        }
       }
 
-      this.activeTimers.clear();
       this.notificationIds.clear();
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error canceling all rest timers:", error);
+    }
   }
 
   /**

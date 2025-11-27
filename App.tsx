@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import React from "react";
+import React, { useEffect } from "react";
 import { StatusBar } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,6 +16,7 @@ import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
+import * as Notifications from "expo-notifications";
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (
@@ -31,6 +32,28 @@ const toastConfig = {
 
 function AppContent() {
   const { isDark } = useTheme();
+
+  // Initialize notification listeners
+  useEffect(() => {
+    // Listener for notifications received while app is in foreground
+    const notificationListener = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log("Notification received:", notification);
+      }
+    );
+
+    // Listener for when user taps on a notification
+    const responseListener =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("Notification response:", response);
+        // You can add navigation logic here if needed
+      });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+      Notifications.removeNotificationSubscription(responseListener);
+    };
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

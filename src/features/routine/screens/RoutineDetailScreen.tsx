@@ -18,6 +18,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { formatTime } from "../components/ExerciseCard/helpers";
@@ -47,6 +48,11 @@ export default function RoutineDetailScreen() {
     start,
   } = route.params;
 
+  // Notification settings
+  const restTimerNotificationsEnabled = useNotificationSettingsStore(
+    (state) => state.restTimerNotificationsEnabled
+  );
+
   const [loading, setLoading] = useState(!!routine?.id);
   const [routineData, setRoutineData] = useState<any>(routine || null);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
@@ -62,6 +68,12 @@ export default function RoutineDetailScreen() {
   const [showRestToast, setShowRestToast] = useState(false);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
   const [totalRestTime, setTotalRestTime] = useState(0);
+  const [currentExerciseName, setCurrentExerciseName] = useState<
+    string | undefined
+  >();
+  const [activeNotificationId, setActiveNotificationId] = useState<
+    string | null
+  >(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -441,14 +453,22 @@ export default function RoutineDetailScreen() {
   ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
+    setCurrentExerciseName(exerciseName);
     setShowRestToast(true);
 
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
     }
 
-    // Start push notification timer
-    await notificationService.startRestTimer(restSeconds, exerciseName);
+    // Start push notification timer only if enabled in settings
+    if (restTimerNotificationsEnabled) {
+      // startRestTimer now handles cancellation of previous timers internally
+      const notificationId = await notificationService.startRestTimer(
+        restSeconds,
+        exerciseName
+      );
+      setActiveNotificationId(notificationId);
+    }
 
     // Keep the visual toast timer
     countdownRef.current = setInterval(() => {
@@ -456,6 +476,7 @@ export default function RoutineDetailScreen() {
         if (prev <= 1) {
           clearInterval(countdownRef.current as NodeJS.Timeout);
           setShowRestToast(false);
+          setActiveNotificationId(null);
           return 0;
         }
         return prev - 1;
@@ -463,26 +484,50 @@ export default function RoutineDetailScreen() {
     }, 1000);
   };
 
-  const handleAddRestTime = () => {
-    setRestTimeRemaining((prev) => {
-      const newTime = prev + 15;
-      setTotalRestTime(newTime);
-      return newTime;
-    });
+  const handleAddRestTime = async () => {
+    const newTime = restTimeRemaining + 15;
+    setRestTimeRemaining(newTime);
+    setTotalRestTime(newTime);
+
+    // Reschedule notification with new time
+    // Reschedule notification with new time
+    if (restTimerNotificationsEnabled) {
+      // startRestTimer now handles cancellation of previous timers internally
+      const notificationId = await notificationService.startRestTimer(
+        newTime,
+        currentExerciseName
+      );
+      setActiveNotificationId(notificationId);
+    }
   };
 
-  const handleSubtractRestTime = () => {
-    setRestTimeRemaining((prev) => {
-      const newTime = Math.max(0, prev - 15);
-      setTotalRestTime(newTime);
-      return newTime;
-    });
+  const handleSubtractRestTime = async () => {
+    const newTime = Math.max(0, restTimeRemaining - 15);
+    setRestTimeRemaining(newTime);
+    setTotalRestTime(newTime);
+
+    // Reschedule notification with new time
+    if (restTimerNotificationsEnabled) {
+      // startRestTimer now handles cancellation of previous timers internally
+      const notificationId = await notificationService.startRestTimer(
+        newTime,
+        currentExerciseName
+      );
+      setActiveNotificationId(notificationId);
+    }
   };
 
-  const handleCancelRestTimer = () => {
+  const handleCancelRestTimer = async () => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
     }
+
+    // Cancel the scheduled notification
+    if (activeNotificationId) {
+      await notificationService.cancelRestTimer(activeNotificationId);
+      setActiveNotificationId(null);
+    }
+
     setShowRestToast(false);
   };
 

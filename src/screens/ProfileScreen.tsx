@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNutritionStore } from "../store/useNutritionStore";
+import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { logout as logoutService } from "../features/login/services/authService";
 import {
   LogOut,
@@ -48,8 +49,19 @@ export default function ProfileScreen() {
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
 
-  const [notifications, setNotifications] = useState(true);
-  const [weeklyReminders, setWeeklyReminders] = useState(true);
+  // Notification settings from store
+  const restTimerNotificationsEnabled = useNotificationSettingsStore(
+    (state) => state.restTimerNotificationsEnabled
+  );
+  const toggleRestTimerNotifications = useNotificationSettingsStore(
+    (state) => state.toggleRestTimerNotifications
+  );
+  const workoutRemindersEnabled = useNotificationSettingsStore(
+    (state) => state.workoutRemindersEnabled
+  );
+  const toggleWorkoutReminders = useNotificationSettingsStore(
+    (state) => state.toggleWorkoutReminders
+  );
 
   const handleEditNutritionProfile = () => {
     if (isProfileComplete()) {
@@ -83,11 +95,15 @@ export default function ProfileScreen() {
   };
 
   const handleExportData = () => {
-    Alert.alert("Exportar Datos", "Exporta tus datos de nutrición como CSV o JSON", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "CSV", onPress: () => console.log("Export as CSV") },
-      { text: "JSON", onPress: () => console.log("Export as JSON") },
-    ]);
+    Alert.alert(
+      "Exportar Datos",
+      "Exporta tus datos de nutrición como CSV o JSON",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "CSV", onPress: () => console.log("Export as CSV") },
+        { text: "JSON", onPress: () => console.log("Export as JSON") },
+      ]
+    );
   };
 
   const handleClearCache = () => {
@@ -137,7 +153,9 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -146,27 +164,51 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
+    >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Perfil</Text>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.background,
+              borderBottomColor: theme.border,
+            },
+          ]}
+        >
+          <Text style={[styles.headerTitle, { color: theme.text }]}>
+            Perfil
+          </Text>
         </View>
 
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
           <View style={styles.avatarContainer}>
             {user.picture ? (
-              <Image source={{ uri: user.picture }} style={[styles.avatar, { borderColor: theme.primary }]} />
+              <Image
+                source={{ uri: user.picture }}
+                style={[styles.avatar, { borderColor: theme.primary }]}
+              />
             ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary }]}>
+              <View
+                style={[
+                  styles.avatarPlaceholder,
+                  { backgroundColor: theme.primary },
+                ]}
+              >
                 <User color="#FFFFFF" size={48} />
               </View>
             )}
           </View>
 
-          <Text style={[styles.userName, { color: theme.text }]}>{user.name}</Text>
-          <Text style={[styles.userEmail, { color: theme.textSecondary }]}>{user.email}</Text>
+          <Text style={[styles.userName, { color: theme.text }]}>
+            {user.name}
+          </Text>
+          <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
+            {user.email}
+          </Text>
 
           {user.createdAt && (
             <View style={styles.joinedContainer}>
@@ -180,14 +222,24 @@ export default function ProfileScreen() {
 
         {/* Nutrition Profile Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>PERFIL DE NUTRICIÓN</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            PERFIL DE NUTRICIÓN
+          </Text>
 
           <TouchableOpacity
-            style={[styles.settingCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+            style={[
+              styles.settingCard,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
             onPress={handleEditNutritionProfile}
           >
             <View style={styles.settingRow}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.primaryLight + '20' }]}>
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.primaryLight + "20" },
+                ]}
+              >
                 <Utensils color={theme.primary} size={24} />
               </View>
               <View style={styles.settingContent}>
@@ -196,7 +248,12 @@ export default function ProfileScreen() {
                     ? "Editar Perfil de Nutrición"
                     : "Configurar Perfil de Nutrición"}
                 </Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   {isProfileComplete()
                     ? "Actualiza tus datos y objetivos de macros"
                     : "Completa tu perfil para empezar"}
@@ -207,10 +264,16 @@ export default function ProfileScreen() {
 
             {isProfileComplete() && userProfile && (
               <>
-                <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                <View
+                  style={[styles.divider, { backgroundColor: theme.divider }]}
+                />
                 <View style={styles.nutritionStats}>
                   <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Objetivo</Text>
+                    <Text
+                      style={[styles.statLabel, { color: theme.textSecondary }]}
+                    >
+                      Objetivo
+                    </Text>
                     <Text style={[styles.statValue, { color: theme.text }]}>
                       {userProfile.goals.weightGoal === "lose"
                         ? "Perder peso"
@@ -219,16 +282,34 @@ export default function ProfileScreen() {
                         : "Mantener peso"}
                     </Text>
                   </View>
-                  <View style={[styles.statDivider, { backgroundColor: theme.divider }]} />
+                  <View
+                    style={[
+                      styles.statDivider,
+                      { backgroundColor: theme.divider },
+                    ]}
+                  />
                   <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Calorías</Text>
+                    <Text
+                      style={[styles.statLabel, { color: theme.textSecondary }]}
+                    >
+                      Calorías
+                    </Text>
                     <Text style={[styles.statValue, { color: theme.text }]}>
                       {Math.round(userProfile.macroGoals.dailyCalories)}
                     </Text>
                   </View>
-                  <View style={[styles.statDivider, { backgroundColor: theme.divider }]} />
+                  <View
+                    style={[
+                      styles.statDivider,
+                      { backgroundColor: theme.divider },
+                    ]}
+                  />
                   <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Peso</Text>
+                    <Text
+                      style={[styles.statLabel, { color: theme.textSecondary }]}
+                    >
+                      Peso
+                    </Text>
                     <Text style={[styles.statValue, { color: theme.text }]}>
                       {userProfile.anthropometrics.weight} kg
                     </Text>
@@ -241,18 +322,47 @@ export default function ProfileScreen() {
 
         {/* General Settings */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>GENERAL</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            GENERAL
+          </Text>
 
-          <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.settingsGroup,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
             {/* Dark Mode */}
-            <View style={[styles.settingRow, styles.settingRowBorder, { borderBottomColor: theme.divider }]}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.primaryLight + '20' }]}>
+            <View
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.primaryLight + "20" },
+                ]}
+              >
                 <Moon color={theme.primary} size={20} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Modo Oscuro</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  {themeMode === 'auto' ? 'Automático (Sistema)' : isDark ? 'Activado' : 'Desactivado'}
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Modo Oscuro
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {themeMode === "auto"
+                    ? "Automático (Sistema)"
+                    : isDark
+                    ? "Activado"
+                    : "Desactivado"}
                 </Text>
               </View>
               <Switch
@@ -263,41 +373,79 @@ export default function ProfileScreen() {
               />
             </View>
 
-            {/* Notifications */}
-            <View style={[styles.settingRow, styles.settingRowBorder, { borderBottomColor: theme.divider }]}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.info + '20' }]}>
+            {/* Rest Timer Notifications */}
+            <View
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.info + "20" },
+                ]}
+              >
                 <Bell color={theme.info} size={20} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Notificaciones</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Recibir notificaciones de la app
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Notificaciones de Descanso
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Alertas cuando termina el tiempo de descanso
                 </Text>
               </View>
               <Switch
-                value={notifications}
-                onValueChange={setNotifications}
+                value={restTimerNotificationsEnabled}
+                onValueChange={toggleRestTimerNotifications}
                 trackColor={{ false: theme.border, true: theme.primaryLight }}
-                thumbColor={notifications ? theme.primary : theme.inputBackground}
+                thumbColor={
+                  restTimerNotificationsEnabled
+                    ? theme.primary
+                    : theme.inputBackground
+                }
               />
             </View>
 
-            {/* Weekly Reminders */}
+            {/* Workout Reminders */}
             <View style={styles.settingRow}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.warning + '20' }]}>
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.warning + "20" },
+                ]}
+              >
                 <Activity color={theme.warning} size={20} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Recordatorios Semanales</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Recordatorios sobre tu progreso
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Recordatorios de Entrenamiento
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Recordatorios para no olvidar entrenar
                 </Text>
               </View>
               <Switch
-                value={weeklyReminders}
-                onValueChange={setWeeklyReminders}
+                value={workoutRemindersEnabled}
+                onValueChange={toggleWorkoutReminders}
                 trackColor={{ false: theme.border, true: theme.primaryLight }}
-                thumbColor={weeklyReminders ? theme.primary : theme.inputBackground}
+                thumbColor={
+                  workoutRemindersEnabled
+                    ? theme.primary
+                    : theme.inputBackground
+                }
               />
             </View>
           </View>
@@ -305,20 +453,43 @@ export default function ProfileScreen() {
 
         {/* Data Settings */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>DATOS</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            DATOS
+          </Text>
 
-          <View style={[styles.settingsGroup, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.settingsGroup,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
             {/* Export Data */}
             <TouchableOpacity
-              style={[styles.settingRow, styles.settingRowBorder, { borderBottomColor: theme.divider }]}
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
               onPress={handleExportData}
             >
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.success + '20' }]}>
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.success + "20" },
+                ]}
+              >
                 <Download color={theme.success} size={20} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Exportar Datos</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Exportar Datos
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   Descarga tus datos de nutrición
                 </Text>
               </View>
@@ -330,12 +501,24 @@ export default function ProfileScreen() {
               style={styles.settingRow}
               onPress={handleClearCache}
             >
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.error + '20' }]}>
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.error + "20" },
+                ]}
+              >
                 <Trash2 color={theme.error} size={20} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Limpiar Caché</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Limpiar Caché
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   Liberar espacio de almacenamiento
                 </Text>
               </View>
@@ -346,10 +529,15 @@ export default function ProfileScreen() {
 
         {/* Account Actions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>CUENTA</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            CUENTA
+          </Text>
 
           <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: theme.card, borderColor: theme.error + '40' }]}
+            style={[
+              styles.logoutButton,
+              { backgroundColor: theme.card, borderColor: theme.error + "40" },
+            ]}
             onPress={handleLogout}
             disabled={isLoggingOut}
           >
