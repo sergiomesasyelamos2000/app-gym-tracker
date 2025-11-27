@@ -668,6 +668,28 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
           theme={theme}
         />
 
+        {/* Botón Ver Progreso */}
+        <View style={styles.progressButtonContainer}>
+          <TouchableOpacity
+            style={styles.progressButton}
+            onPress={() => navigation.navigate("ExerciseProgress", { exercise })}
+            activeOpacity={0.7}
+          >
+            <View style={styles.progressButtonContent}>
+              <View style={styles.progressButtonLeft}>
+                <View style={styles.progressButtonIconContainer}>
+                  <Text style={styles.progressButtonIcon}>📊</Text>
+                </View>
+                <View>
+                  <Text style={styles.progressButtonTitle}>Gráficas de Progreso</Text>
+                  <Text style={styles.progressButtonSubtitle}>Análisis detallado de tu evolución</Text>
+                </View>
+              </View>
+              <Text style={styles.progressButtonArrow}>→</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {history.length > 0 && (
           <ProgressSection
             totalProgress={progress.total}
@@ -1246,6 +1268,77 @@ const createStyles = (theme: any) =>
       color: theme.textSecondary,
       textAlign: "center",
       lineHeight: IS_SMALL_DEVICE ? 18 : 20,
+    },
+    progressButtonContainer: {
+      paddingHorizontal: IS_VERY_SMALL_DEVICE ? 16 : IS_SMALL_DEVICE ? 18 : 20,
+      marginBottom: IS_SMALL_DEVICE ? 16 : 20,
+    },
+    progressButton: {
+      backgroundColor: theme.card,
+      borderRadius: IS_SMALL_DEVICE ? 16 : 20,
+      padding: IS_SMALL_DEVICE ? 14 : 16,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 8,
+      borderWidth: 2,
+      borderColor: theme.primary + "40",
+    },
+    progressButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    progressButtonLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    progressButtonIconContainer: {
+      width: IS_SMALL_DEVICE ? 44 : 48,
+      height: IS_SMALL_DEVICE ? 44 : 48,
+      borderRadius: IS_SMALL_DEVICE ? 12 : 14,
+      backgroundColor: theme.primary + "20",
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: IS_SMALL_DEVICE ? 12 : 14,
+    },
+    progressButtonIcon: {
+      fontSize: IS_VERY_SMALL_DEVICE
+        ? RFValue(20)
+        : IS_SMALL_DEVICE
+        ? RFValue(22)
+        : RFValue(24),
+    },
+    progressButtonTitle: {
+      fontSize: IS_VERY_SMALL_DEVICE
+        ? RFValue(14)
+        : IS_SMALL_DEVICE
+        ? RFValue(15)
+        : RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 2,
+    },
+    progressButtonSubtitle: {
+      fontSize: IS_VERY_SMALL_DEVICE
+        ? RFValue(11)
+        : IS_SMALL_DEVICE
+        ? RFValue(12)
+        : RFValue(13),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    progressButtonArrow: {
+      fontSize: IS_VERY_SMALL_DEVICE
+        ? RFValue(18)
+        : IS_SMALL_DEVICE
+        ? RFValue(20)
+        : RFValue(22),
+      color: theme.primary,
+      fontWeight: "bold",
+      marginLeft: 8,
     },
     bottomSpacer: {
       height: 20,

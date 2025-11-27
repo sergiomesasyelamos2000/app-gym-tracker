@@ -6,6 +6,7 @@ import ExerciseListScreen from "../components/ExerciseList";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";
 import ExerciseDetailScreen from "./ExerciseDetailScreen";
+import ExerciseProgressScreen from "./ExerciseProgressScreen";
 import RoutineDetailScreen from "./RoutineDetailScreen";
 import RoutineEditScreen from "./RoutineEditScreen";
 
@@ -32,6 +33,9 @@ export type WorkoutStackParamList = {
     onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
   };
   ExerciseDetail: {
+    exercise: ExerciseRequestDto;
+  };
+  ExerciseProgress: {
     exercise: ExerciseRequestDto;
   };
 };
@@ -82,6 +86,11 @@ export default function WorkoutStack() {
         name="ExerciseDetail"
         component={ExerciseDetailScreen}
         options={{ title: "Detalle del ejercicio" }}
+      />
+      <Stack.Screen
+        name="ExerciseProgress"
+        component={ExerciseProgressScreen}
+        options={{ title: "Progreso del ejercicio" }}
       />
     </Stack.Navigator>
   );
