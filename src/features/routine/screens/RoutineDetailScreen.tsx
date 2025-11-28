@@ -37,6 +37,7 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 import { notificationService } from "../../../services/notificationService";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { useRecordsStore } from "../../../store/useRecordsStore";
+import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
@@ -82,6 +83,9 @@ export default function RoutineDetailScreen() {
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const [previousSessions, setPreviousSessions] = useState<any[]>([]);
+  const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
+  const [frozenDuration, setFrozenDuration] = useState(0);
+  const MIN_WORKOUT_DURATION = 300; // 5 minutos
 
   const {
     workoutInProgress,
@@ -238,10 +242,10 @@ export default function RoutineDetailScreen() {
   ]);
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || showShortWorkoutModal) return;
     const interval = setInterval(() => setDuration((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
-  }, [started]);
+  }, [started, showShortWorkoutModal]);
 
   useEffect(() => {
     if (!started) return;
@@ -427,7 +431,7 @@ export default function RoutineDetailScreen() {
     setStarted(true);
   };
 
-  const handleFinishAndSaveRoutine = async () => {
+  const processFinishRoutine = async () => {
     try {
       setStarted(false);
       setHasInitializedFromStore(false);
@@ -468,6 +472,27 @@ export default function RoutineDetailScreen() {
     } catch (err) {
       Alert.alert("Error", "Error al guardar la rutina");
     }
+  };
+
+  const handleFinishAndSaveRoutine = async () => {
+    // Freeze the current duration before showing modal
+    setFrozenDuration(duration);
+
+    if (duration < MIN_WORKOUT_DURATION) {
+      setShowShortWorkoutModal(true);
+      return;
+    }
+    await processFinishRoutine();
+  };
+
+  const handleDiscardWorkout = () => {
+    setShowShortWorkoutModal(false);
+    setStarted(false);
+    clearWorkoutInProgress();
+    setHasInitializedFromStore(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setShowRestToast(false);
+    navigation.goBack();
   };
 
   const handleSaveRoutine = async () => {
@@ -808,6 +833,17 @@ export default function RoutineDetailScreen() {
           />
         </Animated.View>
       )}
+
+      <ShortWorkoutConfirmModal
+        visible={showShortWorkoutModal}
+        duration={frozenDuration}
+        onContinue={() => setShowShortWorkoutModal(false)}
+        onDiscard={handleDiscardWorkout}
+        onSave={() => {
+          setShowShortWorkoutModal(false);
+          processFinishRoutine();
+        }}
+      />
     </SafeAreaView>
   );
 }
