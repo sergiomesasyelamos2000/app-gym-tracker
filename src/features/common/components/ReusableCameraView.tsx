@@ -1,5 +1,5 @@
-import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import React, { useRef, useState, useEffect } from "react";
 import {
   StyleSheet,
   TouchableOpacity,
@@ -8,6 +8,8 @@ import {
   Vibration,
   Dimensions,
   BackHandler,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -27,109 +29,81 @@ export default function ReusableCameraView({
 }: Props) {
   const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cameraReady, setCameraReady] = useState(false);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasScannedRef = useRef(false);
 
-  // Flag para saber si el componente está montado
-  const isMounted = useRef(true);
-
-  // Cleanup al desmontar
+  // Limpiar al desmontar
   useEffect(() => {
-    isMounted.current = true;
-    // Reset scanned state cuando el componente se monta
-    setScanned(false);
-    setError(null);
-
     return () => {
-      isMounted.current = false;
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+      hasScannedRef.current = false;
     };
   }, []);
 
-  // Manejar el botón de retroceso en Android
+  // Manejar botón de retroceso en Android
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        if (isMounted.current) {
-          onCloseCamera?.();
-        }
+        onCloseCamera?.();
         return true;
       }
     );
-
     return () => backHandler.remove();
   }, [onCloseCamera]);
 
-  const handleBarCodeScanned = useCallback(
-    ({ data }: { data: string }) => {
-      if (!scanned && isMounted.current) {
-        setScanned(true);
-        Vibration.vibrate(100);
-
-        // Pequeño delay para dar feedback visual
-        setTimeout(() => {
-          if (isMounted.current) {
-            onBarCodeScanned?.(data);
-          }
-        }, 300);
-      }
-    },
-    [scanned, onBarCodeScanned]
-  );
-
-  const handleCameraError = useCallback((error: any) => {
-    if (isMounted.current) {
-      console.error("Error en cámara:", error);
-      const errorMessage = error?.message || error?.toString() || "Error desconocido";
-      setError(`No se pudo iniciar la cámara: ${errorMessage}`);
-      setCameraReady(false);
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    // Evitar escaneos duplicados
+    if (hasScannedRef.current || scanned || !data) {
+      return;
     }
-  }, []);
 
-  const handleCameraReady = useCallback(() => {
-    if (isMounted.current) {
-      console.log("Cámara lista");
-      setCameraReady(true);
-      setError(null);
-    }
-  }, []);
+    hasScannedRef.current = true;
+    setScanned(true);
+
+    console.log("Código escaneado:", data);
+    Vibration.vibrate(100);
+
+    // Dar feedback visual antes de cerrar
+    scanTimeoutRef.current = setTimeout(() => {
+      onBarCodeScanned?.(data);
+    }, 200);
+  };
 
   const handleClose = () => {
-    if (isMounted.current) {
-      onCloseCamera?.();
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
     }
+    onCloseCamera?.();
   };
 
   const handleRequestPermission = async () => {
     try {
       const result = await requestPermission();
-      if (!result.granted && isMounted.current) {
+      if (!result.granted) {
         setError("Permiso de cámara denegado. Actívalo en ajustes.");
       }
     } catch (err) {
-      if (isMounted.current) {
-        setError("Error al solicitar permisos");
-      }
+      console.error("Error requesting permission:", err);
+      setError("Error al solicitar permisos de cámara");
     }
   };
 
-  const handleRetry = () => {
-    if (isMounted.current) {
-      setError(null);
-      setScanned(false);
-    }
-  };
-
+  // Loading state
   if (!permission) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando...</Text>
+        <ActivityIndicator size="large" color="#FFF" />
+        <Text style={styles.loadingText}>Cargando cámara...</Text>
       </View>
     );
   }
 
+  // Permission denied
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
@@ -168,6 +142,7 @@ export default function ReusableCameraView({
     );
   }
 
+  // Error state
   if (error) {
     return (
       <View style={styles.errorContainer}>
@@ -189,14 +164,6 @@ export default function ReusableCameraView({
           style={[styles.errorButton, { backgroundColor: theme.error }]}
         >
           <Text style={styles.errorButtonText}>Cerrar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleRetry} style={styles.secondaryButton}>
-          <Text
-            style={[styles.secondaryButtonText, { color: theme.textSecondary }]}
-          >
-            Reintentar
-          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -235,31 +202,28 @@ export default function ReusableCameraView({
     <View style={styles.container}>
       <CameraView
         style={styles.camera}
-        facing={"back" as CameraType}
-        ref={cameraRef}
+        facing="back"
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        onMountError={handleCameraError}
-        onCameraReady={handleCameraReady}
         barcodeScannerSettings={{
           barcodeTypes: [
-            "aztec",
             "ean13",
             "ean8",
-            "qr",
-            "pdf417",
+            "upc_a",
             "upc_e",
-            "datamatrix",
+            "code128",
             "code39",
-            "code93",
+            "qr",
+            "aztec",
+            "pdf417",
+            "datamatrix",
             "itf14",
             "codabar",
-            "code128",
-            "upc_a",
+            "code93",
           ],
         }}
       />
 
-      {/* Header - Positioned absolutely over camera */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -272,7 +236,7 @@ export default function ReusableCameraView({
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Overlay - Positioned absolutely over camera */}
+      {/* Overlay */}
       <View style={styles.overlay}>
         <View style={[styles.overlaySection, styles.overlayTop]} />
 
@@ -319,11 +283,21 @@ export default function ReusableCameraView({
           <View style={styles.bottomInfo}>
             <Icon name="info" size={20} color="rgba(255,255,255,0.8)" />
             <Text style={styles.helpText}>
-              El escaneo es automático cuando el código está bien enfocado
+              El escaneo es automático cuando el código está enfocado
             </Text>
           </View>
         </View>
       </View>
+
+      {/* Indicador de escaneo exitoso */}
+      {scanned && (
+        <View style={styles.scannedOverlay}>
+          <View style={styles.scannedIndicator}>
+            <Icon name="check-circle" size={64} color="#4CAF50" />
+            <Text style={styles.scannedText}>¡Código escaneado!</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -338,7 +312,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: "absolute",
-    top: 50,
+    top: Platform.OS === "ios" ? 50 : 20,
     left: 0,
     right: 0,
     flexDirection: "row",
@@ -488,6 +462,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: "#FFFFFF",
     fontSize: 16,
+    marginTop: 16,
   },
   permissionContainer: {
     flex: 1,
@@ -575,5 +550,25 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  scannedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  scannedIndicator: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingHorizontal: 40,
+    paddingVertical: 30,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+  scannedText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#4CAF50",
+    marginTop: 12,
   },
 });

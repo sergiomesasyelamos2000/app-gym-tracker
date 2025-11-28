@@ -448,7 +448,7 @@ export default function HomeScreen() {
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerGreeting}>{greeting}</Text>
-              <Text style={styles.headerTitle}>Atleta 💪</Text>
+              <Text style={styles.headerTitle}>{user?.name || "Atleta"} 💪</Text>
               <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
             </View>
             <View style={styles.timeContainer}>

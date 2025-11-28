@@ -1120,6 +1120,7 @@ export default function ProductListScreen() {
   const [searchText, setSearchText] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [initialTab, setInitialTab] = useState<string | undefined>(undefined);
+  const [cameraKey, setCameraKey] = useState(0); // Key para forzar remontaje
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -1141,6 +1142,8 @@ export default function ProductListScreen() {
 
   const handleBarCodeScanned = async (code: string) => {
     setShowCamera(false);
+    // Incrementar key para forzar remontaje la próxima vez
+    setCameraKey(prev => prev + 1);
 
     if (!code || code.trim().length === 0) {
       Alert.alert("Error", "Código de barras no válido");
@@ -1208,8 +1211,13 @@ export default function ProductListScreen() {
   if (showCamera) {
     return (
       <ReusableCameraView
+        key={cameraKey}
         onBarCodeScanned={handleBarCodeScanned}
-        onCloseCamera={() => setShowCamera(false)}
+        onCloseCamera={() => {
+          setShowCamera(false);
+          // Incrementar key para forzar remontaje la próxima vez
+          setCameraKey(prev => prev + 1);
+        }}
       />
     );
   }
