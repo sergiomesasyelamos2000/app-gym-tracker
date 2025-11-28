@@ -121,7 +121,8 @@ export async function createUserProfile(
     goals: {
       weightGoal: profile.goals.weightGoal,
       targetWeight: Math.round(profile.goals.targetWeight * 10) / 10, // Redondear a 1 decimal
-      weeklyWeightChange: Math.round(profile.goals.weeklyWeightChange * 100) / 100, // Redondear a 2 decimales
+      weeklyWeightChange:
+        Math.round(profile.goals.weeklyWeightChange * 100) / 100, // Redondear a 2 decimales
     },
     macroGoals: {
       dailyCalories: Math.round(profile.macroGoals.dailyCalories), // Entero
@@ -255,9 +256,10 @@ export async function updateShoppingListItem(
 }
 
 export async function togglePurchased(
-  itemId: string
+  itemId: string,
+  userId: string
 ): Promise<ShoppingListItem> {
-  return apiFetch(`nutrition/shopping-list/${itemId}/toggle`, {
+  return apiFetch(`nutrition/shopping-list/${userId}/${itemId}/toggle`, {
     method: "PUT",
   });
 }

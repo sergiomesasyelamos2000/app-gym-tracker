@@ -67,8 +67,13 @@ export default function ShoppingListScreen() {
   };
 
   const handleTogglePurchased = async (itemId: string) => {
+    if (!userProfile) return;
+
     try {
-      const updatedItem = await nutritionService.togglePurchased(itemId);
+      const updatedItem = await nutritionService.togglePurchased(
+        itemId,
+        userProfile.userId
+      );
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
