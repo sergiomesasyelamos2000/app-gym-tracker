@@ -40,7 +40,7 @@ export type NutritionStackParamList = {
   EditNutritionProfileScreen: undefined;
   ShoppingListScreen: undefined;
   SettingsScreen: undefined;
-  CreateProductScreen: undefined;
+  CreateProductScreen: { barcode?: string } | undefined;
   CreateMealScreen: {
     selectedProduct?: MealProduct;
     selectedProducts?: (Product | CustomProduct | CustomMeal)[];

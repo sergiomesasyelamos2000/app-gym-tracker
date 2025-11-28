@@ -70,7 +70,7 @@ export async function scanBarcode(code: string): Promise<Product> {
   });
 }
 
-// Product search
+// Product search - Lista de productos populares españoles
 export async function getProducts(
   page = 1,
   pageSize = 20
@@ -78,6 +78,24 @@ export async function getProducts(
   return apiFetch(`nutrition/products?page=${page}&pageSize=${pageSize}`, {
     method: "GET",
   });
+}
+
+// Búsqueda avanzada de productos por nombre (optimizado para España)
+export async function searchProductsByName(
+  searchTerm: string,
+  page = 1,
+  pageSize = 20
+): Promise<{ products: Product[]; total: number }> {
+  if (!searchTerm || searchTerm.trim().length === 0) {
+    return { products: [], total: 0 };
+  }
+
+  return apiFetch(
+    `nutrition/products/search?q=${encodeURIComponent(searchTerm.trim())}&page=${page}&pageSize=${pageSize}`,
+    {
+      method: "GET",
+    }
+  );
 }
 
 // Get product detail by code

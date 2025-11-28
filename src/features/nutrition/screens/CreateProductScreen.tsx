@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -56,10 +56,16 @@ const UNITS_CONFIG = [
   },
 ];
 
+type CreateProductScreenRouteProp = RouteProp<
+  NutritionStackParamList,
+  "CreateProductScreen"
+>;
+
 export default function CreateProductScreen() {
   const { theme } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
+  const route = useRoute<CreateProductScreenRouteProp>();
   const userProfile = useNutritionStore((state) => state.userProfile);
 
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -73,6 +79,13 @@ export default function CreateProductScreen() {
   const [servingSize, setServingSize] = useState("");
   const [servingUnit, setServingUnit] = useState<FoodUnit>("g");
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // Inicializar barcode si viene de los parámetros de navegación
+  useEffect(() => {
+    if (route.params?.barcode) {
+      setBarcode(route.params.barcode);
+    }
+  }, [route.params?.barcode]);
 
   const [nutritionalValues, setNutritionalValues] = useState<NutritionalValues>(
     {

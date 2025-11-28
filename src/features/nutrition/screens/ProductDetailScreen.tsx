@@ -23,6 +23,25 @@ import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
 
 const { width } = Dimensions.get("window");
 
+// Función auxiliar para obtener el color según el Nutri-Score
+function getNutritionGradeColor(grade: string): string {
+  const normalizedGrade = grade.toLowerCase();
+  switch (normalizedGrade) {
+    case 'a':
+      return '#038141'; // Verde oscuro
+    case 'b':
+      return '#85BB2F'; // Verde claro
+    case 'c':
+      return '#FECB02'; // Amarillo
+    case 'd':
+      return '#EE8100'; // Naranja
+    case 'e':
+      return '#E63E11'; // Rojo
+    default:
+      return '#999999'; // Gris por defecto
+  }
+}
+
 interface Props {
   route: any;
   navigation: any;
@@ -361,6 +380,17 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
         <View style={styles.nameContainer}>
           <Text style={styles.productName}>{producto.name}</Text>
+          {producto.brand && (
+            <Text style={styles.productBrand}>{producto.brand}</Text>
+          )}
+          {producto.nutritionGrade && (
+            <View style={styles.nutritionGradeContainer}>
+              <Text style={styles.nutritionGradeLabel}>Nutri-Score:</Text>
+              <View style={[styles.nutritionGradeBadge, { backgroundColor: getNutritionGradeColor(producto.nutritionGrade) }]}>
+                <Text style={styles.nutritionGradeText}>{producto.nutritionGrade.toUpperCase()}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.nutritionSection}>
@@ -936,5 +966,37 @@ const createStyles = (theme: any) =>
       fontSize: RFValue(15),
       fontWeight: "600",
       color: theme.text,
+    },
+    productBrand: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginTop: 8,
+      fontStyle: 'italic',
+      textAlign: 'center',
+    },
+    nutritionGradeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+      gap: 8,
+    },
+    nutritionGradeLabel: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      fontWeight: '600',
+    },
+    nutritionGradeBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      minWidth: 40,
+      alignItems: 'center',
+    },
+    nutritionGradeText: {
+      fontSize: RFValue(14),
+      fontWeight: '800',
+      color: '#fff',
+      letterSpacing: 0.5,
     },
   });

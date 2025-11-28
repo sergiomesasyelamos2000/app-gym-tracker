@@ -16,6 +16,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -45,6 +46,25 @@ const Tab = createMaterialTopTabNavigator();
 
 const { width } = Dimensions.get("window");
 const PAGE_SIZE = 100;
+
+// Función auxiliar para obtener el color según el Nutri-Score
+function getNutritionGradeColor(grade: string): string {
+  const normalizedGrade = grade.toLowerCase();
+  switch (normalizedGrade) {
+    case 'a':
+      return '#038141'; // Verde oscuro
+    case 'b':
+      return '#85BB2F'; // Verde claro
+    case 'c':
+      return '#FECB02'; // Amarillo
+    case 'd':
+      return '#EE8100'; // Naranja
+    case 'e':
+      return '#E63E11'; // Rojo
+    default:
+      return '#999999'; // Gris por defecto
+  }
+}
 
 interface Props {
   navigation: any;
@@ -85,6 +105,8 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const hasLoadedRef = useRef(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -102,6 +124,36 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
       setProductos(dataCache.allProducts);
     }
   }, []);
+
+  // Búsqueda en el backend cuando hay texto de búsqueda
+  useEffect(() => {
+    // Limpiar timeout anterior
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchText.trim().length > 0) {
+      setIsSearching(true);
+      // Debounce de 500ms para evitar demasiadas peticiones
+      searchTimeoutRef.current = setTimeout(() => {
+        searchProducts(searchText, 1, true);
+      }, 500);
+    } else {
+      setIsSearching(false);
+      // Si no hay búsqueda, recargar productos normales
+      if (dataCache.allProducts) {
+        setProductos(dataCache.allProducts);
+      } else {
+        loadProducts(1, true);
+      }
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchText]);
 
   const loadProducts = async (pageToLoad: number, initial = false) => {
     if (loadingMore && !initial) return;
@@ -140,15 +192,53 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
     }
   };
 
-  const handleEndReached = () => {
-    if (!loadingMore && hasMore) {
-      loadProducts(page + 1);
+  const searchProducts = async (query: string, pageToLoad: number, initial = false) => {
+    if (loadingMore && !initial) return;
+    if (!hasMore && !initial) return;
+    if (initial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const data = await nutritionService.searchProductsByName(query, pageToLoad, 20);
+
+      if (!data || !data.products) {
+        setHasMore(false);
+        setProductos([]);
+        return;
+      }
+
+      if (initial) {
+        setProductos(data.products);
+        setHasMore(data.products.length === 20);
+        setPage(pageToLoad);
+      } else {
+        const newProducts = [...productos, ...data.products];
+        setProductos(newProducts);
+        setHasMore(data.products.length === 20);
+        setPage(pageToLoad);
+      }
+    } catch (err) {
+      console.error("Error buscando productos:", err);
+      setHasMore(false);
+      setProductos([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setIsSearching(false);
     }
   };
 
-  const filteredProducts = productos.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const handleEndReached = () => {
+    if (!loadingMore && hasMore) {
+      if (isSearching && searchText.trim().length > 0) {
+        searchProducts(searchText, page + 1);
+      } else {
+        loadProducts(page + 1);
+      }
+    }
+  };
+
+  const filteredProducts = productos; // Ya no filtramos localmente, la búsqueda se hace en el backend
 
   const handleQuickAdd = (item: Product, event: any) => {
     event.stopPropagation();
@@ -195,32 +285,53 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
           ]}
         />
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
         <Text
           style={[
             styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 13 : 14) },
+            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
           ]}
           numberOfLines={2}
         >
           {item.name}
         </Text>
+        {item.brand && (
+          <Text
+            style={[
+              styles.productBrand,
+              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
+            ]}
+            numberOfLines={1}
+          >
+            {item.brand}
+          </Text>
+        )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={14} color="#6FCF97" />
-            <Text style={styles.macroText}>{item.calories || 0} kcal</Text>
-          </View>
-          <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={14} color={theme.textSecondary} />
-            <Text style={styles.macroText}>{item.grams || 100}g</Text>
+            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+              {item.calories || 0} kcal
+            </Text>
           </View>
         </View>
+        <View style={styles.productMacros}>
+          <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]}>
+            P: {item.protein || 0}g • C: {item.carbohydrates || 0}g • F: {item.fat || 0}g
+          </Text>
+        </View>
+        {item.nutritionGrade && (
+          <View style={styles.nutritionGradeContainer}>
+            <Text style={[styles.nutritionGrade, { backgroundColor: getNutritionGradeColor(item.nutritionGrade) }]}>
+              {item.nutritionGrade.toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
       <TouchableOpacity
         style={styles.addButton}
         onPress={(e) => handleQuickAdd(item, e)}
       >
-        <Ionicons name="add" size={24} color={theme.primary} />
+        <Ionicons name="add" size={isSmallScreen ? 22 : 24} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -421,11 +532,11 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
           <Ionicons name="heart" size={16} color="#E94560" />
         </View>
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
         <Text
           style={[
             styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 13 : 14) },
+            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
           ]}
           numberOfLines={2}
         >
@@ -433,14 +544,16 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
         </Text>
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={14} color="#6FCF97" />
-            <Text style={styles.macroText}>
+            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
               {Math.round(item.calories) || 0} kcal
             </Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={14} color="#808080" />
-            <Text style={styles.macroText}>100g</Text>
+            <Ionicons name="analytics" size={isSmallScreen ? 12 : 14} color="#808080" />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+              100g
+            </Text>
           </View>
         </View>
       </View>
@@ -640,31 +753,33 @@ function CustomProductsTab({
           <Ionicons name="create" size={14} color={theme.primary} />
         </View>
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
         <Text
           style={[
             styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 13 : 14) },
+            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
           ]}
           numberOfLines={2}
         >
           {item.name}
         </Text>
         {item.brand && (
-          <Text style={styles.brandText} numberOfLines={1}>
+          <Text style={[styles.brandText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]} numberOfLines={1}>
             {item.brand}
           </Text>
         )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={14} color="#6FCF97" />
-            <Text style={styles.macroText}>
+            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
               {Math.round(item.caloriesPer100)} kcal
             </Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={14} color={theme.textSecondary} />
-            <Text style={styles.macroText}>100g</Text>
+            <Ionicons name="analytics" size={isSmallScreen ? 12 : 14} color={theme.textSecondary} />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+              100g
+            </Text>
           </View>
         </View>
       </View>
@@ -675,7 +790,7 @@ function CustomProductsTab({
           navigation.navigate("EditProductScreen", { product: item });
         }}
       >
-        <Ionicons name="create-outline" size={20} color={theme.primary} />
+        <Ionicons name="create-outline" size={isSmallScreen ? 18 : 20} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -875,32 +990,34 @@ function CustomMealsTab({
           <Ionicons name="restaurant" size={14} color={theme.primary} />
         </View>
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
         <Text
           style={[
             styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 13 : 14) },
+            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
           ]}
           numberOfLines={2}
         >
           {item.name}
         </Text>
         {item.description && (
-          <Text style={styles.brandText} numberOfLines={1}>
+          <Text style={[styles.brandText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]} numberOfLines={1}>
             {item.description}
           </Text>
         )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={14} color="#6FCF97" />
-            <Text style={styles.macroText}>
+            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
               {Math.round(item.totalCalories)} kcal
             </Text>
           </View>
           <View style={styles.macroItem}></View>
           <View style={styles.macroItem}>
-            <Ionicons name="fast-food" size={14} color={theme.primary} />
-            <Text style={styles.macroText}>{item.products.length} items</Text>
+            <Ionicons name="fast-food" size={isSmallScreen ? 12 : 14} color={theme.primary} />
+            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+              {item.products.length} items
+            </Text>
           </View>
         </View>
       </View>
@@ -911,7 +1028,7 @@ function CustomMealsTab({
           navigation.navigate("EditMealScreen", { meal: item });
         }}
       >
-        <Ionicons name="create-outline" size={20} color={theme.primary} />
+        <Ionicons name="create-outline" size={isSmallScreen ? 18 : 20} color={theme.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -1024,13 +1141,55 @@ export default function ProductListScreen() {
 
   const handleBarCodeScanned = async (code: string) => {
     setShowCamera(false);
+
+    if (!code || code.trim().length === 0) {
+      Alert.alert("Error", "Código de barras no válido");
+      return;
+    }
+
     try {
+      // Buscar el producto en la base de datos
       const producto = await nutritionService.scanBarcode(code);
-      if (producto) {
+
+      if (producto && producto.code) {
+        // Producto encontrado en la base de datos
         navigation.navigate("ProductDetailScreen", { producto });
+      } else {
+        // Producto no encontrado, crear uno nuevo directamente
+        Alert.alert(
+          "Producto no encontrado",
+          `No se encontró el producto con código ${code} en nuestra base de datos.\n\nSerás redirigido para crear un producto personalizado.`,
+          [
+            {
+              text: "Cancelar",
+              style: "cancel",
+            },
+            {
+              text: "Crear Producto",
+              onPress: () => navigation.navigate("CreateProductScreen", { barcode: code }),
+              style: "default",
+            },
+          ]
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error escaneando código:", error);
+
+      // Si hay error, asumir que no existe y ofrecer crearlo
+      Alert.alert(
+        "Producto no encontrado",
+        `No se pudo encontrar el producto con código ${code}.\n\n¿Deseas crear un producto personalizado?`,
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+          },
+          {
+            text: "Crear Producto",
+            onPress: () => navigation.navigate("CreateProductScreen", { barcode: code }),
+          },
+        ]
+      );
     }
   };
 
@@ -1442,5 +1601,24 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       fontSize: RFValue(11),
       color: theme.textSecondary,
       marginBottom: 4,
+    },
+    productBrand: {
+      fontSize: RFValue(11),
+      color: theme.textSecondary,
+      marginBottom: 4,
+      fontStyle: 'italic',
+    },
+    nutritionGradeContainer: {
+      marginTop: 4,
+    },
+    nutritionGrade: {
+      fontSize: RFValue(9),
+      fontWeight: '700',
+      color: '#fff',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      alignSelf: 'flex-start',
+      overflow: 'hidden',
     },
   });

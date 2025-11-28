@@ -1,13 +1,21 @@
-// Product from OpenFoodFacts API
+// Product from OpenFoodFacts API (optimizado para productos españoles)
 export interface Product {
   code: string;
   name: string;
+  brand?: string | null;
   image: string | null;
+  nutritionGrade?: string | null;
+  categories?: string | null;
+  servingSize?: string | null;
   calories: number;
   carbohydrates: number;
   protein: number;
   fat: number;
-  grams: number;
+  fiber?: number | null;
+  sugar?: number | null;
+  sodium?: number | null;
+  saturatedFat?: number | null;
+  grams: number; // Base de cálculo (siempre 100g por defecto)
   others: Array<{ label: string; value: any }>;
   isCustomProduct?: boolean;
   customProductId?: string;

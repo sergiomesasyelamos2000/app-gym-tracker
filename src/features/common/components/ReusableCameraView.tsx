@@ -30,6 +30,7 @@ export default function ReusableCameraView({
   const cameraRef = useRef<CameraView>(null);
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
 
   // Flag para saber si el componente está montado
   const isMounted = useRef(true);
@@ -81,7 +82,17 @@ export default function ReusableCameraView({
   const handleCameraError = useCallback((error: any) => {
     if (isMounted.current) {
       console.error("Error en cámara:", error);
-      setError("No se pudo iniciar la cámara. Intenta de nuevo.");
+      const errorMessage = error?.message || error?.toString() || "Error desconocido";
+      setError(`No se pudo iniciar la cámara: ${errorMessage}`);
+      setCameraReady(false);
+    }
+  }, []);
+
+  const handleCameraReady = useCallback(() => {
+    if (isMounted.current) {
+      console.log("Cámara lista");
+      setCameraReady(true);
+      setError(null);
     }
   }, []);
 
@@ -228,6 +239,7 @@ export default function ReusableCameraView({
         ref={cameraRef}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         onMountError={handleCameraError}
+        onCameraReady={handleCameraReady}
         barcodeScannerSettings={{
           barcodeTypes: [
             "aztec",
