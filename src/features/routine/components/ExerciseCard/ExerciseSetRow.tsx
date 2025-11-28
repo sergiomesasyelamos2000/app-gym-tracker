@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { memo, useCallback, useRef } from "react";
 import {
+  Animated,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import * as Haptics from "expo-haptics";
 import { SetRequestDto } from "../../../../models";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import {
@@ -15,6 +18,8 @@ import {
   getCompletedRowStyle,
 } from "../../../../utils/themeStyles";
 import { Trophy, TrendingUp, Zap } from "lucide-react-native";
+import { useSetRowLogic } from "./useSetRowLogic";
+import { COLUMN_FLEX } from "./columnConstants";
 
 interface Props {
   item: SetRequestDto;
@@ -40,277 +45,365 @@ const ExerciseSetRow = ({
   recordType,
 }: Props) => {
   const { theme, isDark } = useTheme();
-  // Estados locales
-  const [localWeight, setLocalWeight] = useState<string>(
-    started ? "" : item.weight?.toString() || ""
-  );
-  const [localReps, setLocalReps] = useState<string>(
-    started ? "" : item.reps?.toString() || ""
-  );
-  const [localRepsMin, setLocalRepsMin] = useState<string>(
-    started ? "" : item.repsMin?.toString() || ""
-  );
-  const [localRepsMax, setLocalRepsMax] = useState<string>(
-    started ? "" : item.repsMax?.toString() || ""
-  );
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 380;
 
-  // Función para extraer valores del previousMark
-  const extractValuesFromPreviousMark = () => {
-    if (!previousMark || previousMark === "-") return null;
+  // Usar el custom hook para la lógica
+  const {
+    localWeight,
+    localReps,
+    localRepsMin,
+    localRepsMax,
+    handleWeightChange,
+    handleRepsChange,
+    handleRepsMinChange,
+    handleRepsMaxChange,
+    handleToggleCompleted,
+    handleAutofillFromPrevious,
+  } = useSetRowLogic({
+    item,
+    onUpdate,
+    repsType,
+    started,
+    previousMark,
+  });
 
-    try {
-      // Formato esperado: "10 kg x 8" o "22 lbs x 12"
-      const parts = previousMark.split(" x ");
-      if (parts.length !== 2) return null;
+  // Animación al completar set
+  const handleToggleWithAnimation = useCallback(() => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const weightPart = parts[0]; // "10 kg" o "22 lbs"
-      const repsPart = parts[1]; // "8"
+    // Animación de escala
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.05,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-      // Extraer el número del peso (eliminar la unidad)
-      const weightValue = weightPart.split(" ")[0];
-      const repsValue = repsPart;
-
-      return {
-        weight: weightValue,
-        reps: repsValue,
-      };
-    } catch (error) {
-      console.error("Error parsing previous mark:", error);
-      return null;
-    }
-  };
-
-  // Función para autocompletar con valores anteriores
-  const handleAutofillFromPrevious = () => {
-    const values = extractValuesFromPreviousMark();
-    if (!values) return;
-
-    // Autocompletar peso
-    setLocalWeight(values.weight);
-    onUpdate(item.id, "weight", Number(values.weight));
-
-    // Autocompletar repeticiones según el tipo
-    if (repsType === "reps") {
-      setLocalReps(values.reps);
-      onUpdate(item.id, "reps", Number(values.reps));
-    } else {
-      // Para rango, poner el mismo valor en min y max
-      setLocalRepsMin(values.reps);
-      setLocalRepsMax(values.reps);
-      onUpdate(item.id, "repsMin", Number(values.reps));
-      onUpdate(item.id, "repsMax", Number(values.reps));
-    }
-  };
-
-  // Solo sincronizar con el item cuando started cambia
-  useEffect(() => {
-    if (started) {
-      // Modo started: vaciar los inputs
-      setLocalWeight("");
-      setLocalReps("");
-      setLocalRepsMin("");
-      setLocalRepsMax("");
-    } else {
-      // Modo edición: cargar valores del item
-      setLocalWeight(item.weight?.toString() || "");
-      setLocalReps(item.reps?.toString() || "");
-      setLocalRepsMin(item.repsMin?.toString() || "");
-      setLocalRepsMax(item.repsMax?.toString() || "");
-    }
-  }, [started, item.id]);
-
-  // Función helper para sanitizar valores
-  const sanitizeValue = (
-    value: string,
-    field: keyof SetRequestDto
-  ): number | boolean => {
-    if (field === "completed") {
-      return value === "true";
-    }
-    const numValue = Number(value);
-    return isNaN(numValue) ? 0 : numValue;
-  };
-
-  // Handlers actualizados
-  const handleWeightChange = (text: string) => {
-    setLocalWeight(text);
-    const value = sanitizeValue(text, "weight");
-    onUpdate(item.id, "weight", value);
-  };
-
-  const handleRepsChange = (text: string) => {
-    setLocalReps(text);
-    const value = sanitizeValue(text, "reps");
-    onUpdate(item.id, "reps", value);
-  };
-
-  const handleRepsMinChange = (text: string) => {
-    setLocalRepsMin(text);
-    const value = sanitizeValue(text, "repsMin");
-    onUpdate(item.id, "repsMin", value);
-  };
-
-  const handleRepsMaxChange = (text: string) => {
-    setLocalRepsMax(text);
-    const value = sanitizeValue(text, "repsMax");
-    onUpdate(item.id, "repsMax", value);
-  };
+    handleToggleCompleted();
+  }, [handleToggleCompleted, scaleAnim]);
 
   return (
-    <View
-      style={[styles.row, getCompletedRowStyle(theme, item.completed ?? false)]}
+    <Animated.View
+      style={[
+        styles.row,
+        getCompletedRowStyle(theme, item.completed ?? false),
+        {
+          transform: [{ scale: scaleAnim }],
+          paddingHorizontal: isSmallScreen ? 8 : 12,
+          paddingVertical: isSmallScreen ? 10 : 14,
+        },
+      ]}
     >
-      <Text style={[styles.label, { flex: 1, color: theme.text }]}>
-        {item.order}
-      </Text>
+      <View
+        style={{
+          flex: isSmallScreen
+            ? COLUMN_FLEX.small.serie
+            : COLUMN_FLEX.normal.serie,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={[
+            styles.label,
+            {
+              color: theme.text,
+              fontSize: RFValue(isSmallScreen ? 13 : 15),
+            },
+          ]}
+          accessibilityLabel={`Serie ${item.order}`}
+        >
+          {item.order}
+        </Text>
+      </View>
 
       {/* Marca anterior - Ahora es clickable */}
       {started && (
-        <TouchableOpacity
-          style={{ flex: 2 }}
-          onPress={handleAutofillFromPrevious}
-          disabled={readonly || !previousMark || previousMark === "-"}
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.anterior
+              : COLUMN_FLEX.normal.anterior,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          <Text
-            style={[
-              styles.previousMark,
-              { color: theme.textSecondary },
-              previousMark &&
-                previousMark !== "-" &&
-                styles.clickablePreviousMark,
-            ]}
+          <TouchableOpacity
+            onPress={handleAutofillFromPrevious}
+            disabled={readonly || !previousMark || previousMark === "-"}
+            accessibilityLabel="Autocompletar con marca anterior"
+            accessibilityHint="Toca para copiar los valores de tu sesión anterior"
+            style={{ width: "100%" }}
           >
-            {previousMark || "-"}
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.previousMark,
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 12 : 14),
+                },
+                previousMark &&
+                  previousMark !== "-" &&
+                  styles.clickablePreviousMark,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {previousMark || "-"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Peso */}
-      <TextInput
-        style={[
-          styles.input,
-          {
-            flex: 2,
-            backgroundColor: theme.inputBackground,
-            color: theme.text,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: theme.border,
-          },
-        ]}
-        keyboardType="numeric"
-        value={localWeight}
-        placeholder={
-          started ? previousMark?.split("kg")[0]?.trim() || "Kg" : "Kg"
-        }
-        placeholderTextColor={theme.textTertiary}
-        onChangeText={handleWeightChange}
-        editable={!readonly}
-      />
-
-      {/* Repeticiones */}
-      {started ? (
+      <View
+        style={{
+          flex: isSmallScreen
+            ? COLUMN_FLEX.small.weight
+            : COLUMN_FLEX.normal.weight,
+          marginHorizontal: 2,
+        }}
+      >
         <TextInput
           style={[
             styles.input,
             {
-              flex: 2,
               backgroundColor: theme.inputBackground,
               color: theme.text,
               borderWidth: isDark ? 1 : 0,
               borderColor: theme.border,
+              padding: isSmallScreen ? 8 : 12,
+              fontSize: RFValue(isSmallScreen ? 13 : 15),
+              minHeight: isSmallScreen ? 40 : 44,
             },
           ]}
           keyboardType="numeric"
-          value={localReps}
+          value={localWeight}
           placeholder={
-            repsType === "range"
-              ? `${item.repsMin || ""}-${item.repsMax || ""}`
-              : previousMark?.split("x")[1]?.trim() || "Reps"
+            started ? previousMark?.split("kg")[0]?.trim() || "Kg" : "Kg"
           }
           placeholderTextColor={theme.textTertiary}
-          onChangeText={handleRepsChange}
+          onChangeText={handleWeightChange}
           editable={!readonly}
+          accessibilityLabel="Peso"
+          accessibilityHint="Introduce el peso levantado"
         />
-      ) : repsType === "range" ? (
+      </View>
+
+      {/* Repeticiones */}
+      {started ? (
+        // En modo entrenamiento, SIEMPRE mostrar un solo input de reps (como Hevy)
         <View
-          style={[
-            styles.rangeContainer,
-            {
-              flex: 2,
-              backgroundColor: theme.inputBackground,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-            },
-          ]}
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.reps
+              : COLUMN_FLEX.normal.reps,
+            marginHorizontal: 2,
+          }}
         >
           <TextInput
-            style={[styles.rangeInput, { flex: 1, color: theme.text }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                color: theme.text,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: theme.border,
+                padding: isSmallScreen ? 8 : 12,
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+                minHeight: isSmallScreen ? 40 : 44,
+              },
+            ]}
+            keyboardType="numeric"
+            value={localReps}
+            placeholder={previousMark?.split("x")[1]?.trim() || "Reps"}
+            placeholderTextColor={theme.textTertiary}
+            onChangeText={handleRepsChange}
+            editable={!readonly}
+            accessibilityLabel="Repeticiones"
+            accessibilityHint="Introduce el número de repeticiones"
+          />
+        </View>
+      ) : repsType === "range" ? (
+        // En modo edición, mostrar rango si corresponde
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.reps
+              : COLUMN_FLEX.normal.reps,
+            marginHorizontal: 2,
+          }}
+        >
+          <View
+            style={[
+              styles.rangeContainer,
+              {
+                backgroundColor: theme.inputBackground,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: theme.border,
+                paddingHorizontal: isSmallScreen ? 2 : 4,
+                minHeight: isSmallScreen ? 40 : 44,
+              },
+            ]}
+          >
+          <TextInput
+            style={[
+              styles.rangeInput,
+              {
+                flex: 1,
+                color: theme.text,
+                padding: isSmallScreen ? 6 : 12,
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+              },
+            ]}
             keyboardType="numeric"
             value={localRepsMin}
             placeholder="8"
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsMinChange}
             editable={!readonly}
+            accessibilityLabel="Repeticiones mínimas"
           />
-          <Text style={[styles.rangeSeparator, { color: theme.textSecondary }]}>
+          <Text
+            style={[
+              styles.rangeSeparator,
+              {
+                color: theme.textSecondary,
+                fontSize: RFValue(isSmallScreen ? 14 : 16),
+              },
+            ]}
+          >
             -
           </Text>
           <TextInput
-            style={[styles.rangeInput, { flex: 1, color: theme.text }]}
+            style={[
+              styles.rangeInput,
+              {
+                flex: 1,
+                color: theme.text,
+                padding: isSmallScreen ? 6 : 12,
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+              },
+            ]}
             keyboardType="numeric"
             value={localRepsMax}
             placeholder="10"
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsMaxChange}
             editable={!readonly}
+            accessibilityLabel="Repeticiones máximas"
           />
+          </View>
         </View>
       ) : (
-        <TextInput
-          style={[
-            styles.input,
-            {
-              flex: 2,
-              backgroundColor: theme.inputBackground,
-              color: theme.text,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-            },
-          ]}
-          keyboardType="numeric"
-          value={localReps}
-          placeholder="Reps"
-          placeholderTextColor={theme.textTertiary}
-          onChangeText={handleRepsChange}
-          editable={!readonly}
-        />
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.reps
+              : COLUMN_FLEX.normal.reps,
+            marginHorizontal: 2,
+          }}
+        >
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.inputBackground,
+                color: theme.text,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: theme.border,
+                padding: isSmallScreen ? 8 : 12,
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+                minHeight: isSmallScreen ? 40 : 44,
+              },
+            ]}
+            keyboardType="numeric"
+            value={localReps}
+            placeholder="Reps"
+            placeholderTextColor={theme.textTertiary}
+            onChangeText={handleRepsChange}
+            editable={!readonly}
+            accessibilityLabel="Repeticiones"
+            accessibilityHint="Introduce el número de repeticiones"
+          />
+        </View>
       )}
 
       {/* Check */}
       {!readonly && (
-        <TouchableOpacity
-          style={{ flex: 1 }}
-          onPress={() => onUpdate(item.id, "completed", !item.completed)}
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.check
+              : COLUMN_FLEX.normal.check,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          <Icon
-            name={item.completed ? "check-circle" : "radio-button-unchecked"}
-            size={24}
-            color={item.completed ? theme.success : theme.textTertiary}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleToggleWithAnimation}
+            accessibilityLabel={
+              item.completed ? "Serie completada" : "Serie no completada"
+            }
+            accessibilityHint="Toca para marcar como completada o no completada"
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: item.completed }}
+          >
+            <Icon
+              name={item.completed ? "check-circle" : "radio-button-unchecked"}
+              size={isSmallScreen ? 24 : 28}
+              color={item.completed ? theme.success : theme.textTertiary}
+            />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Record Icon */}
       {recordType && item.completed && (
-        <View style={{ marginLeft: 8 }}>
-          {recordType === "1RM" && <Trophy size={20} color="#FFD700" />}
-          {recordType === "maxWeight" && (
-            <TrendingUp size={20} color="#FFD700" />
+        <View
+          style={{ marginLeft: isSmallScreen ? 4 : 8 }}
+          accessibilityLabel="Récord personal"
+        >
+          {recordType === "1RM" && (
+            <Trophy size={isSmallScreen ? 16 : 20} color="#FFD700" />
           )}
-          {recordType === "maxVolume" && <Zap size={20} color="#FFD700" />}
+          {recordType === "maxWeight" && (
+            <TrendingUp size={isSmallScreen ? 16 : 20} color="#FFD700" />
+          )}
+          {recordType === "maxVolume" && (
+            <Zap size={isSmallScreen ? 16 : 20} color="#FFD700" />
+          )}
         </View>
       )}
-    </View>
+    </Animated.View>
+  );
+};
+
+// Comparador personalizado para React.memo
+const arePropsEqual = (prevProps: Props, nextProps: Props) => {
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.weight === nextProps.item.weight &&
+    prevProps.item.reps === nextProps.item.reps &&
+    prevProps.item.repsMin === nextProps.item.repsMin &&
+    prevProps.item.repsMax === nextProps.item.repsMax &&
+    prevProps.item.completed === nextProps.item.completed &&
+    prevProps.item.order === nextProps.item.order &&
+    prevProps.repsType === nextProps.repsType &&
+    prevProps.readonly === nextProps.readonly &&
+    prevProps.previousMark === nextProps.previousMark &&
+    prevProps.started === nextProps.started &&
+    prevProps.recordType === nextProps.recordType
   );
 };
 
@@ -319,45 +412,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
     borderRadius: 16,
   },
   input: {
     borderRadius: 12,
-    padding: 8,
-    marginHorizontal: 6,
     textAlign: "center",
-    fontSize: RFValue(15),
   },
   rangeContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    paddingHorizontal: 4,
-    marginHorizontal: 6,
   },
   rangeInput: {
     textAlign: "center",
-    padding: 8,
-    fontSize: RFValue(15),
   },
   rangeSeparator: {
     marginHorizontal: 4,
-    fontSize: RFValue(16),
   },
   label: {
     textAlign: "center",
     fontWeight: "500",
-    fontSize: RFValue(15),
   },
   previousMark: {
     textAlign: "center",
-    fontSize: RFValue(14),
   },
   clickablePreviousMark: {
     fontWeight: "600",
   },
 });
 
-export default ExerciseSetRow;
+export default memo(ExerciseSetRow, arePropsEqual);

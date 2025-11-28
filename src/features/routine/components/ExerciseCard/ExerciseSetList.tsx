@@ -22,6 +22,7 @@ import { SetRequestDto } from "../../../../models";
 import ExerciseSetRow from "./ExerciseSetRow";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
+import { COLUMN_FLEX } from "./columnConstants";
 
 interface Props {
   sets: SetRequestDto[];
@@ -291,99 +292,152 @@ const ExerciseSetList = ({
           styles.columnTitles,
           {
             backgroundColor: theme.background,
-            paddingHorizontal: isSmallScreen ? 4 : 8,
+            paddingHorizontal: isSmallScreen ? 8 : 12,
+            paddingVertical: isSmallScreen ? 6 : 8,
             borderWidth: isDark ? 1 : 0,
             borderColor: theme.border,
           },
         ]}
       >
-        <Text
-          style={[
-            styles.columnTitle,
-            {
-              color: theme.textSecondary,
-              flex: isSmallScreen ? 0.7 : 0.8,
-              fontSize: RFValue(isSmallScreen ? 10 : 12),
-            },
-          ]}
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.serie
+              : COLUMN_FLEX.normal.serie,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          #
-        </Text>
-
-        {started && (
           <Text
             style={[
               styles.columnTitle,
               {
                 color: theme.textSecondary,
-                flex: isSmallScreen ? 1.3 : 1.5,
-                fontSize: RFValue(isSmallScreen ? 10 : 12),
+                fontSize: RFValue(isSmallScreen ? 8 : 10),
               },
             ]}
             numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
           >
-            Ant.
+            SERIE
           </Text>
-        )}
+        </View>
 
-        <TouchableOpacity
-          style={{ flex: isSmallScreen ? 1.3 : 1.5 }}
-          onPress={() => !readonly && !started && setShowWeightModal(true)}
-          disabled={readonly}
-        >
-          <View style={styles.columnHeader}>
+        {started && (
+          <View
+            style={{
+              flex: isSmallScreen
+                ? COLUMN_FLEX.small.anterior
+                : COLUMN_FLEX.normal.anterior,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Text
               style={[
                 styles.columnTitle,
                 {
                   color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 10 : 12),
-                },
-              ]}
-            >
-              {weightUnit}
-            </Text>
-            {!readonly && !started && (
-              <Icon
-                name="arrow-drop-down"
-                size={isSmallScreen ? 14 : 16}
-                color={theme.textTertiary}
-              />
-            )}
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{ flex: isSmallScreen ? 1.8 : 2 }}
-          onPress={() => !readonly && !started && setShowRepsModal(true)}
-          disabled={readonly}
-        >
-          <View style={styles.columnHeader}>
-            <Text
-              style={[
-                styles.columnTitle,
-                {
-                  color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 10 : 12),
+                  fontSize: RFValue(isSmallScreen ? 7 : 9),
                 },
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
             >
-              {repsType === "reps" ? "Reps" : "Rango"}
+              ANTERIOR
+            </Text>
+          </View>
+        )}
+
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.weight
+              : COLUMN_FLEX.normal.weight,
+            marginHorizontal: 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <TouchableOpacity
+            style={styles.columnHeader}
+            onPress={() => !readonly && !started && setShowWeightModal(true)}
+            disabled={readonly || started}
+          >
+            <Text
+              style={[
+                styles.columnTitle,
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 8 : 10),
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {weightUnit.toUpperCase()}
             </Text>
             {!readonly && !started && (
               <Icon
                 name="arrow-drop-down"
-                size={isSmallScreen ? 14 : 16}
+                size={isSmallScreen ? 12 : 14}
                 color={theme.textTertiary}
               />
             )}
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.reps
+              : COLUMN_FLEX.normal.reps,
+            marginHorizontal: 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <TouchableOpacity
+            style={styles.columnHeader}
+            onPress={() => !readonly && !started && setShowRepsModal(true)}
+            disabled={readonly || started}
+          >
+            <Text
+              style={[
+                styles.columnTitle,
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 8 : 10),
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGE"}
+            </Text>
+            {!readonly && !started && (
+              <Icon
+                name="arrow-drop-down"
+                size={isSmallScreen ? 12 : 14}
+                color={theme.textTertiary}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {!readonly && (
           <View
-            style={[styles.checkHeader, { flex: isSmallScreen ? 0.7 : 0.8 }]}
+            style={{
+              flex: isSmallScreen
+                ? COLUMN_FLEX.small.check
+                : COLUMN_FLEX.normal.check,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <Icon
               name="done"
@@ -436,7 +490,6 @@ const ExerciseSetList = ({
 const styles = StyleSheet.create({
   columnTitles: {
     flexDirection: "row",
-    justifyContent: "space-between",
     marginBottom: 12,
     paddingHorizontal: 8,
     alignItems: "center",
@@ -447,16 +500,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 1,
   },
   columnTitle: {
     fontWeight: "600",
-    fontSize: RFValue(12),
+    fontSize: RFValue(10),
     textAlign: "center",
-  },
-  checkHeader: {
-    alignItems: "center",
-    justifyContent: "center",
   },
   actionsContainer: {
     justifyContent: "center",
