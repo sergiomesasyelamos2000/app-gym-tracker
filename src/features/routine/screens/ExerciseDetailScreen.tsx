@@ -65,7 +65,15 @@ const getImageSource = (exercise: ExerciseRequestDto) => {
   };
 };
 
-const ExerciseImage = ({ exercise, style, theme }: { exercise: any; style: any; theme: any }) => {
+const ExerciseImage = ({
+  exercise,
+  style,
+  theme,
+}: {
+  exercise: any;
+  style: any;
+  theme: any;
+}) => {
   const [imageError, setImageError] = useState(false);
   const imageSource = getImageSource(exercise);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -253,7 +261,11 @@ const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-      <ExerciseImage exercise={exercise} style={styles.exerciseImage} theme={theme} />
+      <ExerciseImage
+        exercise={exercise}
+        style={styles.exerciseImage}
+        theme={theme}
+      />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName} numberOfLines={2}>
           {exercise.name}
@@ -390,9 +402,24 @@ const ProgressSection = ({
         <Text style={styles.sectionSubtitle}>Tu evolución en el tiempo</Text>
       </View>
       <View style={styles.progressSection}>
-        <ProgressCard title="Progreso Total" value={totalProgress} icon="📈" theme={theme} />
-        <ProgressCard title="Último Mes" value={monthlyProgress} icon="📅" theme={theme} />
-        <ProgressCard title="vs Récord" value={personalBestProgress} icon="🎯" theme={theme} />
+        <ProgressCard
+          title="Progreso Total"
+          value={totalProgress}
+          icon="📈"
+          theme={theme}
+        />
+        <ProgressCard
+          title="Último Mes"
+          value={monthlyProgress}
+          icon="📅"
+          theme={theme}
+        />
+        <ProgressCard
+          title="vs Récord"
+          value={personalBestProgress}
+          icon="🎯"
+          theme={theme}
+        />
       </View>
     </View>
   );
@@ -538,20 +565,6 @@ const HistoryCard = ({
           </View>
         </View>
       )}
-
-      <TouchableOpacity
-        style={styles.routineButton}
-        onPress={() =>
-          onNavigateToRoutine(
-            item.sessionData.routine?.id,
-            item.sessionData.routine
-          )
-        }
-        activeOpacity={0.7}
-      >
-        <Text style={styles.routineButtonText}>Ver sesión completa</Text>
-        <Text style={styles.routineButtonArrow}>→</Text>
-      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -672,7 +685,9 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
         <View style={styles.progressButtonContainer}>
           <TouchableOpacity
             style={styles.progressButton}
-            onPress={() => navigation.navigate("ExerciseProgress", { exercise })}
+            onPress={() =>
+              navigation.navigate("ExerciseProgress", { exercise })
+            }
             activeOpacity={0.7}
           >
             <View style={styles.progressButtonContent}>
@@ -681,8 +696,12 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
                   <Text style={styles.progressButtonIcon}>📊</Text>
                 </View>
                 <View>
-                  <Text style={styles.progressButtonTitle}>Gráficas de Progreso</Text>
-                  <Text style={styles.progressButtonSubtitle}>Análisis detallado de tu evolución</Text>
+                  <Text style={styles.progressButtonTitle}>
+                    Gráficas de Progreso
+                  </Text>
+                  <Text style={styles.progressButtonSubtitle}>
+                    Análisis detallado de tu evolución
+                  </Text>
                 </View>
               </View>
               <Text style={styles.progressButtonArrow}>→</Text>
