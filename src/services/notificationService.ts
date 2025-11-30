@@ -1,15 +1,27 @@
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Platform, AppState, AppStateStatus } from "react-native";
 
-// Configure notification behavior
+// Track app state globally
+let currentAppState: AppStateStatus = AppState.currentState;
+
+// Listen to app state changes
+AppState.addEventListener("change", (nextAppState) => {
+  currentAppState = nextAppState;
+});
+
+// Configure notification behavior dynamically based on app state
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    const isAppInForeground = currentAppState === "active";
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: !isAppInForeground, // Don't add to list when app is in foreground
+    };
+  },
 });
 
 export interface RestTimerNotification {
@@ -21,6 +33,7 @@ export interface RestTimerNotification {
 class NotificationService {
   private activeTimers: Map<string, NodeJS.Timeout> = new Map();
   private notificationIds: Map<string, string> = new Map();
+  private autoDismissTimers: Map<string, NodeJS.Timeout> = new Map();
 
   /**
    * Request notification permissions
@@ -40,13 +53,14 @@ class NotificationService {
         return false;
       }
 
-      // For Android, create notification channel with MAX importance for lock screen
+      // For Android, create notification channel with custom sound
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("rest-timer", {
           name: "Temporizador de Descanso",
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          sound: "default",
+          // Try to use custom sound, fallback to default
+          sound: "rest_complete.mp3", // Custom sound from assets/sounds/
           enableVibrate: true,
           showBadge: true,
           lockscreenVisibility:
@@ -64,6 +78,7 @@ class NotificationService {
   /**
    * Start rest timer with notification
    * Schedules a notification to fire when the rest time completes
+   * Auto-dismisses notification if app is in foreground
    */
   async startRestTimer(
     restSeconds: number,
@@ -76,10 +91,10 @@ class NotificationService {
       }
 
       // Cancel ALL existing rest timer notifications to prevent duplicates
-      // This is safer than relying on a single ID
       await this.cancelAllRestTimers();
 
       const timerId = `rest-timer-${Date.now()}`;
+      const isAppInForeground = currentAppState === "active";
 
       // Schedule notification to fire after restSeconds
       const notificationId = await Notifications.scheduleNotificationAsync({
@@ -100,18 +115,30 @@ class NotificationService {
             type: "rest-complete",
             exerciseName,
             timerId,
+            isAppInForeground, // Track if app was in foreground when scheduled
           },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: restSeconds,
           channelId: Platform.OS === "android" ? "rest-timer" : undefined,
-          repeats: false, // Explicitly set repeats to false
+          repeats: false,
         },
         identifier: timerId,
       });
 
       this.notificationIds.set(timerId, notificationId);
+
+      // If app is in foreground, auto-dismiss notification after it fires
+      if (isAppInForeground) {
+        const dismissTimer = setTimeout(async () => {
+          // Wait a bit after notification fires, then dismiss it
+          await Notifications.dismissNotificationAsync(notificationId);
+          this.autoDismissTimers.delete(timerId);
+        }, (restSeconds + 2) * 1000); // Dismiss 2 seconds after notification fires
+
+        this.autoDismissTimers.set(timerId, dismissTimer);
+      }
 
       return timerId;
     } catch (error) {
@@ -127,6 +154,13 @@ class NotificationService {
     try {
       await Notifications.cancelScheduledNotificationAsync(timerId);
       this.notificationIds.delete(timerId);
+
+      // Clear auto-dismiss timer if exists
+      const dismissTimer = this.autoDismissTimers.get(timerId);
+      if (dismissTimer) {
+        clearTimeout(dismissTimer);
+        this.autoDismissTimers.delete(timerId);
+      }
     } catch (error) {
       console.error("Error canceling rest timer:", error);
     }
@@ -150,6 +184,9 @@ class NotificationService {
         }
       }
 
+      // Clear all auto-dismiss timers
+      this.autoDismissTimers.forEach((timer) => clearTimeout(timer));
+      this.autoDismissTimers.clear();
       this.notificationIds.clear();
     } catch (error) {
       console.error("Error canceling all rest timers:", error);
