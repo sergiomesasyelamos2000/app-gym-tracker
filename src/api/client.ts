@@ -88,6 +88,18 @@ export async function apiFetch<T = any>(
     return undefined as T;
   }
 
+  // ✅ Check Content-Type to determine how to parse response
+  const contentType = response.headers.get("Content-Type") || "";
+
+  // Si es PDF u otro binario, devolver ArrayBuffer
+  if (
+    contentType.includes("application/pdf") ||
+    contentType.includes("application/octet-stream")
+  ) {
+    const arrayBuffer = await response.arrayBuffer();
+    return arrayBuffer as T;
+  }
+
   // ✅ También si el body está vacío, evitar parsear
   const text = await response.text();
   if (!text) {

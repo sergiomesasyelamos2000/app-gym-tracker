@@ -29,9 +29,18 @@ const initialState: ChatState = {
 // Thunk para envío de mensaje de texto
 export const sendMessageThunk = createAsyncThunk(
   "chat/sendMessage",
-  async (text: string, thunkAPI) => {
-    const data = await postText(text);
-    return data.items;
+  async (payload: { text: string; userId?: string }, thunkAPI) => {
+    const state = thunkAPI.getState() as any;
+    const messages = state.chat.messages;
+
+    // Build history from existing messages
+    const history = messages.map((msg: Message) => ({
+      role: msg.sender === "user" ? "user" : "bot",
+      content: msg.text,
+    }));
+
+    const data = await postText(payload.text, history, payload.userId);
+    return data.reply;
   }
 );
 

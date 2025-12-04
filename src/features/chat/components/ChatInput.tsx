@@ -11,7 +11,12 @@ export const ChatInput: React.FC<{
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.inputContainer, { backgroundColor: theme.card, shadowColor: theme.shadowColor }]}>
+    <View
+      style={[
+        styles.inputContainer,
+        { backgroundColor: theme.card, shadowColor: theme.shadowColor },
+      ]}
+    >
       <TextInput
         style={[styles.chatInput, { color: theme.text }]}
         placeholder="Escribe tu mensaje..."
@@ -19,15 +24,26 @@ export const ChatInput: React.FC<{
         value={value}
         onChangeText={onChangeText}
         editable={!loading}
+        multiline
+        maxLength={1000}
+        textAlignVertical="top"
+        blurOnSubmit={false}
       />
       <TouchableOpacity
-        style={[styles.sendButton, { backgroundColor: theme.primary }, loading && styles.sendButtonDisabled]}
+        style={[
+          styles.sendButton,
+          { backgroundColor: theme.primary },
+          loading && styles.sendButtonDisabled,
+        ]}
         onPress={onSend}
         disabled={loading}
       >
         <Icon name="send" size={24} color="#fff" />
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.sendButton, { backgroundColor: theme.primary }]} onPress={onOpenCamera}>
+      <TouchableOpacity
+        style={[styles.sendButton, { backgroundColor: theme.primary }]}
+        onPress={onOpenCamera}
+      >
         <Icon name="image" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -37,16 +53,20 @@ export const ChatInput: React.FC<{
 const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     borderRadius: 12,
     elevation: 2,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    margin: 8,
   },
   chatInput: {
     flex: 1,
     fontSize: 16,
     paddingHorizontal: 8,
+    paddingVertical: 8,
+    maxHeight: 100,
+    minHeight: 40,
   },
   sendButton: {
     borderRadius: 12,

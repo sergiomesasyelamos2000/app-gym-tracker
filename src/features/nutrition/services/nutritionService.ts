@@ -47,10 +47,14 @@ async function convertImageToBase64(uri: string): Promise<string | null> {
 }
 
 // AI Chat
-export async function postText(text: string): Promise<any> {
+export async function postText(
+  text: string,
+  history?: Array<{ role: string; content: string }>,
+  userId?: string
+): Promise<any> {
   return apiFetch("nutrition", {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, history, userId }),
   });
 }
 
@@ -91,7 +95,9 @@ export async function searchProductsByName(
   }
 
   return apiFetch(
-    `nutrition/products/search?q=${encodeURIComponent(searchTerm.trim())}&page=${page}&pageSize=${pageSize}`,
+    `nutrition/products/search?q=${encodeURIComponent(
+      searchTerm.trim()
+    )}&page=${page}&pageSize=${pageSize}`,
     {
       method: "GET",
     }

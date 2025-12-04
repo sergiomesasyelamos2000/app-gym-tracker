@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -6,10 +6,18 @@ import {
   Text,
   View,
   ActivityIndicator,
+  Animated,
+  TouchableOpacity,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ImageModal from "../features/common/components/ImageModal";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
-import ReusableCameraView from "../features/common/components/ReusableCameraView";
+import * as ImagePicker from "expo-image-picker";
 import {
   addMessage,
   sendMessageThunk,
@@ -21,55 +29,224 @@ import {
 } from "../features/common/hooks/useStore";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuthStore } from "../store/useAuthStore";
+
+// Typing indicator component with animated dots
+const TypingIndicator = ({ theme }: { theme: any }) => {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animateDot = (dot: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const animation1 = animateDot(dot1, 0);
+    const animation2 = animateDot(dot2, 150);
+    const animation3 = animateDot(dot3, 300);
+
+    animation1.start();
+    animation2.start();
+    animation3.start();
+
+    return () => {
+      animation1.stop();
+      animation2.stop();
+      animation3.stop();
+    };
+  }, []);
+
+  const dotStyle = (animValue: Animated.Value) => ({
+    opacity: animValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 1],
+    }),
+    transform: [
+      {
+        translateY: animValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -8],
+        }),
+      },
+    ],
+  });
+
+  return (
+    <View
+      style={[styles.typingIndicatorContainer, { backgroundColor: theme.card }]}
+    >
+      <View style={styles.typingIndicatorContent}>
+        <Animated.View
+          style={[
+            styles.typingDot,
+            { backgroundColor: theme.primary },
+            dotStyle(dot1),
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.typingDot,
+            { backgroundColor: theme.primary },
+            dotStyle(dot2),
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.typingDot,
+            { backgroundColor: theme.primary },
+            dotStyle(dot3),
+          ]}
+        />
+      </View>
+    </View>
+  );
+};
+
+// Empty state component
+const EmptyState = ({ theme }: { theme: any }) => (
+  <View style={styles.emptyStateContainer}>
+    <Ionicons
+      name="nutrition-outline"
+      size={80}
+      color={theme.textSecondary}
+      style={styles.emptyStateIcon}
+    />
+    <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
+      ¡Hola! Soy tu asistente de nutrición
+    </Text>
+    <Text style={[styles.emptyStateSubtitle, { color: theme.textSecondary }]}>
+      Puedo ayudarte a crear dietas personalizadas, calcular macros, y mucho
+      más. ¿En qué puedo ayudarte hoy?
+    </Text>
+    <View style={styles.suggestionsContainer}>
+      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
+        <Text style={[styles.suggestionText, { color: theme.text }]}>
+          💪 Crear plan de dieta
+        </Text>
+      </View>
+      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
+        <Text style={[styles.suggestionText, { color: theme.text }]}>
+          📊 Calcular macros
+        </Text>
+      </View>
+      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
+        <Text style={[styles.suggestionText, { color: theme.text }]}>
+          📸 Analizar comida
+        </Text>
+      </View>
+    </View>
+  </View>
+);
 
 export default function NutritionScreen() {
   const [chatInput, setChatInput] = useState("");
-  const [showCamera, setShowCamera] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState(false); // Estado para mostrar el spinner
+  const [loadingMessage, setLoadingMessage] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const messages = useAppSelector((state) => state.chat.messages);
   const loading = useAppSelector((state) => state.chat.loading);
+  const user = useAuthStore((state) => state.user);
   const dispatch = useAppDispatch();
   const { theme } = useTheme();
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length, loadingMessage]);
+
+  // Animate scroll button appearance
+  useEffect(() => {
+    Animated.timing(scrollButtonOpacity, {
+      toValue: showScrollButton ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [showScrollButton]);
 
   const handleSend = async () => {
     if (!chatInput.trim() || loading) return;
 
     dispatch(addMessage({ id: Date.now(), text: chatInput, sender: "user" }));
     setChatInput("");
-    setLoadingMessage(true); // Mostrar el spinner
+    setLoadingMessage(true);
 
     try {
-      await dispatch(sendMessageThunk(chatInput));
+      await dispatch(sendMessageThunk({ text: chatInput, userId: user?.id }));
     } finally {
-      setLoadingMessage(false); // Ocultar el spinner
+      setLoadingMessage(false);
     }
   };
 
-  const handlePhotoTaken = (photo: { uri: string }) => {
-    setShowCamera(false);
-    dispatch(
-      addMessage({
-        id: Date.now(),
-        text: "📸 Imagen tomada:",
-        sender: "user",
-        imageUri: photo.uri,
-      })
-    );
-    const formData = new FormData();
-    formData.append("file", {
-      uri: photo.uri,
-      name: "photo.jpg",
-      type: "image/jpeg",
-    } as any);
+  const handleImagePicker = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    setLoadingMessage(true); // Mostrar el spinner
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos necesarios",
+          "Necesitamos permisos para acceder a tus fotos"
+        );
+        return;
+      }
 
-    dispatch(sendPhotoThunk(formData)).finally(() => {
-      setLoadingMessage(false); // Ocultar el spinner
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const photo = result.assets[0];
+        dispatch(
+          addMessage({
+            id: Date.now(),
+            text: "📸 Imagen seleccionada:",
+            sender: "user",
+            imageUri: photo.uri,
+          })
+        );
+
+        const formData = new FormData();
+        formData.append("file", {
+          uri: photo.uri,
+          name: "photo.jpg",
+          type: "image/jpeg",
+        } as any);
+
+        setLoadingMessage(true);
+        dispatch(sendPhotoThunk(formData)).finally(() => {
+          setLoadingMessage(false);
+        });
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
+    }
   };
 
   const handleImagePress = (uri: string) => {
@@ -77,45 +254,93 @@ export default function NutritionScreen() {
     setModalVisible(true);
   };
 
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isAtBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+    setShowScrollButton(
+      !isAtBottom && contentSize.height > layoutMeasurement.height
+    );
+  };
+
+  const scrollToBottom = () => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  };
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}>
-      {showCamera ? (
-        <ReusableCameraView
-          onPhotoTaken={handlePhotoTaken}
-          onCloseCamera={() => setShowCamera(false)}
-        />
-      ) : (
-        <View style={styles.container}>
-          <View style={[styles.header, { backgroundColor: theme.primary }]}>
-            <Text style={styles.headerTitle}>Nutrición</Text>
-            <Text style={[styles.headerSubtitle, { color: "#E0F2FE" }]}>
-              Crea dietas personalizadas con la ayuda de tu asistente de IA.
-            </Text>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={[styles.header, { backgroundColor: theme.primary }]}>
+          <View style={styles.headerContent}>
+            <Ionicons name="nutrition" size={32} color="#fff" />
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Nutrición IA</Text>
+              <Text style={[styles.headerSubtitle, { color: "#E0F2FE" }]}>
+                Tu asistente personalizado
+              </Text>
+            </View>
           </View>
-          <ScrollView style={styles.chatContainer}>
-            {messages.map((msg: any) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                onImagePress={handleImagePress}
-              />
-            ))}
-            {loadingMessage && (
-              <View style={[styles.spinnerContainer, { backgroundColor: theme.card }]}>
-                <Text style={[styles.spinnerText, { color: theme.text }]}>Pensando...</Text>
-                <ActivityIndicator size="small" color={theme.primary} />
-              </View>
+        </View>
+
+        <View style={styles.chatWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.chatContainer}
+            contentContainerStyle={styles.chatContentContainer}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            keyboardShouldPersistTaps="handled"
+          >
+            {messages.length === 0 ? (
+              <EmptyState theme={theme} />
+            ) : (
+              <>
+                {messages.map((msg: any) => (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    onImagePress={handleImagePress}
+                  />
+                ))}
+                {loadingMessage && <TypingIndicator theme={theme} />}
+              </>
             )}
           </ScrollView>
-          <ChatInput
-            value={chatInput}
-            onChangeText={setChatInput}
-            onSend={handleSend}
-            onOpenCamera={() => setShowCamera(true)}
-            loading={loading}
-          />
+
+          {showScrollButton && (
+            <Animated.View
+              style={[
+                styles.scrollToBottomButton,
+                { opacity: scrollButtonOpacity },
+              ]}
+            >
+              <TouchableOpacity
+                onPress={scrollToBottom}
+                style={[
+                  styles.scrollToBottomButtonInner,
+                  { backgroundColor: theme.primary },
+                ]}
+              >
+                <Ionicons name="arrow-down" size={24} color="#fff" />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
-      )}
+
+        <ChatInput
+          value={chatInput}
+          onChangeText={setChatInput}
+          onSend={handleSend}
+          onOpenCamera={handleImagePicker}
+          loading={loading}
+        />
+      </KeyboardAvoidingView>
       <ImageModal
         uri={selectedImageUri}
         visible={modalVisible}
@@ -131,84 +356,136 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 24,
   },
   header: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 16,
-    marginTop: 4,
+    fontSize: 14,
+    marginTop: 2,
+    opacity: 0.9,
+  },
+  chatWrapper: {
+    flex: 1,
+    position: "relative",
   },
   chatContainer: {
     flex: 1,
-    marginBottom: 16,
+    paddingHorizontal: 16,
   },
-  spinnerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 12,
-    alignSelf: "flex-start",
+  chatContentContainer: {
+    paddingTop: 16,
+    paddingBottom: 16,
+    flexGrow: 1,
   },
-  spinnerText: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    maxWidth: "80%",
-  },
-  userBubble: {
-    backgroundColor: "#4CAF50",
-    alignSelf: "flex-end",
-  },
-  botBubble: {
-    backgroundColor: "#e0f2fe",
-    alignSelf: "flex-start",
-  },
-  messageText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    elevation: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  chatInput: {
+  // Empty state styles
+  emptyStateContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+  },
+  emptyStateIcon: {
+    marginBottom: 24,
+    opacity: 0.6,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  emptyStateSubtitle: {
     fontSize: 16,
-    paddingHorizontal: 8,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
   },
-  sendButton: {
-    backgroundColor: "#4CAF50",
-    borderRadius: 12,
-    padding: 12,
-    marginLeft: 8,
+  suggestionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
   },
-  sendButtonDisabled: {
-    backgroundColor: "#a5d6a7",
+  suggestionChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
+  suggestionText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  // Typing indicator styles
+  typingIndicatorContainer: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
     marginTop: 8,
+    marginBottom: 8,
+    marginLeft: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  typingIndicatorContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  // Scroll to bottom button
+  scrollToBottomButton: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    zIndex: 10,
+  },
+  scrollToBottomButtonInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
