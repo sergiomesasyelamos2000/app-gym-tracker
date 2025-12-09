@@ -1,34 +1,37 @@
-import React, { useState, useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  ActivityIndicator,
+  Alert,
   Animated,
-  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  ListRenderItem,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  KeyboardAvoidingView,
   Platform,
-  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import ImageModal from "../features/common/components/ImageModal";
+import { useTheme } from "../contexts/ThemeContext";
+import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
-import * as ImagePicker from "expo-image-picker";
-import {
-  addMessage,
-  sendMessageThunk,
-  sendPhotoThunk,
-} from "../store/chatSlice";
+import ImageModal from "../features/common/components/ImageModal";
 import {
   useAppDispatch,
   useAppSelector,
 } from "../features/common/hooks/useStore";
-import { ChatInput } from "../features/chat/components/ChatInput";
-import { useTheme } from "../contexts/ThemeContext";
+import {
+  addMessage,
+  loadChatHistory,
+  Message,
+  saveChatHistory,
+  sendMessageThunk,
+  sendPhotoThunk,
+} from "../store/chatSlice";
 import { useAuthStore } from "../store/useAuthStore";
 
 // Typing indicator component with animated dots
@@ -162,21 +165,41 @@ export default function NutritionScreen() {
 
   const messages = useAppSelector((state) => state.chat.messages);
   const loading = useAppSelector((state) => state.chat.loading);
+  const nextId = useAppSelector((state) => state.chat.nextId);
   const user = useAuthStore((state) => state.user);
   const dispatch = useAppDispatch();
   const { theme } = useTheme();
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
+
+  // Load chat history on mount
+  useEffect(() => {
+    dispatch(loadChatHistory());
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > 0) {
+    console.log(
+      "📨 Messages updated, count:",
+      messages.length,
+      "Messages:",
+      messages
+    );
+    if (messages.length > 0 && flatListRef.current) {
       setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
+        flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages.length, loadingMessage]);
+  }, [messages]);
+
+  // Save chat history when messages change
+  useEffect(() => {
+    if (messages.length > 1) {
+      const state = { messages, loading, nextId };
+      dispatch(saveChatHistory(state as any));
+    }
+  }, [messages, nextId]);
 
   // Animate scroll button appearance
   useEffect(() => {
@@ -190,12 +213,15 @@ export default function NutritionScreen() {
   const handleSend = async () => {
     if (!chatInput.trim() || loading) return;
 
-    dispatch(addMessage({ id: Date.now(), text: chatInput, sender: "user" }));
+    const messageText = chatInput;
+    dispatch(addMessage({ text: messageText, sender: "user" }));
     setChatInput("");
     setLoadingMessage(true);
 
     try {
-      await dispatch(sendMessageThunk({ text: chatInput, userId: user?.id }));
+      await dispatch(sendMessageThunk({ text: messageText, userId: user?.id }));
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
     } finally {
       setLoadingMessage(false);
     }
@@ -224,7 +250,6 @@ export default function NutritionScreen() {
         const photo = result.assets[0];
         dispatch(
           addMessage({
-            id: Date.now(),
             text: "📸 Imagen seleccionada:",
             sender: "user",
             imageUri: photo.uri,
@@ -249,10 +274,10 @@ export default function NutritionScreen() {
     }
   };
 
-  const handleImagePress = (uri: string) => {
+  const handleImagePress = useCallback((uri: string) => {
     setSelectedImageUri(uri);
     setModalVisible(true);
-  };
+  }, []);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -264,8 +289,20 @@ export default function NutritionScreen() {
   };
 
   const scrollToBottom = () => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    flatListRef.current?.scrollToEnd({ animated: true });
   };
+
+  const renderMessage: ListRenderItem<Message> = useCallback(
+    ({ item }) => (
+      <MessageBubble message={item} onImagePress={handleImagePress} />
+    ),
+    [handleImagePress]
+  );
+
+  const renderEmptyComponent = useCallback(
+    () => <EmptyState theme={theme} />,
+    [theme]
+  );
 
   return (
     <SafeAreaView
@@ -289,29 +326,26 @@ export default function NutritionScreen() {
         </View>
 
         <View style={styles.chatWrapper}>
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.chatContainer}
-            contentContainerStyle={styles.chatContentContainer}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => `msg-${item.id}`}
+            contentContainerStyle={[
+              styles.chatContentContainer,
+              messages.length === 0 && { flexGrow: 1 },
+            ]}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
-          >
-            {messages.length === 0 ? (
-              <EmptyState theme={theme} />
-            ) : (
-              <>
-                {messages.map((msg: any) => (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    onImagePress={handleImagePress}
-                  />
-                ))}
-                {loadingMessage && <TypingIndicator theme={theme} />}
-              </>
-            )}
-          </ScrollView>
+            ListEmptyComponent={renderEmptyComponent}
+            ListFooterComponent={
+              loadingMessage ? <TypingIndicator theme={theme} /> : null
+            }
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 0,
+            }}
+          />
 
           {showScrollButton && (
             <Animated.View
@@ -398,7 +432,7 @@ const styles = StyleSheet.create({
   chatContentContainer: {
     paddingTop: 16,
     paddingBottom: 16,
-    flexGrow: 1,
+    paddingHorizontal: 16,
   },
   // Empty state styles
   emptyStateContainer: {

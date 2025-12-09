@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   postPhoto,
   postText,
@@ -10,10 +11,14 @@ export interface Message {
   sender: "user" | "bot";
   imageUri?: string;
 }
+
 interface ChatState {
   messages: Message[];
   loading: boolean;
+  nextId: number;
 }
+
+const CHAT_STORAGE_KEY = "@gym_app_chat_history";
 
 const initialState: ChatState = {
   messages: [
@@ -24,7 +29,43 @@ const initialState: ChatState = {
     },
   ],
   loading: false,
+  nextId: 2,
 };
+
+// Thunk para cargar historial desde AsyncStorage
+export const loadChatHistory = createAsyncThunk(
+  "chat/loadHistory",
+  async () => {
+    try {
+      const stored = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      return null;
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      return null;
+    }
+  }
+);
+
+// Thunk para guardar historial en AsyncStorage
+export const saveChatHistory = createAsyncThunk(
+  "chat/saveHistory",
+  async (state: ChatState) => {
+    try {
+      await AsyncStorage.setItem(
+        CHAT_STORAGE_KEY,
+        JSON.stringify({
+          messages: state.messages,
+          nextId: state.nextId,
+        })
+      );
+    } catch (error) {
+      console.error("Error saving chat history:", error);
+    }
+  }
+);
 
 // Thunk para envío de mensaje de texto
 export const sendMessageThunk = createAsyncThunk(
@@ -57,15 +98,36 @@ const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
-    addMessage: (state, action: PayloadAction<Message>) => {
-      state.messages.push(action.payload);
+    addMessage: (state, action: PayloadAction<Omit<Message, "id">>) => {
+      state.messages.push({
+        ...action.payload,
+        id: state.nextId,
+      });
+      state.nextId += 1;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
+    clearHistory: (state) => {
+      state.messages = [
+        {
+          id: state.nextId,
+          text: "¡Hola! Soy tu asistente de nutrición. ¿Cómo puedo ayudarte hoy?",
+          sender: "bot",
+        },
+      ];
+      state.nextId += 1;
+      AsyncStorage.removeItem(CHAT_STORAGE_KEY);
+    },
   },
   extraReducers: (builder) => {
     builder
+      .addCase(loadChatHistory.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.messages = action.payload.messages;
+          state.nextId = action.payload.nextId;
+        }
+      })
       .addCase(sendMessageThunk.pending, (state) => {
         state.loading = true;
       })
@@ -73,18 +135,20 @@ const chatSlice = createSlice({
         state.loading = false;
         // Agregar respuesta del bot
         state.messages.push({
-          id: Date.now(),
+          id: state.nextId,
           text: action.payload,
           sender: "bot",
         });
+        state.nextId += 1;
       })
       .addCase(sendMessageThunk.rejected, (state) => {
         state.loading = false;
         state.messages.push({
-          id: Date.now(),
+          id: state.nextId,
           text: "🚫 Error conectando con el servidor.",
           sender: "bot",
         });
+        state.nextId += 1;
       })
       // Procesar respuesta de la foto
       .addCase(sendPhotoThunk.fulfilled, (state, action) => {
@@ -92,21 +156,23 @@ const chatSlice = createSlice({
         const items = action.payload;
         const formatted = `🍴 Alimento reconocido: ${items.name}\n📊 Información nutricional:\n- Calorías: ${items.calories} kcal\n- Proteínas: ${items.proteins.quantity} ${items.proteins.unit}\n- Carbohidratos: ${items.carbs.quantity} ${items.carbs.unit}\n- Grasas: ${items.fats.quantity} ${items.fats.unit}\n- Tamaño de porción: ${items.servingSize} g`;
         state.messages.push({
-          id: Date.now(),
+          id: state.nextId,
           text: formatted,
           sender: "bot",
         });
+        state.nextId += 1;
       })
       .addCase(sendPhotoThunk.rejected, (state) => {
         state.loading = false;
         state.messages.push({
-          id: Date.now(),
+          id: state.nextId,
           text: "🚫 Error procesando la imagen.",
           sender: "bot",
         });
+        state.nextId += 1;
       });
   },
 });
 
-export const { addMessage, setLoading } = chatSlice.actions;
+export const { addMessage, setLoading, clearHistory } = chatSlice.actions;
 export default chatSlice.reducer;

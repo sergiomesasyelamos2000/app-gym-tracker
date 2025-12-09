@@ -25,7 +25,7 @@ type Props = {
   onImagePress?: (uri: string) => void;
 };
 
-export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
+const MessageBubbleComponent: React.FC<Props> = ({ message, onImagePress }) => {
   const { theme } = useTheme();
   const isUser = message.sender === "user";
   const isBot = message.sender === "bot";
@@ -126,35 +126,18 @@ export const MessageBubble: React.FC<Props> = ({ message, onImagePress }) => {
           }}
           rules={{
             table: (node, children, parent, styles) => (
-              <View key={node.key} style={{ marginVertical: 8 }}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={true}
-                  persistentScrollbar={true}
-                >
-                  <View
-                    style={[
-                      styles.table,
-                      {
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                        borderRadius: 8,
-                        overflow: "hidden",
-                        backgroundColor: theme.card,
-                      },
-                    ]}
-                  >
-                    {children}
-                  </View>
-                </ScrollView>
-                <Text
-                  style={[
-                    styles.scrollHint,
-                    { color: withOpacity(theme.text, 0.5) },
-                  ]}
-                >
-                  ← Desliza para ver más →
-                </Text>
+              <View
+                key={node.key}
+                style={{
+                  marginVertical: 8,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  backgroundColor: theme.card,
+                }}
+              >
+                {children}
               </View>
             ),
             tr: (node, children, parent, styles) => (
@@ -292,3 +275,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 });
+
+// Memoized version to prevent unnecessary re-renders
+export const MessageBubble = React.memo(MessageBubbleComponent);
+export const MessageBubbleMemo = MessageBubble;
