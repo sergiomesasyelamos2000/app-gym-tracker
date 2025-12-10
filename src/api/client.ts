@@ -19,14 +19,53 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
+/**
+ * Refresh the access token using the refresh token
+ * @returns New tokens or null if refresh failed
+ */
+async function attemptTokenRefresh(): Promise<boolean> {
+  const { refreshToken } = useAuthStore.getState();
+
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    // Call refresh endpoint directly (without using apiFetch to avoid recursion)
+    const response = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+
+    // Update tokens in store
+    if (data.tokens) {
+      useAuthStore.getState().updateTokens(data.tokens);
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    return false;
+  }
+}
+
 export async function apiFetch<T = any>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isRetry: boolean = false
 ): Promise<T> {
   const authHeaders = getAuthHeaders();
-
-  // 🔍 DEBUG: Log token being sent
-  const accessToken = useAuthStore.getState().accessToken;
 
   const response = await fetch(`${BASE_URL}/${endpoint}`, {
     headers: {
@@ -53,7 +92,8 @@ export async function apiFetch<T = any>(
       // Si no es JSON, usar el texto completo
       errorMessage = errorText || errorMessage;
     }
-    // ✅ Handle 401 Unauthorized
+
+    // ✅ Handle 401 Unauthorized with automatic token refresh
     if (response.status === 401) {
       const messageLower = errorMessage.toLowerCase();
 
@@ -68,7 +108,21 @@ export async function apiFetch<T = any>(
         endpoint.includes(path)
       );
 
-      // If it's not a resource-not-found endpoint, treat it as an auth error
+      // If it's not a resource-not-found endpoint and we haven't retried yet
+      if (!isResourceNotFound && !isRetry) {
+        // Attempt to refresh the token
+        const refreshSuccess = await attemptTokenRefresh();
+
+        if (refreshSuccess) {
+          // Retry the original request with the new token
+          return apiFetch<T>(endpoint, options, true);
+        }
+      }
+
+      // If we reach here, either:
+      // 1. It's a resource-not-found 401 (don't logout)
+      // 2. Token refresh failed (logout)
+      // 3. This is already a retry (logout to avoid infinite loop)
       if (!isResourceNotFound) {
         const authStore = useAuthStore.getState();
         authStore.clearAuth();
