@@ -51,18 +51,18 @@ const PAGE_SIZE = 100;
 function getNutritionGradeColor(grade: string): string {
   const normalizedGrade = grade.toLowerCase();
   switch (normalizedGrade) {
-    case 'a':
-      return '#038141'; // Verde oscuro
-    case 'b':
-      return '#85BB2F'; // Verde claro
-    case 'c':
-      return '#FECB02'; // Amarillo
-    case 'd':
-      return '#EE8100'; // Naranja
-    case 'e':
-      return '#E63E11'; // Rojo
+    case "a":
+      return "#038141"; // Verde oscuro
+    case "b":
+      return "#85BB2F"; // Verde claro
+    case "c":
+      return "#FECB02"; // Amarillo
+    case "d":
+      return "#EE8100"; // Naranja
+    case "e":
+      return "#E63E11"; // Rojo
     default:
-      return '#999999'; // Gris por defecto
+      return "#999999"; // Gris por defecto
   }
 }
 
@@ -192,14 +192,22 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
     }
   };
 
-  const searchProducts = async (query: string, pageToLoad: number, initial = false) => {
+  const searchProducts = async (
+    query: string,
+    pageToLoad: number,
+    initial = false
+  ) => {
     if (loadingMore && !initial) return;
     if (!hasMore && !initial) return;
     if (initial) setLoading(true);
     else setLoadingMore(true);
 
     try {
-      const data = await nutritionService.searchProductsByName(query, pageToLoad, 20);
+      const data = await nutritionService.searchProductsByName(
+        query,
+        pageToLoad,
+        20
+      );
 
       if (!data || !data.products) {
         setHasMore(false);
@@ -308,30 +316,59 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
         )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="flame"
+              size={isSmallScreen ? 12 : 14}
+              color="#6FCF97"
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               {item.calories || 0} kcal
             </Text>
           </View>
         </View>
         <View style={styles.productMacros}>
-          <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]}>
-            P: {item.protein || 0}g • C: {item.carbohydrates || 0}g • F: {item.fat || 0}g
+          <Text
+            style={[
+              styles.macroText,
+              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
+            ]}
+          >
+            P: {item.protein || 0}g • C: {item.carbohydrates || 0}g • F:{" "}
+            {item.fat || 0}g
           </Text>
         </View>
-        {item.nutritionGrade && (
-          <View style={styles.nutritionGradeContainer}>
-            <Text style={[styles.nutritionGrade, { backgroundColor: getNutritionGradeColor(item.nutritionGrade) }]}>
-              {item.nutritionGrade.toUpperCase()}
-            </Text>
-          </View>
-        )}
+        {item.nutritionGrade &&
+          item.nutritionGrade.toLowerCase() !== "unknown" && (
+            <View style={styles.nutritionGradeContainer}>
+              <Text
+                style={[
+                  styles.nutritionGrade,
+                  {
+                    backgroundColor: getNutritionGradeColor(
+                      item.nutritionGrade
+                    ),
+                  },
+                ]}
+              >
+                {item.nutritionGrade.toUpperCase()}
+              </Text>
+            </View>
+          )}
       </View>
       <TouchableOpacity
         style={styles.addButton}
         onPress={(e) => handleQuickAdd(item, e)}
       >
-        <Ionicons name="add" size={isSmallScreen ? 22 : 24} color={theme.primary} />
+        <Ionicons
+          name="add"
+          size={isSmallScreen ? 22 : 24}
+          color={theme.primary}
+        />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -544,14 +581,32 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
         </Text>
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="flame"
+              size={isSmallScreen ? 12 : 14}
+              color="#6FCF97"
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               {Math.round(item.calories) || 0} kcal
             </Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={isSmallScreen ? 12 : 14} color="#808080" />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="analytics"
+              size={isSmallScreen ? 12 : 14}
+              color="#808080"
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               100g
             </Text>
           </View>
@@ -764,20 +819,44 @@ function CustomProductsTab({
           {item.name}
         </Text>
         {item.brand && (
-          <Text style={[styles.brandText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.brandText,
+              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
+            ]}
+            numberOfLines={1}
+          >
             {item.brand}
           </Text>
         )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="flame"
+              size={isSmallScreen ? 12 : 14}
+              color="#6FCF97"
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               {Math.round(item.caloriesPer100)} kcal
             </Text>
           </View>
           <View style={styles.macroItem}>
-            <Ionicons name="analytics" size={isSmallScreen ? 12 : 14} color={theme.textSecondary} />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="analytics"
+              size={isSmallScreen ? 12 : 14}
+              color={theme.textSecondary}
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               100g
             </Text>
           </View>
@@ -790,7 +869,11 @@ function CustomProductsTab({
           navigation.navigate("EditProductScreen", { product: item });
         }}
       >
-        <Ionicons name="create-outline" size={isSmallScreen ? 18 : 20} color={theme.primary} />
+        <Ionicons
+          name="create-outline"
+          size={isSmallScreen ? 18 : 20}
+          color={theme.primary}
+        />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -1001,21 +1084,45 @@ function CustomMealsTab({
           {item.name}
         </Text>
         {item.description && (
-          <Text style={[styles.brandText, { fontSize: RFValue(isSmallScreen ? 9 : 11) }]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.brandText,
+              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
+            ]}
+            numberOfLines={1}
+          >
             {item.description}
           </Text>
         )}
         <View style={styles.productMacros}>
           <View style={styles.macroItem}>
-            <Ionicons name="flame" size={isSmallScreen ? 12 : 14} color="#6FCF97" />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="flame"
+              size={isSmallScreen ? 12 : 14}
+              color="#6FCF97"
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               {Math.round(item.totalCalories)} kcal
             </Text>
           </View>
           <View style={styles.macroItem}></View>
           <View style={styles.macroItem}>
-            <Ionicons name="fast-food" size={isSmallScreen ? 12 : 14} color={theme.primary} />
-            <Text style={[styles.macroText, { fontSize: RFValue(isSmallScreen ? 10 : 12) }]}>
+            <Ionicons
+              name="fast-food"
+              size={isSmallScreen ? 12 : 14}
+              color={theme.primary}
+            />
+            <Text
+              style={[
+                styles.macroText,
+                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+              ]}
+            >
               {item.products.length} items
             </Text>
           </View>
@@ -1028,7 +1135,11 @@ function CustomMealsTab({
           navigation.navigate("EditMealScreen", { meal: item });
         }}
       >
-        <Ionicons name="create-outline" size={isSmallScreen ? 18 : 20} color={theme.primary} />
+        <Ionicons
+          name="create-outline"
+          size={isSmallScreen ? 18 : 20}
+          color={theme.primary}
+        />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -1143,7 +1254,7 @@ export default function ProductListScreen() {
   const handleBarCodeScanned = async (code: string) => {
     setShowCamera(false);
     // Incrementar key para forzar remontaje la próxima vez
-    setCameraKey(prev => prev + 1);
+    setCameraKey((prev) => prev + 1);
 
     if (!code || code.trim().length === 0) {
       Alert.alert("Error", "Código de barras no válido");
@@ -1169,7 +1280,8 @@ export default function ProductListScreen() {
             },
             {
               text: "Crear Producto",
-              onPress: () => navigation.navigate("CreateProductScreen", { barcode: code }),
+              onPress: () =>
+                navigation.navigate("CreateProductScreen", { barcode: code }),
               style: "default",
             },
           ]
@@ -1189,7 +1301,8 @@ export default function ProductListScreen() {
           },
           {
             text: "Crear Producto",
-            onPress: () => navigation.navigate("CreateProductScreen", { barcode: code }),
+            onPress: () =>
+              navigation.navigate("CreateProductScreen", { barcode: code }),
           },
         ]
       );
@@ -1216,7 +1329,7 @@ export default function ProductListScreen() {
         onCloseCamera={() => {
           setShowCamera(false);
           // Incrementar key para forzar remontaje la próxima vez
-          setCameraKey(prev => prev + 1);
+          setCameraKey((prev) => prev + 1);
         }}
       />
     );
@@ -1614,19 +1727,19 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       fontSize: RFValue(11),
       color: theme.textSecondary,
       marginBottom: 4,
-      fontStyle: 'italic',
+      fontStyle: "italic",
     },
     nutritionGradeContainer: {
       marginTop: 4,
     },
     nutritionGrade: {
       fontSize: RFValue(9),
-      fontWeight: '700',
-      color: '#fff',
+      fontWeight: "700",
+      color: "#fff",
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 4,
-      alignSelf: 'flex-start',
-      overflow: 'hidden',
+      alignSelf: "flex-start",
+      overflow: "hidden",
     },
   });
