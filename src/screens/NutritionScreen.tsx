@@ -180,12 +180,6 @@ export default function NutritionScreen() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    console.log(
-      "📨 Messages updated, count:",
-      messages.length,
-      "Messages:",
-      messages
-    );
     if (messages.length > 0 && flatListRef.current) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
