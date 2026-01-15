@@ -1,10 +1,4 @@
-/**
- * AuthScreen - Unified Login and Register Screen
- *
- * Handles both email/password authentication and Google OAuth.
- * Integrates with auth store and navigation.
- */
-
+import { useNavigation } from "@react-navigation/native";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
@@ -13,23 +7,24 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
-import { useAuthStore } from "../../../store/useAuthStore";
-import { login, register, googleAuth } from "../services/authService";
-import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { googleAuth, login, register } from "../services/authService";
 
 WebBrowser.maybeCompleteAuthSession();
 
+const { width } = Dimensions.get("window");
 type AuthMode = "login" | "register";
 
 export default function AuthScreen() {
@@ -38,41 +33,66 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
   const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const navigation = useNavigation();
 
-  // Google OAuth configuration
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId:
       "1019156813901-996dkn9dvnedm2bb7k2huapr3lsb98rt.apps.googleusercontent.com",
-    androidClientId: "TU_ANDROID_CLIENT_ID.apps.googleusercontent.com",
     webClientId:
       "1019156813901-qsa5kq5sv3gvf20p76bnu074h2l3us7u.apps.googleusercontent.com",
-    scopes: ["profile", "email"],
+    redirectUri: AuthSession.makeRedirectUri({
+      scheme: "app",
+    }),
   });
 
-  // Entrance animations
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 600,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
-  // Handle Google OAuth response
   useEffect(() => {
     if (response?.type === "success") {
       handleGoogleAuthSuccess(response.authentication);
@@ -82,7 +102,6 @@ export default function AuthScreen() {
   const handleGoogleAuthSuccess = async (authentication: any) => {
     setIsLoading(true);
     try {
-      // Get user info from Google
       const userInfoResponse = await fetch(
         "https://www.googleapis.com/userinfo/v2/me",
         {
@@ -91,7 +110,6 @@ export default function AuthScreen() {
       );
       const userInfo = await userInfoResponse.json();
 
-      // Send to backend
       const authResponse = await googleAuth({
         accessToken: authentication.accessToken,
         userInfo: {
@@ -102,52 +120,35 @@ export default function AuthScreen() {
         },
       });
 
-      // Store auth data
       setAuth(authResponse.user, authResponse.tokens);
-
       Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
     } catch (error: any) {
-      console.error("Error en la autenticación con Google:", error);
-      Alert.alert(
-        "Error",
-        error.message || "No se pudo completar el inicio de sesión con Google."
-      );
+      Alert.alert("Error", error.message || "Error al conectar con Google");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEmailAuth = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Por favor completa todos los campos");
-      return;
-    }
-
-    if (mode === "register" && !name) {
-      Alert.alert("Error", "Por favor ingresa tu nombre");
+    if (!email || !password || (mode === "register" && !name)) {
+      Alert.alert("Error", "Completa todos los campos");
       return;
     }
 
     setIsLoading(true);
     try {
-      if (mode === "login") {
-        const authResponse = await login({ email, password });
-        setAuth(authResponse.user, authResponse.tokens);
-        Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
-      } else {
-        const authResponse = await register({ email, password, name });
-        setAuth(authResponse.user, authResponse.tokens);
-        Alert.alert("¡Cuenta creada!", `Bienvenido ${authResponse.user.name}`);
-      }
-    } catch (error: any) {
-      console.error("Error en autenticación:", error);
+      const authResponse =
+        mode === "login"
+          ? await login({ email, password })
+          : await register({ email, password, name });
+
+      setAuth(authResponse.user, authResponse.tokens);
       Alert.alert(
-        "Error",
-        error.message ||
-          `No se pudo ${
-            mode === "login" ? "iniciar sesión" : "crear la cuenta"
-          }`
+        mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
+        `Bienvenido ${authResponse.user.name}`
       );
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Error en la autenticación");
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +157,7 @@ export default function AuthScreen() {
   const toggleMode = () => {
     Animated.sequence([
       Animated.timing(fadeAnim, {
-        toValue: 0.5,
+        toValue: 0,
         duration: 150,
         useNativeDriver: true,
       }),
@@ -173,430 +174,455 @@ export default function AuthScreen() {
     setName("");
   };
 
-  const loginWithGoogle = () => {
-    promptAsync();
-  };
-
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
-    >
+    <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
+      {/* Gradient Background Effect */}
+      <View style={styles.gradientContainer}>
+        <Animated.View
+          style={[
+            styles.gradientCircle,
+            {
+              backgroundColor: theme.primary,
+              opacity: 0.15,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.gradientCircle2,
+            {
+              backgroundColor: theme.primary,
+              opacity: 0.1,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
+        style={{ flex: 1 }}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section */}
-          <Animated.View
-            style={[
-              styles.header,
-              {
-                backgroundColor: theme.primary,
-                shadowColor: isDark ? "#000" : theme.primary,
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>FitTrack</Text>
-              <Text style={styles.headerSubtitle}>
-                Tu compañero de entrenamiento personal
-              </Text>
-            </View>
-
-            <View style={styles.logoContainer}>
-              <View style={styles.logo}>
-                <Text style={styles.logoText}>🔥</Text>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Auth Section */}
-          <Animated.View
-            style={[
-              styles.authSection,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <View style={styles.welcomeSection}>
-              <Text style={[styles.welcomeTitle, { color: theme.text }]}>
-                {mode === "login" ? "¡Bienvenido!" : "Crear cuenta"}
-              </Text>
-              <Text
-                style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}
-              >
-                {mode === "login"
-                  ? "Inicia sesión para continuar"
-                  : "Regístrate para comenzar tu journey fitness"}
-              </Text>
-            </View>
-
-            {/* Email/Password Form */}
-            <View style={styles.formContainer}>
-              {mode === "register" && (
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>
-                    Nombre completo
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme.inputBackground,
-                        borderColor: theme.inputBorder,
-                        color: theme.text,
-                      },
-                    ]}
-                    placeholder="Ingresa tu nombre"
-                    placeholderTextColor={theme.textTertiary}
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    editable={!isLoading}
-                  />
-                </View>
-              )}
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Email</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.inputBackground,
-                      borderColor: theme.inputBorder,
-                      color: theme.text,
-                    },
-                  ]}
-                  placeholder="tucorreo@ejemplo.com"
-                  placeholderTextColor={theme.textTertiary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!isLoading}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>
-                  Contraseña
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.inputBackground,
-                      borderColor: theme.inputBorder,
-                      color: theme.text,
-                    },
-                  ]}
-                  placeholder="••••••••"
-                  placeholderTextColor={theme.textTertiary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  {
-                    backgroundColor: theme.primary,
-                    shadowColor: theme.primary,
-                    opacity: isLoading ? 0.7 : 1,
-                  },
-                ]}
-                onPress={handleEmailAuth}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>
-                    {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View
-                style={[styles.dividerLine, { backgroundColor: theme.divider }]}
-              />
-              <Text
-                style={[styles.dividerText, { color: theme.textSecondary }]}
-              >
-                o continúa con
-              </Text>
-              <View
-                style={[styles.dividerLine, { backgroundColor: theme.divider }]}
-              />
-            </View>
-
-            {/* Google Login Button */}
-            <TouchableOpacity
+          <SafeAreaView style={{ flex: 1 }}>
+            <Animated.View
               style={[
-                styles.googleButton,
+                styles.contentContainer,
                 {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                  shadowColor: theme.shadowColor,
-                  opacity: isLoading || !request ? 0.6 : 1,
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
                 },
               ]}
-              onPress={loginWithGoogle}
-              disabled={isLoading || !request}
-              activeOpacity={0.7}
             >
-              <View style={styles.buttonContent}>
-                <View style={styles.googleIconContainer}>
-                  <Text style={styles.buttonIcon}>G</Text>
+              {/* Logo & Header */}
+              <View style={styles.headerSection}>
+                <Animated.View
+                  style={[
+                    styles.logoContainer,
+                    {
+                      backgroundColor: `${theme.primary}20`,
+                      transform: [{ scale: pulseAnim }],
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.logoInner,
+                      { backgroundColor: theme.primary },
+                    ]}
+                  >
+                    <Text style={styles.logoText}>FT</Text>
+                  </View>
+                </Animated.View>
+
+                <View style={styles.titleContainer}>
+                  <Text style={[styles.mainTitle, { color: theme.text }]}>
+                    {mode === "login" ? "Bienvenido" : "Únete a"}
+                  </Text>
+                  <Text style={[styles.brandTitle, { color: theme.primary }]}>
+                    FitTrack
+                  </Text>
                 </View>
-                <Text style={[styles.googleButtonText, { color: theme.text }]}>
-                  Continuar con Google
+
+                <Text
+                  style={[styles.description, { color: theme.textSecondary }]}
+                >
+                  {mode === "login"
+                    ? "Continúa tu journey fitness"
+                    : "Empieza tu transformación hoy"}
                 </Text>
               </View>
-            </TouchableOpacity>
 
-            {/* Toggle Mode */}
-            <TouchableOpacity
-              style={styles.toggleModeButton}
-              onPress={toggleMode}
-              disabled={isLoading}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[styles.toggleModeText, { color: theme.textSecondary }]}
+              {/* Form Card */}
+              <View
+                style={[
+                  styles.formCard,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(255,255,255,0.05)"
+                      : "rgba(255,255,255,0.9)",
+                    borderColor: theme.border,
+                  },
+                ]}
               >
-                {mode === "login"
-                  ? "¿No tienes cuenta? "
-                  : "¿Ya tienes cuenta? "}
-                <Text style={[styles.toggleModeLink, { color: theme.primary }]}>
+                {mode === "register" && (
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={[
+                        styles.modernInput,
+                        {
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: nameFocused
+                            ? theme.primary
+                            : "transparent",
+                        },
+                      ]}
+                      placeholder="Nombre completo"
+                      placeholderTextColor={theme.textTertiary}
+                      value={name}
+                      onChangeText={setName}
+                      onFocus={() => setNameFocused(true)}
+                      onBlur={() => setNameFocused(false)}
+                    />
+                  </View>
+                )}
+
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.modernInput,
+                      {
+                        backgroundColor: theme.card,
+                        color: theme.text,
+                        borderColor: emailFocused
+                          ? theme.primary
+                          : "transparent",
+                      },
+                    ]}
+                    placeholder="Email"
+                    placeholderTextColor={theme.textTertiary}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
+                  />
+                </View>
+
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.modernInput,
+                      {
+                        backgroundColor: theme.card,
+                        color: theme.text,
+                        borderColor: passwordFocused
+                          ? theme.primary
+                          : "transparent",
+                      },
+                    ]}
+                    placeholder="Contraseña"
+                    placeholderTextColor={theme.textTertiary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    {
+                      backgroundColor: theme.primary,
+                      opacity: isLoading ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handleEmailAuth}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryButtonText}>
+                        {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
+                      </Text>
+                      <Text style={styles.buttonArrow}>→</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={styles.dividerContainer}>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: theme.border },
+                    ]}
+                  />
+                  <Text
+                    style={[styles.dividerText, { color: theme.textSecondary }]}
+                  >
+                    O continúa con
+                  </Text>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: theme.border },
+                    ]}
+                  />
+                </View>
+
+                {/* Google Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.googleButton,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                  onPress={() => promptAsync()}
+                  disabled={isLoading || !request}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.googleLogo}>
+                    <Text style={styles.googleG}>G</Text>
+                  </View>
+                  <Text
+                    style={[styles.googleButtonText, { color: theme.text }]}
+                  >
+                    Google
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Toggle Mode */}
+              <TouchableOpacity
+                onPress={toggleMode}
+                style={styles.toggleContainer}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[styles.toggleText, { color: theme.textSecondary }]}
+                >
+                  {mode === "login"
+                    ? "¿No tienes cuenta?"
+                    : "¿Ya tienes cuenta?"}
+                </Text>
+                <Text style={[styles.toggleAction, { color: theme.primary }]}>
                   {mode === "login" ? "Regístrate" : "Inicia sesión"}
                 </Text>
-              </Text>
-            </TouchableOpacity>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-                Al continuar, aceptas nuestros{" "}
-                <Text style={[styles.footerLink, { color: theme.primary }]}>
-                  Términos de servicio
-                </Text>{" "}
-                y{" "}
-                <Text style={[styles.footerLink, { color: theme.primary }]}>
-                  Política de privacidad
-                </Text>
-              </Text>
-            </View>
-          </Animated.View>
+              </TouchableOpacity>
+            </Animated.View>
+          </SafeAreaView>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  mainContainer: {
     flex: 1,
   },
-  container: {
-    flex: 1,
+  gradientContainer: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+  },
+  gradientCircle: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    top: -100,
+    right: -100,
+  },
+  gradientCircle2: {
+    position: "absolute",
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    bottom: -50,
+    left: -80,
   },
   scrollContent: {
     flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  header: {
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+  contentContainer: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 32,
   },
-  headerContent: {
+  headerSection: {
     alignItems: "center",
-    marginBottom: 30,
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  headerSubtitle: {
-    color: "#E0D7F5",
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "500",
-    textAlign: "center",
-    opacity: 0.95,
+    gap: 20,
   },
   logoContainer: {
-    alignItems: "center",
-  },
-  logo: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  logoInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoText: {
-    fontSize: 36,
+    color: "#FFF",
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: -0.5,
   },
-  authSection: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 20,
-  },
-  welcomeSection: {
+  titleContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    gap: 4,
   },
-  welcomeTitle: {
+  mainTitle: {
     fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  formContainer: {
-    marginBottom: 24,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
     fontWeight: "600",
-    marginBottom: 8,
+    letterSpacing: -0.5,
   },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  brandTitle: {
+    fontSize: 40,
+    fontWeight: "900",
+    letterSpacing: -1,
+  },
+  description: {
     fontSize: 16,
-    borderWidth: 1.5,
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  formCard: {
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  inputWrapper: {
+    gap: 8,
+  },
+  modernInput: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    borderWidth: 2,
+    fontWeight: "500",
   },
   primaryButton: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  divider: {
+    borderRadius: 16,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  primaryButtonText: {
+    color: "#FFF",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  buttonArrow: {
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 8,
+    gap: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
+    opacity: 0.3,
   },
   dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
+    opacity: 0.6,
   },
   googleButton: {
-    borderRadius: 12,
-    padding: 16,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-  },
-  buttonContent: {
+    borderRadius: 16,
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 12,
+    borderWidth: 2,
   },
-  googleIconContainer: {
+  googleLogo: {
     width: 24,
     height: 24,
     borderRadius: 12,
     backgroundColor: "#4285F4",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
-  buttonIcon: {
+  googleG: {
+    color: "#FFF",
     fontSize: 14,
     fontWeight: "bold",
-    color: "#FFFFFF",
   },
   googleButtonText: {
     fontSize: 16,
-    fontWeight: "600",
-  },
-  toggleModeButton: {
-    marginTop: 24,
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  toggleModeText: {
-    fontSize: 15,
-  },
-  toggleModeLink: {
     fontWeight: "700",
   },
-  footer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
+  toggleContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
   },
-  footerText: {
-    fontSize: 12,
-    textAlign: "center",
-    lineHeight: 18,
+  toggleText: {
+    fontSize: 15,
+    fontWeight: "500",
   },
-  footerLink: {
-    fontWeight: "600",
+  toggleAction: {
+    fontSize: 15,
+    fontWeight: "800",
   },
 });
