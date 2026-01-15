@@ -74,22 +74,25 @@ export const useSetRowLogic = ({
     onUpdate(item.id, "reps", Number(values.reps));
   }, [extractValuesFromPreviousMark, item.id, onUpdate]);
 
-  // Solo sincronizar con el item cuando started cambia
+  // Efecto para limpiar inputs al entrar en modo started
   useEffect(() => {
     if (started) {
-      // Modo started: vaciar los inputs
       setLocalWeight("");
       setLocalReps("");
       setLocalRepsMin("");
       setLocalRepsMax("");
-    } else {
-      // Modo edición: cargar valores del item
+    }
+  }, [started]);
+
+  // Efecto para sincronizar en modo edición
+  useEffect(() => {
+    if (!started) {
       setLocalWeight(item.weight?.toString() || "");
       setLocalReps(item.reps?.toString() || "");
       setLocalRepsMin(item.repsMin?.toString() || "");
       setLocalRepsMax(item.repsMax?.toString() || "");
     }
-  }, [started, item.id, item.weight, item.reps, item.repsMin, item.repsMax]);
+  }, [started, item.weight, item.reps, item.repsMin, item.repsMax]);
 
   // Función helper para sanitizar valores
   const sanitizeValue = useCallback(
