@@ -212,14 +212,16 @@ export async function updateFoodEntry(
   entryId: string,
   updates: Partial<FoodEntry>
 ): Promise<FoodEntry> {
+  const userId = getCurrentUserId();
   return apiFetch(`nutrition/diary/${entryId}`, {
     method: "PUT",
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, userId }),
   });
 }
 
 export async function deleteFoodEntry(entryId: string): Promise<void> {
-  return apiFetch(`nutrition/diary/${entryId}`, {
+  const userId = getCurrentUserId();
+  return apiFetch(`nutrition/diary/${entryId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
@@ -273,9 +275,10 @@ export async function updateShoppingListItem(
   itemId: string,
   updates: Partial<ShoppingListItem>
 ): Promise<ShoppingListItem> {
+  const userId = getCurrentUserId();
   return apiFetch(`nutrition/shopping-list/${itemId}`, {
     method: "PUT",
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, userId }),
   });
 }
 
@@ -289,7 +292,8 @@ export async function togglePurchased(
 }
 
 export async function deleteShoppingListItem(itemId: string): Promise<void> {
-  return apiFetch(`nutrition/shopping-list/${itemId}`, {
+  const userId = getCurrentUserId();
+  return apiFetch(`nutrition/shopping-list/${itemId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
@@ -418,6 +422,8 @@ export async function updateCustomProduct(
   productId: string,
   updates: Partial<CustomProduct>
 ): Promise<CustomProduct> {
+  const userId = getCurrentUserId();
+
   // Convertir imagen a base64 si existe y es local
   let imageBase64 = updates.image;
   if (imageBase64 && imageBase64.startsWith("file://")) {
@@ -428,13 +434,15 @@ export async function updateCustomProduct(
     method: "PUT",
     body: JSON.stringify({
       ...updates,
+      userId,
       image: imageBase64,
     }),
   });
 }
 
 export async function deleteCustomProduct(productId: string): Promise<void> {
-  return apiFetch(`nutrition/custom-products/${productId}`, {
+  const userId = getCurrentUserId();
+  return apiFetch(`nutrition/custom-products/${productId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
@@ -508,6 +516,8 @@ export async function updateCustomMeal(
   mealId: string,
   updates: Partial<CustomMeal>
 ): Promise<CustomMeal> {
+  const userId = getCurrentUserId();
+
   // Convertir imagen a base64 si existe y es local
   let imageBase64 = updates.image;
   if (imageBase64 && imageBase64.startsWith("file://")) {
@@ -518,21 +528,27 @@ export async function updateCustomMeal(
     method: "PUT",
     body: JSON.stringify({
       ...updates,
+      userId,
       image: imageBase64,
     }),
   });
 }
 
 export async function deleteCustomMeal(mealId: string): Promise<void> {
-  return apiFetch(`nutrition/custom-meals/${mealId}`, {
+  const userId = getCurrentUserId();
+  return apiFetch(`nutrition/custom-meals/${mealId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
 
 export async function duplicateCustomMeal(mealId: string): Promise<CustomMeal> {
-  return apiFetch(`nutrition/custom-meals/${mealId}/duplicate`, {
-    method: "POST",
-  });
+  const userId = getCurrentUserId();
+  return apiFetch(
+    `nutrition/custom-meals/${mealId}/duplicate?userId=${userId}`,
+    {
+      method: "POST",
+    }
+  );
 }
 
 export async function searchCustomMeals(
