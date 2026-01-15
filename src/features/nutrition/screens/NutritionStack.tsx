@@ -5,6 +5,7 @@ import {
   CustomMeal,
   CustomProduct,
   MealProduct,
+  MealType,
   Product,
 } from "../../../models/nutrition.model";
 import CreateMealScreen from "./CreateMealScreen";
@@ -28,6 +29,7 @@ export type NutritionStackParamList = {
         screen?: string;
         selectionMode?: boolean;
         returnTo?: string;
+        selectedMeal?: MealType;
       }
     | undefined;
   ProductDetailScreen: {
@@ -35,12 +37,15 @@ export type NutritionStackParamList = {
     selectionMode?: boolean;
     returnTo?: string;
     quickAdd?: boolean;
+    selectedMeal?: MealType;
   };
   UserProfileSetupScreen: { userId: string };
   EditNutritionProfileScreen: undefined;
   ShoppingListScreen: undefined;
   SettingsScreen: undefined;
-  CreateProductScreen: { barcode?: string } | undefined;
+  CreateProductScreen:
+    | { barcode?: string; selectedMeal?: MealType }
+    | undefined;
   CreateMealScreen: {
     selectedProduct?: MealProduct;
     selectedProducts?: (Product | CustomProduct | CustomMeal)[];

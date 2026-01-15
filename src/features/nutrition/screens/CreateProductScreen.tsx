@@ -20,7 +20,7 @@ import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { FoodUnit } from "../../../models/nutrition.model";
+import { FoodUnit, MealType } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -86,6 +86,8 @@ export default function CreateProductScreen() {
       setBarcode(route.params.barcode);
     }
   }, [route.params?.barcode]);
+
+  const selectedMeal = route.params?.selectedMeal;
 
   const [nutritionalValues, setNutritionalValues] = useState<NutritionalValues>(
     {
@@ -230,7 +232,10 @@ export default function CreateProductScreen() {
         {
           text: "OK",
           onPress: () => {
-            navigation.navigate("ProductListScreen", { refresh: true });
+            navigation.navigate("ProductListScreen", {
+              refresh: true,
+              selectedMeal,
+            });
           },
         },
       ]);

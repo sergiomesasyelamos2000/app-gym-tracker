@@ -35,6 +35,7 @@ import {
   CustomMeal,
   CustomProduct,
   FavoriteProduct,
+  MealType,
   Product,
 } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -73,6 +74,7 @@ interface Props {
 interface TabProps {
   searchText: string;
   navigation: any;
+  selectedMeal?: MealType;
 }
 type ProductListScreenRouteProp = RouteProp<
   NutritionStackParamList,
@@ -96,7 +98,7 @@ const dataCache = {
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 // Tab de Todos los Productos
-function AllProductsTab({ searchText, navigation }: TabProps) {
+function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const [productos, setProductos] = useState<Product[]>([]);
@@ -253,6 +255,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
     navigation.navigate("ProductDetailScreen", {
       producto: item,
       quickAdd: true,
+      selectedMeal,
     });
   };
 
@@ -266,7 +269,10 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
         },
       ]}
       onPress={() =>
-        navigation.navigate("ProductDetailScreen", { producto: item })
+        navigation.navigate("ProductDetailScreen", {
+          producto: item,
+          selectedMeal,
+        })
       }
       activeOpacity={0.8}
     >
@@ -421,7 +427,7 @@ function AllProductsTab({ searchText, navigation }: TabProps) {
 }
 
 // Tab de Favoritos
-function FavoritesTab({ searchText, navigation }: TabProps) {
+function FavoritesTab({ searchText, navigation, selectedMeal }: TabProps) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -499,6 +505,7 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
           grams: 100,
           others: [],
         },
+        selectedMeal,
       });
       return;
     }
@@ -507,7 +514,10 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
       const productDetail = await nutritionService.getProductDetail(
         item.productCode
       );
-      navigation.navigate("ProductDetailScreen", { producto: productDetail });
+      navigation.navigate("ProductDetailScreen", {
+        producto: productDetail,
+        selectedMeal,
+      });
     } catch (error) {
       console.error("Error obteniendo detalle del producto:", error);
       navigation.navigate("ProductDetailScreen", {
@@ -522,6 +532,7 @@ function FavoritesTab({ searchText, navigation }: TabProps) {
           grams: 100,
           others: [],
         },
+        selectedMeal,
       });
     }
   };
@@ -666,6 +677,7 @@ function CustomProductsTab({
   searchText,
   navigation,
   route,
+  selectedMeal,
 }: TabProps & { route?: any }) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
@@ -768,7 +780,10 @@ function CustomProductsTab({
       customProductId: item.id,
     };
 
-    navigation.navigate("ProductDetailScreen", { producto: mappedProduct });
+    navigation.navigate("ProductDetailScreen", {
+      producto: mappedProduct,
+      selectedMeal,
+    });
   };
 
   const filteredProducts = customProducts.filter((p) =>
@@ -1243,6 +1258,7 @@ export default function ProductListScreen() {
 
   const selectionMode = route.params?.selectionMode || false;
   const returnTo = route.params?.returnTo;
+  const selectedMeal = route.params?.selectedMeal;
 
   useEffect(() => {
     if (route.params?.screen) {
@@ -1281,7 +1297,10 @@ export default function ProductListScreen() {
             {
               text: "Crear Producto",
               onPress: () =>
-                navigation.navigate("CreateProductScreen", { barcode: code }),
+                navigation.navigate("CreateProductScreen", {
+                  barcode: code,
+                  selectedMeal,
+                }),
               style: "default",
             },
           ]
@@ -1302,7 +1321,10 @@ export default function ProductListScreen() {
           {
             text: "Crear Producto",
             onPress: () =>
-              navigation.navigate("CreateProductScreen", { barcode: code }),
+              navigation.navigate("CreateProductScreen", {
+                barcode: code,
+                selectedMeal,
+              }),
           },
         ]
       );
@@ -1421,7 +1443,11 @@ export default function ProductListScreen() {
             }}
           >
             {() => (
-              <AllProductsTab searchText={searchText} navigation={navigation} />
+              <AllProductsTab
+                searchText={searchText}
+                navigation={navigation}
+                selectedMeal={selectedMeal}
+              />
             )}
           </Tab.Screen>
           <Tab.Screen
@@ -1438,7 +1464,11 @@ export default function ProductListScreen() {
             }}
           >
             {() => (
-              <FavoritesTab searchText={searchText} navigation={navigation} />
+              <FavoritesTab
+                searchText={searchText}
+                navigation={navigation}
+                selectedMeal={selectedMeal}
+              />
             )}
           </Tab.Screen>
           <Tab.Screen
@@ -1454,6 +1484,7 @@ export default function ProductListScreen() {
               <CustomProductsTab
                 searchText={searchText}
                 navigation={navigation}
+                selectedMeal={selectedMeal}
               />
             )}
           </Tab.Screen>
