@@ -1744,6 +1744,8 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       fontWeight: "600",
       color: theme.text,
       marginTop: 16,
+      textAlign: "center",
+      paddingHorizontal: 40,
     },
     emptySubtitle: {
       fontSize: RFValue(14),
