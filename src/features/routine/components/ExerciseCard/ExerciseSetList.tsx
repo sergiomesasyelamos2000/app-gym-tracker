@@ -417,7 +417,7 @@ const ExerciseSetList = ({
               adjustsFontSizeToFit
               minimumFontScale={0.6}
             >
-              {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGE"}
+              {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO"}
             </Text>
             {!readonly && !started && (
               <Icon
