@@ -27,18 +27,18 @@ const { width } = Dimensions.get("window");
 function getNutritionGradeColor(grade: string): string {
   const normalizedGrade = grade.toLowerCase();
   switch (normalizedGrade) {
-    case 'a':
-      return '#038141'; // Verde oscuro
-    case 'b':
-      return '#85BB2F'; // Verde claro
-    case 'c':
-      return '#FECB02'; // Amarillo
-    case 'd':
-      return '#EE8100'; // Naranja
-    case 'e':
-      return '#E63E11'; // Rojo
+    case "a":
+      return "#038141"; // Verde oscuro
+    case "b":
+      return "#85BB2F"; // Verde claro
+    case "c":
+      return "#FECB02"; // Amarillo
+    case "d":
+      return "#EE8100"; // Naranja
+    case "e":
+      return "#E63E11"; // Rojo
     default:
-      return '#999999'; // Gris por defecto
+      return "#999999"; // Gris por defecto
   }
 }
 
@@ -111,6 +111,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
   const updateFoodEntryInStore = useNutritionStore(
     (state) => state.updateFoodEntry
+  );
+  const triggerFavoritesUpdate = useNutritionStore(
+    (state) => state.triggerFavoritesUpdate
   );
 
   const [quantity, setQuantity] = useState(
@@ -186,6 +189,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           userProfile.userId
         );
         setIsFavorite(false);
+        setIsFavorite(false);
+        triggerFavoritesUpdate();
         Alert.alert("Eliminado", "Producto eliminado de favoritos");
       } else {
         await nutritionService.addFavorite({
@@ -199,6 +204,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           fat: calculateNutrients.fat,
         });
         setIsFavorite(true);
+        setIsFavorite(true);
+        triggerFavoritesUpdate();
         Alert.alert("Agregado", "Producto agregado a favoritos");
       }
     } catch (error) {
@@ -330,14 +337,15 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
   const selectedMeal = getMealData(meal);
 
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={handleGoBack}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
@@ -386,8 +394,19 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           {producto.nutritionGrade && (
             <View style={styles.nutritionGradeContainer}>
               <Text style={styles.nutritionGradeLabel}>Nutri-Score:</Text>
-              <View style={[styles.nutritionGradeBadge, { backgroundColor: getNutritionGradeColor(producto.nutritionGrade) }]}>
-                <Text style={styles.nutritionGradeText}>{producto.nutritionGrade.toUpperCase()}</Text>
+              <View
+                style={[
+                  styles.nutritionGradeBadge,
+                  {
+                    backgroundColor: getNutritionGradeColor(
+                      producto.nutritionGrade
+                    ),
+                  },
+                ]}
+              >
+                <Text style={styles.nutritionGradeText}>
+                  {producto.nutritionGrade.toUpperCase()}
+                </Text>
               </View>
             </View>
           )}
@@ -971,32 +990,32 @@ const createStyles = (theme: any) =>
       fontSize: RFValue(14),
       color: theme.textSecondary,
       marginTop: 8,
-      fontStyle: 'italic',
-      textAlign: 'center',
+      fontStyle: "italic",
+      textAlign: "center",
     },
     nutritionGradeContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       marginTop: 12,
       gap: 8,
     },
     nutritionGradeLabel: {
       fontSize: RFValue(13),
       color: theme.textSecondary,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     nutritionGradeBadge: {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
       minWidth: 40,
-      alignItems: 'center',
+      alignItems: "center",
     },
     nutritionGradeText: {
       fontSize: RFValue(14),
-      fontWeight: '800',
-      color: '#fff',
+      fontWeight: "800",
+      color: "#fff",
       letterSpacing: 0.5,
     },
   });

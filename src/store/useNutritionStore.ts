@@ -9,10 +9,12 @@ interface NutritionState {
   userProfile: UserNutritionProfileResponseDto | null;
   todayEntries: FoodEntry[];
   hasProfile: boolean;
+  favoritesLastUpdate: number;
 
   // Actions - Profile
   setUserProfile: (profile: UserNutritionProfileResponseDto | null) => void;
   setHasProfile: (hasProfile: boolean) => void;
+  triggerFavoritesUpdate: () => void;
   isProfileComplete: () => boolean;
 
   // Actions - Entries
@@ -32,6 +34,7 @@ export const useNutritionStore = create<NutritionState>()(
       userProfile: null,
       todayEntries: [],
       hasProfile: false,
+      favoritesLastUpdate: 0,
 
       // ========== PROFILE ACTIONS ==========
       setUserProfile: (profile) =>
@@ -41,6 +44,7 @@ export const useNutritionStore = create<NutritionState>()(
         }),
 
       setHasProfile: (hasProfile) => set({ hasProfile }),
+      triggerFavoritesUpdate: () => set({ favoritesLastUpdate: Date.now() }),
 
       isProfileComplete: () => {
         const { userProfile } = get();
@@ -84,6 +88,7 @@ export const useNutritionStore = create<NutritionState>()(
       partialize: (state) => ({
         userProfile: state.userProfile,
         hasProfile: state.hasProfile,
+        favoritesLastUpdate: state.favoritesLastUpdate,
       }),
     }
   )

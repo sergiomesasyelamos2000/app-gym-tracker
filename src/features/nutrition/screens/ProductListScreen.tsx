@@ -75,6 +75,7 @@ interface TabProps {
   searchText: string;
   navigation: any;
   selectedMeal?: MealType;
+  refreshFavorites?: boolean;
 }
 type ProductListScreenRouteProp = RouteProp<
   NutritionStackParamList,
@@ -427,7 +428,12 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
 }
 
 // Tab de Favoritos
-function FavoritesTab({ searchText, navigation, selectedMeal }: TabProps) {
+function FavoritesTab({
+  searchText,
+  navigation,
+  selectedMeal,
+  refreshFavorites,
+}: TabProps) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -436,6 +442,14 @@ function FavoritesTab({ searchText, navigation, selectedMeal }: TabProps) {
   const hasLoadedRef = useRef(false);
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+
+  // Efecto inicial - Cargar si no hay datos
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      loadFavorites();
+      hasLoadedRef.current = true;
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     // Solo cargar si no se ha cargado antes o si el cache está vencido
@@ -461,8 +475,7 @@ function FavoritesTab({ searchText, navigation, selectedMeal }: TabProps) {
     try {
       const data = await nutritionService.getFavorites(userProfile.userId);
       setFavorites(data);
-      dataCache.favorites = data;
-      dataCache.lastUpdate.favorites = Date.now();
+      // No actualizamos cache timestamp para forzar recarga siempre
     } catch (error) {
       console.error("Error loading favorites:", error);
     } finally {
@@ -470,14 +483,10 @@ function FavoritesTab({ searchText, navigation, selectedMeal }: TabProps) {
     }
   };
 
-  // Recargar cuando la pantalla recibe foco
+  // Recargar SIEMPRE cuando la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
-      const now = Date.now();
-      const cacheAge = now - dataCache.lastUpdate.favorites;
-      if (cacheAge > CACHE_DURATION) {
-        loadFavorites();
-      }
+      loadFavorites();
     }, [userProfile])
   );
 
