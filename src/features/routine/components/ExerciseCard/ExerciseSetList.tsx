@@ -393,7 +393,11 @@ const ExerciseSetList = ({
         <View
           style={{
             flex: isSmallScreen
-              ? COLUMN_FLEX.small.reps
+              ? !started && repsType === "range"
+                ? COLUMN_FLEX.small.repsRange
+                : COLUMN_FLEX.small.reps
+              : !started && repsType === "range"
+              ? COLUMN_FLEX.normal.repsRange
               : COLUMN_FLEX.normal.reps,
             marginHorizontal: 2,
             alignItems: "center",

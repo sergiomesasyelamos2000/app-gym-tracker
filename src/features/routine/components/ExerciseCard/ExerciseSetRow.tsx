@@ -236,8 +236,8 @@ const ExerciseSetRow = ({
         <View
           style={{
             flex: isSmallScreen
-              ? COLUMN_FLEX.small.reps
-              : COLUMN_FLEX.normal.reps,
+              ? COLUMN_FLEX.small.repsRange
+              : COLUMN_FLEX.normal.repsRange,
             marginHorizontal: 2,
           }}
         >
@@ -259,7 +259,8 @@ const ExerciseSetRow = ({
                 {
                   flex: 1,
                   color: theme.text,
-                  padding: isSmallScreen ? 6 : 12,
+                  paddingVertical: isSmallScreen ? 6 : 10,
+                  paddingHorizontal: 2,
                   fontSize: RFValue(isSmallScreen ? 13 : 15),
                 },
               ]}
@@ -288,7 +289,8 @@ const ExerciseSetRow = ({
                 {
                   flex: 1,
                   color: theme.text,
-                  padding: isSmallScreen ? 6 : 12,
+                  paddingVertical: isSmallScreen ? 6 : 10,
+                  paddingHorizontal: 2,
                   fontSize: RFValue(isSmallScreen ? 13 : 15),
                 },
               ]}
