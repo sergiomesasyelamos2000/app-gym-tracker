@@ -99,10 +99,14 @@ const dataCache = {
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 // Tab de Todos los Productos
+// Tab de Todos los Productos (VERSIÓN CORREGIDA)
 function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
+  const userProfile = useNutritionStore((state) => state.userProfile);
+
   const [productos, setProductos] = useState<Product[]>([]);
+  const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -114,8 +118,23 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
+  // Cargar productos personalizados al inicio
   useEffect(() => {
-    // Solo cargar si no se ha cargado antes o si el cache está vencido
+    loadCustomProducts();
+  }, [userProfile]);
+
+  const loadCustomProducts = async () => {
+    if (!userProfile) return;
+
+    try {
+      const data = await nutritionService.getCustomProducts(userProfile.userId);
+      setCustomProducts(data);
+    } catch (error) {
+      console.error("Error loading custom products:", error);
+    }
+  };
+
+  useEffect(() => {
     const now = Date.now();
     const cacheAge = now - dataCache.lastUpdate.allProducts;
 
@@ -123,27 +142,22 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       loadProducts(1, true);
       hasLoadedRef.current = true;
     } else if (dataCache.allProducts) {
-      // Usar datos en caché
       setProductos(dataCache.allProducts);
     }
   }, []);
 
-  // Búsqueda en el backend cuando hay texto de búsqueda
   useEffect(() => {
-    // Limpiar timeout anterior
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
     if (searchText.trim().length > 0) {
       setIsSearching(true);
-      // Debounce de 500ms para evitar demasiadas peticiones
       searchTimeoutRef.current = setTimeout(() => {
         searchProducts(searchText, 1, true);
       }, 500);
     } else {
       setIsSearching(false);
-      // Si no hay búsqueda, recargar productos normales
       if (dataCache.allProducts) {
         setProductos(dataCache.allProducts);
       } else {
@@ -249,7 +263,53 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     }
   };
 
-  const filteredProducts = productos; // Ya no filtramos localmente, la búsqueda se hace en el backend
+  // FUNCIÓN PARA CONVERTIR CustomProduct A Product
+  const customProductToProduct = (customProduct: CustomProduct): Product => {
+    return {
+      code: customProduct.id,
+      name: customProduct.name,
+      image: customProduct.image ?? null,
+      brand: customProduct.brand,
+      grams: 100,
+      calories: customProduct.caloriesPer100,
+      protein: customProduct.proteinPer100,
+      carbohydrates: customProduct.carbsPer100,
+      fat: customProduct.fatPer100,
+      nutritionGrade: "unknown",
+      others: [
+        ...(customProduct.fiberPer100
+          ? [{ label: "Fibra", value: customProduct.fiberPer100 }]
+          : []),
+        ...(customProduct.sugarPer100
+          ? [{ label: "Azúcar", value: customProduct.sugarPer100 }]
+          : []),
+        ...(customProduct.sodiumPer100
+          ? [{ label: "Sodio", value: customProduct.sodiumPer100 }]
+          : []),
+      ],
+      isCustomProduct: true, // Marcador para saber que es custom
+    };
+  };
+
+  // FILTRAR Y COMBINAR PRODUCTOS
+  const getCombinedProducts = (): Product[] => {
+    const searchLower = searchText.toLowerCase().trim();
+
+    // Filtrar productos personalizados
+    const filteredCustom = customProducts
+      .filter(
+        (cp) =>
+          !searchLower ||
+          cp.name.toLowerCase().includes(searchLower) ||
+          (cp.brand && cp.brand.toLowerCase().includes(searchLower))
+      )
+      .map(customProductToProduct);
+
+    // Combinar: productos personalizados primero, luego los del backend
+    return [...filteredCustom, ...productos];
+  };
+
+  const allProducts = getCombinedProducts();
 
   const handleQuickAdd = (item: Product, event: any) => {
     event.stopPropagation();
@@ -283,22 +343,34 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
           { width: width * 0.15, height: width * 0.15 },
         ]}
       >
-        <Image
-          source={
-            item.image
-              ? { uri: item.image }
-              : require("./../../../../assets/not-image.png")
-          }
-          style={[
-            styles.productImage,
-            {
-              width: width * 0.12,
-              height: width * 0.12,
-              tintColor:
-                !item.image && isDark ? theme.textSecondary : undefined,
-            },
-          ]}
-        />
+        {item.image ? (
+          <Image
+            source={{ uri: item.image }}
+            style={[
+              styles.productImage,
+              { width: width * 0.12, height: width * 0.12 },
+            ]}
+          />
+        ) : (
+          <Image
+            source={require("./../../../../assets/not-image.png")}
+            style={[
+              styles.productImage,
+              {
+                width: width * 0.12,
+                height: width * 0.12,
+                tintColor:
+                  !item.image && isDark ? theme.textSecondary : undefined,
+              },
+            ]}
+          />
+        )}
+        {/* Badge para productos personalizados */}
+        {item.isCustomProduct && (
+          <View style={styles.customBadge}>
+            <Ionicons name="create" size={14} color={theme.primary} />
+          </View>
+        )}
       </View>
       <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
         <Text
@@ -334,7 +406,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
                 { fontSize: RFValue(isSmallScreen ? 10 : 12) },
               ]}
             >
-              {item.calories || 0} kcal
+              {Math.round(item.calories || 0)} kcal
             </Text>
           </View>
         </View>
@@ -392,7 +464,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   return (
     <FlatList
       style={styles.container}
-      data={filteredProducts}
+      data={allProducts}
       renderItem={renderItem}
       keyExtractor={(item) => item.code}
       onEndReached={handleEndReached}
