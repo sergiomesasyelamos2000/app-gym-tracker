@@ -1,15 +1,15 @@
+import * as Haptics from "expo-haptics";
+import { TrendingUp, Trophy, Zap } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
   Animated,
   Dimensions,
+  Modal,
   Platform,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { Trophy, TrendingUp, Zap } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
   RecordData,

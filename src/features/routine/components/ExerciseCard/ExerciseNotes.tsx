@@ -7,8 +7,8 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import Icon from "react-native-vector-icons/MaterialIcons";
 import uuid from "react-native-uuid";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../../contexts/ThemeContext";
 
 export interface ExerciseNote {

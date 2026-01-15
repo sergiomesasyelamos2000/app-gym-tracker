@@ -1,36 +1,36 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  SafeAreaView,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import { RFValue } from "react-native-responsive-fontsize";
-import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Modal from "react-native-modal";
+import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { NutritionStackParamList } from "./NutritionStack";
 import {
   ActivityLevel,
   Gender,
-  WeightGoal,
   UserAnthropometrics,
   UserGoals,
+  WeightGoal,
 } from "../../../models/nutrition.model";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { useNutritionStore } from "../../../store/useNutritionStore";
 import {
   calculateMacroGoals,
   getEstimatedTimeToGoal,
 } from "../../../utils/macroCalculator";
-import { useAuthStore } from "../../../store/useAuthStore";
-import { useNutritionStore } from "../../../store/useNutritionStore";
 import { updateUserProfile } from "../services/nutritionService";
+import { NutritionStackParamList } from "./NutritionStack";
 
 const { width, height } = Dimensions.get("window");
 

@@ -1,15 +1,15 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  Text,
-  Vibration,
-  Dimensions,
-  BackHandler,
   ActivityIndicator,
+  BackHandler,
+  Dimensions,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";

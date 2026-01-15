@@ -1,14 +1,7 @@
-/**
- * Authentication Store
- *
- * Manages user authentication state, tokens, and session persistence.
- * Uses Zustand with AsyncStorage for persistent login sessions.
- */
-
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { User, AuthTokens } from "../models";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { AuthTokens, User } from "../models";
 
 interface AuthState {
   // State
@@ -103,7 +96,8 @@ export const useAuthStore = create<AuthState>()(
 );
 
 // Selectors for common use cases
-export const selectIsAuthenticated = (state: AuthState) => state.isAuthenticated;
+export const selectIsAuthenticated = (state: AuthState) =>
+  state.isAuthenticated;
 export const selectUser = (state: AuthState) => state.user;
 export const selectAccessToken = (state: AuthState) => state.accessToken;
 export const selectUserId = (state: AuthState) => state.user?.id || null;

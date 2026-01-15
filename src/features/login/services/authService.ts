@@ -8,9 +8,9 @@
 import { apiFetch } from "../../../api/client";
 import {
   AuthResponse,
+  GoogleAuthRequestDto,
   LoginRequestDto,
   RegisterRequestDto,
-  GoogleAuthRequestDto,
   User,
 } from "../../../models";
 

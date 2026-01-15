@@ -1,9 +1,14 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import {
+  BarChart3,
+  Minus,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -23,7 +28,6 @@ import {
 } from "../../../utils/statsHelpers";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -168,14 +172,16 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     return (
       <View style={styles.statsOverview}>
         <View style={styles.statsRow}>
-          {renderStatsCard("Mejor Peso", `${stats.bestWeight} kg`, undefined, renderTrendIcon())}
+          {renderStatsCard(
+            "Mejor Peso",
+            `${stats.bestWeight} kg`,
+            undefined,
+            renderTrendIcon()
+          )}
           {renderStatsCard("1RM Estimado", `${stats.best1RM} kg`)}
         </View>
         <View style={styles.statsRow}>
-          {renderStatsCard(
-            "Peso Promedio",
-            `${stats.averageWeight} kg`
-          )}
+          {renderStatsCard("Peso Promedio", `${stats.averageWeight} kg`)}
           {renderStatsCard(
             "Volumen Total",
             `${(stats.totalVolume / 1000).toFixed(1)} t`,
@@ -312,9 +318,9 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>💡 Sobre el 1RM</Text>
           <Text style={styles.infoText}>
-            El 1RM (Una Repetición Máxima) es una estimación del peso máximo
-            que podrías levantar en una sola repetición, calculado a partir de
-            tus series completadas.
+            El 1RM (Una Repetición Máxima) es una estimación del peso máximo que
+            podrías levantar en una sola repetición, calculado a partir de tus
+            series completadas.
           </Text>
         </View>
       </ScrollView>
@@ -326,7 +332,10 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
 function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return "0, 0, 0";
-  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
+    result[3],
+    16
+  )}`;
 }
 
 const createStyles = (theme: any) =>

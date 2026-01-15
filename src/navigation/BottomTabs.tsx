@@ -2,14 +2,13 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { BarChart3, Dumbbell, Heart, Home, User } from "lucide-react-native";
 import React from "react";
+import { useTheme } from "../contexts/ThemeContext";
 import NutritionStack from "../features/nutrition/screens/NutritionStack";
+import ProfileStack from "../features/profile/screens/ProfileStack";
 import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import ProfileStack from "../features/profile/screens/ProfileStack";
 import { useNavigationStore } from "../store/useNavigationStore";
-import { useTheme } from "../contexts/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 

@@ -1,3 +1,5 @@
+import * as Haptics from "expo-haptics";
+import { TrendingUp, Trophy, Zap } from "lucide-react-native";
 import React, { memo, useCallback, useRef } from "react";
 import {
   Animated,
@@ -10,16 +12,11 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import * as Haptics from "expo-haptics";
-import { SetRequestDto } from "../../../../models";
 import { useTheme } from "../../../../contexts/ThemeContext";
-import {
-  withOpacity,
-  getCompletedRowStyle,
-} from "../../../../utils/themeStyles";
-import { Trophy, TrendingUp, Zap } from "lucide-react-native";
-import { useSetRowLogic } from "./useSetRowLogic";
+import { SetRequestDto } from "../../../../models";
+import { getCompletedRowStyle } from "../../../../utils/themeStyles";
 import { COLUMN_FLEX } from "./columnConstants";
+import { useSetRowLogic } from "./useSetRowLogic";
 
 interface Props {
   item: SetRequestDto;
@@ -256,53 +253,53 @@ const ExerciseSetRow = ({
               },
             ]}
           >
-          <TextInput
-            style={[
-              styles.rangeInput,
-              {
-                flex: 1,
-                color: theme.text,
-                padding: isSmallScreen ? 6 : 12,
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-              },
-            ]}
-            keyboardType="numeric"
-            value={localRepsMin}
-            placeholder="8"
-            placeholderTextColor={theme.textTertiary}
-            onChangeText={handleRepsMinChange}
-            editable={!readonly}
-            accessibilityLabel="Repeticiones mínimas"
-          />
-          <Text
-            style={[
-              styles.rangeSeparator,
-              {
-                color: theme.textSecondary,
-                fontSize: RFValue(isSmallScreen ? 14 : 16),
-              },
-            ]}
-          >
-            -
-          </Text>
-          <TextInput
-            style={[
-              styles.rangeInput,
-              {
-                flex: 1,
-                color: theme.text,
-                padding: isSmallScreen ? 6 : 12,
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-              },
-            ]}
-            keyboardType="numeric"
-            value={localRepsMax}
-            placeholder="10"
-            placeholderTextColor={theme.textTertiary}
-            onChangeText={handleRepsMaxChange}
-            editable={!readonly}
-            accessibilityLabel="Repeticiones máximas"
-          />
+            <TextInput
+              style={[
+                styles.rangeInput,
+                {
+                  flex: 1,
+                  color: theme.text,
+                  padding: isSmallScreen ? 6 : 12,
+                  fontSize: RFValue(isSmallScreen ? 13 : 15),
+                },
+              ]}
+              keyboardType="numeric"
+              value={localRepsMin}
+              placeholder="8"
+              placeholderTextColor={theme.textTertiary}
+              onChangeText={handleRepsMinChange}
+              editable={!readonly}
+              accessibilityLabel="Repeticiones mínimas"
+            />
+            <Text
+              style={[
+                styles.rangeSeparator,
+                {
+                  color: theme.textSecondary,
+                  fontSize: RFValue(isSmallScreen ? 14 : 16),
+                },
+              ]}
+            >
+              -
+            </Text>
+            <TextInput
+              style={[
+                styles.rangeInput,
+                {
+                  flex: 1,
+                  color: theme.text,
+                  padding: isSmallScreen ? 6 : 12,
+                  fontSize: RFValue(isSmallScreen ? 13 : 15),
+                },
+              ]}
+              keyboardType="numeric"
+              value={localRepsMax}
+              placeholder="10"
+              placeholderTextColor={theme.textTertiary}
+              onChangeText={handleRepsMaxChange}
+              editable={!readonly}
+              accessibilityLabel="Repeticiones máximas"
+            />
           </View>
         </View>
       ) : (

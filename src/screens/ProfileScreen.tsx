@@ -1,41 +1,34 @@
-/**
- * ProfileScreen - User profile and settings
- *
- * Shows user information, app settings, dark mode, and nutrition profile
- */
-
+import { useNavigation } from "@react-navigation/native";
+import {
+  Activity,
+  Bell,
+  Calendar,
+  ChevronRight,
+  Download,
+  LogOut,
+  Moon,
+  Trash2,
+  User,
+  Utensils,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Alert,
   Image,
+  ScrollView,
+  StyleSheet,
   Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import { useAuthStore } from "../store/useAuthStore";
-import { useNutritionStore } from "../store/useNutritionStore";
-import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
-import { logout as logoutService } from "../features/login/services/authService";
-import {
-  LogOut,
-  Mail,
-  User,
-  Calendar,
-  Utensils,
-  ChevronRight,
-  Moon,
-  Bell,
-  Download,
-  Trash2,
-  Activity,
-} from "lucide-react-native";
 import { useTheme } from "../contexts/ThemeContext";
+import { logout as logoutService } from "../features/login/services/authService";
+import { useAuthStore } from "../store/useAuthStore";
+import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
+import { useNutritionStore } from "../store/useNutritionStore";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();

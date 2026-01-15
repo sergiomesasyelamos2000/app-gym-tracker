@@ -1,6 +1,7 @@
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
+
 export const ChatInput: React.FC<{
   value: string;
   onChangeText: (text: string) => void;

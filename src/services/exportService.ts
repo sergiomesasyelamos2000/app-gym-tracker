@@ -1,11 +1,10 @@
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { getMonthlySummary } from "../features/nutrition/services/nutritionService";
 import {
   findAllRoutines,
   findAllRoutineSessions,
 } from "../features/routine/services/routineService";
-import { getMonthlySummary } from "../features/nutrition/services/nutritionService";
-import { Platform } from "react-native";
 
 export type ExportFormat = "json" | "csv";
 export type DataType = "workouts" | "nutrition" | "all";

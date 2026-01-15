@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { TimerPickerModal } from "react-native-timer-picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { formatTime, parseRestTime } from "./helpers";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { formatTime, parseRestTime } from "./helpers";
 
 interface Props {
   restTime: string;

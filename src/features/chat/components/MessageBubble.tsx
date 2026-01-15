@@ -1,17 +1,10 @@
 import React from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ScrollView,
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { isExportableContent } from "../../../utils/exportUtils";
 import { withOpacity } from "../../../utils/themeStyles";
 import { ExportButton } from "./ExportButton";
-import { isExportableContent } from "../../../utils/exportUtils";
 
 export type Message = {
   id: number;

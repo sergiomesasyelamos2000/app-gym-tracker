@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { FoodEntry, DailyNutritionSummary } from "../models/nutrition.model";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { FoodEntry } from "../models/nutrition.model";
 import { UserNutritionProfileResponseDto } from "../models/user-nutrition-profile.model";
 
 interface NutritionState {

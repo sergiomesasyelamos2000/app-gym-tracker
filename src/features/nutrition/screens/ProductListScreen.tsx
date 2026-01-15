@@ -10,9 +10,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  useMemo,
 } from "react";
 import {
   ActivityIndicator,
@@ -30,7 +30,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme, Theme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,

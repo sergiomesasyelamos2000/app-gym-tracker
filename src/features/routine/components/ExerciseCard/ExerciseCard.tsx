@@ -1,27 +1,25 @@
-// ExerciseCard.tsx - Versión actualizada
-
 import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
   useWindowDimensions,
+  View,
 } from "react-native";
 import { Button, Card } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
+import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
+import { detectRecord } from "../../../../services/recordsService";
+import { useRecordsStore } from "../../../../store/useRecordsStore";
 import ExerciseHeader from "./ExerciseHeader";
 import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
-import { useTheme } from "../../../../contexts/ThemeContext";
-import { detectRecord, RecordData } from "../../../../services/recordsService";
-import { useRecordsStore } from "../../../../store/useRecordsStore";
 
 interface Props {
   exercise: ExerciseRequestDto;

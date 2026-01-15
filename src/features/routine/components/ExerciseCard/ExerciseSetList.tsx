@@ -18,11 +18,11 @@ import {
   Swipeable,
 } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { SetRequestDto } from "../../../../models";
-import ExerciseSetRow from "./ExerciseSetRow";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { SetRequestDto } from "../../../../models";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
 import { COLUMN_FLEX } from "./columnConstants";
+import ExerciseSetRow from "./ExerciseSetRow";
 
 interface Props {
   sets: SetRequestDto[];

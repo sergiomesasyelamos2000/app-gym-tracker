@@ -9,14 +9,14 @@ import { RootNavigator } from "./src/navigation";
 import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 
+import * as Notifications from "expo-notifications";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ToastConfigParams } from "react-native-toast-message";
 import { Provider as ReduxProvider } from "react-redux";
+import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
-import * as Notifications from "expo-notifications";
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (

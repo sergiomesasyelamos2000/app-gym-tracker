@@ -12,8 +12,8 @@ import Modal from "react-native-modal";
 import { Portal } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { ExerciseRequestDto } from "../../../../models";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { ExerciseRequestDto } from "../../../../models";
 
 interface Props {
   exercise: ExerciseRequestDto;

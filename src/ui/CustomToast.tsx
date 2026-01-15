@@ -1,14 +1,14 @@
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
-  View,
-  Text,
   Animated,
+  Platform,
   StyleSheet,
+  Text,
   TouchableOpacity,
   useWindowDimensions,
-  Platform,
+  View,
 } from "react-native";
-import * as Haptics from "expo-haptics";
 
 interface CustomToastProps {
   text1: string;

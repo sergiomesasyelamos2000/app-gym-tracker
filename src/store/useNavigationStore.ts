@@ -1,4 +1,3 @@
-// store/useNavigationStore.ts
 import { create } from "zustand";
 
 interface NavigationState {

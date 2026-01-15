@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -11,12 +12,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ExerciseRequestDto,
   RoutineResponseDto,
 } from "../../../models/index.js";
-import { useTheme } from "../../../contexts/ThemeContext";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 import { MaterialIcons } from "@expo/vector-icons";

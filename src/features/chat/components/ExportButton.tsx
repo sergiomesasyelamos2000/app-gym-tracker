@@ -1,17 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  View,
-  Text,
   ActivityIndicator,
-  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { exportToCSV, exportToPDF } from "../../../utils/exportUtils";
 import { useAuthStore } from "../../../store/useAuthStore";
+import { exportToCSV, exportToPDF } from "../../../utils/exportUtils";
 
 interface ExportButtonProps {
   content: string;

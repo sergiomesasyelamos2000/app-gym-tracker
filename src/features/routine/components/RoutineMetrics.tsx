@@ -1,15 +1,15 @@
 import React from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
-import { formatTime } from "../utils/routineHelpers";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { formatTime } from "../utils/routineHelpers";
 
 type Props = {
   duration: number;

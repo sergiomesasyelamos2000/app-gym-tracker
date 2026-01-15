@@ -1,4 +1,4 @@
-import { ScrollView, View, Button, Text, StyleSheet } from "react-native";
+import { Button, ScrollView, Text, View } from "react-native";
 import { useTheme } from "../../../contexts/ThemeContext";
 
 const cardStyle = {

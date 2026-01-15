@@ -1,8 +1,8 @@
+import { apiFetch } from "../../../api/index";
 import {
   RoutineRequestDto,
   RoutineResponseDto,
 } from "../../../models/index.js";
-import { apiFetch } from "../../../api/index";
 import { useAuthStore } from "../../../store/useAuthStore";
 
 /**

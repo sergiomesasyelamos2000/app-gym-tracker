@@ -6,9 +6,9 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { useAuthStore } from "../store/useAuthStore";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import AuthScreen from "../features/login/screens/AuthScreen";
+import { useAuthStore } from "../store/useAuthStore";
 import { BottomTabs } from "./BottomTabs";
 
 export const RootNavigator = () => {

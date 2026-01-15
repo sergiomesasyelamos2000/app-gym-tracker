@@ -1,17 +1,17 @@
+import * as FileSystem from "expo-file-system";
 import { apiFetch } from "../../../api";
 import {
-  Product,
-  FoodEntry,
-  DailyNutritionSummary,
-  MacroGoals,
-  ShoppingListItem,
-  CustomProduct,
   CustomMeal,
+  CustomProduct,
+  DailyNutritionSummary,
   FavoriteProduct,
+  FoodEntry,
+  MacroGoals,
+  Product,
+  ShoppingListItem,
 } from "../../../models/nutrition.model";
-import * as FileSystem from "expo-file-system";
-import { useAuthStore } from "../../../store/useAuthStore";
 import { UserNutritionProfileResponseDto } from "../../../models/user-nutrition-profile.model";
+import { useAuthStore } from "../../../store/useAuthStore";
 
 /**
  * Get current user ID from auth store

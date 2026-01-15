@@ -17,27 +17,27 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
-import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { notificationService } from "../../../services/notificationService";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
+import { useRecordsStore } from "../../../store/useRecordsStore";
+import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
+import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
 import {
+  findAllRoutineSessions,
   getRoutineById,
   saveRoutine,
   saveRoutineSession,
   updateRoutineById,
-  findAllRoutineSessions,
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { notificationService } from "../../../services/notificationService";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { useRecordsStore } from "../../../store/useRecordsStore";
-import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 

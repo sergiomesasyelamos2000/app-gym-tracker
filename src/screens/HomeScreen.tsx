@@ -14,7 +14,9 @@ import React, {
 } from "react";
 import {
   Animated,
+  FlatList,
   Image,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -22,8 +24,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  FlatList,
-  Pressable,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../contexts/ThemeContext";
@@ -33,9 +33,9 @@ import {
   getGlobalStats,
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
+import { useResponsive } from "../hooks/useResponsive";
 import { ExerciseRequestDto } from "../models";
 import { useAuthStore } from "../store/useAuthStore";
-import { useResponsive } from "../hooks/useResponsive";
 
 // Función auxiliar para formatear la URI de la imagen
 const getImageSource = (exercise: ExerciseRequestDto) => {
@@ -448,7 +448,9 @@ export default function HomeScreen() {
           <View style={styles.headerContent}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerGreeting}>{greeting}</Text>
-              <Text style={styles.headerTitle}>{user?.name || "Atleta"} 💪</Text>
+              <Text style={styles.headerTitle}>
+                {user?.name || "Atleta"} 💪
+              </Text>
               <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
             </View>
             <View style={styles.timeContainer}>

@@ -1,15 +1,15 @@
+import { AlertTriangle } from "lucide-react-native";
 import React from "react";
 import {
+  Dimensions,
   Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { AlertTriangle } from "lucide-react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "../../../contexts/ThemeContext";
 
 interface Props {
   visible: boolean;
