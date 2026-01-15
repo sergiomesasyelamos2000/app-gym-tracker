@@ -1,13 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import {
-  Activity,
   Bell,
   Calendar,
   ChevronRight,
   Download,
   LogOut,
   Moon,
-  Trash2,
   User,
   Utensils,
 } from "lucide-react-native";
@@ -49,12 +47,6 @@ export default function ProfileScreen() {
   const toggleRestTimerNotifications = useNotificationSettingsStore(
     (state) => state.toggleRestTimerNotifications
   );
-  const workoutRemindersEnabled = useNotificationSettingsStore(
-    (state) => state.workoutRemindersEnabled
-  );
-  const toggleWorkoutReminders = useNotificationSettingsStore(
-    (state) => state.toggleWorkoutReminders
-  );
 
   const handleEditNutritionProfile = () => {
     if (isProfileComplete()) {
@@ -89,23 +81,6 @@ export default function ProfileScreen() {
 
   const handleExportData = () => {
     navigation.navigate("ExportData");
-  };
-
-  const handleClearCache = () => {
-    Alert.alert(
-      "Limpiar Caché",
-      "¿Estás seguro de que quieres limpiar el caché de la aplicación?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Limpiar",
-          style: "destructive",
-          onPress: () => {
-            Alert.alert("Éxito", "Caché limpiado correctamente");
-          },
-        },
-      ]
-    );
   };
 
   const handleLogout = () => {
@@ -398,41 +373,6 @@ export default function ProfileScreen() {
                 }
               />
             </View>
-
-            {/* Workout Reminders */}
-            <View style={styles.settingRow}>
-              <View
-                style={[
-                  styles.settingIconContainer,
-                  { backgroundColor: theme.warning + "20" },
-                ]}
-              >
-                <Activity color={theme.warning} size={20} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Recordatorios de Entrenamiento
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Recordatorios para no olvidar entrenar
-                </Text>
-              </View>
-              <Switch
-                value={workoutRemindersEnabled}
-                onValueChange={toggleWorkoutReminders}
-                trackColor={{ false: theme.border, true: theme.primaryLight }}
-                thumbColor={
-                  workoutRemindersEnabled
-                    ? theme.primary
-                    : theme.inputBackground
-                }
-              />
-            </View>
           </View>
         </View>
 
@@ -476,35 +416,6 @@ export default function ProfileScreen() {
                   ]}
                 >
                   Descarga tus datos de nutrición y entrenamiento
-                </Text>
-              </View>
-              <ChevronRight color={theme.textTertiary} size={20} />
-            </TouchableOpacity>
-
-            {/* Clear Cache */}
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={handleClearCache}
-            >
-              <View
-                style={[
-                  styles.settingIconContainer,
-                  { backgroundColor: theme.error + "20" },
-                ]}
-              >
-                <Trash2 color={theme.error} size={20} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Limpiar Caché
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Liberar espacio de almacenamiento
                 </Text>
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />
