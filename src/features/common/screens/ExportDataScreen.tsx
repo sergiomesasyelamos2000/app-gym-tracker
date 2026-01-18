@@ -32,7 +32,7 @@ export default function ExportDataScreen() {
 
   // State
   const [startDate, setStartDate] = useState(
-    new Date(new Date().setMonth(new Date().getMonth() - 1))
+    new Date(new Date().setMonth(new Date().getMonth() - 1)),
   );
   const [endDate, setEndDate] = useState(new Date());
   const [dataType, setDataType] = useState<DataType>("all");
@@ -41,7 +41,7 @@ export default function ExportDataScreen() {
   // Date Picker State
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState<"start" | "end">(
-    "start"
+    "start",
   );
 
   const showDatePicker = (mode: "start" | "end") => {
@@ -81,7 +81,7 @@ export default function ExportDataScreen() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString();
+    return date.toLocaleDateString("es-ES");
   };
 
   return (
@@ -169,8 +169,8 @@ export default function ExportDataScreen() {
                 {type === "all"
                   ? "Todo"
                   : type === "workouts"
-                  ? "Entrenamientos"
-                  : "Nutrición"}
+                    ? "Entrenamientos"
+                    : "Nutrición"}
               </Text>
             </TouchableOpacity>
           ))}
@@ -244,6 +244,10 @@ export default function ExportDataScreen() {
         onConfirm={handleConfirmDate}
         onCancel={hideDatePicker}
         date={datePickerMode === "start" ? startDate : endDate}
+        locale="es_ES"
+        confirmTextIOS="Confirmar"
+        cancelTextIOS="Cancelar"
+        headerTextIOS="Seleccionar fecha"
       />
     </SafeAreaView>
   );
