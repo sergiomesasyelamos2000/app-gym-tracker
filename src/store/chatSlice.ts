@@ -18,7 +18,7 @@ interface ChatState {
   nextId: number;
 }
 
-const CHAT_STORAGE_KEY = "@gym_app_chat_history";
+const getChatStorageKey = (userId: string) => `@gym_app_chat_history_${userId}`;
 
 const initialState: ChatState = {
   messages: [
@@ -35,9 +35,10 @@ const initialState: ChatState = {
 // Thunk para cargar historial desde AsyncStorage
 export const loadChatHistory = createAsyncThunk(
   "chat/loadHistory",
-  async () => {
+  async (userId: string) => {
+    if (!userId) return null;
     try {
-      const stored = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+      const stored = await AsyncStorage.getItem(getChatStorageKey(userId));
       if (stored) {
         return JSON.parse(stored);
       }
@@ -46,25 +47,26 @@ export const loadChatHistory = createAsyncThunk(
       console.error("Error loading chat history:", error);
       return null;
     }
-  }
+  },
 );
 
 // Thunk para guardar historial en AsyncStorage
 export const saveChatHistory = createAsyncThunk(
   "chat/saveHistory",
-  async (state: ChatState) => {
+  async ({ state, userId }: { state: ChatState; userId: string }) => {
+    if (!userId) return;
     try {
       await AsyncStorage.setItem(
-        CHAT_STORAGE_KEY,
+        getChatStorageKey(userId),
         JSON.stringify({
           messages: state.messages,
           nextId: state.nextId,
-        })
+        }),
       );
     } catch (error) {
       console.error("Error saving chat history:", error);
     }
-  }
+  },
 );
 
 // Thunk para envío de mensaje de texto
@@ -82,7 +84,7 @@ export const sendMessageThunk = createAsyncThunk(
 
     const data = await postText(payload.text, history, payload.userId);
     return data.reply;
-  }
+  },
 );
 
 // Thunk para envío de imagen
@@ -91,7 +93,7 @@ export const sendPhotoThunk = createAsyncThunk(
   async (fileData: FormData, thunkAPI) => {
     const data = await postPhoto(fileData);
     return data.items;
-  }
+  },
 );
 
 const chatSlice = createSlice({
@@ -108,7 +110,7 @@ const chatSlice = createSlice({
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
-    clearHistory: (state) => {
+    clearHistory: (state, action: PayloadAction<string>) => {
       state.messages = [
         {
           id: state.nextId,
@@ -117,7 +119,11 @@ const chatSlice = createSlice({
         },
       ];
       state.nextId += 1;
-      AsyncStorage.removeItem(CHAT_STORAGE_KEY);
+      if (action.payload) {
+        AsyncStorage.removeItem(getChatStorageKey(action.payload)).catch(
+          (err) => console.error("Error clearing chat history:", err),
+        );
+      }
     },
   },
   extraReducers: (builder) => {

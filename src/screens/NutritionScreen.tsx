@@ -55,7 +55,7 @@ const TypingIndicator = ({ theme }: { theme: any }) => {
             duration: 400,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
     };
 
@@ -175,8 +175,10 @@ export default function NutritionScreen() {
 
   // Load chat history on mount
   useEffect(() => {
-    dispatch(loadChatHistory());
-  }, []);
+    if (user?.id) {
+      dispatch(loadChatHistory(user.id));
+    }
+  }, [user?.id]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -189,11 +191,11 @@ export default function NutritionScreen() {
 
   // Save chat history when messages change
   useEffect(() => {
-    if (messages.length > 1) {
+    if (messages.length > 1 && user?.id) {
       const state = { messages, loading, nextId };
-      dispatch(saveChatHistory(state as any));
+      dispatch(saveChatHistory({ state: state as any, userId: user.id }));
     }
-  }, [messages, nextId]);
+  }, [messages, nextId, user?.id]);
 
   // Animate scroll button appearance
   useEffect(() => {
@@ -229,7 +231,7 @@ export default function NutritionScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Permisos necesarios",
-          "Necesitamos permisos para acceder a tus fotos"
+          "Necesitamos permisos para acceder a tus fotos",
         );
         return;
       }
@@ -247,7 +249,7 @@ export default function NutritionScreen() {
             text: "📸 Imagen seleccionada:",
             sender: "user",
             imageUri: photo.uri,
-          })
+          }),
         );
 
         const formData = new FormData();
@@ -278,7 +280,7 @@ export default function NutritionScreen() {
     const isAtBottom =
       layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
     setShowScrollButton(
-      !isAtBottom && contentSize.height > layoutMeasurement.height
+      !isAtBottom && contentSize.height > layoutMeasurement.height,
     );
   };
 
@@ -290,12 +292,12 @@ export default function NutritionScreen() {
     ({ item }) => (
       <MessageBubble message={item} onImagePress={handleImagePress} />
     ),
-    [handleImagePress]
+    [handleImagePress],
   );
 
   const renderEmptyComponent = useCallback(
     () => <EmptyState theme={theme} />,
-    [theme]
+    [theme],
   );
 
   return (
