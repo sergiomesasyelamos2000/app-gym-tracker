@@ -178,6 +178,10 @@ export interface MealProduct {
   protein: number;
   carbs: number;
   fat: number;
+  baseCalories?: number;
+  baseProtein?: number;
+  baseCarbs?: number;
+  baseFat?: number;
 }
 
 export interface CustomMeal {

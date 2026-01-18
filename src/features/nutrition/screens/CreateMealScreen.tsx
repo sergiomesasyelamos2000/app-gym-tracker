@@ -97,6 +97,10 @@ export default function CreateMealScreen() {
             protein: product.totalProtein,
             carbs: product.totalCarbs,
             fat: product.totalFat,
+            baseCalories: product.totalCalories,
+            baseProtein: product.totalProtein,
+            baseCarbs: product.totalCarbs,
+            baseFat: product.totalFat,
           };
         } else {
           const isCustom = "caloriesPer100" in product;
@@ -123,6 +127,10 @@ export default function CreateMealScreen() {
             protein: baseProtein,
             carbs: baseCarbs,
             fat: baseFat,
+            baseCalories: baseCalories / 100,
+            baseProtein: baseProtein / 100,
+            baseCarbs: baseCarbs / 100,
+            baseFat: baseFat / 100,
           };
         }
       });
@@ -219,10 +227,17 @@ export default function CreateMealScreen() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.productCode === productCode) {
-          const baseCalories = product.calories / product.quantity;
-          const baseProtein = product.protein / product.quantity;
-          const baseCarbs = product.carbs / product.quantity;
-          const baseFat = product.fat / product.quantity;
+          // Utilizar valores base si existen (para evitar errores NaN con quantity=0)
+          // Si no existen, intentar derivarlos del estado actual (fallback)
+          const getBase = (currentVal: number, baseVal?: number) => {
+            if (baseVal !== undefined) return baseVal;
+            return product.quantity > 0 ? currentVal / product.quantity : 0;
+          };
+
+          const baseCalories = getBase(product.calories, product.baseCalories);
+          const baseProtein = getBase(product.protein, product.baseProtein);
+          const baseCarbs = getBase(product.carbs, product.baseCarbs);
+          const baseFat = getBase(product.fat, product.baseFat);
 
           return {
             ...product,
