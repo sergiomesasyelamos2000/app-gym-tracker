@@ -134,6 +134,13 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     }
   };
 
+  // Recargar custom products cuando la pantalla recibe foco
+  useFocusEffect(
+    useCallback(() => {
+      loadCustomProducts();
+    }, [userProfile]),
+  );
+
   useEffect(() => {
     const now = Date.now();
     const cacheAge = now - dataCache.lastUpdate.allProducts;
@@ -212,7 +219,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const searchProducts = async (
     query: string,
     pageToLoad: number,
-    initial = false
+    initial = false,
   ) => {
     if (loadingMore && !initial) return;
     if (!hasMore && !initial) return;
@@ -223,7 +230,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       const data = await nutritionService.searchProductsByName(
         query,
         pageToLoad,
-        20
+        20,
       );
 
       if (!data || !data.products) {
@@ -288,6 +295,10 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
           : []),
       ],
       isCustomProduct: true, // Marcador para saber que es custom
+      servingUnit: customProduct.servingUnit || "g",
+      servingSize: customProduct.servingSize
+        ? String(customProduct.servingSize)
+        : null,
     };
   };
 
@@ -301,7 +312,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
         (cp) =>
           !searchLower ||
           cp.name.toLowerCase().includes(searchLower) ||
-          (cp.brand && cp.brand.toLowerCase().includes(searchLower))
+          (cp.brand && cp.brand.toLowerCase().includes(searchLower)),
       )
       .map(customProductToProduct);
 
@@ -409,6 +420,23 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
               {Math.round(item.calories || 0)} kcal
             </Text>
           </View>
+          {item.servingSize && item.servingUnit && (
+            <View style={[styles.macroItem, { marginLeft: 8 }]}>
+              <Ionicons
+                name="restaurant-outline"
+                size={isSmallScreen ? 12 : 14}
+                color="#409CFF"
+              />
+              <Text
+                style={[
+                  styles.macroText,
+                  { fontSize: RFValue(isSmallScreen ? 10 : 12) },
+                ]}
+              >
+                {item.servingSize} {item.servingUnit}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.productMacros}>
           <Text
@@ -429,7 +457,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
                   styles.nutritionGrade,
                   {
                     backgroundColor: getNutritionGradeColor(
-                      item.nutritionGrade
+                      item.nutritionGrade,
                     ),
                   },
                 ]}
@@ -559,20 +587,20 @@ function FavoritesTab({
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
-    }, [userProfile])
+    }, [userProfile]),
   );
 
   const handleProductPress = async (item: FavoriteProduct) => {
     // Check if productCode is a UUID (indicates data issue where favorite ID was stored instead of product code)
     const isUUID =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        item.productCode
+        item.productCode,
       );
 
     if (isUUID) {
       // Skip API call for UUIDs and use cached favorite data directly
       console.warn(
-        `Favorite product has UUID as productCode (${item.productCode}), using cached data`
+        `Favorite product has UUID as productCode (${item.productCode}), using cached data`,
       );
       navigation.navigate("ProductDetailScreen", {
         producto: {
@@ -593,7 +621,7 @@ function FavoritesTab({
 
     try {
       const productDetail = await nutritionService.getProductDetail(
-        item.productCode
+        item.productCode,
       );
       navigation.navigate("ProductDetailScreen", {
         producto: productDetail,
@@ -619,7 +647,7 @@ function FavoritesTab({
   };
 
   const filteredFavorites = favorites.filter((f) =>
-    f?.productName?.toLowerCase().includes(searchText.toLowerCase())
+    f?.productName?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: FavoriteProduct }) => (
@@ -784,15 +812,11 @@ function CustomProductsTab({
     }
   }, [userProfile]);
 
-  // Recargar cuando la pantalla recibe foco
+  // Recargar cuando la pantalla recibe foco (siempre, para asegurar datos frescos)
   useFocusEffect(
     useCallback(() => {
-      const now = Date.now();
-      const cacheAge = now - dataCache.lastUpdate.customProducts;
-      if (cacheAge > CACHE_DURATION) {
-        loadCustomProducts();
-      }
-    }, [userProfile])
+      loadCustomProducts();
+    }, [userProfile]),
   );
 
   useEffect(() => {
@@ -859,6 +883,8 @@ function CustomProductsTab({
       ],
       isCustomProduct: true,
       customProductId: item.id,
+      servingUnit: item.servingUnit || "g",
+      servingSize: item.servingSize ? String(item.servingSize) : null,
     };
 
     navigation.navigate("ProductDetailScreen", {
@@ -868,7 +894,7 @@ function CustomProductsTab({
   };
 
   const filteredProducts = customProducts.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase())
+    p?.name?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: CustomProduct }) => (
@@ -953,7 +979,9 @@ function CustomProductsTab({
                 { fontSize: RFValue(isSmallScreen ? 10 : 12) },
               ]}
             >
-              100g
+              {item.servingSize && item.servingUnit
+                ? `${item.servingSize} ${item.servingUnit}`
+                : "100g"}
             </Text>
           </View>
         </View>
@@ -1085,7 +1113,7 @@ function CustomMealsTab({
       if (cacheAge > CACHE_DURATION) {
         loadCustomMeals();
       }
-    }, [userProfile])
+    }, [userProfile]),
   );
 
   useEffect(() => {
@@ -1133,7 +1161,7 @@ function CustomMealsTab({
   };
 
   const filteredMeals = customMeals.filter((m) =>
-    m?.name?.toLowerCase().includes(searchText.toLowerCase())
+    m?.name?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: CustomMeal }) => (
@@ -1384,7 +1412,7 @@ export default function ProductListScreen() {
                 }),
               style: "default",
             },
-          ]
+          ],
         );
       }
     } catch (error: any) {
@@ -1407,7 +1435,7 @@ export default function ProductListScreen() {
                 selectedMeal,
               }),
           },
-        ]
+        ],
       );
     }
   };

@@ -50,7 +50,7 @@ interface Props {
 const UNITS_CONFIG = [
   {
     label: "Gramos",
-    value: "gram" as FoodUnit,
+    value: "g" as FoodUnit,
     icon: "scale-outline",
     color: "#10B981",
   },
@@ -110,16 +110,31 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const userProfile = useNutritionStore((state) => state.userProfile);
   const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
   const updateFoodEntryInStore = useNutritionStore(
-    (state) => state.updateFoodEntry
+    (state) => state.updateFoodEntry,
   );
   const triggerFavoritesUpdate = useNutritionStore(
-    (state) => state.triggerFavoritesUpdate
+    (state) => state.triggerFavoritesUpdate,
   );
 
   const [quantity, setQuantity] = useState(
-    initialQty?.toString() || producto.grams?.toString() || "100"
+    initialQty?.toString() ||
+      producto.servingSize?.toString() ||
+      producto.grams?.toString() ||
+      "100",
   );
-  const [unit, setUnit] = useState<FoodUnit>(initialUnit || "gram");
+  const [unit, setUnit] = useState<FoodUnit>(() => {
+    // Si viene de una edición (initialUnit), usarlo. Si no, usar la unidad por defecto del producto.
+    if (initialUnit) return initialUnit;
+
+    // Mapeo seguro de la unidad del producto
+    const productUnit = producto.servingUnit;
+    if (productUnit === "gram" || productUnit === "g") return "g";
+    if (productUnit === "ml") return "ml";
+    if (productUnit === "portion" || productUnit === "unit") return "portion";
+
+    // Default fallback
+    return "g";
+  });
   const [meal, setMeal] = useState<MealType>(initialMeal || "dinner");
   const [showMore, setShowMore] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -152,6 +167,20 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     checkIfFavorite();
+
+    // Sincronizar estado si el producto cambia (ej. al editar)
+    if (!initialQty && !initialUnit) {
+      if (producto.servingSize) {
+        setQuantity(producto.servingSize.toString());
+      }
+      if (producto.servingUnit) {
+        setUnit(
+          producto.servingUnit === "gram"
+            ? "g"
+            : (producto.servingUnit as FoodUnit),
+        );
+      }
+    }
   }, [producto]);
 
   const getUnitLabel = (value: FoodUnit): string => {
@@ -168,7 +197,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     try {
       const favorite = await nutritionService.isFavorite(
         producto.code,
-        userProfile.userId
+        userProfile.userId,
       );
       setIsFavorite(favorite);
     } catch (error) {
@@ -186,7 +215,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       if (isFavorite) {
         await nutritionService.removeFavoriteByProductCode(
           producto.code,
-          userProfile.userId
+          userProfile.userId,
         );
         setIsFavorite(false);
         setIsFavorite(false);
@@ -399,7 +428,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   styles.nutritionGradeBadge,
                   {
                     backgroundColor: getNutritionGradeColor(
-                      producto.nutritionGrade
+                      producto.nutritionGrade,
                     ),
                   },
                 ]}
@@ -462,6 +491,26 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             ))}
           </View>
         </View>
+
+        {/* Mostrar información de porción estándar si existe */}
+        {producto.servingSize && producto.servingUnit && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+            <Text
+              style={{
+                color: theme.textSecondary,
+                fontSize: RFValue(12),
+                fontStyle: "italic",
+              }}
+            >
+              * Porción estándar: {producto.servingSize}{" "}
+              {producto.servingUnit === "gram"
+                ? "g"
+                : producto.servingUnit === "portion"
+                  ? "porción"
+                  : producto.servingUnit}
+            </Text>
+          </View>
+        )}
 
         {!quickAdd && (
           <View style={styles.section}>

@@ -19,6 +19,7 @@ export interface Product {
   others: Array<{ label: string; value: any }>;
   isCustomProduct?: boolean;
   customProductId?: string;
+  servingUnit?: string;
 }
 
 // Legacy interface (keeping for compatibility)
