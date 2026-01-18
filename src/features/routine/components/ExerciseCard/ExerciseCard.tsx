@@ -15,6 +15,7 @@ import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
 import { detectRecord } from "../../../../services/recordsService";
 import { useRecordsStore } from "../../../../store/useRecordsStore";
+import { CelebrationAnimation } from "../CelebrationAnimation";
 import ExerciseHeader from "./ExerciseHeader";
 import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
@@ -79,11 +80,17 @@ const ExerciseCard = ({
     return "00:00";
   });
 
+  // Celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+
   // Record detection state (no modal, just tracking)
   const [recordSetTypes, setRecordSetTypes] = useState<{
     [id: string]: "1RM" | "maxWeight" | "maxVolume";
   }>({});
-  const addRecord = useRecordsStore((state) => state.addRecord);
+  const addOrUpdateRecord = useRecordsStore((state) => state.addOrUpdateRecord);
+  const removeRecordBySetId = useRecordsStore(
+    (state) => state.removeRecordBySetId,
+  );
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -128,44 +135,88 @@ const ExerciseCard = ({
     setSets((prev) =>
       prev
         .filter((set) => set.id !== id)
-        .map((s, i) => ({ ...s, order: i + 1 }))
+        .map((s, i) => ({ ...s, order: i + 1 })),
     );
   };
 
   const updateSet = (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: number | boolean,
   ) => {
-    setSets((prev) =>
-      prev.map((set) => (set.id === id ? { ...set, [field]: value } : set))
-    );
+    // 1. Calculate the new state first
+    const currentSets = sets;
+    const setIndex = currentSets.findIndex((s) => s.id === id);
+    if (setIndex === -1) return;
 
-    if (field === "completed" && value === true) {
-      // Start rest timer
-      if (onStartRestTimer) {
-        const { minutes, seconds } = parseTime(restTime);
-        const totalSeconds = minutes * 60 + seconds;
-        if (totalSeconds > 0) {
-          onStartRestTimer(totalSeconds, exercise.name);
-        }
-      }
+    const currentSet = currentSets[setIndex];
+    const updatedSet = { ...currentSet, [field]: value };
 
-      // Detect record (no modal, just mark the set)
-      if (started && previousSessions.length > 0) {
-        const completedSet = sets.find((s) => s.id === id);
-        if (completedSet) {
-          const record = detectRecord(
-            exercise.id,
-            exercise.name,
-            completedSet,
-            previousSessions
-          );
+    // Create new array with update
+    const newSets = [...currentSets];
+    newSets[setIndex] = updatedSet;
 
-          if (record) {
-            setRecordSetTypes((prev) => ({ ...prev, [id]: record.type }));
-            addRecord(record);
+    // 2. Update local state
+    setSets(newSets);
+
+    // 3. Handle Side Effects (Record Detection & Rest Timer)
+    // We used to do this inside setSets updater, which is bad for side effects (can run multiple times)
+    if (started && previousSessions.length > 0) {
+      if (
+        (field === "completed" && value === true) || // Just marked completed
+        (updatedSet.completed && field !== "completed") // Already completed, modifying values
+      ) {
+        // Start rest timer if explicitly toggling completion
+        if (field === "completed" && value === true && onStartRestTimer) {
+          const { minutes, seconds } = parseTime(restTime);
+          const totalSeconds = minutes * 60 + seconds;
+          if (totalSeconds > 0) {
+            onStartRestTimer(totalSeconds, exercise.name);
           }
+        }
+
+        // Check for record
+        const record = detectRecord(
+          exercise.id,
+          exercise.name,
+          updatedSet,
+          previousSessions,
+        );
+
+        if (record) {
+          // Only update if not already this type of record to avoid loops/dups
+          if (recordSetTypes[id] !== record.type) {
+            setRecordSetTypes((prev) => ({ ...prev, [id]: record.type }));
+            addOrUpdateRecord(record);
+            // Trigger celebration only if it wasn't already completed (fresh completion)
+            if (field === "completed" && value === true) {
+              setShowCelebration(true);
+            }
+          } else {
+            // Even if typ is same, value might changed (e.g. 100kg -> 105kg), update store
+            // But check logic inside store handles idempotency
+            addOrUpdateRecord(record);
+          }
+        } else {
+          // No record detected (maybe weight lowered)
+          if (recordSetTypes[id]) {
+            setRecordSetTypes((prev) => {
+              const newState = { ...prev };
+              delete newState[id];
+              return newState;
+            });
+            removeRecordBySetId(id);
+          }
+        }
+      } else if (field === "completed" && value === false) {
+        // Unchecking completion
+        if (recordSetTypes[id]) {
+          setRecordSetTypes((prev) => {
+            const newState = { ...prev };
+            delete newState[id];
+            return newState;
+          });
+          removeRecordBySetId(id);
         }
       }
     }
@@ -199,6 +250,11 @@ const ExerciseCard = ({
         },
       ]}
     >
+      <CelebrationAnimation
+        visible={showCelebration}
+        onFinish={() => setShowCelebration(false)}
+      />
+
       <TouchableOpacity
         onLongPress={onLongPress}
         delayLongPress={500}

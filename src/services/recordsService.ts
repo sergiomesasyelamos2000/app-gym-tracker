@@ -2,6 +2,7 @@ import { SetRequestDto } from "../models";
 
 export interface RecordData {
   id: string;
+  setId?: string; // Linked set ID (optional for backward compatibility)
   exerciseId: string;
   exerciseName: string;
   type: "1RM" | "maxWeight" | "maxVolume";
@@ -37,7 +38,7 @@ export function calculateVolume(weight: number, reps: number): number {
  */
 export function getBestMetrics(
   exerciseId: string,
-  previousSessions: any[]
+  previousSessions: any[],
 ): {
   best1RM: number;
   bestWeight: number;
@@ -87,7 +88,7 @@ export function detectRecord(
   exerciseId: string,
   exerciseName: string,
   newSet: SetRequestDto,
-  previousSessions: any[]
+  previousSessions: any[],
 ): RecordData | null {
   const weight = newSet.weight ?? 0;
   const reps = newSet.reps ?? 0;
@@ -98,7 +99,7 @@ export function detectRecord(
 
   const { best1RM, bestWeight, bestVolume } = getBestMetrics(
     exerciseId,
-    previousSessions
+    previousSessions,
   );
 
   const current1RM = calculate1RM(weight, reps);
@@ -108,6 +109,7 @@ export function detectRecord(
   if (current1RM > best1RM) {
     return {
       id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
       exerciseId,
       exerciseName,
       type: "1RM",
@@ -123,6 +125,7 @@ export function detectRecord(
   if (weight > bestWeight) {
     return {
       id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
       exerciseId,
       exerciseName,
       type: "maxWeight",
@@ -138,6 +141,7 @@ export function detectRecord(
   if (currentVolume > bestVolume) {
     return {
       id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
       exerciseId,
       exerciseName,
       type: "maxVolume",
@@ -171,7 +175,7 @@ export function formatRecordType(type: RecordData["type"]): string {
  */
 export function formatRecordValue(
   type: RecordData["type"],
-  value: number
+  value: number,
 ): string {
   switch (type) {
     case "1RM":

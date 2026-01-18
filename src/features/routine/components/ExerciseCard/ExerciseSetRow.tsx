@@ -23,7 +23,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: number | boolean,
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
@@ -76,17 +76,63 @@ const ExerciseSetRow = ({
       Animated.timing(scaleAnim, {
         toValue: 1.05,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
 
     handleToggleCompleted();
   }, [handleToggleCompleted, scaleAnim]);
+
+  const iconScale = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (recordType && item.completed) {
+      iconScale.setValue(0);
+      Animated.spring(iconScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 100,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      iconScale.setValue(0);
+    }
+  }, [recordType, item.completed]);
+
+  // Flash animation for PR
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (recordType && item.completed) {
+      // Trigger flash
+      flashAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(flashAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false, // backgroundColor doesn't support native driver
+        }),
+        Animated.timing(flashAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [recordType, item.completed]);
+
+  const backgroundColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [
+      item.completed ? (isDark ? "#1E293B" : "#F1F5F9") : "transparent", // Default background
+      "#FFD70040", // Gold with opacity for flash
+    ],
+  });
 
   return (
     <Animated.View
@@ -97,6 +143,7 @@ const ExerciseSetRow = ({
           transform: [{ scale: scaleAnim }],
           paddingHorizontal: isSmallScreen ? 8 : 12,
           paddingVertical: isSmallScreen ? 10 : 14,
+          backgroundColor: backgroundColor, // Apply animated background
         },
       ]}
     >
@@ -122,7 +169,6 @@ const ExerciseSetRow = ({
           {item.order}
         </Text>
       </View>
-
       {/* Marca anterior - Ahora es clickable */}
       {started && (
         <View
@@ -161,7 +207,6 @@ const ExerciseSetRow = ({
           </TouchableOpacity>
         </View>
       )}
-
       {/* Peso */}
       <View
         style={{
@@ -196,7 +241,6 @@ const ExerciseSetRow = ({
           accessibilityHint="Introduce el peso levantado"
         />
       </View>
-
       {/* Repeticiones */}
       {started ? (
         // En modo entrenamiento, SIEMPRE mostrar un solo input de reps (como Hevy)
@@ -337,7 +381,6 @@ const ExerciseSetRow = ({
           />
         </View>
       )}
-
       {/* Check */}
       {!readonly && (
         <View
@@ -369,8 +412,11 @@ const ExerciseSetRow = ({
 
       {/* Record Icon */}
       {recordType && item.completed && (
-        <View
-          style={{ marginLeft: isSmallScreen ? 4 : 8 }}
+        <Animated.View
+          style={{
+            marginLeft: isSmallScreen ? 4 : 8,
+            transform: [{ scale: iconScale }],
+          }}
           accessibilityLabel="Récord personal"
         >
           {recordType === "1RM" && (
@@ -382,7 +428,7 @@ const ExerciseSetRow = ({
           {recordType === "maxVolume" && (
             <Zap size={isSmallScreen ? 16 : 20} color="#FFD700" />
           )}
-        </View>
+        </Animated.View>
       )}
     </Animated.View>
   );
