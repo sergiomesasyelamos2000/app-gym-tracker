@@ -81,7 +81,7 @@ export const exportService = {
         } catch (e) {
           console.warn(
             `Could not fetch nutrition data for ${year}-${month}`,
-            e
+            e,
           );
         }
 
@@ -123,9 +123,26 @@ export const exportService = {
 
     if (data.workouts) {
       csv += "WORKOUT SESSIONS\n";
-      csv += "Date,Routine,Duration (s),Volume (kg),Completed Sets\n";
+      csv += "Date,Routine,Exercise,Set,Weight (kg),Reps\n";
       data.workouts.sessions.forEach((session: any) => {
-        csv += `${session.createdAt},${session.routineTitle},${session.totalTime},${session.totalWeight},${session.completedSets}\n`;
+        const date = new Date(session.createdAt).toLocaleDateString();
+        const routine = `"${session.routineTitle || "Unknown"}"`;
+
+        if (session.exercises && Array.isArray(session.exercises)) {
+          session.exercises.forEach((exercise: any) => {
+            const exerciseName = `"${exercise.exerciseName || "Unknown"}"`;
+            if (exercise.sets && Array.isArray(exercise.sets)) {
+              exercise.sets.forEach((set: any, index: number) => {
+                csv += `${date},${routine},${exerciseName},${
+                  index + 1
+                },${set.weight || 0},${set.reps || 0}\n`;
+              });
+            }
+          });
+        } else {
+          // Fallback if no exercise data is available
+          csv += `${date},${routine},No Details,0,0,0\n`;
+        }
       });
       csv += "\n";
     }
