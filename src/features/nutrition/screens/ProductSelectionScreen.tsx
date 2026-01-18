@@ -46,7 +46,7 @@ interface TabProps {
   selectedProducts: Set<string>;
   onToggleProduct: (
     product: Product | CustomProduct | CustomMeal,
-    isSelected: boolean
+    isSelected: boolean,
   ) => void;
 }
 
@@ -68,7 +68,7 @@ function AllProductsTab({
 
   const styles = React.useMemo(
     () => createStyles(theme, isDark),
-    [theme, isDark]
+    [theme, isDark],
   );
 
   useEffect(() => {
@@ -114,7 +114,7 @@ function AllProductsTab({
   };
 
   const filteredProducts = productos.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase())
+    p?.name?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: Product }) => {
@@ -241,13 +241,13 @@ function FavoritesTab({
 
   const styles = React.useMemo(
     () => createStyles(theme, isDark),
-    [theme, isDark]
+    [theme, isDark],
   );
 
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
-    }, [userProfile])
+    }, [userProfile]),
   );
 
   const loadFavorites = async () => {
@@ -268,7 +268,7 @@ function FavoritesTab({
   };
 
   const filteredFavorites = favorites.filter((f) =>
-    f?.productName?.toLowerCase().includes(searchText.toLowerCase())
+    f?.productName?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: FavoriteProduct }) => {
@@ -428,13 +428,13 @@ function CustomProductsTab({
 
   const styles = React.useMemo(
     () => createStyles(theme, isDark),
-    [theme, isDark]
+    [theme, isDark],
   );
 
   useFocusEffect(
     useCallback(() => {
       loadCustomProducts();
-    }, [userProfile])
+    }, [userProfile]),
   );
 
   const loadCustomProducts = async () => {
@@ -455,7 +455,7 @@ function CustomProductsTab({
   };
 
   const filteredProducts = customProducts.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase())
+    p?.name?.toLowerCase().includes(searchText.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: CustomProduct }) => {
@@ -605,7 +605,7 @@ export default function ProductSelectionScreen() {
 
   const styles = React.useMemo(
     () => createStyles(theme, isDark),
-    [theme, isDark]
+    [theme, isDark],
   );
 
   // Determinar de dónde viene la navegación
@@ -613,7 +613,7 @@ export default function ProductSelectionScreen() {
 
   const handleToggleProduct = (
     product: Product | CustomProduct | CustomMeal,
-    isSelected: boolean
+    isSelected: boolean,
   ) => {
     setSelectedProducts((prev) => {
       const newMap = new Map(prev);
@@ -648,7 +648,7 @@ export default function ProductSelectionScreen() {
       } else {
         // Fallback: si no hay meal, navegar a CreateMealScreen
         console.warn(
-          "No se encontró la comida para editar, redirigiendo a creación"
+          "No se encontró la comida para editar, redirigiendo a creación",
         );
         navigation.navigate("CreateMealScreen", {
           selectedProducts: productsArray,
@@ -658,6 +658,9 @@ export default function ProductSelectionScreen() {
       // Por defecto, o si viene de CreateMealScreen
       navigation.navigate("CreateMealScreen", {
         selectedProducts: productsArray,
+        draftName: route.params?.draftName,
+        draftDescription: route.params?.draftDescription,
+        draftImageUri: route.params?.draftImageUri,
       });
     }
   };

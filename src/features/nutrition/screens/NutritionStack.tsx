@@ -49,6 +49,9 @@ export type NutritionStackParamList = {
   CreateMealScreen: {
     selectedProduct?: MealProduct;
     selectedProducts?: (Product | CustomProduct | CustomMeal)[];
+    draftName?: string;
+    draftDescription?: string;
+    draftImageUri?: string | null;
   };
   EditProductScreen: { product: CustomProduct };
   EditMealScreen: {
@@ -60,6 +63,9 @@ export type NutritionStackParamList = {
     | {
         from?: string;
         meal?: CustomMeal;
+        draftName?: string;
+        draftDescription?: string;
+        draftImageUri?: string | null;
       }
     | undefined;
 };

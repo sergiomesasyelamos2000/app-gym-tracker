@@ -57,7 +57,7 @@ export default function CreateMealScreen() {
       const product = route.params.selectedProduct;
 
       const existingProductIndex = products.findIndex(
-        (p) => p.productCode === product.productCode
+        (p) => p.productCode === product.productCode,
       );
 
       if (existingProductIndex !== -1) {
@@ -65,8 +65,8 @@ export default function CreateMealScreen() {
           prev.map((p, index) =>
             index === existingProductIndex
               ? { ...p, quantity: p.quantity + product.quantity }
-              : p
-          )
+              : p,
+          ),
         );
       } else {
         setProducts((prev) => [...prev, product]);
@@ -131,7 +131,7 @@ export default function CreateMealScreen() {
         const updated = [...prev];
         newMealProducts.forEach((newProduct) => {
           const existingIndex = updated.findIndex(
-            (p) => p.productCode === newProduct.productCode
+            (p) => p.productCode === newProduct.productCode,
           );
           if (existingIndex === -1) {
             updated.push(newProduct);
@@ -142,7 +142,17 @@ export default function CreateMealScreen() {
 
       navigation.setParams({ selectedProducts: undefined });
     }
-  }, [route.params?.selectedProducts]);
+
+    if (route.params?.draftName !== undefined) {
+      setName(route.params.draftName);
+    }
+    if (route.params?.draftDescription !== undefined) {
+      setDescription(route.params.draftDescription);
+    }
+    if (route.params?.draftImageUri !== undefined) {
+      setImageUri(route.params.draftImageUri);
+    }
+  }, [route.params?.selectedProducts, route.params?.draftName]);
 
   const handlePickImage = async () => {
     const permissionResult =
@@ -151,7 +161,7 @@ export default function CreateMealScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos"
+        "Por favor permite el acceso a tus fotos",
       );
       return;
     }
@@ -179,7 +189,7 @@ export default function CreateMealScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ]
+      ],
     );
   };
 
@@ -187,6 +197,9 @@ export default function CreateMealScreen() {
     // Navegar a ProductSelectionScreen indicando que viene de CreateMealScreen
     navigation.navigate("ProductSelectionScreen", {
       from: "CreateMealScreen",
+      draftName: name,
+      draftDescription: description,
+      draftImageUri: imageUri,
     });
   };
 
@@ -210,7 +223,7 @@ export default function CreateMealScreen() {
           };
         }
         return product;
-      })
+      }),
     );
   };
 
@@ -225,11 +238,11 @@ export default function CreateMealScreen() {
           style: "destructive",
           onPress: () => {
             setProducts((prev) =>
-              prev.filter((product) => product.productCode !== productCode)
+              prev.filter((product) => product.productCode !== productCode),
             );
           },
         },
-      ]
+      ],
     );
   };
 
@@ -241,7 +254,7 @@ export default function CreateMealScreen() {
         carbs: totals.carbs + product.carbs,
         fat: totals.fat + product.fat,
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
@@ -254,7 +267,7 @@ export default function CreateMealScreen() {
     if (products.length === 0) {
       Alert.alert(
         "Error de Validación",
-        "Por favor añade al menos un producto a tu comida"
+        "Por favor añade al menos un producto a tu comida",
       );
       return false;
     }
@@ -263,7 +276,7 @@ export default function CreateMealScreen() {
     if (hasInvalidQuantity) {
       Alert.alert(
         "Error de Validación",
-        "Todos los productos deben tener una cantidad válida"
+        "Todos los productos deben tener una cantidad válida",
       );
       return false;
     }
