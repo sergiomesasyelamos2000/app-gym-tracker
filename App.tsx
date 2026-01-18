@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import React, { useEffect } from "react";
-import { StatusBar } from "react-native";
+import { LogBox, StatusBar } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
@@ -17,6 +17,12 @@ import { Provider as ReduxProvider } from "react-redux";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { store } from "./src/store/store";
 import CustomToast from "./src/ui/CustomToast";
+
+LogBox.ignoreLogs([
+  "expo-notifications: Android Push notifications",
+  "expo-notifications functionality is not fully supported",
+  "[Reanimated] Reduced motion setting is enabled",
+]);
 
 const toastConfig = {
   customToast: ({ text1, props }: ToastConfigParams<any>) => (
@@ -39,7 +45,7 @@ function AppContent() {
     const notificationListener = Notifications.addNotificationReceivedListener(
       (notification) => {
         console.log("Notification received:", notification);
-      }
+      },
     );
 
     // Listener for when user taps on a notification
@@ -50,8 +56,8 @@ function AppContent() {
       });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      notificationListener.remove();
+      responseListener.remove();
     };
   }, []);
 
