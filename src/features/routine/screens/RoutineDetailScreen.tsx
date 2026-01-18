@@ -54,7 +54,7 @@ export default function RoutineDetailScreen() {
 
   // Notification settings
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
-    (state) => state.restTimerNotificationsEnabled
+    (state) => state.restTimerNotificationsEnabled,
   );
 
   const [loading, setLoading] = useState(!!routine?.id);
@@ -65,7 +65,7 @@ export default function RoutineDetailScreen() {
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
-    {}
+    {},
   );
   const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
 
@@ -99,7 +99,7 @@ export default function RoutineDetailScreen() {
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
   const completedSets = useMemo(
     () => allSets.filter((s) => s.completed).length,
-    [allSets]
+    [allSets],
   );
 
   // Calculate records achieved in this session
@@ -220,7 +220,7 @@ export default function RoutineDetailScreen() {
 
     const setsMap = exercisesWithSets.reduce(
       (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
-      {}
+      {},
     );
 
     setWorkoutInProgress({
@@ -447,6 +447,8 @@ export default function RoutineDetailScreen() {
         });
       }
 
+      await notificationService.cancelAllRestTimers();
+
       clearWorkoutInProgress();
       navigation.setParams({ start: undefined, routineId: undefined });
 
@@ -530,7 +532,7 @@ export default function RoutineDetailScreen() {
 
   const handleStartRestTimer = async (
     restSeconds: number,
-    exerciseName?: string
+    exerciseName?: string,
   ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
@@ -549,7 +551,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         restSeconds,
-        exerciseName
+        exerciseName,
       );
       setActiveNotificationId(notificationId);
     }
@@ -581,7 +583,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         newTime,
-        currentExerciseName
+        currentExerciseName,
       );
       setActiveNotificationId(notificationId);
     }
@@ -600,7 +602,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         newTime,
-        currentExerciseName
+        currentExerciseName,
       );
       setActiveNotificationId(notificationId);
     }
@@ -678,7 +680,7 @@ export default function RoutineDetailScreen() {
       : new Date(Date.now() - duration * 1000);
 
     const sessionRecords = allRecords.filter(
-      (r) => new Date(r.date) >= startTime
+      (r) => new Date(r.date) >= startTime,
     );
 
     return {
@@ -691,18 +693,18 @@ export default function RoutineDetailScreen() {
         imageUrl: exercise.imageUrl,
         totalWeight: (sets[exercise.id] || []).reduce(
           (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
-          0
+          0,
         ),
         totalReps: (sets[exercise.id] || []).reduce(
           (acc, s) => acc + (s.reps || 0),
-          0
+          0,
         ),
         sets: (sets[exercise.id] || []).map((s) => {
           const isRecord = sessionRecords.some(
             (r) =>
               r.exerciseId === exercise.id &&
               r.setData.weight === (s.weight || 0) &&
-              r.setData.reps === (s.reps || 0)
+              r.setData.reps === (s.reps || 0),
           );
 
           return {
@@ -743,8 +745,8 @@ export default function RoutineDetailScreen() {
         onChangeExercise={(updatedExercise) =>
           setExercises((prev) =>
             prev.map((ex) =>
-              ex.id === updatedExercise.id ? updatedExercise : ex
-            )
+              ex.id === updatedExercise.id ? updatedExercise : ex,
+            ),
           )
         }
         readonly={readonly && !started}
