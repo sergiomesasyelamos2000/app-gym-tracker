@@ -77,8 +77,8 @@ export default function CreateMealScreen() {
   }, [route.params?.selectedProduct]);
 
   useEffect(() => {
-    if (route.params?.selectedProducts) {
-      const selectedProducts = route.params.selectedProducts as (
+    if (route.params?.selectedProducts || route.params?.currentProducts) {
+      const selectedProducts = (route.params.selectedProducts || []) as (
         | Product
         | CustomProduct
         | CustomMeal
@@ -128,7 +128,10 @@ export default function CreateMealScreen() {
       });
 
       setProducts((prev) => {
-        const updated = [...prev];
+        // Use currentProducts if passed (restoring state), otherwise use previous state
+        const base = route.params?.currentProducts || prev;
+        const updated = [...base];
+
         newMealProducts.forEach((newProduct) => {
           const existingIndex = updated.findIndex(
             (p) => p.productCode === newProduct.productCode,
@@ -140,7 +143,10 @@ export default function CreateMealScreen() {
         return updated;
       });
 
-      navigation.setParams({ selectedProducts: undefined });
+      navigation.setParams({
+        selectedProducts: undefined,
+        currentProducts: undefined,
+      });
     }
 
     if (route.params?.draftName !== undefined) {
@@ -152,7 +158,11 @@ export default function CreateMealScreen() {
     if (route.params?.draftImageUri !== undefined) {
       setImageUri(route.params.draftImageUri);
     }
-  }, [route.params?.selectedProducts, route.params?.draftName]);
+  }, [
+    route.params?.selectedProducts,
+    route.params?.currentProducts,
+    route.params?.draftName,
+  ]);
 
   const handlePickImage = async () => {
     const permissionResult =
@@ -200,6 +210,7 @@ export default function CreateMealScreen() {
       draftName: name,
       draftDescription: description,
       draftImageUri: imageUri,
+      currentProducts: products,
     });
   };
 

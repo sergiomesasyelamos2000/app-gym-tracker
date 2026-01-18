@@ -661,6 +661,7 @@ export default function ProductSelectionScreen() {
         draftName: route.params?.draftName,
         draftDescription: route.params?.draftDescription,
         draftImageUri: route.params?.draftImageUri,
+        currentProducts: route.params?.currentProducts,
       });
     }
   };

@@ -52,6 +52,7 @@ export type NutritionStackParamList = {
     draftName?: string;
     draftDescription?: string;
     draftImageUri?: string | null;
+    currentProducts?: MealProduct[];
   };
   EditProductScreen: { product: CustomProduct };
   EditMealScreen: {
@@ -66,6 +67,7 @@ export type NutritionStackParamList = {
         draftName?: string;
         draftDescription?: string;
         draftImageUri?: string | null;
+        currentProducts?: MealProduct[];
       }
     | undefined;
 };
