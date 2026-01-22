@@ -29,7 +29,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: number | boolean,
   ) => void;
   onDelete: (id: string) => void;
   weightUnit: "kg" | "lbs";
@@ -64,16 +64,50 @@ const ExerciseSetList = ({
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
 
-  const renderRightActions = (itemId: string) => (
-    <View style={styles.actionsContainer}>
-      <TouchableOpacity
-        onPress={() => onDelete(itemId)}
-        style={[styles.deleteButton, { backgroundColor: theme.error }]}
-      >
-        <Icon name="delete" size={22} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  );
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>,
+    itemId: string,
+  ) => {
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.85, 1],
+      extrapolate: "clamp",
+    });
+
+    const opacity = progress.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0, 0.6, 1],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          onPress={() => onDelete(itemId)}
+          activeOpacity={0.7}
+          style={[
+            styles.deleteButton,
+            {
+              backgroundColor: theme.error,
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.deleteContent,
+              {
+                opacity,
+                transform: [{ scale }],
+              },
+            ]}
+          >
+            <Icon name="delete-outline" size={24} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const openModal = () => {
     Animated.parallel([
@@ -397,8 +431,8 @@ const ExerciseSetList = ({
                 ? COLUMN_FLEX.small.repsRange
                 : COLUMN_FLEX.small.reps
               : !started && repsType === "range"
-              ? COLUMN_FLEX.normal.repsRange
-              : COLUMN_FLEX.normal.reps,
+                ? COLUMN_FLEX.normal.repsRange
+                : COLUMN_FLEX.normal.reps,
             marginHorizontal: 2,
             alignItems: "center",
             justifyContent: "center",
@@ -458,10 +492,15 @@ const ExerciseSetList = ({
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Swipeable
-              renderRightActions={() =>
-                !readonly ? renderRightActions(item.id) : null
+              renderRightActions={(progress, dragX) =>
+                !readonly ? renderRightActions(progress, dragX, item.id) : null
               }
               overshootRight={false}
+              onSwipeableWillOpen={() => {
+                import("expo-haptics").then((Haptics) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                });
+              }}
             >
               <ExerciseSetRow
                 item={item}
@@ -474,11 +513,11 @@ const ExerciseSetList = ({
                         item.previousReps || 0
                       }`
                     : started
-                    ? "-"
-                    : undefined
+                      ? "-"
+                      : undefined
                 }
                 started={started}
-                recordType={recordSetTypes[item.id]} // Pass record type if exists
+                recordType={recordSetTypes[item.id]}
               />
             </Swipeable>
           )}
@@ -514,16 +553,19 @@ const styles = StyleSheet.create({
   actionsContainer: {
     justifyContent: "center",
     alignItems: "center",
-    width: 75,
+    width: 70,
     marginVertical: 4,
   },
   deleteButton: {
-    width: 60,
+    width: 64,
     height: "100%",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
+  },
+  deleteContent: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   optionContent: {
     flexDirection: "row",
