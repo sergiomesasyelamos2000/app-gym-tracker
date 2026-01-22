@@ -25,6 +25,7 @@ import { useRecordsStore } from "../../../store/useRecordsStore";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
+import UndoSnackbar from "../components/ExerciseCard/UndoSnackbar";
 import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { RoutineMetrics } from "../components/RoutineMetrics";
@@ -83,6 +84,20 @@ export default function RoutineDetailScreen() {
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const [previousSessions, setPreviousSessions] = useState<any[]>([]);
+
+  // Undo deletion state
+  const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
+  const [undoMessage, setUndoMessage] = useState("");
+  const [onUndoCallback, setOnUndoCallback] = useState<(() => void) | null>(
+    null,
+  );
+
+  const handleShowUndoSnackbar = (message: string, onUndo: () => void) => {
+    setUndoMessage(message);
+    setOnUndoCallback(() => onUndo);
+    setShowUndoSnackbar(true);
+  };
+
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
   const MIN_WORKOUT_DURATION = 300; // 5 minutos
@@ -752,6 +767,8 @@ export default function RoutineDetailScreen() {
         readonly={readonly && !started}
         started={started}
         onStartRestTimer={handleStartRestTimer}
+        onCancelRestTimer={handleCancelRestTimer}
+        onShowUndoSnackbar={handleShowUndoSnackbar}
         showOptions={false}
         supersetWith={item.supersetWith} // 🔥 PASAR PROP
         supersetExerciseName={supersetExercise?.name} // 🔥 PASAR PROP
@@ -845,6 +862,16 @@ export default function RoutineDetailScreen() {
           setShowShortWorkoutModal(false);
           processFinishRoutine();
         }}
+      />
+
+      <UndoSnackbar
+        visible={showUndoSnackbar}
+        message={undoMessage}
+        onUndo={() => {
+          onUndoCallback?.();
+          setShowUndoSnackbar(false);
+        }}
+        onDismiss={() => setShowUndoSnackbar(false)}
       />
     </SafeAreaView>
   );

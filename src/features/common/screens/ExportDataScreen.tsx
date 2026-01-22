@@ -247,7 +247,7 @@ export default function ExportDataScreen() {
         locale="es_ES"
         confirmTextIOS="Confirmar"
         cancelTextIOS="Cancelar"
-        headerTextIOS="Seleccionar fecha"
+        modalPropsIOS={{ title: "Seleccionar fecha" }}
       />
     </SafeAreaView>
   );

@@ -30,6 +30,8 @@ interface Props {
   readonly?: boolean;
   started?: boolean;
   onStartRestTimer?: (restSeconds: number, exerciseName?: string) => void;
+  onCancelRestTimer?: () => void;
+  onShowUndoSnackbar?: (message: string, onUndo: () => void) => void;
   compact?: boolean;
   onLongPress?: () => void;
   isDragging?: boolean;
@@ -53,6 +55,8 @@ const ExerciseCard = ({
   readonly = false,
   started = false,
   onStartRestTimer,
+  onCancelRestTimer,
+  onShowUndoSnackbar,
   compact = false,
   onLongPress,
   isDragging = false,
@@ -82,6 +86,12 @@ const ExerciseCard = ({
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // Undo deletion state
+  const [pendingDelete, setPendingDelete] = useState<{
+    set: SetRequestDto;
+    timeoutId: NodeJS.Timeout;
+  } | null>(null);
 
   // Record detection state (no modal, just tracking)
   const [recordSetTypes, setRecordSetTypes] = useState<{
@@ -132,11 +142,68 @@ const ExerciseCard = ({
   };
 
   const deleteSet = (id: string) => {
+    // Find the set to delete
+    const setToDelete = sets.find((set) => set.id === id);
+    if (!setToDelete) return;
+
+    // Cancel rest timer immediately if the set was completed
+    if (setToDelete.completed && onCancelRestTimer) {
+      onCancelRestTimer();
+    }
+
+    // Clear any existing pending deletion
+    if (pendingDelete) {
+      clearTimeout(pendingDelete.timeoutId);
+      // Commit the previous deletion immediately
+      setSets((prev) =>
+        prev
+          .filter((set) => set.id !== pendingDelete.set.id)
+          .map((s, i) => ({ ...s, order: i + 1 })),
+      );
+    }
+
+    // Set up new pending deletion with 4 second timeout
+    const timeoutId = setTimeout(() => {
+      commitDelete(id);
+    }, 4000);
+
+    setPendingDelete({ set: setToDelete, timeoutId });
+
+    // Show undo snackbar at screen level
+    // We pass a direct closure that captures the timeoutId to avoid stale state issues
+    if (onShowUndoSnackbar) {
+      onShowUndoSnackbar("Serie eliminada", () => {
+        clearTimeout(timeoutId);
+        setPendingDelete(null);
+      });
+    }
+  };
+
+  const commitDelete = (id: string) => {
     setSets((prev) =>
       prev
         .filter((set) => set.id !== id)
         .map((s, i) => ({ ...s, order: i + 1 })),
     );
+
+    // Remove from record tracking if it was a PR
+    if (recordSetTypes[id]) {
+      setRecordSetTypes((prev) => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
+      removeRecordBySetId(id);
+    }
+
+    setPendingDelete(null);
+  };
+
+  const handleUndo = () => {
+    if (pendingDelete) {
+      clearTimeout(pendingDelete.timeoutId);
+      setPendingDelete(null);
+    }
   };
 
   const updateSet = (
@@ -329,7 +396,7 @@ const ExerciseCard = ({
         />
 
         <ExerciseSetList
-          sets={sets}
+          sets={sets.filter((set) => set.id !== pendingDelete?.set.id)}
           onUpdate={updateSet}
           onDelete={deleteSet}
           weightUnit={exercise.weightUnit || "kg"}
