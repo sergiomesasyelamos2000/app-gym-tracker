@@ -6,7 +6,7 @@ interface UseSetRowLogicProps {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: number | boolean,
   ) => void;
   repsType: "reps" | "range";
   started: boolean;
@@ -22,16 +22,16 @@ export const useSetRowLogic = ({
 }: UseSetRowLogicProps) => {
   // Estados locales
   const [localWeight, setLocalWeight] = useState<string>(
-    started ? "" : item.weight?.toString() || ""
+    started ? "" : item.weight?.toString() || "",
   );
   const [localReps, setLocalReps] = useState<string>(
-    started ? "" : item.reps?.toString() || ""
+    started ? "" : item.reps?.toString() || "",
   );
   const [localRepsMin, setLocalRepsMin] = useState<string>(
-    started ? "" : item.repsMin?.toString() || ""
+    started ? "" : item.repsMin?.toString() || "",
   );
   const [localRepsMax, setLocalRepsMax] = useState<string>(
-    started ? "" : item.repsMax?.toString() || ""
+    started ? "" : item.repsMax?.toString() || "",
   );
 
   // Función para extraer valores del previousMark
@@ -103,7 +103,7 @@ export const useSetRowLogic = ({
       const numValue = Number(value);
       return isNaN(numValue) ? 0 : numValue;
     },
-    []
+    [],
   );
 
   // Handlers memoizados
@@ -113,7 +113,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "weight");
       onUpdate(item.id, "weight", value);
     },
-    [item.id, onUpdate, sanitizeValue]
+    [item.id, onUpdate, sanitizeValue],
   );
 
   const handleRepsChange = useCallback(
@@ -122,7 +122,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "reps");
       onUpdate(item.id, "reps", value);
     },
-    [item.id, onUpdate, sanitizeValue]
+    [item.id, onUpdate, sanitizeValue],
   );
 
   const handleRepsMinChange = useCallback(
@@ -131,7 +131,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "repsMin");
       onUpdate(item.id, "repsMin", value);
     },
-    [item.id, onUpdate, sanitizeValue]
+    [item.id, onUpdate, sanitizeValue],
   );
 
   const handleRepsMaxChange = useCallback(
@@ -140,12 +140,41 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "repsMax");
       onUpdate(item.id, "repsMax", value);
     },
-    [item.id, onUpdate, sanitizeValue]
+    [item.id, onUpdate, sanitizeValue],
   );
 
   const handleToggleCompleted = useCallback(() => {
-    onUpdate(item.id, "completed", !item.completed);
-  }, [item.id, item.completed, onUpdate]);
+    const isMarkingCompleted = !item.completed;
+
+    if (isMarkingCompleted && started) {
+      const values = extractValuesFromPreviousMark();
+      if (values) {
+        // Solo autocompletar si el campo está vacío
+        const weightIsEmpty = !localWeight || localWeight.trim() === "";
+        const repsIsEmpty = !localReps || localReps.trim() === "";
+
+        if (weightIsEmpty) {
+          setLocalWeight(values.weight);
+          onUpdate(item.id, "weight", Number(values.weight));
+        }
+
+        if (repsIsEmpty) {
+          setLocalReps(values.reps);
+          onUpdate(item.id, "reps", Number(values.reps));
+        }
+      }
+    }
+
+    onUpdate(item.id, "completed", isMarkingCompleted);
+  }, [
+    item.id,
+    item.completed,
+    onUpdate,
+    started,
+    localWeight,
+    localReps,
+    extractValuesFromPreviousMark,
+  ]);
 
   return {
     localWeight,
