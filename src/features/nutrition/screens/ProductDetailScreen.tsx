@@ -257,7 +257,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         productName: producto.name,
         productImage: producto.image,
         quantity: parseFloat(quantity) || 100,
-        unit: unit,
+        unit: (unit === "g" ? "gram" : unit) as any,
       });
       Alert.alert("¡Añadido!", "Producto agregado a la lista de compras");
     } catch (error) {
@@ -301,7 +301,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         const updatedEntry: Partial<FoodEntry> = {
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: unit,
+          unit: (unit === "g" ? "gram" : unit) as any,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,
@@ -326,7 +326,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           date: today,
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: unit,
+          unit: (unit === "g" ? "gram" : unit) as any,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,
