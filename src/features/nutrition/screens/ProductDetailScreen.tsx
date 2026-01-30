@@ -42,12 +42,20 @@ function getNutritionGradeColor(grade: string): string {
   }
 }
 
-interface Props {
-  route: any;
-  navigation: any;
-}
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { NutritionStackParamList } from "./NutritionStack";
 
-const UNITS_CONFIG = [
+type Props = NativeStackScreenProps<
+  NutritionStackParamList,
+  "ProductDetailScreen"
+>;
+
+const UNITS_CONFIG: {
+  label: string;
+  value: FoodUnit;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}[] = [
   {
     label: "Gramos",
     value: "g" as FoodUnit,
@@ -68,7 +76,12 @@ const UNITS_CONFIG = [
   },
 ];
 
-const MEALS_CONFIG = [
+const MEALS_CONFIG: {
+  label: string;
+  value: MealType;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}[] = [
   {
     label: "Desayuno",
     value: "breakfast" as MealType,
@@ -559,7 +572,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   ]}
                 >
                   <Ionicons
-                    name={selectedMeal.icon as any}
+                    name={selectedMeal.icon}
                     size={24}
                     color={selectedMeal.color}
                   />
@@ -685,7 +698,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   ]}
                 >
                   <Ionicons
-                    name={unitOption.icon as any}
+                    name={unitOption.icon}
                     size={24}
                     color={unitOption.color}
                   />
@@ -750,7 +763,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   ]}
                 >
                   <Ionicons
-                    name={mealOption.icon as any}
+                    name={mealOption.icon}
                     size={24}
                     color={mealOption.color}
                   />
@@ -772,7 +785,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const createStyles = (theme: any) =>
+import { Theme } from "../../../contexts/ThemeContext";
+
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

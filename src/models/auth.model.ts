@@ -5,46 +5,23 @@
  * and token management.
  */
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import {
+  AuthResponse,
+  LoginRequestDto,
+  RegisterRequestDto,
+  GoogleAuthRequestDto,
+  AuthTokens,
+} from "@entity-data-models/index";
+import { UserEntity as User } from "@entity-data-models/index";
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-}
-
-export interface AuthResponse {
-  user: User;
-  tokens: AuthTokens;
-}
-
-export interface LoginRequestDto {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequestDto {
-  email: string;
-  password: string;
-  name: string;
-}
-
-export interface GoogleAuthRequestDto {
-  accessToken: string;
-  userInfo: {
-    id: string;
-    email: string;
-    name: string;
-    picture?: string;
-  };
-}
+export {
+  AuthResponse,
+  LoginRequestDto,
+  RegisterRequestDto,
+  GoogleAuthRequestDto,
+  AuthTokens,
+  User,
+};
 
 export interface AuthState {
   user: User | null;

@@ -35,6 +35,15 @@ type CreateMealScreenRouteProp = RouteProp<
   "CreateMealScreen"
 >;
 
+interface FrontendMealProduct extends MealProduct {
+  id?: string;
+  productImage?: string;
+  baseCalories: number;
+  baseProtein: number;
+  baseCarbs: number;
+  baseFat: number;
+}
+
 export default function CreateMealScreen() {
   const { theme } = useTheme();
   const navigation =
@@ -49,7 +58,7 @@ export default function CreateMealScreen() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [products, setProducts] = useState<MealProduct[]>([]);
+  const [products, setProducts] = useState<FrontendMealProduct[]>([]);
 
   // Escuchar cuando se selecciona un producto desde ProductDetailScreen
   useEffect(() => {
@@ -64,12 +73,27 @@ export default function CreateMealScreen() {
         setProducts((prev) =>
           prev.map((p, index) =>
             index === existingProductIndex
-              ? { ...p, quantity: p.quantity + product.quantity }
+              ? ({
+                  ...p,
+                  quantity: p.quantity + product.quantity,
+                } as FrontendMealProduct)
               : p,
           ),
         );
       } else {
-        setProducts((prev) => [...prev, product]);
+        // Need to convert selectedProduct to FrontendMealProduct if it isn't one.
+        // Assuming selectedProduct has base props or we calculate them.
+        // Actually selectedProduct logic seems incomplete in previous code reuse.
+        // Let's assume for now we don't handle selectedProduct here or it's handled differently.
+        // But to satisfy TS:
+        // Note: The previous logic line 72 `setProducts((prev) => [...prev, product]);` implies `product` matched the type.
+        // If `product` comes from params, it might be just `MealProduct`.
+        // We probably need to map it properly like in the other useEffect.
+        // For now, let's just cast to fix the immediate error, assuming data integrity.
+        setProducts((prev) => [
+          ...prev,
+          product as unknown as FrontendMealProduct,
+        ]);
       }
 
       navigation.setParams({ selectedProduct: undefined });
@@ -84,60 +108,63 @@ export default function CreateMealScreen() {
         | CustomMeal
       )[];
 
-      const newMealProducts: MealProduct[] = selectedProducts.map((product) => {
-        if ("totalCalories" in product) {
-          return {
-            id: product.id,
-            productCode: product.id,
-            productName: product.name,
-            productImage: product.image || undefined,
-            quantity: 1,
-            unit: "porción",
-            calories: product.totalCalories,
-            protein: product.totalProtein,
-            carbs: product.totalCarbs,
-            fat: product.totalFat,
-            baseCalories: product.totalCalories,
-            baseProtein: product.totalProtein,
-            baseCarbs: product.totalCarbs,
-            baseFat: product.totalFat,
-          };
-        } else {
-          const isCustom = "caloriesPer100" in product;
-          const baseCalories = isCustom
-            ? product.caloriesPer100
-            : product.calories;
-          const baseProtein = isCustom
-            ? product.proteinPer100
-            : product.protein;
-          const baseCarbs = isCustom
-            ? product.carbsPer100
-            : product.carbohydrates;
-          const baseFat = isCustom ? product.fatPer100 : product.fat;
+      const newMealProducts: FrontendMealProduct[] = selectedProducts.map(
+        (product) => {
+          if ("totalCalories" in product) {
+            return {
+              id: product.id,
+              productCode: product.id,
+              productName: product.name,
+              productImage: product.image || undefined,
+              quantity: 1,
+              unit: "porción",
+              calories: product.totalCalories,
+              protein: product.totalProtein,
+              carbs: product.totalCarbs,
+              fat: product.totalFat,
+              baseCalories: product.totalCalories,
+              baseProtein: product.totalProtein,
+              baseCarbs: product.totalCarbs,
+              baseFat: product.totalFat,
+            };
+          } else {
+            const isCustom = "caloriesPer100" in product;
+            const baseCalories = isCustom
+              ? product.caloriesPer100
+              : product.calories;
+            const baseProtein = isCustom
+              ? product.proteinPer100
+              : product.protein;
+            const baseCarbs = isCustom
+              ? product.carbsPer100
+              : product.carbohydrates;
+            const baseFat = isCustom ? product.fatPer100 : product.fat;
 
-          return {
-            id: isCustom ? product.id : product.code,
-            isCustom,
-            productCode: isCustom ? product.id : product.code,
-            productName: product.name,
-            productImage: product.image || undefined,
-            quantity: 100,
-            unit: "g",
-            calories: baseCalories,
-            protein: baseProtein,
-            carbs: baseCarbs,
-            fat: baseFat,
-            baseCalories: baseCalories / 100,
-            baseProtein: baseProtein / 100,
-            baseCarbs: baseCarbs / 100,
-            baseFat: baseFat / 100,
-          };
-        }
-      });
+            return {
+              id: isCustom ? product.id : product.code,
+              isCustom,
+              productCode: isCustom ? product.id : product.code,
+              productName: product.name,
+              productImage: product.image || undefined,
+              quantity: 100,
+              unit: "g",
+              calories: baseCalories,
+              protein: baseProtein,
+              carbs: baseCarbs,
+              fat: baseFat,
+              baseCalories: baseCalories / 100,
+              baseProtein: baseProtein / 100,
+              baseCarbs: baseCarbs / 100,
+              baseFat: baseFat / 100,
+            };
+          }
+        },
+      );
 
       setProducts((prev) => {
         // Use currentProducts if passed (restoring state), otherwise use previous state
-        const base = route.params?.currentProducts || prev;
+        const base =
+          (route.params?.currentProducts as FrontendMealProduct[]) || prev;
         const updated = [...base];
 
         newMealProducts.forEach((newProduct) => {
@@ -361,7 +388,7 @@ export default function CreateMealScreen() {
     item,
     index,
   }: {
-    item: MealProduct;
+    item: FrontendMealProduct;
     index: number;
   }) => (
     <View

@@ -92,7 +92,7 @@ export const sendPhotoThunk = createAsyncThunk(
   "chat/sendPhoto",
   async (fileData: FormData, thunkAPI) => {
     const data = await postPhoto(fileData);
-    return data.items;
+    return data; // data is RecognizeFoodResponseDto[]
   },
 );
 
@@ -159,8 +159,18 @@ const chatSlice = createSlice({
       // Procesar respuesta de la foto
       .addCase(sendPhotoThunk.fulfilled, (state, action) => {
         state.loading = false;
-        const items = action.payload;
-        const formatted = `🍴 Alimento reconocido: ${items.name}\n📊 Información nutricional:\n- Calorías: ${items.calories} kcal\n- Proteínas: ${items.proteins.quantity} ${items.proteins.unit}\n- Carbohidratos: ${items.carbs.quantity} ${items.carbs.unit}\n- Grasas: ${items.fats.quantity} ${items.fats.unit}\n- Tamaño de porción: ${items.servingSize} g`;
+        const items = action.payload; // RecognizeFoodResponseDto[]
+
+        let formatted = "No se pudo reconocer ningún alimento.";
+
+        if (items && items.length > 0) {
+          formatted = items
+            .map((item) => {
+              return `🍴 Alimento reconocido: ${item.name}\n📊 Información nutricional:\n- Calorías: ${item.calories || 0} kcal\n- Proteínas: ${item.proteins || 0} g\n- Carbohidratos: ${item.carbs || 0} g\n- Grasas: ${item.fats || 0} g\n- Tamaño de porción: ${item.servingSize || 0} g`;
+            })
+            .join("\n\n");
+        }
+
         state.messages.push({
           id: state.nextId,
           text: formatted,

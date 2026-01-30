@@ -60,10 +60,29 @@ async function attemptTokenRefresh(): Promise<boolean> {
   }
 }
 
-export async function apiFetch<T = any>(
+export class ApiError extends Error {
+  status?: number;
+  statusText?: string;
+  details?: unknown;
+
+  constructor(
+    message: string,
+    status?: number,
+    statusText?: string,
+    details?: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.details = details;
+  }
+}
+
+export async function apiFetch<T = unknown>(
   endpoint: string,
   options: RequestInit = {},
-  isRetry: boolean = false
+  isRetry: boolean = false,
 ): Promise<T> {
   const authHeaders = getAuthHeaders();
 
@@ -81,7 +100,7 @@ export async function apiFetch<T = any>(
     // ✅ Intentar parsear el error como JSON
     const errorText = await response.text();
     let errorMessage = `Error ${response.status}`;
-    let errorDetails: any = null;
+    let errorDetails: unknown = null;
 
     try {
       const errorData = JSON.parse(errorText);
@@ -95,8 +114,6 @@ export async function apiFetch<T = any>(
 
     // ✅ Handle 401 Unauthorized with automatic token refresh
     if (response.status === 401) {
-      const messageLower = errorMessage.toLowerCase();
-
       // List of endpoints that may return 401 for missing resources (not auth errors)
       const resourceNotFoundEndpoints = [
         "nutrition/user-profile",
@@ -105,7 +122,7 @@ export async function apiFetch<T = any>(
 
       // Check if this is a resource-not-found 401 (e.g., missing nutrition profile)
       const isResourceNotFound = resourceNotFoundEndpoints.some((path) =>
-        endpoint.includes(path)
+        endpoint.includes(path),
       );
 
       // If it's not a resource-not-found endpoint and we haven't retried yet
@@ -129,12 +146,12 @@ export async function apiFetch<T = any>(
       }
     }
 
-    const error = new Error(errorMessage);
-    (error as any).status = response.status;
-    (error as any).statusText = response.statusText;
-    (error as any).details = errorDetails;
-
-    throw error;
+    throw new ApiError(
+      errorMessage,
+      response.status,
+      response.statusText,
+      errorDetails,
+    );
   }
 
   // ✅ Si es 204 (sin contenido), no intentes hacer .json()
@@ -160,5 +177,5 @@ export async function apiFetch<T = any>(
     return undefined as T;
   }
 
-  return JSON.parse(text);
+  return JSON.parse(text) as T;
 }

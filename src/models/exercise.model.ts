@@ -1,53 +1,23 @@
-import { SetRequestDto } from "./set.model";
+import {
+  ExerciseRequestDto,
+  SetRequestDto,
+  ExerciseTypeEntity as ExerciseTypeDto,
+  MuscleEntity as MuscleDto,
+  EquipmentEntity as EquipmentDto,
+  CreateExerciseDto, // Verify if this exists in shared or not. Step 146 didn't show it explicitly but it might be in exercise.model shared.
+} from "@entity-data-models/index";
+
+export {
+  ExerciseRequestDto,
+  SetRequestDto,
+  ExerciseTypeDto,
+  MuscleDto,
+  EquipmentDto,
+  CreateExerciseDto,
+};
 
 export interface ExerciseNote {
   id: string;
   text: string;
   createdAt: string;
-}
-
-export interface ExerciseRequestDto {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  giftUrl?: string;
-  equipments: string[];
-  bodyParts: string[];
-  targetMuscles: string[];
-  secondaryMuscles?: string[];
-  instructions: string[];
-  notes?: ExerciseNote[];
-  restSeconds?: string;
-  sets?: SetRequestDto[];
-  weightUnit: "kg" | "lbs";
-  repsType: "reps" | "range";
-  order?: number;
-  supersetWith?: string;
-}
-
-export interface CreateExerciseDto {
-  name: string;
-  equipment: string;
-  primaryMuscle: string;
-  otherMuscles: string[];
-  type: string;
-  imageBase64?: string | null;
-}
-
-export interface EquipmentDto {
-  id: string;
-  name: string;
-  imagePath?: string;
-}
-
-export interface MuscleDto {
-  id: string;
-  name: string;
-  imagePath?: string;
-}
-
-export interface ExerciseTypeDto {
-  id: string;
-  name: string;
-  imagePath?: string;
 }

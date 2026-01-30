@@ -7,6 +7,7 @@ import {
   MealProduct,
   MealType,
   Product,
+  FoodUnit,
 } from "../../../models/nutrition.model";
 import CreateMealScreen from "./CreateMealScreen";
 import CreateProductScreen from "./CreateProductScreen";
@@ -38,6 +39,10 @@ export type NutritionStackParamList = {
     returnTo?: string;
     quickAdd?: boolean;
     selectedMeal?: MealType;
+    fromDiary?: boolean;
+    quantity?: number;
+    unit?: FoodUnit;
+    entryId?: string;
   };
   UserProfileSetupScreen: { userId: string };
   EditNutritionProfileScreen: undefined;
@@ -46,14 +51,16 @@ export type NutritionStackParamList = {
   CreateProductScreen:
     | { barcode?: string; selectedMeal?: MealType }
     | undefined;
-  CreateMealScreen: {
-    selectedProduct?: MealProduct;
-    selectedProducts?: (Product | CustomProduct | CustomMeal)[];
-    draftName?: string;
-    draftDescription?: string;
-    draftImageUri?: string | null;
-    currentProducts?: MealProduct[];
-  };
+  CreateMealScreen:
+    | {
+        selectedProduct?: MealProduct;
+        selectedProducts?: (Product | CustomProduct | CustomMeal)[];
+        draftName?: string;
+        draftDescription?: string;
+        draftImageUri?: string | null;
+        currentProducts?: MealProduct[];
+      }
+    | undefined;
   EditProductScreen: { product: CustomProduct };
   EditMealScreen: {
     meal: CustomMeal;

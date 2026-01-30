@@ -19,7 +19,7 @@ import {
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import { FoodUnit, MealType } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
@@ -35,7 +35,12 @@ interface NutritionalValues {
   sodium: string;
 }
 
-const UNITS_CONFIG = [
+const UNITS_CONFIG: {
+  label: string;
+  value: FoodUnit;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}[] = [
   {
     label: "Gramos",
     value: "g" as FoodUnit,
@@ -98,7 +103,7 @@ export default function CreateProductScreen() {
       fiber: "",
       sugar: "",
       sodium: "",
-    }
+    },
   );
 
   const handlePickImage = async () => {
@@ -108,7 +113,7 @@ export default function CreateProductScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos"
+        "Por favor permite el acceso a tus fotos",
       );
       return;
     }
@@ -136,13 +141,13 @@ export default function CreateProductScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ]
+      ],
     );
   };
 
   const updateNutritionalValue = (
     key: keyof NutritionalValues,
-    value: string
+    value: string,
   ) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
@@ -404,7 +409,7 @@ export default function CreateProductScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={selectedUnit.icon as any}
+                      name={selectedUnit.icon}
                       size={20}
                       color={selectedUnit.color}
                     />
@@ -600,7 +605,7 @@ export default function CreateProductScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={unitOption.icon as any}
+                      name={unitOption.icon}
                       size={24}
                       color={unitOption.color}
                     />
@@ -623,7 +628,7 @@ export default function CreateProductScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

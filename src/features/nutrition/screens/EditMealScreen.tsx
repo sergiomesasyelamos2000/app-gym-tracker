@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
@@ -38,6 +38,15 @@ type EditMealScreenRouteProp = RouteProp<
   "EditMealScreen"
 >;
 
+interface FrontendMealProduct extends MealProduct {
+  id?: string;
+  productImage?: string;
+  baseCalories?: number;
+  baseProtein?: number;
+  baseCarbs?: number;
+  baseFat?: number;
+}
+
 export default function EditMealScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<EditMealScreenNavigationProp>();
@@ -51,7 +60,9 @@ export default function EditMealScreen() {
   const [name, setName] = useState(meal?.name || "");
   const [description, setDescription] = useState(meal?.description || "");
   const [imageUri, setImageUri] = useState<string | null>(meal?.image || null);
-  const [products, setProducts] = useState<MealProduct[]>(meal?.products || []);
+  const [products, setProducts] = useState<FrontendMealProduct[]>(
+    (meal?.products as FrontendMealProduct[]) || [],
+  );
 
   useEffect(() => {
     if (!meal) {
@@ -70,57 +81,59 @@ export default function EditMealScreen() {
         | CustomMeal
       )[];
 
-      const newMealProducts: MealProduct[] = selectedProducts.map((product) => {
-        // Si es una comida personalizada (CustomMeal)
-        if ("totalCalories" in product) {
-          return {
-            id: product.id,
-            productCode: product.id,
-            productName: product.name,
-            productImage: product.image || undefined,
-            quantity: 1,
-            unit: "porción",
-            calories: product.totalCalories,
-            protein: product.totalProtein,
-            carbs: product.totalCarbs,
-            fat: product.totalFat,
-          };
-        } else {
-          // Es un Product o CustomProduct
-          const isCustom = "caloriesPer100" in product;
-          const baseCalories = isCustom
-            ? product.caloriesPer100
-            : product.calories;
-          const baseProtein = isCustom
-            ? product.proteinPer100
-            : product.protein;
-          const baseCarbs = isCustom
-            ? product.carbsPer100
-            : product.carbohydrates;
-          const baseFat = isCustom ? product.fatPer100 : product.fat;
+      const newMealProducts: FrontendMealProduct[] = selectedProducts.map(
+        (product) => {
+          // Si es una comida personalizada (CustomMeal)
+          if ("totalCalories" in product) {
+            return {
+              id: product.id,
+              productCode: product.id,
+              productName: product.name,
+              productImage: product.image || undefined,
+              quantity: 1,
+              unit: "porción",
+              calories: product.totalCalories,
+              protein: product.totalProtein,
+              carbs: product.totalCarbs,
+              fat: product.totalFat,
+            };
+          } else {
+            // Es un Product o CustomProduct
+            const isCustom = "caloriesPer100" in product;
+            const baseCalories = isCustom
+              ? product.caloriesPer100
+              : product.calories;
+            const baseProtein = isCustom
+              ? product.proteinPer100
+              : product.protein;
+            const baseCarbs = isCustom
+              ? product.carbsPer100
+              : product.carbohydrates;
+            const baseFat = isCustom ? product.fatPer100 : product.fat;
 
-          return {
-            id: isCustom ? product.id : product.code,
-            isCustom,
-            productCode: isCustom ? product.id : product.code,
-            productName: product.name,
-            productImage: product.image || undefined,
-            quantity: 100,
-            unit: "g",
-            calories: baseCalories,
-            protein: baseProtein,
-            carbs: baseCarbs,
-            fat: baseFat,
-          };
-        }
-      });
+            return {
+              id: isCustom ? product.id : product.code,
+              isCustom,
+              productCode: isCustom ? product.id : product.code,
+              productName: product.name,
+              productImage: product.image || undefined,
+              quantity: 100,
+              unit: "g",
+              calories: baseCalories,
+              protein: baseProtein,
+              carbs: baseCarbs,
+              fat: baseFat,
+            };
+          }
+        },
+      );
 
       // Combinar con productos existentes, evitando duplicados
       setProducts((prev) => {
         const updated = [...prev];
         newMealProducts.forEach((newProduct) => {
           const existingIndex = updated.findIndex(
-            (p) => p.productCode === newProduct.productCode
+            (p) => p.productCode === newProduct.productCode,
           );
           if (existingIndex === -1) {
             updated.push(newProduct);
@@ -141,7 +154,7 @@ export default function EditMealScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos"
+        "Por favor permite el acceso a tus fotos",
       );
       return;
     }
@@ -169,7 +182,7 @@ export default function EditMealScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ]
+      ],
     );
   };
 
@@ -201,7 +214,7 @@ export default function EditMealScreen() {
           };
         }
         return product;
-      })
+      }),
     );
   };
 
@@ -216,11 +229,11 @@ export default function EditMealScreen() {
           style: "destructive",
           onPress: () => {
             setProducts((prev) =>
-              prev.filter((product) => product.productCode !== productCode)
+              prev.filter((product) => product.productCode !== productCode),
             );
           },
         },
-      ]
+      ],
     );
   };
 
@@ -232,7 +245,7 @@ export default function EditMealScreen() {
         carbs: totals.carbs + product.carbs,
         fat: totals.fat + product.fat,
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   };
 
@@ -245,7 +258,7 @@ export default function EditMealScreen() {
     if (products.length === 0) {
       Alert.alert(
         "Error de Validación",
-        "Por favor añade al menos un producto a tu comida"
+        "Por favor añade al menos un producto a tu comida",
       );
       return false;
     }
@@ -254,7 +267,7 @@ export default function EditMealScreen() {
     if (hasInvalidQuantity) {
       Alert.alert(
         "Error de Validación",
-        "Todos los productos deben tener una cantidad válida"
+        "Todos los productos deben tener una cantidad válida",
       );
       return false;
     }
@@ -304,7 +317,7 @@ export default function EditMealScreen() {
       console.error("Error updating meal:", error);
       Alert.alert(
         "Error",
-        "No se pudo actualizar la comida. Intenta de nuevo."
+        "No se pudo actualizar la comida. Intenta de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -342,14 +355,14 @@ export default function EditMealScreen() {
               console.error("Error deleting meal:", error);
               Alert.alert(
                 "Error",
-                "No se pudo eliminar la comida. Intenta de nuevo."
+                "No se pudo eliminar la comida. Intenta de nuevo.",
               );
             } finally {
               setDeleting(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -359,7 +372,7 @@ export default function EditMealScreen() {
     item,
     index,
   }: {
-    item: MealProduct;
+    item: FrontendMealProduct;
     index: number;
   }) => (
     <View
@@ -702,7 +715,7 @@ export default function EditMealScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -718,383 +731,383 @@ const createStyles = (theme: any) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-  },
-  headerSubtitle: {
-    fontSize: RFValue(12),
-    color: theme.textSecondary,
-    marginTop: 2,
-  },
-  content: {
-    flex: 1,
-  },
-  imageSection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  mealImagePlaceholder: {
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: theme.card,
-    borderWidth: 2,
-    borderColor: theme.border,
-    borderStyle: "dashed",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  placeholderIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  imagePlaceholderText: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: theme.text,
-    marginTop: 4,
-  },
-  imagePlaceholderSubtext: {
-    fontSize: RFValue(12),
-    color: theme.textSecondary,
-    marginTop: 4,
-  },
-  imagePreviewContainer: {
-    position: "relative",
-    height: 200,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  mealImagePreview: {
-    width: "100%",
-    height: "100%",
-  },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    flexDirection: "row",
-    gap: 8,
-  },
-  imageActionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${theme.primary}E6`,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: theme.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  deleteImageButton: {
-    backgroundColor: `${theme.error}E6`,
-  },
-  section: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: theme.text,
-    marginBottom: 8,
-  },
-  required: {
-    color: theme.error,
-  },
-  input: {
-    backgroundColor: theme.card,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: RFValue(15),
-    color: theme.text,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 14,
-    textAlignVertical: "top",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    gap: 12,
-  },
-  sectionHeaderText: {
-    flex: 1,
-    marginRight: 8,
-  },
-  sectionTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-  },
-  sectionSubtitle: {
-    fontSize: RFValue(13),
-    color: theme.textSecondary,
-    marginTop: 2,
-    flexWrap: "wrap",
-  },
-  addProductsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.backgroundSecondary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
-    flexShrink: 0,
-  },
-  addProductsText: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    color: theme.primary,
-  },
-  productsList: {
-    backgroundColor: theme.card,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: theme.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  productItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.backgroundSecondary,
-  },
-  lastProductItem: {
-    borderBottomWidth: 0,
-  },
-  productImageContainer: {
-    marginRight: 12,
-  },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  productPlaceholder: {
-    backgroundColor: theme.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  productInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  productName: {
-    fontSize: RFValue(15),
-    fontWeight: "600",
-    color: theme.text,
-    marginBottom: 6,
-  },
-  productQuantityContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  quantityInput: {
-    backgroundColor: theme.backgroundSecondary,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    fontSize: RFValue(14),
-    fontWeight: "600",
-    width: 70,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: theme.border,
-    color: theme.text,
-  },
-  unitText: {
-    fontSize: RFValue(14),
-    color: theme.textSecondary,
-    fontWeight: "500",
-  },
-  macrosChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  macroChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.backgroundSecondary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 3,
-  },
-  macroChipText: {
-    fontSize: RFValue(11),
-    color: theme.textSecondary,
-    fontWeight: "500",
-  },
-  proteinText: {
-    color: "#2196F3",
-  },
-  carbsText: {
-    color: "#FFB74D",
-  },
-  fatText: {
-    color: "#FF9800",
-  },
-  removeProductButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: `${theme.error}15`,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyProducts: {
-    backgroundColor: theme.card,
-    borderRadius: 16,
-    padding: 48,
-    alignItems: "center",
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  emptyProductsText: {
-    fontSize: RFValue(17),
-    fontWeight: "600",
-    color: theme.text,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptyProductsSubtext: {
-    fontSize: RFValue(14),
-    color: theme.textTertiary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  macrosCard: {
-    backgroundColor: theme.card,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: theme.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  macroGrid: {
-    gap: 16,
-  },
-  mainMacro: {
-    alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.backgroundSecondary,
-  },
-  mainMacroValue: {
-    fontSize: RFValue(32),
-    fontWeight: "700",
-    color: "#FF6B6B",
-    marginTop: 8,
-  },
-  mainMacroLabel: {
-    fontSize: RFValue(14),
-    color: theme.textSecondary,
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  macrosGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 8,
-  },
-  secondaryMacro: {
-    alignItems: "center",
-    flex: 1,
-  },
-  macroIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginBottom: 8,
-  },
-  secondaryMacroValue: {
-    fontSize: RFValue(18),
-    fontWeight: "700",
-    color: theme.text,
-    marginBottom: 4,
-  },
-  secondaryMacroLabel: {
-    fontSize: RFValue(11),
-    color: theme.textSecondary,
-    textAlign: "center",
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: theme.card,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-  },
-  saveButton: {
-    flexDirection: "row",
-    backgroundColor: theme.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: RFValue(16),
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  bottomPadding: {
-    height: 32,
-  },
-});
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    headerSubtitle: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    content: {
+      flex: 1,
+    },
+    imageSection: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 12,
+    },
+    mealImagePlaceholder: {
+      height: 200,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      borderWidth: 2,
+      borderColor: theme.border,
+      borderStyle: "dashed",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    placeholderIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    imagePlaceholderText: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.text,
+      marginTop: 4,
+    },
+    imagePlaceholderSubtext: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    imagePreviewContainer: {
+      position: "relative",
+      height: 200,
+      borderRadius: 16,
+      overflow: "hidden",
+    },
+    mealImagePreview: {
+      width: "100%",
+      height: "100%",
+    },
+    imageOverlay: {
+      position: "absolute",
+      bottom: 12,
+      right: 12,
+      flexDirection: "row",
+      gap: 8,
+    },
+    imageActionButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: `${theme.primary}E6`,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    deleteImageButton: {
+      backgroundColor: `${theme.error}E6`,
+    },
+    section: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    inputGroup: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    required: {
+      color: theme.error,
+    },
+    input: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: RFValue(15),
+      color: theme.text,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    textArea: {
+      minHeight: 100,
+      paddingTop: 14,
+      textAlignVertical: "top",
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 16,
+      gap: 12,
+    },
+    sectionHeaderText: {
+      flex: 1,
+      marginRight: 8,
+    },
+    sectionTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    sectionSubtitle: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      marginTop: 2,
+      flexWrap: "wrap",
+    },
+    addProductsButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      gap: 6,
+      flexShrink: 0,
+    },
+    addProductsText: {
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      color: theme.primary,
+    },
+    productsList: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      overflow: "hidden",
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    productItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    lastProductItem: {
+      borderBottomWidth: 0,
+    },
+    productImageContainer: {
+      marginRight: 12,
+    },
+    productImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 12,
+    },
+    productPlaceholder: {
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    productInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    productName: {
+      fontSize: RFValue(15),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    productQuantityContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    quantityInput: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      width: 70,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      color: theme.text,
+    },
+    unitText: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    macrosChips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    macroChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      gap: 3,
+    },
+    macroChipText: {
+      fontSize: RFValue(11),
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    proteinText: {
+      color: "#2196F3",
+    },
+    carbsText: {
+      color: "#FFB74D",
+    },
+    fatText: {
+      color: "#FF9800",
+    },
+    removeProductButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: `${theme.error}15`,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyProducts: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 48,
+      alignItems: "center",
+    },
+    emptyIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.backgroundSecondary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    emptyProductsText: {
+      fontSize: RFValue(17),
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    emptyProductsSubtext: {
+      fontSize: RFValue(14),
+      color: theme.textTertiary,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    macrosCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 20,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    macroGrid: {
+      gap: 16,
+    },
+    mainMacro: {
+      alignItems: "center",
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.backgroundSecondary,
+    },
+    mainMacroValue: {
+      fontSize: RFValue(32),
+      fontWeight: "700",
+      color: "#FF6B6B",
+      marginTop: 8,
+    },
+    mainMacroLabel: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    macrosGrid: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingTop: 8,
+    },
+    secondaryMacro: {
+      alignItems: "center",
+      flex: 1,
+    },
+    macroIndicator: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginBottom: 8,
+    },
+    secondaryMacroValue: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 4,
+    },
+    secondaryMacroLabel: {
+      fontSize: RFValue(11),
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    footer: {
+      padding: 16,
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    saveButton: {
+      flexDirection: "row",
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: "#FFF",
+    },
+    bottomPadding: {
+      height: 32,
+    },
+  });

@@ -19,7 +19,7 @@ import {
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import { FoodUnit } from "../../../models/nutrition.model";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -43,7 +43,12 @@ type EditProductScreenRouteProp = RouteProp<
   "EditProductScreen"
 >;
 
-const UNITS_CONFIG = [
+const UNITS_CONFIG: {
+  label: string;
+  value: FoodUnit;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}[] = [
   {
     label: "Gramos",
     value: "g" as FoodUnit,
@@ -78,16 +83,16 @@ export default function EditProductScreen() {
   const [description, setDescription] = useState(product?.description || "");
   const [brand, setBrand] = useState(product?.brand || "");
   const [imageUri, setImageUri] = useState<string | null>(
-    product?.image || null
+    product?.image || null,
   );
   const [barcode, setBarcode] = useState(product?.barcode || "");
   const [servingSize, setServingSize] = useState(
-    product?.servingSize ? String(product.servingSize) : ""
+    product?.servingSize ? String(product.servingSize) : "",
   );
   const [servingUnit, setServingUnit] = useState<FoodUnit>(
     (product?.servingUnit === "gram"
       ? "g"
-      : (product?.servingUnit as FoodUnit)) || "g"
+      : (product?.servingUnit as FoodUnit)) || "g",
   );
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -100,7 +105,7 @@ export default function EditProductScreen() {
       fiber: product?.fiberPer100 ? String(product.fiberPer100) : "",
       sugar: product?.sugarPer100 ? String(product.sugarPer100) : "",
       sodium: product?.sodiumPer100 ? String(product.sodiumPer100) : "",
-    }
+    },
   );
 
   useEffect(() => {
@@ -118,7 +123,7 @@ export default function EditProductScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos"
+        "Por favor permite el acceso a tus fotos",
       );
       return;
     }
@@ -146,13 +151,13 @@ export default function EditProductScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ]
+      ],
     );
   };
 
   const updateNutritionalValue = (
     key: keyof NutritionalValues,
-    value: string
+    value: string,
   ) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
@@ -247,7 +252,7 @@ export default function EditProductScreen() {
       console.error("Error updating product:", error);
       Alert.alert(
         "Error",
-        "No se pudo actualizar el producto. Intenta de nuevo."
+        "No se pudo actualizar el producto. Intenta de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -285,14 +290,14 @@ export default function EditProductScreen() {
               console.error("Error deleting product:", error);
               Alert.alert(
                 "Error",
-                "No se pudo eliminar el producto. Intenta de nuevo."
+                "No se pudo eliminar el producto. Intenta de nuevo.",
               );
             } finally {
               setDeleting(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -468,7 +473,7 @@ export default function EditProductScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={selectedUnit.icon as any}
+                      name={selectedUnit.icon}
                       size={20}
                       color={selectedUnit.color}
                     />
@@ -663,7 +668,7 @@ export default function EditProductScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={unitOption.icon as any}
+                    name={unitOption.icon}
                     size={24}
                     color={unitOption.color}
                   />
@@ -685,7 +690,7 @@ export default function EditProductScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

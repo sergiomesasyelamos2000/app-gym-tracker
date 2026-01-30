@@ -86,7 +86,7 @@ if (
 
 const MEAL_CONFIG: Record<
   MealType,
-  { icon: string; label: string; color: string }
+  { icon: keyof typeof Ionicons.glyphMap; label: string; color: string }
 > = {
   breakfast: { icon: "cafe-outline", label: "Desayuno", color: "#FF9800" },
   lunch: { icon: "restaurant-outline", label: "Almuerzo", color: "#4CAF50" },
@@ -94,7 +94,12 @@ const MEAL_CONFIG: Record<
   snack: { icon: "pizza-outline", label: "Snack", color: "#2196F3" },
 };
 
-export default function MacrosScreen({ navigation }: { navigation: any }) {
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { NutritionStackParamList } from "./NutritionStack";
+
+type Props = NativeStackScreenProps<NutritionStackParamList, "MacrosScreen">;
+
+export default function MacrosScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
@@ -106,17 +111,17 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const hasProfile = useNutritionStore((state) => state.hasProfile);
   const setHasProfile = useNutritionStore((state) => state.setHasProfile);
   const setTabVisibility = useNavigationStore(
-    (state) => state.setTabVisibility
+    (state) => state.setTabVisibility,
   );
 
   const [calendarKey, setCalendarKey] = useState(0);
   const [showSetupPrompt, setShowSetupPrompt] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [notEatenEntries, setNotEatenEntries] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [refreshing, setRefreshing] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(false);
@@ -124,7 +129,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   const [showScanner, setShowScanner] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(
     {
@@ -132,7 +137,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       lunch: true,
       dinner: true,
       snack: true,
-    }
+    },
   );
 
   const animatedCarbs = useRef(new Animated.Value(0)).current;
@@ -148,7 +153,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   const isSelectionMode = selectedEntries.size > 0;
   const isAllNotEatenSelected = Array.from(selectedEntries).every((id) =>
-    notEatenEntries.has(id)
+    notEatenEntries.has(id),
   );
   const isToday = selectedDate === new Date().toISOString().split("T")[0];
 
@@ -189,7 +194,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           Alert.alert(
             "Sesión Expirada",
             "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
-            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+            [
+              {
+                text: "OK",
+                onPress: () => (navigation as any).navigate("Login"),
+              },
+            ],
           );
           return;
         }
@@ -221,16 +231,19 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => {
     const effectiveEntries = todayEntries.filter(
-      (entry) => !notEatenEntries.has(entry.id || "")
+      (entry) => !notEatenEntries.has(entry.id || ""),
     );
 
     const totals = effectiveEntries.reduce(
-      (acc, entry) => ({
-        carbs: acc.carbs + entry.carbs,
-        protein: acc.protein + entry.protein,
-        fat: acc.fat + entry.fat,
+      (
+        acc: { carbs: number; protein: number; fat: number },
+        entry: FoodEntry,
+      ) => ({
+        carbs: acc.carbs + (entry.carbs || 0),
+        protein: acc.protein + (entry.protein || 0),
+        fat: acc.fat + (entry.fat || 0),
       }),
-      { carbs: 0, protein: 0, fat: 0 }
+      { carbs: 0, protein: 0, fat: 0 },
     );
 
     Animated.parallel([
@@ -295,7 +308,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       }
       setTabVisibility("Macros", true);
       return () => setTabVisibility("Macros", true);
-    }, [selectedDate, user, setTabVisibility])
+    }, [selectedDate, user, setTabVisibility]),
   );
 
   const loadEntriesForDate = async (date: string) => {
@@ -330,7 +343,12 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
           Alert.alert(
             "Sesión Expirada",
             "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
-            [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+            [
+              {
+                text: "OK",
+                onPress: () => (navigation as any).navigate("Login"),
+              },
+            ],
           );
           return;
         }
@@ -393,7 +411,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -412,7 +430,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               setDuplicating(true);
 
               const entriesToDuplicate = todayEntries.filter((entry) =>
-                selectedEntries.has(entry.id || "")
+                selectedEntries.has(entry.id || ""),
               );
 
               for (const entry of entriesToDuplicate) {
@@ -437,7 +455,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
 
               Alert.alert(
                 "¡Éxito!",
-                `${entriesToDuplicate.length} alimento(s) duplicado(s) correctamente`
+                `${entriesToDuplicate.length} alimento(s) duplicado(s) correctamente`,
               );
             } catch (error) {
               console.error("Error duplicating entries:", error);
@@ -447,7 +465,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -491,7 +509,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
       } else {
         Alert.alert(
           "Producto no encontrado",
-          "No se pudo encontrar el producto con ese código de barras"
+          "No se pudo encontrar el producto con ese código de barras",
         );
       }
     } catch (error) {
@@ -505,7 +523,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     setExpandedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
   };
 
-  const handleDateSelect = (day: any) => {
+  const handleDateSelect = (day: { dateString: string }) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSelectedDate(day.dateString);
     setCalendarKey((prev) => prev + 1);
@@ -660,17 +678,20 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
   };
 
   const effectiveEntries = todayEntries.filter(
-    (entry) => !notEatenEntries.has(entry.id || "")
+    (entry) => !notEatenEntries.has(entry.id || ""),
   );
 
   const totals = effectiveEntries.reduce(
-    (acc, entry) => ({
-      calories: acc.calories + entry.calories,
-      protein: acc.protein + entry.protein,
-      carbs: acc.carbs + entry.carbs,
-      fat: acc.fat + entry.fat,
+    (
+      acc: { calories: number; protein: number; carbs: number; fat: number },
+      entry: FoodEntry,
+    ) => ({
+      calories: acc.calories + (entry.calories || 0),
+      protein: acc.protein + (entry.protein || 0),
+      carbs: acc.carbs + (entry.carbs || 0),
+      fat: acc.fat + (entry.fat || 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    { calories: 0, protein: 0, carbs: 0, fat: 0 },
   );
 
   const remaining = {
@@ -684,11 +705,14 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     calories: Math.min(100, (totals.calories / goals.dailyCalories) * 100),
   };
 
-  const entriesByMeal = todayEntries.reduce((acc, entry) => {
-    if (!acc[entry.mealType]) acc[entry.mealType] = [];
-    acc[entry.mealType].push(entry);
-    return acc;
-  }, {} as Record<MealType, FoodEntry[]>);
+  const entriesByMeal = todayEntries.reduce(
+    (acc: Record<MealType, FoodEntry[]>, entry: FoodEntry) => {
+      if (!acc[entry.mealType]) acc[entry.mealType] = [];
+      acc[entry.mealType].push(entry);
+      return acc;
+    },
+    {} as Record<MealType, FoodEntry[]>,
+  );
 
   const renderFoodEntry = (entry: FoodEntry) => {
     const isSelected = selectedEntries.has(entry.id || "");
@@ -768,7 +792,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
     const entries = entriesByMeal[mealType] || [];
     const mealTotals = entries
       .filter((entry) => !notEatenEntries.has(entry.id || ""))
-      .reduce((sum, entry) => sum + entry.calories, 0);
+      .reduce((sum: number, entry: FoodEntry) => sum + entry.calories, 0);
     const isExpanded = expandedMeals[mealType];
     const mealConfig = MEAL_CONFIG[mealType];
 
@@ -787,7 +811,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
               ]}
             >
               <Ionicons
-                name={mealConfig.icon as any}
+                name={mealConfig.icon}
                 size={22}
                 color={mealConfig.color}
               />
@@ -1021,7 +1045,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
         <View style={styles.diarySection}>
           <Text style={styles.sectionTitle}>Diario de Alimentos</Text>
           {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map(
-            renderMealSection
+            renderMealSection,
           )}
         </View>
 
@@ -1180,7 +1204,7 @@ export default function MacrosScreen({ navigation }: { navigation: any }) {
                 style={styles.confirmButton}
                 onPress={() => {
                   LayoutAnimation.configureNext(
-                    LayoutAnimation.Presets.easeInEaseOut
+                    LayoutAnimation.Presets.easeInEaseOut,
                   );
                   setShowCalendar(false);
                   loadEntriesForDate(selectedDate);

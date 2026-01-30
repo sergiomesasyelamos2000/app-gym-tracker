@@ -50,7 +50,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       Alert.alert(
         "Error",
         "No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        [{ text: "OK", onPress: () => navigation.goBack() }],
       );
     }
   }, [userId]);
@@ -106,7 +106,11 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     },
   ];
 
-  const weightGoals: { value: WeightGoal; label: string; icon: string }[] = [
+  const weightGoals: {
+    value: WeightGoal;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }[] = [
     { value: "lose", label: "Perder Peso", icon: "trending-down" },
     { value: "maintain", label: "Mantener Peso", icon: "remove" },
     { value: "gain", label: "Ganar Peso", icon: "trending-up" },
@@ -421,7 +425,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                   onPress={() => setWeightGoal(goal.value)}
                 >
                   <Ionicons
-                    name={goal.icon as any}
+                    name={goal.icon}
                     size={32}
                     color={weightGoal === goal.value ? "#fff" : "#6C3BAA"}
                   />
@@ -466,8 +470,8 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
               {weightGoal === "lose"
                 ? "Pérdida de peso recomendada: 0.5 kg/semana"
                 : weightGoal === "gain"
-                ? "Ganancia de peso recomendada: 0.35 kg/semana"
-                : "Mantener peso actual"}
+                  ? "Ganancia de peso recomendada: 0.35 kg/semana"
+                  : "Mantener peso actual"}
             </Text>
             {weightGoal !== "maintain" && (
               <>
@@ -510,7 +514,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                         getEstimatedTimeToGoal(
                           parseFloat(weight),
                           parseFloat(targetWeight),
-                          weeklyWeightChange
+                          weeklyWeightChange,
                         ).months
                       }{" "}
                       meses

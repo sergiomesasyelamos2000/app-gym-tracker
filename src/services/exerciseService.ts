@@ -1,21 +1,28 @@
-import { apiFetch } from "../api/index";
+import { apiFetch } from "../api/client";
 import {
   CreateExerciseDto,
   EquipmentDto,
+  ExerciseRequestDto,
   ExerciseTypeDto,
   MuscleDto,
 } from "../models/index.js";
 
-export const fetchExercises = async (): Promise<any[]> => {
-  return apiFetch("exercises");
+export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
+  return apiFetch<ExerciseRequestDto[]>("exercises");
 };
 
-export const searchExercises = async (query: string): Promise<any[]> => {
-  return apiFetch(`exercises/search?name=${encodeURIComponent(query)}`);
+export const searchExercises = async (
+  query: string,
+): Promise<ExerciseRequestDto[]> => {
+  return apiFetch<ExerciseRequestDto[]>(
+    `exercises/search?name=${encodeURIComponent(query)}`,
+  );
 };
 
-export const createExercise = async (exercise: CreateExerciseDto) => {
-  return apiFetch("exercises", {
+export const createExercise = async (
+  exercise: CreateExerciseDto,
+): Promise<ExerciseRequestDto> => {
+  return apiFetch<ExerciseRequestDto>("exercises", {
     method: "POST",
     body: JSON.stringify(exercise),
     headers: {

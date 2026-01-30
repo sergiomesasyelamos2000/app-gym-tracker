@@ -5,6 +5,11 @@ import {
   findAllRoutines,
   findAllRoutineSessions,
 } from "../features/routine/services/routineService";
+import type {
+  RoutineEntity,
+  RoutineSessionEntity,
+} from "@entity-data-models/index";
+import { DailyNutritionSummary } from "../models/nutrition.model";
 
 export type ExportFormat = "json" | "csv";
 export type DataType = "workouts" | "nutrition" | "all";
@@ -14,6 +19,14 @@ export interface ExportOptions {
   endDate: Date;
   format: ExportFormat;
   dataType: DataType;
+}
+
+export interface ExportData {
+  workouts?: {
+    routines: RoutineEntity[];
+    sessions: (RoutineSessionEntity & { routineTitle: string })[];
+  };
+  nutrition?: DailyNutritionSummary[];
 }
 
 export const exportService = {
@@ -28,9 +41,9 @@ export const exportService = {
     }
   },
 
-  async fetchData(options: ExportOptions): Promise<any> {
+  async fetchData(options: ExportOptions): Promise<ExportData> {
     const { dataType } = options;
-    const data: any = {};
+    const data: ExportData = {};
 
     // Normalize dates to include full days
     // Set startDate to beginning of day (00:00:00)
@@ -50,11 +63,11 @@ export const exportService = {
       // Filter sessions by date and attach routine title
       // The backend returns session.routine (not session.routineId) with the full routine object
       const filteredSessions = sessions
-        .filter((session: any) => {
+        .filter((session: RoutineSessionEntity) => {
           const sessionDate = new Date(session.createdAt);
           return sessionDate >= startDate && sessionDate <= endDate;
         })
-        .map((session: any) => ({
+        .map((session: RoutineSessionEntity) => ({
           ...session,
           routineTitle: session.routine?.title || "Unknown",
         }));
@@ -67,7 +80,7 @@ export const exportService = {
 
     if (dataType === "nutrition" || dataType === "all") {
       // Fetch nutrition data month by month
-      const nutritionData = [];
+      const nutritionData: DailyNutritionSummary[] = [];
       let currentDate = new Date(startDate);
       const endMonth = new Date(endDate);
 
@@ -89,7 +102,7 @@ export const exportService = {
       }
 
       // Filter strictly by date range (since monthly fetch might include extra days)
-      data.nutrition = nutritionData.filter((entry: any) => {
+      data.nutrition = nutritionData.filter((entry: DailyNutritionSummary) => {
         const entryDate = new Date(entry.date);
         return entryDate >= startDate && entryDate <= endDate;
       });
@@ -98,7 +111,7 @@ export const exportService = {
     return data;
   },
 
-  async generateFile(data: any, format: ExportFormat): Promise<string> {
+  async generateFile(data: ExportData, format: ExportFormat): Promise<string> {
     const fileName = `gym-tracker-export-${
       new Date().toISOString().split("T")[0]
     }.${format}`;
@@ -118,21 +131,21 @@ export const exportService = {
     return fileUri;
   },
 
-  convertToCSV(data: any): string {
+  convertToCSV(data: ExportData): string {
     let csv = "";
 
     if (data.workouts) {
       csv += "WORKOUT SESSIONS\n";
       csv += "Date,Routine,Exercise,Set,Weight (kg),Reps\n";
-      data.workouts.sessions.forEach((session: any) => {
+      data.workouts.sessions.forEach((session) => {
         const date = new Date(session.createdAt).toLocaleDateString();
         const routine = `"${session.routineTitle || "Unknown"}"`;
 
         if (session.exercises && Array.isArray(session.exercises)) {
-          session.exercises.forEach((exercise: any) => {
-            const exerciseName = `"${exercise.exerciseName || "Unknown"}"`;
+          session.exercises.forEach((exercise) => {
+            const exerciseName = `"${exercise.name || "Unknown"}"`;
             if (exercise.sets && Array.isArray(exercise.sets)) {
-              exercise.sets.forEach((set: any, index: number) => {
+              exercise.sets.forEach((set, index: number) => {
                 csv += `${date},${routine},${exerciseName},${
                   index + 1
                 },${set.weight || 0},${set.reps || 0}\n`;
@@ -150,7 +163,7 @@ export const exportService = {
     if (data.nutrition) {
       csv += "NUTRITION LOG\n";
       csv += "Date,Calories,Protein (g),Carbs (g),Fat (g)\n";
-      data.nutrition.forEach((day: any) => {
+      data.nutrition.forEach((day) => {
         csv += `${day.date},${day.totals.calories},${day.totals.protein},${day.totals.carbs},${day.totals.fat}\n`;
       });
     }

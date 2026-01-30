@@ -1,4 +1,5 @@
-import { SetRequestDto } from "../models";
+import { SetRequestDto } from "@entity-data-models/index";
+import type { RoutineSessionEntity } from "@entity-data-models/index";
 
 export interface RecordData {
   id: string;
@@ -38,7 +39,7 @@ export function calculateVolume(weight: number, reps: number): number {
  */
 export function getBestMetrics(
   exerciseId: string,
-  previousSessions: any[],
+  previousSessions: RoutineSessionEntity[],
 ): {
   best1RM: number;
   bestWeight: number;
@@ -49,11 +50,13 @@ export function getBestMetrics(
   let bestVolume = 0;
 
   previousSessions.forEach((session) => {
-    session.exercises?.forEach((ex: any) => {
+    session.exercises?.forEach((ex) => {
+      // Check both exerciseId (standard) and id (legacy/compatibility)
+      // @ts-ignore: handling potential legacy data structure not in strict type
       if (ex.exerciseId === exerciseId || ex.id === exerciseId) {
-        ex.sets?.forEach((set: any) => {
-          const weight = parseFloat(set.weight) || 0;
-          const reps = parseInt(set.reps) || 0;
+        ex.sets?.forEach((set) => {
+          const weight = Number(set.weight) || 0;
+          const reps = Number(set.reps) || 0;
 
           if (set.completed) {
             // Calculate 1RM
@@ -88,7 +91,7 @@ export function detectRecord(
   exerciseId: string,
   exerciseName: string,
   newSet: SetRequestDto,
-  previousSessions: any[],
+  previousSessions: RoutineSessionEntity[],
 ): RecordData | null {
   const weight = newSet.weight ?? 0;
   const reps = newSet.reps ?? 0;

@@ -56,29 +56,29 @@ export default function EditNutritionProfileScreen({
 
   // Form data - inicializar con datos del perfil existente
   const [gender, setGender] = useState<Gender>(
-    userProfile?.anthropometrics.gender || "male"
+    userProfile?.anthropometrics.gender || "male",
   );
 
   const [age, setAge] = useState(
-    userProfile?.anthropometrics.age.toString() || ""
+    userProfile?.anthropometrics.age.toString() || "",
   );
   const [weight, setWeight] = useState(
-    userProfile?.anthropometrics.weight.toString() || ""
+    userProfile?.anthropometrics.weight.toString() || "",
   );
   const [height, setHeight] = useState(
-    userProfile?.anthropometrics.height.toString() || ""
+    userProfile?.anthropometrics.height.toString() || "",
   );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
-    userProfile?.anthropometrics.activityLevel || "moderately_active"
+    userProfile?.anthropometrics.activityLevel || "moderately_active",
   );
   const [weightGoal, setWeightGoal] = useState<WeightGoal>(
-    userProfile?.goals.weightGoal || "maintain"
+    userProfile?.goals.weightGoal || "maintain",
   );
   const [targetWeight, setTargetWeight] = useState(
-    userProfile?.goals.targetWeight.toString() || ""
+    userProfile?.goals.targetWeight.toString() || "",
   );
   const [weeklyWeightChange, setWeeklyWeightChange] = useState(
-    userProfile?.goals.weeklyWeightChange || 0.5
+    userProfile?.goals.weeklyWeightChange || 0.5,
   );
 
   // Modal states
@@ -91,7 +91,7 @@ export default function EditNutritionProfileScreen({
       Alert.alert(
         "Error",
         "No se encontró el perfil de nutrición. Por favor, completa la configuración inicial.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        [{ text: "OK", onPress: () => navigation.goBack() }],
       );
     }
   }, [userProfile, currentUser]);
@@ -128,7 +128,11 @@ export default function EditNutritionProfileScreen({
     },
   ];
 
-  const weightGoals: { value: WeightGoal; label: string; icon: string }[] = [
+  const weightGoals: {
+    value: WeightGoal;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }[] = [
     { value: "lose", label: "Perder Peso", icon: "trending-down" },
     { value: "maintain", label: "Mantener Peso", icon: "remove" },
     { value: "gain", label: "Ganar Peso", icon: "trending-up" },
@@ -216,13 +220,13 @@ export default function EditNutritionProfileScreen({
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error("Error updating profile:", error);
       Alert.alert(
         "Error",
-        "No se pudo actualizar el perfil. Por favor intenta de nuevo."
+        "No se pudo actualizar el perfil. Por favor intenta de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -418,7 +422,7 @@ export default function EditNutritionProfileScreen({
                   onPress={() => setWeightGoal(goal.value)}
                 >
                   <Ionicons
-                    name={goal.icon as any}
+                    name={goal.icon}
                     size={32}
                     color={weightGoal === goal.value ? "#fff" : "#6C3BAA"}
                   />
@@ -463,8 +467,8 @@ export default function EditNutritionProfileScreen({
               {weightGoal === "lose"
                 ? "Pérdida de peso recomendada: 0.5 kg/semana"
                 : weightGoal === "gain"
-                ? "Ganancia de peso recomendada: 0.35 kg/semana"
-                : "Mantener peso actual"}
+                  ? "Ganancia de peso recomendada: 0.35 kg/semana"
+                  : "Mantener peso actual"}
             </Text>
             {weightGoal !== "maintain" && (
               <>
@@ -507,7 +511,7 @@ export default function EditNutritionProfileScreen({
                         getEstimatedTimeToGoal(
                           parseFloat(weight),
                           parseFloat(targetWeight),
-                          weeklyWeightChange
+                          weeklyWeightChange,
                         ).months
                       }{" "}
                       meses

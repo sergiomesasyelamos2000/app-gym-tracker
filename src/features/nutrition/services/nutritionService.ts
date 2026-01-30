@@ -1,5 +1,5 @@
 import * as FileSystem from "expo-file-system";
-import { apiFetch } from "../../../api";
+import { apiFetch } from "../../../api/client";
 import {
   CustomMeal,
   CustomProduct,
@@ -11,13 +11,17 @@ import {
   ShoppingListItem,
 } from "../../../models/nutrition.model";
 import { UserNutritionProfileResponseDto } from "../../../models/user-nutrition-profile.model";
+import {
+  ChatResponseDto,
+  RecognizeFoodResponseDto,
+} from "@entity-data-models/index";
 import { useAuthStore } from "../../../store/useAuthStore";
 
 /**
  * Get current user ID from auth store
  * @throws Error if user is not authenticated
  */
-function getCurrentUserId(): string {
+export function getCurrentUserId(): string {
   const userId = useAuthStore.getState().user?.id;
   if (!userId) {
     throw new Error("User not authenticated. Please log in.");
@@ -25,7 +29,9 @@ function getCurrentUserId(): string {
   return userId;
 }
 
-async function convertImageToBase64(uri: string): Promise<string | null> {
+export async function convertImageToBase64(
+  uri: string,
+): Promise<string | null> {
   try {
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
@@ -50,17 +56,22 @@ async function convertImageToBase64(uri: string): Promise<string | null> {
 export async function postText(
   text: string,
   history?: Array<{ role: string; content: string }>,
-  userId?: string
-): Promise<any> {
-  return apiFetch("nutrition", {
+  userId?: string,
+): Promise<ChatResponseDto> {
+  // We need to map the history to match proper types if needed,
+  // typically the DTO expects role as 'user'|'assistant'|'system'
+  // and history comes as such.
+  return apiFetch<ChatResponseDto>("nutrition", {
     method: "POST",
     body: JSON.stringify({ text, history, userId }),
   });
 }
 
 // Photo analysis
-export async function postPhoto(formData: FormData): Promise<any> {
-  return apiFetch("nutrition/photo", {
+export async function postPhoto(
+  formData: FormData,
+): Promise<RecognizeFoodResponseDto[]> {
+  return apiFetch<RecognizeFoodResponseDto[]>("nutrition/photo", {
     method: "POST",
     body: formData,
   });
@@ -68,7 +79,7 @@ export async function postPhoto(formData: FormData): Promise<any> {
 
 // Barcode scanning
 export async function scanBarcode(code: string): Promise<Product> {
-  return apiFetch("nutrition/barcode", {
+  return apiFetch<Product>("nutrition/barcode", {
     method: "POST",
     body: JSON.stringify({ code }),
   });
@@ -77,46 +88,49 @@ export async function scanBarcode(code: string): Promise<Product> {
 // Product search - Lista de productos populares españoles
 export async function getProducts(
   page = 1,
-  pageSize = 20
+  pageSize = 20,
 ): Promise<{ products: Product[]; total: number }> {
-  return apiFetch(`nutrition/products?page=${page}&pageSize=${pageSize}`, {
-    method: "GET",
-  });
+  return apiFetch<{ products: Product[]; total: number }>(
+    `nutrition/products?page=${page}&pageSize=${pageSize}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 // Búsqueda avanzada de productos por nombre (optimizado para España)
 export async function searchProductsByName(
   searchTerm: string,
   page = 1,
-  pageSize = 20
+  pageSize = 20,
 ): Promise<{ products: Product[]; total: number }> {
   if (!searchTerm || searchTerm.trim().length === 0) {
     return { products: [], total: 0 };
   }
 
-  return apiFetch(
+  return apiFetch<{ products: Product[]; total: number }>(
     `nutrition/products/search?q=${encodeURIComponent(
-      searchTerm.trim()
+      searchTerm.trim(),
     )}&page=${page}&pageSize=${pageSize}`,
     {
       method: "GET",
-    }
+    },
   );
 }
 
 // Get product detail by code
 export async function getProductDetail(code: string): Promise<Product> {
-  return apiFetch(`nutrition/products/${code}`, {
+  return apiFetch<Product>(`nutrition/products/${code}`, {
     method: "GET",
   });
 }
 
 // User Profile Management
 export async function getUserProfile(
-  userId: string
+  userId: string,
 ): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/profile/${id}`, {
+  return apiFetch<UserNutritionProfileResponseDto>(`nutrition/profile/${id}`, {
     method: "GET",
   });
 }
@@ -127,7 +141,7 @@ export async function createUserProfile(
     "id" | "createdAt" | "updatedAt" | "userId"
   > & {
     userId?: string;
-  }
+  },
 ): Promise<UserNutritionProfileResponseDto> {
   const userId = profile.userId || getCurrentUserId();
 
@@ -160,7 +174,7 @@ export async function createUserProfile(
     },
   };
 
-  return apiFetch("nutrition/profile", {
+  return apiFetch<UserNutritionProfileResponseDto>("nutrition/profile", {
     method: "POST",
     body: JSON.stringify(dto),
   });
@@ -168,10 +182,10 @@ export async function createUserProfile(
 
 export async function updateUserProfile(
   updates: Partial<UserNutritionProfileResponseDto>,
-  userId?: string
+  userId?: string,
 ): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/profile/${id}`, {
+  return apiFetch<UserNutritionProfileResponseDto>(`nutrition/profile/${id}`, {
     method: "PUT",
     body: JSON.stringify(updates),
   });
@@ -179,21 +193,24 @@ export async function updateUserProfile(
 
 export async function updateMacroGoals(
   goals: MacroGoals,
-  userId?: string
+  userId?: string,
 ): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/profile/${id}/goals`, {
-    method: "PUT",
-    body: JSON.stringify(goals),
-  });
+  return apiFetch<UserNutritionProfileResponseDto>(
+    `nutrition/profile/${id}/goals`,
+    {
+      method: "PUT",
+      body: JSON.stringify(goals),
+    },
+  );
 }
 
 // Food Diary Management
 export async function addFoodEntry(
-  entry: Omit<FoodEntry, "id" | "createdAt" | "userId"> & { userId?: string }
+  entry: Omit<FoodEntry, "id" | "createdAt" | "userId"> & { userId?: string },
 ): Promise<FoodEntry> {
   const userId = entry.userId || getCurrentUserId();
-  return apiFetch("nutrition/diary", {
+  return apiFetch<FoodEntry>("nutrition/diary", {
     method: "POST",
     body: JSON.stringify({ ...entry, userId }),
   });
@@ -201,19 +218,19 @@ export async function addFoodEntry(
 
 export async function getDailyEntries(
   userId: string,
-  date: string
+  date: string,
 ): Promise<DailyNutritionSummary> {
-  return apiFetch(`nutrition/diary/${userId}/${date}`, {
+  return apiFetch<DailyNutritionSummary>(`nutrition/diary/${userId}/${date}`, {
     method: "GET",
   });
 }
 
 export async function updateFoodEntry(
   entryId: string,
-  updates: Partial<FoodEntry>
+  updates: Partial<FoodEntry>,
 ): Promise<FoodEntry> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/diary/${entryId}`, {
+  return apiFetch<FoodEntry>(`nutrition/diary/${entryId}`, {
     method: "PUT",
     body: JSON.stringify({ ...updates, userId }),
   });
@@ -221,7 +238,7 @@ export async function updateFoodEntry(
 
 export async function deleteFoodEntry(entryId: string): Promise<void> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/diary/${entryId}?userId=${userId}`, {
+  return apiFetch<void>(`nutrition/diary/${entryId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
@@ -229,23 +246,29 @@ export async function deleteFoodEntry(entryId: string): Promise<void> {
 // Get weekly/monthly summaries
 export async function getWeeklySummary(
   startDate: string,
-  userId?: string
+  userId?: string,
 ): Promise<DailyNutritionSummary[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/diary/${id}/weekly?startDate=${startDate}`, {
-    method: "GET",
-  });
+  return apiFetch<DailyNutritionSummary[]>(
+    `nutrition/diary/${id}/weekly?startDate=${startDate}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function getMonthlySummary(
   year: number,
   month: number,
-  userId?: string
+  userId?: string,
 ): Promise<DailyNutritionSummary[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/diary/${id}/monthly?year=${year}&month=${month}`, {
-    method: "GET",
-  });
+  return apiFetch<DailyNutritionSummary[]>(
+    `nutrition/diary/${id}/monthly?year=${year}&month=${month}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 // ==================== SHOPPING LIST ====================
@@ -253,30 +276,30 @@ export async function getMonthlySummary(
 export async function addToShoppingList(
   item: Omit<ShoppingListItem, "id" | "createdAt" | "purchased" | "userId"> & {
     userId?: string;
-  }
+  },
 ): Promise<ShoppingListItem> {
   const userId = item.userId || getCurrentUserId();
-  return apiFetch("nutrition/shopping-list", {
+  return apiFetch<ShoppingListItem>("nutrition/shopping-list", {
     method: "POST",
     body: JSON.stringify({ ...item, userId }),
   });
 }
 
 export async function getShoppingList(
-  userId?: string
+  userId?: string,
 ): Promise<ShoppingListItem[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/shopping-list/${id}`, {
+  return apiFetch<ShoppingListItem[]>(`nutrition/shopping-list/${id}`, {
     method: "GET",
   });
 }
 
 export async function updateShoppingListItem(
   itemId: string,
-  updates: Partial<ShoppingListItem>
+  updates: Partial<ShoppingListItem>,
 ): Promise<ShoppingListItem> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/shopping-list/${itemId}`, {
+  return apiFetch<ShoppingListItem>(`nutrition/shopping-list/${itemId}`, {
     method: "PUT",
     body: JSON.stringify({ ...updates, userId }),
   });
@@ -284,30 +307,33 @@ export async function updateShoppingListItem(
 
 export async function togglePurchased(
   itemId: string,
-  userId: string
+  userId: string,
 ): Promise<ShoppingListItem> {
-  return apiFetch(`nutrition/shopping-list/${userId}/${itemId}/toggle`, {
-    method: "PUT",
-  });
+  return apiFetch<ShoppingListItem>(
+    `nutrition/shopping-list/${userId}/${itemId}/toggle`,
+    {
+      method: "PUT",
+    },
+  );
 }
 
 export async function deleteShoppingListItem(itemId: string): Promise<void> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/shopping-list/${itemId}?userId=${userId}`, {
+  return apiFetch<void>(`nutrition/shopping-list/${itemId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
 
 export async function clearPurchasedItems(userId?: string): Promise<number> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/shopping-list/${id}/purchased`, {
+  return apiFetch<number>(`nutrition/shopping-list/${id}/purchased`, {
     method: "DELETE",
   });
 }
 
 export async function clearShoppingList(userId?: string): Promise<void> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/shopping-list/${id}/all`, {
+  return apiFetch<void>(`nutrition/shopping-list/${id}/all`, {
     method: "DELETE",
   });
 }
@@ -317,58 +343,58 @@ export async function clearShoppingList(userId?: string): Promise<void> {
 export async function addFavorite(
   favorite: Omit<FavoriteProduct, "id" | "createdAt" | "userId"> & {
     userId?: string;
-  }
+  },
 ): Promise<FavoriteProduct> {
   const userId = favorite.userId || getCurrentUserId();
-  return apiFetch("nutrition/favorites", {
+  return apiFetch<FavoriteProduct>("nutrition/favorites", {
     method: "POST",
     body: JSON.stringify({ ...favorite, userId }),
   });
 }
 
 export async function getFavorites(
-  userId?: string
+  userId?: string,
 ): Promise<FavoriteProduct[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/favorites/${id}`, {
+  return apiFetch<FavoriteProduct[]>(`nutrition/favorites/${id}`, {
     method: "GET",
   });
 }
 
 export async function isFavorite(
   productCode: string,
-  userId?: string
+  userId?: string,
 ): Promise<boolean> {
   const id = userId || getCurrentUserId();
-  const result = await apiFetch(
+  const result = await apiFetch<boolean>(
     `nutrition/favorites/${id}/check/${productCode}`,
     {
       method: "GET",
-    }
+    },
   );
   return result;
 }
 
 export async function removeFavoriteByProductCode(
   productCode: string,
-  userId?: string
+  userId?: string,
 ): Promise<void> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/favorites/${id}/product/${productCode}`, {
+  return apiFetch<void>(`nutrition/favorites/${id}/product/${productCode}`, {
     method: "DELETE",
   });
 }
 
 export async function searchFavorites(
   query: string,
-  userId?: string
+  userId?: string,
 ): Promise<FavoriteProduct[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(
+  return apiFetch<FavoriteProduct[]>(
     `nutrition/favorites/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
-    }
+    },
   );
 }
 
@@ -377,7 +403,7 @@ export async function searchFavorites(
 export async function createCustomProduct(
   product: Omit<CustomProduct, "id" | "createdAt" | "updatedAt" | "userId"> & {
     userId?: string;
-  }
+  },
 ): Promise<CustomProduct> {
   const userId = product.userId || getCurrentUserId();
 
@@ -389,7 +415,7 @@ export async function createCustomProduct(
     imageBase64 = product.image; // Ya es una URL o base64
   }
 
-  return apiFetch("nutrition/custom-products", {
+  return apiFetch<CustomProduct>("nutrition/custom-products", {
     method: "POST",
     body: JSON.stringify({
       ...product,
@@ -400,27 +426,30 @@ export async function createCustomProduct(
 }
 
 export async function getCustomProducts(
-  userId?: string
+  userId?: string,
 ): Promise<CustomProduct[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/custom-products/${id}`, {
+  return apiFetch<CustomProduct[]>(`nutrition/custom-products/${id}`, {
     method: "GET",
   });
 }
 
 export async function getCustomProductById(
   productId: string,
-  userId?: string
+  userId?: string,
 ): Promise<CustomProduct> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/custom-products/${id}/${productId}`, {
-    method: "GET",
-  });
+  return apiFetch<CustomProduct>(
+    `nutrition/custom-products/${id}/${productId}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function updateCustomProduct(
   productId: string,
-  updates: Partial<CustomProduct>
+  updates: Partial<CustomProduct>,
 ): Promise<CustomProduct> {
   const userId = getCurrentUserId();
 
@@ -430,7 +459,7 @@ export async function updateCustomProduct(
     imageBase64 = (await convertImageToBase64(imageBase64)) || undefined;
   }
 
-  return apiFetch(`nutrition/custom-products/${productId}`, {
+  return apiFetch<CustomProduct>(`nutrition/custom-products/${productId}`, {
     method: "PUT",
     body: JSON.stringify({
       ...updates,
@@ -442,21 +471,24 @@ export async function updateCustomProduct(
 
 export async function deleteCustomProduct(productId: string): Promise<void> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/custom-products/${productId}?userId=${userId}`, {
-    method: "DELETE",
-  });
+  return apiFetch<void>(
+    `nutrition/custom-products/${productId}?userId=${userId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export async function searchCustomProducts(
   query: string,
-  userId?: string
+  userId?: string,
 ): Promise<CustomProduct[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(
+  return apiFetch<CustomProduct[]>(
     `nutrition/custom-products/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
-    }
+    },
   );
 }
 
@@ -473,7 +505,7 @@ export async function createCustomMeal(
     | "totalCarbs"
     | "totalFat"
     | "userId"
-  > & { userId?: string }
+  > & { userId?: string },
 ): Promise<CustomMeal> {
   const userId = meal.userId || getCurrentUserId();
 
@@ -485,7 +517,7 @@ export async function createCustomMeal(
     imageBase64 = meal.image; // Ya es una URL o base64
   }
 
-  return apiFetch("nutrition/custom-meals", {
+  return apiFetch<CustomMeal>("nutrition/custom-meals", {
     method: "POST",
     body: JSON.stringify({
       ...meal,
@@ -497,24 +529,24 @@ export async function createCustomMeal(
 
 export async function getCustomMeals(userId?: string): Promise<CustomMeal[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/custom-meals/${id}`, {
+  return apiFetch<CustomMeal[]>(`nutrition/custom-meals/${id}`, {
     method: "GET",
   });
 }
 
 export async function getCustomMealById(
   mealId: string,
-  userId?: string
+  userId?: string,
 ): Promise<CustomMeal> {
   const id = userId || getCurrentUserId();
-  return apiFetch(`nutrition/custom-meals/${id}/${mealId}`, {
+  return apiFetch<CustomMeal>(`nutrition/custom-meals/${id}/${mealId}`, {
     method: "GET",
   });
 }
 
 export async function updateCustomMeal(
   mealId: string,
-  updates: Partial<CustomMeal>
+  updates: Partial<CustomMeal>,
 ): Promise<CustomMeal> {
   const userId = getCurrentUserId();
 
@@ -524,7 +556,7 @@ export async function updateCustomMeal(
     imageBase64 = (await convertImageToBase64(imageBase64)) || undefined;
   }
 
-  return apiFetch(`nutrition/custom-meals/${mealId}`, {
+  return apiFetch<CustomMeal>(`nutrition/custom-meals/${mealId}`, {
     method: "PUT",
     body: JSON.stringify({
       ...updates,
@@ -536,30 +568,30 @@ export async function updateCustomMeal(
 
 export async function deleteCustomMeal(mealId: string): Promise<void> {
   const userId = getCurrentUserId();
-  return apiFetch(`nutrition/custom-meals/${mealId}?userId=${userId}`, {
+  return apiFetch<void>(`nutrition/custom-meals/${mealId}?userId=${userId}`, {
     method: "DELETE",
   });
 }
 
 export async function duplicateCustomMeal(mealId: string): Promise<CustomMeal> {
   const userId = getCurrentUserId();
-  return apiFetch(
+  return apiFetch<CustomMeal>(
     `nutrition/custom-meals/${mealId}/duplicate?userId=${userId}`,
     {
       method: "POST",
-    }
+    },
   );
 }
 
 export async function searchCustomMeals(
   query: string,
-  userId?: string
+  userId?: string,
 ): Promise<CustomMeal[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch(
+  return apiFetch<CustomMeal[]>(
     `nutrition/custom-meals/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",
-    }
+    },
   );
 }

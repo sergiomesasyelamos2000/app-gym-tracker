@@ -27,6 +27,14 @@ WebBrowser.maybeCompleteAuthSession();
 const { width } = Dimensions.get("window");
 type AuthMode = "login" | "register";
 
+interface GoogleAuthentication {
+  accessToken: string;
+  refreshToken?: string;
+  idToken?: string;
+  expiresIn?: number;
+  issuedAt?: number;
+}
+
 export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,29 +97,31 @@ export default function AuthScreen() {
           duration: 1500,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
   useEffect(() => {
     if (response?.type === "success") {
-      handleGoogleAuthSuccess(response.authentication);
+      handleGoogleAuthSuccess(response.authentication as GoogleAuthentication);
     }
   }, [response]);
 
-  const handleGoogleAuthSuccess = async (authentication: any) => {
+  const handleGoogleAuthSuccess = async (
+    authentication: GoogleAuthentication,
+  ) => {
     setIsLoading(true);
     try {
       const userInfoResponse = await fetch(
         "https://www.googleapis.com/userinfo/v2/me",
         {
           headers: { Authorization: `Bearer ${authentication.accessToken}` },
-        }
+        },
       );
       const userInfo = await userInfoResponse.json();
 
       const authResponse = await googleAuth({
-        accessToken: authentication.accessToken,
+        accessToken: authentication.accessToken!,
         userInfo: {
           id: userInfo.id,
           email: userInfo.email,
@@ -122,8 +132,10 @@ export default function AuthScreen() {
 
       setAuth(authResponse.user, authResponse.tokens);
       Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Error al conectar con Google");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al conectar con Google";
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +157,7 @@ export default function AuthScreen() {
       setAuth(authResponse.user, authResponse.tokens);
       Alert.alert(
         mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
-        `Bienvenido ${authResponse.user.name}`
+        `Bienvenido ${authResponse.user.name}`,
       );
     } catch (error: any) {
       Alert.alert("Error", error.message || "Error en la autenticación");

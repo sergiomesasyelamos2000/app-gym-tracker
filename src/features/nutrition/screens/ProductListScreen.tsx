@@ -6,7 +6,10 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from "@react-navigation/native-stack";
 import React, {
   useCallback,
   useEffect,
@@ -67,13 +70,16 @@ function getNutritionGradeColor(grade: string): string {
   }
 }
 
-interface Props {
-  navigation: any;
-}
+import { GestureResponderEvent } from "react-native";
+
+type ProductListScreenProps = NativeStackScreenProps<
+  NutritionStackParamList,
+  "ProductListScreen"
+>;
 
 interface TabProps {
   searchText: string;
-  navigation: any;
+  navigation: ProductListScreenProps["navigation"];
   selectedMeal?: MealType;
   refreshFavorites?: boolean;
 }
@@ -322,7 +328,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
 
   const allProducts = getCombinedProducts();
 
-  const handleQuickAdd = (item: Product, event: any) => {
+  const handleQuickAdd = (item: Product, event: GestureResponderEvent) => {
     event.stopPropagation();
     navigation.navigate("ProductDetailScreen", {
       producto: item,
@@ -787,7 +793,7 @@ function CustomProductsTab({
   navigation,
   route,
   selectedMeal,
-}: TabProps & { route?: any }) {
+}: TabProps & { route: ProductListScreenRouteProp }) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -1080,7 +1086,7 @@ function CustomMealsTab({
   searchText,
   navigation,
   route,
-}: TabProps & { route?: any }) {
+}: TabProps & { route: ProductListScreenRouteProp }) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -1361,8 +1367,7 @@ export default function ProductListScreen() {
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
 
-  const navigation =
-    useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
+  const navigation = useNavigation<ProductListScreenProps["navigation"]>();
   const route = useRoute<ProductListScreenRouteProp>();
 
   const selectionMode = route.params?.selectionMode || false;
@@ -1594,6 +1599,7 @@ export default function ProductListScreen() {
                 searchText={searchText}
                 navigation={navigation}
                 selectedMeal={selectedMeal}
+                route={route}
               />
             )}
           </Tab.Screen>
