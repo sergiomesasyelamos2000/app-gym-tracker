@@ -23,6 +23,7 @@
       "buildNumber": "1.0.0"
     },
     "android": {
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -48,6 +49,12 @@
           "recordAudioAndroid": true
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "59890898-088b-402b-bc22-b15ec51d1c17"
+      }
+    },
+    "owner": "smy862"
   }
 }

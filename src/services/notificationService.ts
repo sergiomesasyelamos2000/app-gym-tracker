@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
-import { AppState, AppStateStatus, Platform } from "react-native";
+import Constants from "expo-constants";
+import { AppState, AppStateStatus, Linking, Platform } from "react-native";
 
 // Track app state globally
 let currentAppState: AppStateStatus = AppState.currentState;
@@ -19,7 +20,9 @@ Notifications.setNotificationHandler({
       shouldPlaySound: true,
       shouldSetBadge: false,
       shouldShowBanner: true,
-      shouldShowList: !isAppInForeground, // Don't add to list when app is in foreground
+      // For user friendliness, we generally want to show the notification even in foreground
+      // especially for timers.
+      shouldShowList: !isAppInForeground,
     };
   },
 });
@@ -36,7 +39,7 @@ class NotificationService {
   private autoDismissTimers: Map<string, NodeJS.Timeout> = new Map();
 
   /**
-   * Request notification permissions
+   * Request notification permissions with better handling
    */
   async requestPermissions(): Promise<boolean> {
     try {
@@ -44,6 +47,8 @@ class NotificationService {
         await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
+      // Only ask if permissions have not already been determined, because
+      // iOS won't necessarily prompt the user a second time.
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
@@ -53,40 +58,51 @@ class NotificationService {
         return false;
       }
 
-      // For Android, create notification channel with custom sound
+      // Initialize Android Channel
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("rest-timer", {
           name: "Temporizador de Descanso",
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          // Try to use custom sound, fallback to default
-          sound: "rest_complete.mp3", // Custom sound from assets/sounds/
+          sound: "default", // Changed from missing custom sound to default
           enableVibrate: true,
           showBadge: true,
           lockscreenVisibility:
             Notifications.AndroidNotificationVisibility.PUBLIC,
           bypassDnd: false,
         });
+
+        // Channel for reminders
+        await Notifications.setNotificationChannelAsync("reminders", {
+          name: "Recordatorios",
+          importance: Notifications.AndroidImportance.HIGH,
+          sound: "default",
+          enableVibrate: true,
+          showBadge: true,
+          lockscreenVisibility:
+            Notifications.AndroidNotificationVisibility.PUBLIC,
+        });
       }
 
       return true;
     } catch (error) {
+      console.error("Error asking for permissions:", error);
       return false;
     }
   }
 
   /**
    * Start rest timer with notification
-   * Schedules a notification to fire when the rest time completes
-   * Auto-dismisses notification if app is in foreground
    */
   async startRestTimer(
     restSeconds: number,
-    exerciseName?: string
+    exerciseName?: string,
   ): Promise<string | null> {
     try {
+      // Ensure permissions before scheduling
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) {
+        // If critical feature, consider alerting user to enable permissions in settings
         return null;
       }
 
@@ -96,26 +112,26 @@ class NotificationService {
       const timerId = `rest-timer-${Date.now()}`;
       const isAppInForeground = currentAppState === "active";
 
-      // Schedule notification to fire after restSeconds
+      // Schedule notification
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: "✅ Descanso Completado!",
           body: exerciseName
             ? `Listo para la siguiente serie de ${exerciseName} 💪`
             : "Listo para la siguiente serie 💪",
-          sound: true,
+          sound: "default", // Explicitly use default
           priority: Notifications.AndroidNotificationPriority.MAX,
           vibrate: [0, 250, 250, 250],
-          // Android specific for lock screen
           ...(Platform.OS === "android" && {
             categoryIdentifier: "rest-complete",
             badge: 1,
+            channelId: "rest-timer", // Use the created channel
           }),
           data: {
             type: "rest-complete",
             exerciseName,
             timerId,
-            isAppInForeground, // Track if app was in foreground when scheduled
+            isAppInForeground,
           },
         },
         trigger: {
@@ -129,13 +145,19 @@ class NotificationService {
 
       this.notificationIds.set(timerId, notificationId);
 
-      // If app is in foreground, auto-dismiss notification after it fires
+      // Auto-dismiss logic remains relevant for cleanup
       if (isAppInForeground) {
-        const dismissTimer = setTimeout(async () => {
-          // Wait a bit after notification fires, then dismiss it
-          await Notifications.dismissNotificationAsync(notificationId);
-          this.autoDismissTimers.delete(timerId);
-        }, (restSeconds + 2) * 1000); // Dismiss 2 seconds after notification fires
+        const dismissTimer = setTimeout(
+          async () => {
+            try {
+              await Notifications.dismissNotificationAsync(notificationId);
+            } catch (e) {
+              // Ignore dismissal errors
+            }
+            this.autoDismissTimers.delete(timerId);
+          },
+          (restSeconds + 2) * 1000,
+        ); // Dismiss 2 seconds after notification fires
 
         this.autoDismissTimers.set(timerId, dismissTimer);
       }
@@ -155,7 +177,6 @@ class NotificationService {
       await Notifications.cancelScheduledNotificationAsync(timerId);
       this.notificationIds.delete(timerId);
 
-      // Clear auto-dismiss timer if exists
       const dismissTimer = this.autoDismissTimers.get(timerId);
       if (dismissTimer) {
         clearTimeout(dismissTimer);
@@ -171,20 +192,17 @@ class NotificationService {
    */
   async cancelAllRestTimers() {
     try {
-      // Get all scheduled notifications
       const scheduledNotifications =
         await Notifications.getAllScheduledNotificationsAsync();
 
-      // Cancel only rest timer notifications
       for (const notification of scheduledNotifications) {
         if (notification.content.data?.type === "rest-complete") {
           await Notifications.cancelScheduledNotificationAsync(
-            notification.identifier
+            notification.identifier,
           );
         }
       }
 
-      // Clear all auto-dismiss timers
       this.autoDismissTimers.forEach((timer) => clearTimeout(timer));
       this.autoDismissTimers.clear();
       this.notificationIds.clear();
@@ -194,40 +212,29 @@ class NotificationService {
   }
 
   /**
-   * Format seconds to MM:SS
-   */
-  private formatTime(totalSeconds: number): string {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
-  }
-
-  /**
    * Schedule a reminder notification with Date
    */
   async scheduleReminder(
     title: string,
     body: string,
-    triggerDate: Date
+    triggerDate: Date,
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
-      if (!hasPermissions) {
-        return null;
-      }
+      if (!hasPermissions) return null;
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          sound: true,
+          sound: "default",
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === "android" && { channelId: "reminders" }),
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE, // ✅ Agregar type
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: triggerDate,
+          channelId: Platform.OS === "android" ? "reminders" : undefined,
         },
       });
 
@@ -245,25 +252,25 @@ class NotificationService {
     title: string,
     body: string,
     seconds: number,
-    repeats: boolean = false
+    repeats: boolean = false,
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
-      if (!hasPermissions) {
-        return null;
-      }
+      if (!hasPermissions) return null;
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          sound: true,
+          sound: "default",
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === "android" && { channelId: "reminders" }),
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, // ✅ Agregar type
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds,
           repeats,
+          channelId: Platform.OS === "android" ? "reminders" : undefined,
         },
       });
 
@@ -281,26 +288,25 @@ class NotificationService {
     title: string,
     body: string,
     hour: number,
-    minute: number = 0
+    minute: number = 0,
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
-      if (!hasPermissions) {
-        return null;
-      }
+      if (!hasPermissions) return null;
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          sound: true,
+          sound: "default",
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === "android" && { channelId: "reminders" }),
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY, // ✅ Agregar type
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute,
-          //repeats: true,
+          channelId: Platform.OS === "android" ? "reminders" : undefined,
         },
       });
 
@@ -317,29 +323,28 @@ class NotificationService {
   async scheduleWeeklyReminder(
     title: string,
     body: string,
-    weekday: number, // 1 = Monday, 7 = Sunday
+    weekday: number, // 1 = Sunday, 2 = Monday, ... 7 = Saturday
     hour: number,
-    minute: number = 0
+    minute: number = 0,
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
-      if (!hasPermissions) {
-        return null;
-      }
+      if (!hasPermissions) return null;
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title,
           body,
-          sound: true,
+          sound: "default",
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === "android" && { channelId: "reminders" }),
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.WEEKLY, // ✅ Agregar type
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
           weekday,
           hour,
           minute,
-          //repeats: true,
+          channelId: Platform.OS === "android" ? "reminders" : undefined,
         },
       });
 
@@ -372,6 +377,59 @@ class NotificationService {
       console.error("Error cancelling all notifications:", error);
     }
   }
+
+  /**
+   * Register for push notifications and return the token
+   */
+  async registerForPushNotificationsAsync(): Promise<string | null> {
+    if (Platform.OS === "web") {
+      return null;
+    }
+
+    const hasPermissions = await this.requestPermissions();
+    if (!hasPermissions) {
+      console.log("Permission not granted for push notifications.");
+      return null;
+    }
+
+    try {
+      // Check for EAS Project ID using expo-constants
+      // This prevents the error: [Error: No "projectId" found...]
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId;
+
+      if (!projectId) {
+        console.log(
+          "EAS Project ID not found. Skipping push token registration. To enable push notifications, run `eas init`.",
+        );
+        return null;
+      }
+
+      // Get the token explicitly passing the projectId if available
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId,
+      });
+      const token = tokenData.data;
+      console.log("Expo Push Token:", token);
+      return token;
+    } catch (error) {
+      // Gracefully handle the error if it still occurs
+      console.error("Error getting push token:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Open system settings for permissions
+   */
+  openSettings() {
+    if (Platform.OS === "ios") {
+      Linking.openURL("app-settings:");
+    } else {
+      Linking.openSettings();
+    }
+  }
 }
 
 // Export singleton instance
@@ -380,6 +438,7 @@ export const notificationService = new NotificationService();
 // Export for convenience
 export const {
   requestPermissions,
+  registerForPushNotificationsAsync,
   startRestTimer,
   cancelRestTimer,
   cancelAllRestTimers,

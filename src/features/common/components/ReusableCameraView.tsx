@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Vibration,
   View,
+  Linking,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -51,7 +52,7 @@ export default function ReusableCameraView({
       () => {
         onCloseCamera?.();
         return true;
-      }
+      },
     );
     return () => backHandler.remove();
   }, [onCloseCamera]);
@@ -122,13 +123,21 @@ export default function ReusableCameraView({
           Necesitamos acceso a tu cámara para escanear códigos de barras
         </Text>
         <TouchableOpacity
-          onPress={handleRequestPermission}
+          onPress={() => {
+            if (permission.canAskAgain) {
+              handleRequestPermission();
+            } else {
+              Linking.openSettings();
+            }
+          }}
           style={[
             styles.permissionButton,
             { backgroundColor: theme.primary, shadowColor: theme.primary },
           ]}
         >
-          <Text style={styles.permissionButtonText}>Permitir Cámara</Text>
+          <Text style={styles.permissionButtonText}>
+            {permission.canAskAgain ? "Permitir Cámara" : "Abrir Ajustes"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleClose} style={styles.secondaryButton}>
@@ -170,7 +179,7 @@ export default function ReusableCameraView({
   }
 
   const renderCorner = (
-    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
+    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight",
   ) => {
     const styleMap = {
       topLeft: [

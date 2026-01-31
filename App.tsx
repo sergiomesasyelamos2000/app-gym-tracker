@@ -10,12 +10,14 @@ import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 
 import * as Notifications from "expo-notifications";
+import { notificationService } from "./src/services/notificationService";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ToastConfigParams } from "react-native-toast-message";
 import { Provider as ReduxProvider } from "react-redux";
 import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { store } from "./src/store/store";
+import { useNotificationSettingsStore } from "./src/store/useNotificationSettingsStore";
 import CustomToast from "./src/ui/CustomToast";
 
 LogBox.ignoreLogs([
@@ -41,17 +43,46 @@ function AppContent() {
 
   // Initialize notification listeners
   useEffect(() => {
+    const setupNotifications = async () => {
+      // Register for push notifications
+      const token =
+        await notificationService.registerForPushNotificationsAsync();
+      const setPermissionsGranted =
+        useNotificationSettingsStore.getState().setPermissionsGranted;
+
+      if (token) {
+        console.log("Push Token obtained:", token);
+        setPermissionsGranted(true);
+        // TODO: Send token to backend when user is logged in
+      } else {
+        setPermissionsGranted(false);
+      }
+
+      // Check if app was opened from a notification (cold start)
+      const lastNotificationResponse =
+        await Notifications.getLastNotificationResponseAsync();
+      if (lastNotificationResponse) {
+        console.log(
+          "App opened via notification (cold start):",
+          lastNotificationResponse,
+        );
+        // Handle deep linking logic here if needed
+      }
+    };
+
+    setupNotifications();
+
     // Listener for notifications received while app is in foreground
     const notificationListener = Notifications.addNotificationReceivedListener(
       (notification) => {
-        console.log("Notification received:", notification);
+        console.log("Notification received in foreground:", notification);
       },
     );
 
     // Listener for when user taps on a notification
     const responseListener =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("Notification response:", response);
+        console.log("Notification response received:", response);
         // You can add navigation logic here if needed
       });
 
