@@ -38,6 +38,7 @@ export const ChatInput: React.FC<{
         ]}
         onPress={onSend}
         disabled={loading}
+        testID="chat-send-button"
       >
         <Icon name="send" size={24} color="#fff" />
       </TouchableOpacity>

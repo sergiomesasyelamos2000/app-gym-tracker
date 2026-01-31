@@ -67,8 +67,44 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
+jest.mock("expo-file-system", () => ({
+  documentDirectory: "file:///test-directory/",
+  writeAsStringAsync: jest.fn(),
+  EncodingType: { UTF8: "utf8", Base64: "base64" },
+}));
+
+jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+  shareAsync: jest.fn(),
+}));
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  setItem: jest.fn(() => Promise.resolve()),
+  getItem: jest.fn(() => Promise.resolve(null)),
+  removeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+  multiRemove: jest.fn(() => Promise.resolve()),
+  multiGet: jest.fn(() => Promise.resolve([])),
+}));
+
+jest.mock("expo-image-picker", () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(),
+  launchImageLibraryAsync: jest.fn(),
+  MediaTypeOptions: { Images: "Images" },
+}));
+
 // Mock Vector Icons
-jest.mock("react-native-vector-icons/MaterialCommunityIcons", () => "Icon");
+const MockIcon = () => null;
+jest.mock("react-native-vector-icons/MaterialCommunityIcons", () => ({
+  __esModule: true,
+  default: MockIcon,
+}));
+jest.mock("react-native-vector-icons/MaterialIcons", () => ({
+  __esModule: true,
+  default: MockIcon,
+}));
 jest.mock("@expo/vector-icons", () => {
   const { View } = require("react-native");
   return {
