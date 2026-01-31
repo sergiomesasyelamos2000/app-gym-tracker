@@ -20,9 +20,26 @@ const ImageModal: React.FC<ImagenModalProps> = ({ uri, visible, onClose }) => {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={[styles.modalContainer, { backgroundColor: withOpacity(theme.background, 95) }]}>
-        <Image source={{ uri: uri || "" }} style={styles.fullscreenImage} />
-        <TouchableOpacity style={[styles.closeButton, { backgroundColor: withOpacity(theme.text, 20) }]} onPress={onClose}>
+      <View
+        style={[
+          styles.modalContainer,
+          { backgroundColor: withOpacity(theme.background, 95) },
+        ]}
+      >
+        <Image
+          source={{ uri: uri || "" }}
+          style={styles.fullscreenImage}
+          resizeMode="contain"
+          testID="modal-image"
+        />
+        <TouchableOpacity
+          testID="close-modal-button"
+          style={[
+            styles.closeButton,
+            { backgroundColor: withOpacity(theme.text, 20) },
+          ]}
+          onPress={onClose}
+        >
           <Icon name="close" size={30} color={theme.text} />
         </TouchableOpacity>
       </View>

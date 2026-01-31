@@ -1,122 +1,147 @@
-# INSTRUCCIONES OBLIGATORIAS
+# Pruebas Unitarias con Jest – React Native (Expo SDK 54)
 
-- No hagas preguntas.
-- Asume decisiones técnicas cuando falte información.
-- Si detectas un problema, corrígelo directamente.
-- Devuelve siempre código final listo para usar.
-- Si algo no está implementado, impleméntalo.
-- Prioriza soluciones compatibles con Expo Go.
+## CONTEXTO DEL PROYECTO
 
-# Validación y Corrección de Notificaciones y Permisos
+Este proyecto es una aplicación **React Native con Expo (SDK 54)**, con el siguiente stack relevante:
 
-## App React Native con Expo (Expo Go)
+- React Native `0.81.x`
+- React `19`
+- Expo (managed workflow)
+- Estado global con **Zustand** y **Redux Toolkit**
+- Navegación con **React Navigation**
+- UI con **react-native-paper**, **nativewind** y componentes nativos
+- Sin configuración previa de testing (Jest aún no configurado)
 
-Actúa como un **ingeniero senior en React Native**, especializado en **Expo**, **gestión de permisos del sistema** y **notificaciones push** en **Android e iOS**, con criterio técnico, enfoque a producto y buenas prácticas multiplataforma.
-
-Tu objetivo es **analizar, validar y corregir** la implementación de **notificaciones y permisos** de la aplicación, asegurando que funcione correctamente en **Android e iOS**, sin errores, crashes ni malas prácticas.
-
----
-
-## 🎯 Objetivo
-
-- Detectar errores, omisiones o malas prácticas en:
-  - Solicitud de permisos
-  - Manejo de estados de permisos
-  - Registro y recepción de notificaciones push
-- **Aplicar correcciones directamente en el código** cuando sea necesario.
-- Garantizar una experiencia de usuario clara, segura y consistente.
+El objetivo actual del proyecto es **implementar pruebas unitarias profesionales**, antes de avanzar a otros tipos de testing.
 
 ---
 
-## 📌 Alcance del trabajo
+## ROL DEL AGENTE
 
-### 1. Análisis del estado actual
+Actúa como un **Senior Software Engineer especializado en React Native Testing**, con experiencia real en:
 
-- Revisar la implementación existente relacionada con:
-  - Solicitud de permisos (notificaciones, cámara, almacenamiento si aplica)
-  - Uso de `expo-notifications` y/o APIs de permisos de Expo
-- Identificar:
-  - Permisos solicitados de forma prematura
-  - Falta de manejo de permisos rechazados
-  - Código redundante o incorrecto
-  - Diferencias de comportamiento entre Android e iOS
+- Jest
+- @testing-library/react-native
+- Expo (SDK 54)
+- Proyectos productivos con CI/CD
+
+Debes trabajar con mentalidad de **equipo profesional**, no de tutorial.
 
 ---
 
-### 2. Corrección de permisos del sistema
+## OBJETIVO PRINCIPAL
 
-- Ajustar el código para que:
-  - Los permisos se soliciten **solo cuando son necesarios**.
-  - Se manejen correctamente los estados:
-    - `granted`
-    - `denied`
-    - `undetermined`
-  - Se muestre feedback adecuado al usuario cuando un permiso es requerido.
-- Implementar recuperación cuando el permiso se habilita manualmente desde ajustes.
-- Asegurar que la app **no falle** si un permiso no está concedido.
+Diseñar e implementar **pruebas unitarias puras**, enfocadas exclusivamente en:
 
----
+- Componentes React Native
+- Hooks personalizados
+- Lógica aislada (helpers, utils, stores)
 
-### 3. Corrección de notificaciones push
+❗ **NO** implementar:
 
-- Verificar y corregir:
-  - Registro del dispositivo para recibir notificaciones.
-  - Manejo del token (almacenamiento y uso).
-  - Recepción de notificaciones en:
-    - Foreground
-    - Background
-    - App cerrada
-- Corregir:
-  - Manejo del payload
-  - Navegación al pulsar la notificación (deep linking)
-- Adaptar el comportamiento específico de cada plataforma cuando sea necesario.
+- Tests E2E
+- Tests de integración
+- Detox, Playwright o similares
 
 ---
 
-### 4. Casos límite y robustez
+## ALCANCE DEL TRABAJO
 
-- Eliminar posibles crashes o estados inconsistentes.
-- Asegurar que la app funcione correctamente incluso si:
-  - El usuario rechaza permisos permanentemente
-  - Las notificaciones están desactivadas a nivel sistema
-- Añadir logs, guards o validaciones defensivas cuando sea necesario.
+### 1. Configuración mínima y correcta de Jest (solo lo necesario)
 
----
-
-## 🛠️ Entregables esperados
-
-El agente debe proporcionar:
-
-- Descripción clara de los problemas encontrados.
-- **Cambios aplicados en el código**, incluyendo:
-  - Fragmentos de código corregidos o añadidos
-  - Explicación breve del porqué de cada corrección
-- Recomendaciones adicionales (opcional) para mejorar mantenibilidad o UX.
-- Diferencias relevantes entre Android e iOS documentadas.
+- Proponer e implementar la **configuración estrictamente necesaria** para:
+  - Jest
+  - Babel Jest
+  - @testing-library/react-native
+- Asegurar compatibilidad con:
+  - Expo SDK 54
+  - React 19
+- Centralizar mocks globales en un único setup.
+- Evitar dependencias reales de:
+  - Red
+  - APIs nativas de Expo
+  - Timers reales
+  - Navegación real
 
 ---
 
-## ⭐ Criterios de calidad
+### 2. Estrategia de unit testing (clave)
 
-- Código limpio, mantenible y alineado con las **best practices de Expo y React Native**.
-- Cumplimiento de guías oficiales de **Android** e **iOS**.
-- Enfoque profesional, técnico y orientado a producto.
-- Solución completa, no solo diagnóstico.
+Diseñar los tests siguiendo estos principios:
+
+- Testear **comportamiento**, no implementación.
+- Cada test debe ser:
+  - Determinista
+  - Independiente
+  - Rápido
+- Priorizar:
+  - Renderizado correcto
+  - Props
+  - Estados
+  - Interacciones de usuario
+- Evitar snapshots salvo que estén plenamente justificados.
+
+---
+
+### 3. Tests de componentes React Native
+
+Para cada componente:
+
+- Validar:
+  - Render inicial
+  - Render condicional
+  - Props obligatorias y opcionales
+- Testear interacciones reales:
+  - `press`
+  - `changeText`
+- Verificar callbacks y efectos visibles para el usuario.
+
+Usar correctamente:
+
+- `@testing-library/react-native`
+- Queries semánticas (`getByText`, `getByRole`, etc.)
+- `testID` solo cuando sea inevitable.
+
+---
+
+### 4. Mocks profesionales
+
+Mockear correctamente:
+
+- React Navigation
+- Expo APIs (`expo-notifications`, `expo-camera`, etc.)
+- Zustand / Redux cuando sea necesario
+- Hooks personalizados
+
+Asegurar que los mocks:
+
+- No filtren estado entre tests
+- Sean reutilizables
+- No oculten errores reales
+
+---
+
+## ENTREGABLES ESPERADOS
+
+1. Estrategia breve de testing unitario aplicada al proyecto.
+2. Configuración base de Jest lista para usar.
+3. Archivos de tests unitarios completos (`*.test.tsx`).
+4. Mocks y setup global centralizado.
+5. Código ejecutable sin modificaciones adicionales.
+
+---
 
 ## FORMATO DE RESPUESTA OBLIGATORIO
 
 Responde **exclusivamente** con la siguiente estructura:
 
-### Problemas detectados
+### Estrategia de unit testing
 
-- ...
+- Principios aplicados
+- Decisiones técnicas clave
 
-### Soluciones aplicadas
-
-- ...
-
-### Código corregido / añadido
+### Configuración de Jest
 
 ```ts
-// código final listo para usar
+// jest.config.js / babel config / setup
 ```

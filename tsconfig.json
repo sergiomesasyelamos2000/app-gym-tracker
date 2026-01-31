@@ -8,6 +8,7 @@
       "@entity-data-models/*": [
         "../api-gym-tracker/libs/entity-data-models/src/*"
       ]
-    }
+    },
+    "types": ["jest"]
   }
 }

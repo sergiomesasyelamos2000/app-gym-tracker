@@ -61,7 +61,7 @@ const ExerciseHeader = ({
   };
 
   const handleExerciseAction = (
-    action: "reorder" | "replace" | "superset" | "delete"
+    action: "reorder" | "replace" | "superset" | "delete",
   ) => {
     setPendingAction(action);
     setActionModalVisible(false);
@@ -95,7 +95,7 @@ const ExerciseHeader = ({
   };
 
   const filteredExercises = availableExercises.filter(
-    (ex) => ex.id !== exercise.id
+    (ex) => ex.id !== exercise.id,
   );
 
   return (
@@ -124,7 +124,10 @@ const ExerciseHeader = ({
 
         {/* 🔥 CAMBIO: Solo mostrar si showOptions es true Y no es readonly */}
         {showOptions && !readonly && (
-          <TouchableOpacity onPress={openExerciseOptions}>
+          <TouchableOpacity
+            testID="exercise-options-button"
+            onPress={openExerciseOptions}
+          >
             <Icon name="more-vert" size={24} color={theme.text} />
           </TouchableOpacity>
         )}

@@ -32,7 +32,7 @@ export default function ReusableCameraView({
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScannedRef = useRef(false);
 
   // Limpiar al desmontar
@@ -235,6 +235,7 @@ export default function ReusableCameraView({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
+          testID="close-camera-button"
           style={styles.closeButton}
           onPress={handleClose}
           activeOpacity={0.7}

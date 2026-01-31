@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { DailyCalorieChart } from "../components/DailyCalorieChart";
+import { MacroDistributionChart } from "../components/MacroDistributionChart";
 import {
   ActivityIndicator,
   Alert,
@@ -140,12 +142,7 @@ export default function MacrosScreen({ navigation }: Props) {
     },
   );
 
-  const animatedCarbs = useRef(new Animated.Value(0)).current;
-  const animatedProtein = useRef(new Animated.Value(0)).current;
-  const animatedFat = useRef(new Animated.Value(0)).current;
-  const [displayCarbs, setDisplayCarbs] = useState(0);
-  const [displayProtein, setDisplayProtein] = useState(0);
-  const [displayFat, setDisplayFat] = useState(0);
+  // Animation logic moved to MacroDistributionChart
   const [actionBarAnim] = useState(new Animated.Value(0));
   const [addButtonAnim] = useState(new Animated.Value(1));
   const calendarSlideAnim = useRef(new Animated.Value(0)).current;
@@ -215,19 +212,7 @@ export default function MacrosScreen({ navigation }: Props) {
     }
   };
 
-  useEffect(() => {
-    const listeners = [
-      animatedCarbs.addListener(({ value }) => setDisplayCarbs(value)),
-      animatedProtein.addListener(({ value }) => setDisplayProtein(value)),
-      animatedFat.addListener(({ value }) => setDisplayFat(value)),
-    ];
-
-    return () => {
-      listeners.forEach((id, index) => {
-        [animatedCarbs, animatedProtein, animatedFat][index].removeListener(id);
-      });
-    };
-  }, []);
+  // Animation listeners removed (moved to component)
 
   useEffect(() => {
     const effectiveEntries = todayEntries.filter(
@@ -246,24 +231,7 @@ export default function MacrosScreen({ navigation }: Props) {
       { carbs: 0, protein: 0, fat: 0 },
     );
 
-    Animated.parallel([
-      Animated.timing(animatedCarbs, {
-        toValue: totals.carbs,
-        duration: 800,
-        useNativeDriver: false,
-      }),
-      Animated.timing(animatedProtein, {
-        toValue: totals.protein,
-        duration: 800,
-        useNativeDriver: false,
-      }),
-      Animated.timing(animatedFat, {
-        toValue: totals.fat,
-        duration: 800,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [todayEntries, notEatenEntries]);
+  // Animation triggers removed (moved to component)
 
   useEffect(() => {
     setTabVisibility("Macros", !isSelectionMode);
@@ -959,88 +927,17 @@ export default function MacrosScreen({ navigation }: Props) {
             </View>
           </View>
 
-          <View style={styles.caloriesCard}>
-            <Text style={styles.caloriesLabel}>
-              {remaining.calories > 0
-                ? "Calorías disponibles"
-                : "Calorías excedidas"}
-            </Text>
-            <Text
-              style={[
-                styles.caloriesValue,
-                remaining.calories < 0 && styles.caloriesValueExceeded,
-              ]}
-            >
-              {Math.abs(Math.round(remaining.calories))}
-            </Text>
-            <Text style={styles.caloriesSubtext}>
-              {Math.round(totals.calories)} de {goals.dailyCalories} kcal
-            </Text>
-          </View>
-
-          <View style={styles.caloriesProgressBar}>
-            <View
-              style={[
-                styles.caloriesProgressFill,
-                {
-                  width: `${Math.min(100, percentages.calories)}%`,
-                  backgroundColor:
-                    remaining.calories > 0 ? "#4CAF50" : "#FF6B6B",
-                },
-              ]}
-            />
-          </View>
+        <DailyCalorieChart
+            consumed={totals.calories}
+            target={goals.dailyCalories}
+          />
         </View>
 
-        <View style={styles.macrosSection}>
-          <Text style={styles.sectionTitle}>Macronutrientes</Text>
-          <View style={styles.macrosRow}>
-            {[
-              {
-                key: "carbs",
-                label: "Carbos",
-                color: "#FFB74D",
-                value: displayCarbs,
-                goal: goals.carbs,
-                remaining: remaining.carbs,
-              },
-              {
-                key: "protein",
-                label: "Proteína",
-                color: "#2196F3",
-                value: displayProtein,
-                goal: goals.protein,
-                remaining: remaining.protein,
-              },
-              {
-                key: "fat",
-                label: "Grasa",
-                color: "#FF9800",
-                value: displayFat,
-                goal: goals.fat,
-                remaining: remaining.fat,
-              },
-            ].map(({ key, label, color, value, goal, remaining }) => (
-              <View key={key} style={styles.macroCircle}>
-                <CircularProgress
-                  value={value}
-                  radius={50}
-                  maxValue={goal}
-                  title={label}
-                  titleStyle={styles.circleTitle}
-                  progressValueColor={theme.text}
-                  activeStrokeColor={color}
-                  inActiveStrokeColor={theme.border}
-                  inActiveStrokeOpacity={0.3}
-                  valueSuffix="g"
-                />
-                <Text style={styles.macrosRemaining}>
-                  {Math.max(0, Math.round(remaining))}g restantes
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        <MacroDistributionChart
+          carbs={{ current: totals.carbs, target: goals.carbs }}
+          protein={{ current: totals.protein, target: goals.protein }}
+          fat={{ current: totals.fat, target: goals.fat }}
+        />
 
         <View style={styles.diarySection}>
           <Text style={styles.sectionTitle}>Diario de Alimentos</Text>
