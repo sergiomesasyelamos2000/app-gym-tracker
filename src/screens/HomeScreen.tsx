@@ -20,6 +20,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -193,13 +194,13 @@ export default function HomeScreen() {
             sum +
             e.sets.reduce(
               (acc: number, s: any) => acc + (s.weight || 0) * (s.reps || 0),
-              0
+              0,
             ),
-          0
+          0,
         );
         const totalReps = session.exercises?.reduce(
           (sum: number, e: any) => sum + e.totalReps,
-          0
+          0,
         );
 
         return {
@@ -227,7 +228,7 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }).start();
       fetchData();
-    }, [fetchData])
+    }, [fetchData]),
   );
 
   const onRefresh = useCallback(() => {
@@ -411,312 +412,347 @@ export default function HomeScreen() {
         </Pressable>
       );
     },
-    [theme, isDark, responsive]
+    [theme, isDark, responsive],
   );
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
-    >
-      <ScrollView
-        ref={scrollViewRef}
-        style={[
-          styles.container,
-          { backgroundColor: theme.backgroundSecondary },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Section */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              backgroundColor: theme.primary,
-              shadowColor: isDark ? "#000" : theme.primary,
-              opacity: fadeAnim,
-            },
-          ]}
+    <View style={[styles.mainContainer, { backgroundColor: theme.primary }]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.primary}
+        translucent={true}
+      />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.container}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor="#FFFFFF"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 0 }}
         >
-          <View style={styles.headerContent}>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerGreeting}>{greeting}</Text>
-              <Text style={styles.headerTitle}>
-                {user?.name || "Atleta"} 💪
-              </Text>
-              <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
-            </View>
-            <View style={styles.timeContainer}>
-              <Text style={styles.currentTime}>{formattedTime}</Text>
-              <Text style={styles.currentDate}>
-                {currentTime.toLocaleDateString("es-ES", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </Text>
-            </View>
-          </View>
-
-          {/* Quick Stats Overview */}
-          <View style={styles.quickStats}>
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>
-                {stats ? Math.round(stats.totalTime / 60) : 0}
-              </Text>
-              <Text style={styles.quickStatLabel}>Min</Text>
-            </View>
-            <View style={styles.quickStatDivider} />
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>
-                {stats ? stats.completedSets : 0}
-              </Text>
-              <Text style={styles.quickStatLabel}>Series</Text>
-            </View>
-            <View style={styles.quickStatDivider} />
-            <View style={styles.quickStat}>
-              <Text style={styles.quickStatValue}>
-                {stats ? stats.totalWeight : 0}
-              </Text>
-              <Text style={styles.quickStatLabel}>Kg</Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Stats Section Rediseñada */}
-        <View style={styles.statsSection}>
-          <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                styles.timeCard,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statIconContainer,
-                  styles.timeIconContainer,
-                  { backgroundColor: theme.primary + "20" },
-                ]}
-              >
-                <Text style={styles.statIcon}>⏱️</Text>
+          {/* Header Section */}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                backgroundColor: theme.primary,
+                shadowColor: isDark ? "#000" : theme.primary,
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerGreeting}>{greeting}</Text>
+                <Text style={styles.headerTitle}>
+                  {user?.name || "Atleta"} 💪
+                </Text>
+                <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
               </View>
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {stats ? Math.round(stats.totalTime / 60) : 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Minutos totales
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statCard,
-                styles.setsCard,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statIconContainer,
-                  styles.setsIconContainer,
-                  { backgroundColor: theme.success + "20" },
-                ]}
-              >
-                <Text style={styles.statIcon}>✅</Text>
+              <View style={styles.timeContainer}>
+                <Text style={styles.currentTime}>{formattedTime}</Text>
+                <Text style={styles.currentDate}>
+                  {currentTime.toLocaleDateString("es-ES", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}
+                </Text>
               </View>
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {stats ? stats.completedSets : 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Series completadas
-              </Text>
             </View>
 
-            <View
-              style={[
-                styles.statCard,
-                styles.weightCard,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statIconContainer,
-                  styles.weightIconContainer,
-                  { backgroundColor: theme.warning + "20" },
-                ]}
-              >
-                <Text style={styles.statIcon}>🏋️</Text>
+            {/* Quick Stats Overview */}
+            <View style={styles.quickStats}>
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>
+                  {stats ? Math.round(stats.totalTime / 60) : 0}
+                </Text>
+                <Text style={styles.quickStatLabel}>Min</Text>
               </View>
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {stats ? stats.totalWeight : 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Volumen
-              </Text>
+              <View style={styles.quickStatDivider} />
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>
+                  {stats ? stats.completedSets : 0}
+                </Text>
+                <Text style={styles.quickStatLabel}>Series</Text>
+              </View>
+              <View style={styles.quickStatDivider} />
+              <View style={styles.quickStat}>
+                <Text style={styles.quickStatValue}>
+                  {stats ? stats.totalWeight : 0}
+                </Text>
+                <Text style={styles.quickStatLabel}>Kg</Text>
+              </View>
             </View>
-          </View>
-        </View>
+          </Animated.View>
 
-        {/* Acciones Rápidas */}
-        <View style={styles.actionsSection}>
-          <View style={styles.actionsGrid}>
-            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-              <Pressable
-                style={[
-                  styles.actionButton,
-                  styles.startWorkout,
-                  {
-                    backgroundColor: theme.card,
-                    shadowColor: theme.shadowColor,
-                    borderLeftColor: theme.error,
-                    borderWidth: isDark ? 1 : 0,
-                    borderColor: theme.border,
-                    borderLeftWidth: 4,
-                  },
-                ]}
-                onPress={handleStartWorkout}
-                android_ripple={{ color: theme.error + "20" }}
-              >
+          {/* Content with background color change */}
+          <View
+            style={[
+              styles.contentWrapper,
+              { backgroundColor: theme.backgroundSecondary },
+            ]}
+          >
+            {/* Stats Section Rediseñada */}
+            <View style={styles.statsSection}>
+              <View style={styles.statsGrid}>
                 <View
                   style={[
-                    styles.actionIconContainer,
-                    { backgroundColor: theme.error },
+                    styles.statCard,
+                    styles.timeCard,
+                    {
+                      backgroundColor: theme.card,
+                      shadowColor: theme.shadowColor,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: theme.border,
+                    },
                   ]}
                 >
-                  <Text style={styles.actionIcon}>🔥</Text>
-                </View>
-                <View style={styles.actionTextContainer}>
-                  <Text
-                    style={[styles.actionButtonText, { color: theme.text }]}
+                  <View
+                    style={[
+                      styles.statIconContainer,
+                      styles.timeIconContainer,
+                      { backgroundColor: theme.primary + "20" },
+                    ]}
                   >
-                    Iniciar Entrenamiento
+                    <Text style={styles.statIcon}>⏱️</Text>
+                  </View>
+                  <Text style={[styles.statValue, { color: theme.text }]}>
+                    {stats ? Math.round(stats.totalTime / 60) : 0}
+                  </Text>
+                  <Text
+                    style={[styles.statLabel, { color: theme.textSecondary }]}
+                  >
+                    Minutos totales
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statCard,
+                    styles.setsCard,
+                    {
+                      backgroundColor: theme.card,
+                      shadowColor: theme.shadowColor,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.statIconContainer,
+                      styles.setsIconContainer,
+                      { backgroundColor: theme.success + "20" },
+                    ]}
+                  >
+                    <Text style={styles.statIcon}>✅</Text>
+                  </View>
+                  <Text style={[styles.statValue, { color: theme.text }]}>
+                    {stats ? stats.completedSets : 0}
+                  </Text>
+                  <Text
+                    style={[styles.statLabel, { color: theme.textSecondary }]}
+                  >
+                    Series completadas
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statCard,
+                    styles.weightCard,
+                    {
+                      backgroundColor: theme.card,
+                      shadowColor: theme.shadowColor,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.statIconContainer,
+                      styles.weightIconContainer,
+                      { backgroundColor: theme.warning + "20" },
+                    ]}
+                  >
+                    <Text style={styles.statIcon}>🏋️</Text>
+                  </View>
+                  <Text style={[styles.statValue, { color: theme.text }]}>
+                    {stats ? stats.totalWeight : 0}
+                  </Text>
+                  <Text
+                    style={[styles.statLabel, { color: theme.textSecondary }]}
+                  >
+                    Volumen
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Acciones Rápidas */}
+            <View style={styles.actionsSection}>
+              <View style={styles.actionsGrid}>
+                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                  <Pressable
+                    style={[
+                      styles.actionButton,
+                      styles.startWorkout,
+                      {
+                        backgroundColor: theme.card,
+                        shadowColor: theme.shadowColor,
+                        borderLeftColor: theme.error,
+                        borderWidth: isDark ? 1 : 0,
+                        borderColor: theme.border,
+                        borderLeftWidth: 4,
+                      },
+                    ]}
+                    onPress={handleStartWorkout}
+                    android_ripple={{ color: theme.error + "20" }}
+                  >
+                    <View
+                      style={[
+                        styles.actionIconContainer,
+                        { backgroundColor: theme.error },
+                      ]}
+                    >
+                      <Text style={styles.actionIcon}>🔥</Text>
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text
+                        style={[styles.actionButtonText, { color: theme.text }]}
+                      >
+                        Iniciar Entrenamiento
+                      </Text>
+                      <Text
+                        style={[
+                          styles.actionButtonSubtext,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        Comienza ahora
+                      </Text>
+                    </View>
+                    <Text
+                      style={[styles.actionArrow, { color: theme.primary }]}
+                    >
+                      →
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              </View>
+            </View>
+
+            {/* Histórico de Sesiones */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Histórico de Sesiones
+                </Text>
+                <Text
+                  style={[
+                    styles.sectionSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {sessions.length > 0
+                    ? `${sessions.length} entrenamiento${
+                        sessions.length > 1 ? "s" : ""
+                      } registrado${sessions.length > 1 ? "s" : ""}`
+                    : "Tus entrenamientos recientes"}
+                </Text>
+              </View>
+
+              {sessions.length === 0 ? (
+                <Animated.View
+                  style={[
+                    styles.emptyState,
+                    {
+                      backgroundColor: theme.card,
+                      opacity: fadeAnim,
+                      transform: [
+                        {
+                          translateY: fadeAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <Text style={styles.emptyStateEmoji}>📊</Text>
+                  <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
+                    No hay sesiones registradas
                   </Text>
                   <Text
                     style={[
-                      styles.actionButtonSubtext,
+                      styles.emptyStateText,
                       { color: theme.textSecondary },
                     ]}
                   >
-                    Comienza ahora
+                    Comienza tu primer entrenamiento para ver estadísticas aquí
                   </Text>
-                </View>
-                <Text style={[styles.actionArrow, { color: theme.primary }]}>
-                  →
-                </Text>
-              </Pressable>
-            </Animated.View>
+                  <TouchableOpacity
+                    style={[
+                      styles.emptyStateCTA,
+                      { backgroundColor: theme.primary },
+                    ]}
+                    onPress={handleStartWorkout}
+                  >
+                    <Text style={styles.emptyStateCTAText}>
+                      Empezar ahora 🚀
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <FlatList
+                  data={sessions}
+                  renderItem={renderSessionCard}
+                  keyExtractor={(item) => item.id}
+                  numColumns={responsive.sessionColumns}
+                  key={responsive.sessionColumns} // Force remount when columns change
+                  scrollEnabled={false}
+                  columnWrapperStyle={
+                    responsive.sessionColumns === 2
+                      ? styles.sessionRow
+                      : undefined
+                  }
+                  contentContainerStyle={styles.sessionsContainer}
+                />
+              )}
+            </View>
           </View>
-        </View>
-
-        {/* Histórico de Sesiones */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Histórico de Sesiones
-            </Text>
-            <Text
-              style={[styles.sectionSubtitle, { color: theme.textSecondary }]}
-            >
-              {sessions.length > 0
-                ? `${sessions.length} entrenamiento${
-                    sessions.length > 1 ? "s" : ""
-                  } registrado${sessions.length > 1 ? "s" : ""}`
-                : "Tus entrenamientos recientes"}
-            </Text>
-          </View>
-
-          {sessions.length === 0 ? (
-            <Animated.View
-              style={[
-                styles.emptyState,
-                {
-                  backgroundColor: theme.card,
-                  opacity: fadeAnim,
-                  transform: [
-                    {
-                      translateY: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Text style={styles.emptyStateEmoji}>📊</Text>
-              <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
-                No hay sesiones registradas
-              </Text>
-              <Text
-                style={[styles.emptyStateText, { color: theme.textSecondary }]}
-              >
-                Comienza tu primer entrenamiento para ver estadísticas aquí
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.emptyStateCTA,
-                  { backgroundColor: theme.primary },
-                ]}
-                onPress={handleStartWorkout}
-              >
-                <Text style={styles.emptyStateCTAText}>Empezar ahora 🚀</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          ) : (
-            <FlatList
-              data={sessions}
-              renderItem={renderSessionCard}
-              keyExtractor={(item) => item.id}
-              numColumns={responsive.sessionColumns}
-              key={responsive.sessionColumns} // Force remount when columns change
-              scrollEnabled={false}
-              columnWrapperStyle={
-                responsive.sessionColumns === 2 ? styles.sessionRow : undefined
-              }
-              contentContainerStyle={styles.sessionsContainer}
-            />
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
   container: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 25,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -861,7 +897,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     flexShrink: 1,
-    //numberOfLines: 2,
   },
   actionsSection: {
     paddingHorizontal: 20,
