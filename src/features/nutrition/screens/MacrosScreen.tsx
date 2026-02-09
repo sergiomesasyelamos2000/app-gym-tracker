@@ -13,6 +13,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -102,7 +103,7 @@ import { NutritionStackParamList } from "./NutritionStack";
 type Props = NativeStackScreenProps<NutritionStackParamList, "MacrosScreen">;
 
 export default function MacrosScreen({ navigation }: Props) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -829,6 +830,10 @@ export default function MacrosScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+      />
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={theme.primary} />

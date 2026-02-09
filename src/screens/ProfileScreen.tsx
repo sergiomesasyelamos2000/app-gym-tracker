@@ -15,6 +15,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Switch,
   Text,
@@ -35,17 +36,17 @@ export default function ProfileScreen() {
   const logout = useAuthStore((state) => state.logout);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const isProfileComplete = useNutritionStore(
-    (state) => state.isProfileComplete
+    (state) => state.isProfileComplete,
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
 
   // Notification settings from store
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
-    (state) => state.restTimerNotificationsEnabled
+    (state) => state.restTimerNotificationsEnabled,
   );
   const toggleRestTimerNotifications = useNotificationSettingsStore(
-    (state) => state.toggleRestTimerNotifications
+    (state) => state.toggleRestTimerNotifications,
   );
 
   const handleEditNutritionProfile = () => {
@@ -70,7 +71,7 @@ export default function ProfileScreen() {
               }
             },
           },
-        ]
+        ],
       );
     }
   };
@@ -107,7 +108,7 @@ export default function ProfileScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -127,6 +128,10 @@ export default function ProfileScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
     >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.backgroundSecondary}
+      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View
@@ -238,8 +243,8 @@ export default function ProfileScreen() {
                       {userProfile.goals.weightGoal === "lose"
                         ? "Perder peso"
                         : userProfile.goals.weightGoal === "gain"
-                        ? "Ganar peso"
-                        : "Mantener peso"}
+                          ? "Ganar peso"
+                          : "Mantener peso"}
                     </Text>
                   </View>
                   <View
@@ -321,8 +326,8 @@ export default function ProfileScreen() {
                   {themeMode === "auto"
                     ? "Automático (Sistema)"
                     : isDark
-                    ? "Activado"
-                    : "Desactivado"}
+                      ? "Activado"
+                      : "Desactivado"}
                 </Text>
               </View>
               <Switch

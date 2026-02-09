@@ -11,6 +11,7 @@ import {
   NativeSyntheticEvent,
   Platform,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -168,7 +169,7 @@ export default function NutritionScreen() {
   const nextId = useAppSelector((state) => state.chat.nextId);
   const user = useAuthStore((state) => state.user);
   const dispatch = useAppDispatch();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
@@ -304,6 +305,7 @@ export default function NutritionScreen() {
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
+      <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
