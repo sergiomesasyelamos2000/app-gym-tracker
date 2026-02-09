@@ -82,7 +82,7 @@ export default function RoutineDetailScreen() {
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const restTimerEndTimeRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [previousSessions, setPreviousSessions] = useState<any[]>([]);
 
   // Undo deletion state
@@ -575,7 +575,7 @@ export default function RoutineDetailScreen() {
     countdownRef.current = setInterval(() => {
       setRestTimeRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(countdownRef.current as NodeJS.Timeout);
+          clearInterval(countdownRef.current!);
           setShowRestToast(false);
           setActiveNotificationId(null);
           return 0;
@@ -704,16 +704,7 @@ export default function RoutineDetailScreen() {
       completedSets,
       exercises: exercisesState.map((exercise) => ({
         exerciseId: exercise.id,
-        exerciseName: exercise.name,
-        imageUrl: exercise.imageUrl,
-        totalWeight: (sets[exercise.id] || []).reduce(
-          (acc, s) => acc + (s.weight || 0) * (s.reps || 0),
-          0,
-        ),
-        totalReps: (sets[exercise.id] || []).reduce(
-          (acc, s) => acc + (s.reps || 0),
-          0,
-        ),
+        name: exercise.name,
         sets: (sets[exercise.id] || []).map((s) => {
           const isRecord = sessionRecords.some(
             (r) =>

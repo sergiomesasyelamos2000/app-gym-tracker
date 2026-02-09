@@ -215,25 +215,6 @@ export default function MacrosScreen({ navigation }: Props) {
   // Animation listeners removed (moved to component)
 
   useEffect(() => {
-    const effectiveEntries = todayEntries.filter(
-      (entry) => !notEatenEntries.has(entry.id || ""),
-    );
-
-    const totals = effectiveEntries.reduce(
-      (
-        acc: { carbs: number; protein: number; fat: number },
-        entry: FoodEntry,
-      ) => ({
-        carbs: acc.carbs + (entry.carbs || 0),
-        protein: acc.protein + (entry.protein || 0),
-        fat: acc.fat + (entry.fat || 0),
-      }),
-      { carbs: 0, protein: 0, fat: 0 },
-    );
-
-  // Animation triggers removed (moved to component)
-
-  useEffect(() => {
     setTabVisibility("Macros", !isSelectionMode);
 
     if (isSelectionMode) {
@@ -664,9 +645,9 @@ export default function MacrosScreen({ navigation }: Props) {
 
   const remaining = {
     calories: goals.dailyCalories - totals.calories,
-    protein: goals.protein - displayProtein,
-    carbs: goals.carbs - displayCarbs,
-    fat: goals.fat - displayFat,
+    protein: goals.protein - totals.protein,
+    carbs: goals.carbs - totals.carbs,
+    fat: goals.fat - totals.fat,
   };
 
   const percentages = {
@@ -927,7 +908,7 @@ export default function MacrosScreen({ navigation }: Props) {
             </View>
           </View>
 
-        <DailyCalorieChart
+          <DailyCalorieChart
             consumed={totals.calories}
             target={goals.dailyCalories}
           />
