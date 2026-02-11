@@ -28,7 +28,7 @@ export interface Subscription {
   cancelAtPeriodEnd: boolean;
   canceledAt?: Date;
   trialEnd?: Date;
-  price: number;
+  price?: number;
   currency: string;
   createdAt: Date;
   updatedAt: Date;

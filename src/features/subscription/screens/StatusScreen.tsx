@@ -157,7 +157,7 @@ export function StatusScreen() {
                 <CreditCard size={20} color="#6b7280" />
                 <Text style={styles.detailLabel}>Price:</Text>
                 <Text style={styles.detailValue}>
-                  ${subscription.price.toFixed(2)}/{planMetadata.interval}
+                  ${subscription.price ? subscription.price.toFixed(2) : '0.00'}/{planMetadata.interval}
                 </Text>
               </View>
 

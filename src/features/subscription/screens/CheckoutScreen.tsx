@@ -38,8 +38,16 @@ export function CheckoutScreen() {
       setVerifying(true);
 
       try {
+        // Extract session ID from URL if present
+        let sessionId = params.sessionId;
+        const urlParams = new URLSearchParams(url.split('?')[1]);
+        const urlSessionId = urlParams.get('session_id');
+        if (urlSessionId) {
+          sessionId = urlSessionId;
+        }
+
         // Verify payment
-        const subscription = await verifyPayment(params.sessionId);
+        const subscription = await verifyPayment(sessionId);
 
         // Update store
         const statusResponse = {
