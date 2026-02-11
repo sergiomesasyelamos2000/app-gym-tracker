@@ -3,7 +3,24 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(xargs basename -a)",
+      "Bash(find /Users/smyelamos/Desktop/gym_app/api-gym-tracker/src -name *migration* -o -name *Migration*)",
+      "Bash(find /Users/smyelamos/Desktop/gym_app/app-gym-tracker/src -name *Navigator* -o -name *RootNav*)",
+      "Bash(npx expo install react-native-webview)",
+      "Bash(node --version)",
+      "Bash(find /Users/smyelamos/Desktop/gym_app/api-gym-tracker -name *.example -o -name .env.*)",
+      "Bash(docker compose exec api npm run migration:run)",
+      "Bash(docker compose restart api)",
+      "Bash(docker compose down -v)",
+      "Bash(docker compose up -d postgres redis)",
+      "Bash(docker compose up -d api)",
+      "Bash(docker compose up api -d)",
+      "Bash(docker compose exec postgres psql -U postgres -d gym_db -c \"\\\\dt\")",
+      "Bash(curl -s http://localhost:3000/api)",
+      "Bash(npm run migration:show)",
+      "Bash(npm run)",
+      "Bash(npm run migration:run)"
     ],
     "deny": [],
     "ask": []

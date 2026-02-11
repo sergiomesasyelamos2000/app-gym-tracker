@@ -3,16 +3,23 @@
  *
  * Shows AuthScreen when user is not authenticated
  * Shows BottomTabs when user is authenticated
+ * Includes SubscriptionStack as modal accessible from anywhere
  */
 
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import { useAuthStore } from "../store/useAuthStore";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { BottomTabs } from "./BottomTabs";
+import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
+
+const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const fetchSubscription = useSubscriptionStore((state) => state.setSubscription);
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Check if auth state is loaded from AsyncStorage
@@ -25,6 +32,13 @@ export const RootNavigator = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Load subscription data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isInitializing) {
+      // Subscription will be loaded by useSubscription hook in components
+    }
+  }, [isAuthenticated, isInitializing]);
+
   // Show loading screen while checking auth state
   if (isInitializing) {
     return (
@@ -34,8 +48,26 @@ export const RootNavigator = () => {
     );
   }
 
-  // Show auth screen or main app based on authentication
-  return isAuthenticated ? <BottomTabs /> : <AuthScreen />;
+  // Show auth screen or main app with subscription stack
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isAuthenticated ? (
+        <>
+          <Stack.Screen name="MainApp" component={BottomTabs} />
+          <Stack.Screen
+            name="SubscriptionStack"
+            component={SubscriptionStack}
+            options={{
+              presentation: "modal",
+              headerShown: false,
+            }}
+          />
+        </>
+      ) : (
+        <Stack.Screen name="Auth" component={AuthScreen} />
+      )}
+    </Stack.Navigator>
+  );
 };
 
 const styles = StyleSheet.create({

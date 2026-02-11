@@ -3,6 +3,7 @@ import {
   Bell,
   Calendar,
   ChevronRight,
+  Crown,
   Download,
   LogOut,
   Moon,
@@ -28,6 +29,8 @@ import { logout as logoutService } from "../features/login/services/authService"
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { useNutritionStore } from "../store/useNutritionStore";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
+import { SubscriptionPlan } from "../models/subscription.model";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -40,6 +43,10 @@ export default function ProfileScreen() {
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
+
+  // Subscription store
+  const subscription = useSubscriptionStore((state) => state.subscription);
+  const isPremium = useSubscriptionStore((state) => state.isPremium);
 
   // Notification settings from store
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
@@ -78,6 +85,14 @@ export default function ProfileScreen() {
 
   const handleThemeChange = async (value: boolean) => {
     await setThemeMode(value ? "dark" : "light");
+  };
+
+  const handleSubscription = () => {
+    if (isPremium) {
+      navigation.navigate("SubscriptionStatus");
+    } else {
+      navigation.navigate("PlansScreen");
+    }
   };
 
   const handleExportData = () => {
@@ -183,6 +198,73 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
+        </View>
+
+        {/* Premium/Subscription Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            {isPremium ? "SUSCRIPCIÓN" : "ACTUALIZAR A PREMIUM"}
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.settingCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: isPremium ? theme.border : theme.warning + "40",
+                borderWidth: 1,
+              },
+            ]}
+            onPress={handleSubscription}
+          >
+            <View style={styles.settingRow}>
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.warning + "20" },
+                ]}
+              >
+                <Crown color={theme.warning} size={24} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  {isPremium ? "Gestionar Suscripción" : "🚀 Desbloquear Premium"}
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {isPremium
+                    ? `Plan ${subscription?.plan === SubscriptionPlan.LIFETIME ? "Lifetime" : subscription?.plan === SubscriptionPlan.YEARLY ? "Anual" : "Mensual"} · Activo`
+                    : "Rutinas ilimitadas, AI, y más"}
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </View>
+
+            {!isPremium && (
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: theme.divider, marginVertical: 12 },
+                ]}
+              />
+            )}
+            {!isPremium && (
+              <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.warning, fontWeight: "600" },
+                  ]}
+                >
+                  ✨ Prueba todas las funciones premium
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Nutrition Profile Section */}
