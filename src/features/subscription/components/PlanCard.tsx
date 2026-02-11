@@ -46,12 +46,12 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
 
       {/* Price */}
       <View style={styles.priceContainer}>
-        <Text style={styles.currency}>$</Text>
         <Text style={styles.price}>{plan.price.toFixed(2)}</Text>
+        <Text style={styles.currency}>€</Text>
         {plan.interval && plan.interval !== 'lifetime' && (
           <Text style={styles.interval}>/{plan.interval === 'month' ? 'mes' : plan.interval === 'year' ? 'año' : plan.interval}</Text>
         )}
-        {plan.interval === 'lifetime' && <Text style={styles.interval}>pago único</Text>}
+        {plan.interval === 'lifetime' && <Text style={styles.interval}> pago único</Text>}
       </View>
 
       {/* Savings */}
@@ -155,9 +155,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   currency: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '600',
     color: '#111827',
+    marginLeft: 4,
   },
   price: {
     fontSize: 48,
