@@ -73,8 +73,8 @@ export function CheckoutScreen() {
       } catch (error: any) {
         console.error('Error verifying payment:', error);
         Alert.alert(
-          'Verification Error',
-          'Payment successful but verification failed. Please contact support.',
+          'Error de Verificación',
+          'Pago exitoso pero la verificación falló. Por favor, contacta con soporte.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       } finally {
@@ -84,7 +84,7 @@ export function CheckoutScreen() {
 
     // Check if cancel URL
     if (url.includes('/subscription/cancel')) {
-      Alert.alert('Payment Canceled', 'You canceled the payment process.', [
+      Alert.alert('Pago Cancelado', 'Has cancelado el proceso de pago.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     }
@@ -92,11 +92,11 @@ export function CheckoutScreen() {
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancel Payment',
-      'Are you sure you want to cancel the payment process?',
+      'Cancelar Pago',
+      '¿Estás seguro de que quieres cancelar el proceso de pago?',
       [
-        { text: 'Continue Payment', style: 'cancel' },
-        { text: 'Cancel', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: 'Continuar con el Pago', style: 'cancel' },
+        { text: 'Cancelar', style: 'destructive', onPress: () => navigation.goBack() },
       ]
     );
   };
@@ -106,8 +106,8 @@ export function CheckoutScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.verifyingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={styles.verifyingText}>Verifying payment...</Text>
-          <Text style={styles.verifyingSubtext}>Please wait while we confirm your purchase</Text>
+          <Text style={styles.verifyingText}>Verificando pago...</Text>
+          <Text style={styles.verifyingSubtext}>Por favor espera mientras confirmamos tu compra</Text>
         </View>
       </SafeAreaView>
     );
@@ -120,7 +120,7 @@ export function CheckoutScreen() {
         <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
           <X size={24} color="#374151" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Secure Checkout</Text>
+        <Text style={styles.headerTitle}>Pago Seguro</Text>
         <View style={{ width: 40 }} />
       </View>
 

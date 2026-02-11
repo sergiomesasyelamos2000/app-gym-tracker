@@ -49,21 +49,21 @@ export function StatusScreen() {
 
   const handleCancelSubscription = () => {
     Alert.alert(
-      'Cancel Subscription',
-      'Are you sure you want to cancel your subscription? You will still have access until the end of your billing period.',
+      'Cancelar Suscripción',
+      '¿Estás seguro de que quieres cancelar tu suscripción? Seguirás teniendo acceso hasta el final de tu período de facturación.',
       [
-        { text: 'Keep Subscription', style: 'cancel' },
+        { text: 'Mantener Suscripción', style: 'cancel' },
         {
-          text: 'Cancel Subscription',
+          text: 'Cancelar Suscripción',
           style: 'destructive',
           onPress: async () => {
             try {
               setActionLoading(true);
               await cancelSubscription(false); // Cancel at period end
               await fetchSubscription();
-              Alert.alert('Success', 'Your subscription will be canceled at the end of the billing period.');
+              Alert.alert('Éxito', 'Tu suscripción se cancelará al final del período de facturación.');
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to cancel subscription');
+              Alert.alert('Error', error.message || 'No se pudo cancelar la suscripción');
             } finally {
               setActionLoading(false);
             }
@@ -78,9 +78,9 @@ export function StatusScreen() {
       setActionLoading(true);
       await reactivateSubscription();
       await fetchSubscription();
-      Alert.alert('Success', 'Your subscription has been reactivated!');
+      Alert.alert('Éxito', '¡Tu suscripción ha sido reactivada!');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to reactivate subscription');
+      Alert.alert('Error', error.message || 'No se pudo reactivar la suscripción');
     } finally {
       setActionLoading(false);
     }
@@ -92,7 +92,7 @@ export function StatusScreen() {
       const { portalUrl } = await getCustomerPortalUrl();
       await Linking.openURL(portalUrl);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open customer portal');
+      Alert.alert('Error', error.message || 'No se pudo abrir el portal de cliente');
     } finally {
       setActionLoading(false);
     }
@@ -127,7 +127,7 @@ export function StatusScreen() {
           <View style={styles.successBanner}>
             <CheckCircle size={24} color="#10b981" />
             <Text style={styles.successText}>
-              Welcome to Premium! Your subscription is now active.
+              ¡Bienvenido a Premium! Tu suscripción está activa.
             </Text>
           </View>
         )}
@@ -135,7 +135,7 @@ export function StatusScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Crown size={32} color={isPremium ? '#f59e0b' : '#9ca3af'} />
-          <Text style={styles.title}>My Subscription</Text>
+          <Text style={styles.title}>Mi Suscripción</Text>
         </View>
 
         {/* Current Plan Card */}
@@ -155,9 +155,9 @@ export function StatusScreen() {
               {/* Price */}
               <View style={styles.detailRow}>
                 <CreditCard size={20} color="#6b7280" />
-                <Text style={styles.detailLabel}>Price:</Text>
+                <Text style={styles.detailLabel}>Precio:</Text>
                 <Text style={styles.detailValue}>
-                  ${typeof subscription.price === 'number' ? subscription.price.toFixed(2) : '0.00'}/{planMetadata.interval}
+                  ${typeof subscription.price === 'number' ? subscription.price.toFixed(2) : '0.00'}/{planMetadata.interval === 'month' ? 'mes' : planMetadata.interval === 'year' ? 'año' : planMetadata.interval}
                 </Text>
               </View>
 
@@ -166,11 +166,11 @@ export function StatusScreen() {
                 <View style={styles.detailRow}>
                   <Calendar size={20} color="#6b7280" />
                   <Text style={styles.detailLabel}>
-                    {isCanceled ? 'Expires:' : 'Renews:'}
+                    {isCanceled ? 'Expira:' : 'Se renueva:'}
                   </Text>
                   <Text style={styles.detailValue}>
-                    {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                    {daysRemaining !== undefined && ` (${daysRemaining} days)`}
+                    {new Date(subscription.currentPeriodEnd).toLocaleDateString('es-ES')}
+                    {daysRemaining !== undefined && ` (${daysRemaining} días)`}
                   </Text>
                 </View>
               )}
@@ -179,7 +179,7 @@ export function StatusScreen() {
               {isCanceled && (
                 <View style={styles.canceledNotice}>
                   <Text style={styles.canceledText}>
-                    Your subscription will be canceled at the end of the billing period.
+                    Tu suscripción se cancelará al final del período de facturación.
                   </Text>
                 </View>
               )}
@@ -188,7 +188,7 @@ export function StatusScreen() {
 
           {/* Features List */}
           <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>Included Features:</Text>
+            <Text style={styles.featuresTitle}>Funciones Incluidas:</Text>
             <FeatureList features={planMetadata.features} />
           </View>
 
@@ -210,7 +210,7 @@ export function StatusScreen() {
                   onPress={handleManageSubscription}
                   disabled={actionLoading}
                 >
-                  <Text style={styles.buttonTextSecondary}>Manage Subscription</Text>
+                  <Text style={styles.buttonTextSecondary}>Gestionar Suscripción</Text>
                   <ArrowRight size={20} color="#374151" />
                 </TouchableOpacity>
 
@@ -219,7 +219,7 @@ export function StatusScreen() {
                   onPress={handleCancelSubscription}
                   disabled={actionLoading}
                 >
-                  <Text style={styles.buttonTextDanger}>Cancel Subscription</Text>
+                  <Text style={styles.buttonTextDanger}>Cancelar Suscripción</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -230,7 +230,7 @@ export function StatusScreen() {
                 onPress={handleReactivateSubscription}
                 disabled={actionLoading}
               >
-                <Text style={styles.buttonTextPrimary}>Reactivate Subscription</Text>
+                <Text style={styles.buttonTextPrimary}>Reactivar Suscripción</Text>
               </TouchableOpacity>
             )}
 
@@ -240,7 +240,7 @@ export function StatusScreen() {
                 onPress={handleChangePlan}
                 disabled={actionLoading}
               >
-                <Text style={styles.buttonTextOutline}>View All Plans</Text>
+                <Text style={styles.buttonTextOutline}>Ver Todos los Planes</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -255,7 +255,7 @@ export function StatusScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Questions? Contact us at support@gymtracker.com
+            ¿Preguntas? Contáctanos en support@gymtracker.com
           </Text>
         </View>
       </ScrollView>

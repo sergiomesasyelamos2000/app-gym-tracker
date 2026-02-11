@@ -38,11 +38,11 @@ export function usePaywall() {
         getDefaultMessage(feature, features?.maxRoutines, features?.maxCustomProducts, features?.maxCustomMeals);
 
       Alert.alert(
-        'Premium Feature',
+        'Función Premium',
         message,
         [
           {
-            text: 'Upgrade to Premium',
+            text: 'Actualizar a Premium',
             onPress: () => {
               // Navigate to plans screen
               navigation.navigate('SubscriptionStack', {
@@ -52,7 +52,7 @@ export function usePaywall() {
             style: 'default',
           },
           {
-            text: 'Maybe Later',
+            text: 'Quizás más tarde',
             style: 'cancel',
           },
         ],
@@ -80,18 +80,18 @@ function getDefaultMessage(
 ): string {
   switch (feature) {
     case 'create_routine':
-      return `You've reached the limit of ${maxRoutines} routines on the free plan. Upgrade to Premium for unlimited routines.`;
+      return `Has alcanzado el límite de ${maxRoutines} rutinas en el plan gratuito. Actualiza a Premium para rutinas ilimitadas.`;
     case 'create_custom_product':
-      return `You've reached the limit of ${maxCustomProducts} custom products on the free plan. Upgrade to Premium for unlimited custom products.`;
+      return `Has alcanzado el límite de ${maxCustomProducts} productos personalizados en el plan gratuito. Actualiza a Premium para productos ilimitados.`;
     case 'create_custom_meal':
-      return `You've reached the limit of ${maxCustomMeals} custom meals on the free plan. Upgrade to Premium for unlimited custom meals.`;
+      return `Has alcanzado el límite de ${maxCustomMeals} comidas personalizadas en el plan gratuito. Actualiza a Premium para comidas ilimitadas.`;
     case 'ai_analysis':
-      return 'AI food analysis is a premium feature. Upgrade to Premium to analyze food from photos.';
+      return 'El análisis de alimentos con IA es una función premium. Actualiza a Premium para analizar alimentos desde fotos.';
     case 'advanced_stats':
-      return 'Advanced statistics are available with Premium. Upgrade to unlock detailed insights.';
+      return 'Las estadísticas avanzadas están disponibles con Premium. Actualiza para desbloquear información detallada.';
     case 'export_data':
-      return 'Data export is a premium feature. Upgrade to export your workout and nutrition data.';
+      return 'La exportación de datos es una función premium. Actualiza para exportar tus datos de entrenamiento y nutrición.';
     default:
-      return 'This feature requires a Premium subscription. Upgrade to unlock all features.';
+      return 'Esta función requiere una suscripción Premium. Actualiza para desbloquear todas las funciones.';
   }
 }

@@ -34,18 +34,18 @@ export function PaywallScreen({
     });
   };
 
-  const defaultTitle = 'Unlock Premium Features';
+  const defaultTitle = 'Desbloquea las Funciones Premium';
   const defaultMessage =
-    'Upgrade to Premium to access unlimited routines, AI analysis, advanced stats, and more.';
+    'Actualiza a Premium para acceder a rutinas ilimitadas, análisis con IA, estadísticas avanzadas y más.';
 
   const premiumFeatures = [
-    'Unlimited workout routines',
-    'Unlimited custom products & meals',
-    'AI food photo analysis',
-    'Advanced statistics & insights',
-    'Data export functionality',
-    'Priority customer support',
-    'Ad-free experience',
+    'Rutinas de entrenamiento ilimitadas',
+    'Productos y comidas personalizadas ilimitadas',
+    'Análisis de fotos de alimentos con IA',
+    'Estadísticas e información avanzada',
+    'Exportación de datos',
+    'Soporte prioritario',
+    'Experiencia sin anuncios',
   ];
 
   return (
@@ -85,14 +85,14 @@ export function PaywallScreen({
           {feature && (
             <View style={styles.featureContext}>
               <Text style={styles.featureContextText}>
-                You're trying to access: <Text style={styles.featureName}>{feature}</Text>
+                Estás intentando acceder a: <Text style={styles.featureName}>{feature}</Text>
               </Text>
             </View>
           )}
 
           {/* Features List */}
           <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>Premium includes:</Text>
+            <Text style={styles.featuresTitle}>Premium incluye:</Text>
             {premiumFeatures.map((feat, index) => (
               <View key={index} style={styles.featureRow}>
                 <Check size={20} color="#10b981" style={styles.checkIcon} />
@@ -104,14 +104,14 @@ export function PaywallScreen({
           {/* Pricing Preview */}
           <View style={styles.pricingPreview}>
             <View style={styles.pricingOption}>
-              <Text style={styles.pricingLabel}>Monthly</Text>
-              <Text style={styles.pricingPrice}>$9.99/month</Text>
+              <Text style={styles.pricingLabel}>Mensual</Text>
+              <Text style={styles.pricingPrice}>$9.99/mes</Text>
             </View>
             <View style={styles.pricingDivider} />
             <View style={styles.pricingOption}>
-              <Text style={styles.pricingLabel}>Yearly</Text>
-              <Text style={styles.pricingPrice}>$99.99/year</Text>
-              <Text style={styles.pricingSavings}>Save 17%</Text>
+              <Text style={styles.pricingLabel}>Anual</Text>
+              <Text style={styles.pricingPrice}>$99.99/año</Text>
+              <Text style={styles.pricingSavings}>Ahorra 17%</Text>
             </View>
           </View>
 
@@ -123,18 +123,18 @@ export function PaywallScreen({
               activeOpacity={0.8}
             >
               <Crown size={20} color="#ffffff" style={styles.buttonIcon} />
-              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeButtonText}>Actualizar a Premium</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.laterButton} onPress={onClose}>
-              <Text style={styles.laterButtonText}>Maybe Later</Text>
+              <Text style={styles.laterButtonText}>Quizás más tarde</Text>
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              7-day money-back guarantee • Cancel anytime
+              Garantía de devolución de 7 días • Cancela cuando quieras
             </Text>
           </View>
         </ScrollView>

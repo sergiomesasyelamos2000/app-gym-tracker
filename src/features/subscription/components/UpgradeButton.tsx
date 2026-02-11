@@ -34,7 +34,7 @@ export function UpgradeButton({
         style={styles.icon}
       />
       <Text style={textStyle}>
-        {feature ? `Upgrade for ${feature}` : 'Upgrade to Premium'}
+        {feature ? `Actualizar para ${feature}` : 'Actualizar a Premium'}
       </Text>
     </TouchableOpacity>
   );

@@ -45,7 +45,7 @@ export function PlansScreen() {
       console.error('Error creating checkout session:', error);
       Alert.alert(
         'Error',
-        error.message || 'Failed to create checkout session. Please try again.'
+        error.message || 'No se pudo crear la sesión de pago. Por favor, inténtalo de nuevo.'
       );
     } finally {
       setLoading(false);
@@ -68,16 +68,16 @@ export function PlansScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Choose Your Plan</Text>
+          <Text style={styles.title}>Elige tu Plan</Text>
           <Text style={styles.subtitle}>
-            Unlock all features with Premium and take your fitness to the next level
+            Desbloquea todas las funciones con Premium y lleva tu entrenamiento al siguiente nivel
           </Text>
         </View>
 
         {/* Current Plan Info */}
         {subscription && (
           <View style={styles.currentPlanContainer}>
-            <Text style={styles.currentPlanLabel}>Current Plan:</Text>
+            <Text style={styles.currentPlanLabel}>Plan Actual:</Text>
             <Text style={styles.currentPlanText}>
               {PLAN_METADATA[subscription.plan].name}
             </Text>
@@ -99,17 +99,17 @@ export function PlansScreen() {
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Creating checkout session...</Text>
+            <Text style={styles.loadingText}>Creando sesión de pago...</Text>
           </View>
         )}
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            All plans include a 7-day money-back guarantee
+            Todos los planes incluyen garantía de devolución de 7 días
           </Text>
           <Text style={styles.footerSubtext}>
-            Cancel anytime • Secure payment powered by Stripe
+            Cancela cuando quieras • Pago seguro con Stripe
           </Text>
         </View>
       </ScrollView>

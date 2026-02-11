@@ -23,18 +23,18 @@ export function canCreateRoutine(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Premium Feature',
-      `You've reached the limit of ${features.maxRoutines} routines on the free plan. Upgrade to Premium for unlimited routines.`,
+      'Función Premium',
+      `Has alcanzado el límite de ${features.maxRoutines} rutinas en el plan gratuito. Actualiza a Premium para rutinas ilimitadas.`,
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }
@@ -64,18 +64,18 @@ export function canCreateCustomProduct(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Premium Feature',
-      `You've reached the limit of ${features.maxCustomProducts} custom products on the free plan. Upgrade to Premium for unlimited custom products.`,
+      'Función Premium',
+      `Has alcanzado el límite de ${features.maxCustomProducts} productos personalizados en el plan gratuito. Actualiza a Premium para productos ilimitados.`,
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }
@@ -105,18 +105,18 @@ export function canCreateCustomMeal(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Premium Feature',
-      `You've reached the limit of ${features.maxCustomMeals} custom meals on the free plan. Upgrade to Premium for unlimited custom meals.`,
+      'Función Premium',
+      `Has alcanzado el límite de ${features.maxCustomMeals} comidas personalizadas en el plan gratuito. Actualiza a Premium para comidas ilimitadas.`,
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }
@@ -138,18 +138,18 @@ export function canUseAI(navigation?: any): boolean {
 
   if (!canUse && navigation) {
     Alert.alert(
-      'Premium Feature',
-      'AI food analysis is a premium feature. Upgrade to Premium to analyze food from photos.',
+      'Función Premium',
+      'El análisis de alimentos con IA es una función premium. Actualiza a Premium para analizar alimentos desde fotos.',
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }
@@ -171,18 +171,18 @@ export function canAccessAdvancedStats(navigation?: any): boolean {
 
   if (!canAccess && navigation) {
     Alert.alert(
-      'Premium Feature',
-      'Advanced statistics are available with Premium. Upgrade to unlock detailed insights.',
+      'Función Premium',
+      'Las estadísticas avanzadas están disponibles con Premium. Actualiza para desbloquear información detallada.',
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }
@@ -204,18 +204,18 @@ export function canExportData(navigation?: any): boolean {
 
   if (!canExport && navigation) {
     Alert.alert(
-      'Premium Feature',
-      'Data export is a premium feature. Upgrade to export your workout and nutrition data.',
+      'Función Premium',
+      'La exportación de datos es una función premium. Actualiza para exportar tus datos de entrenamiento y nutrición.',
       [
         {
-          text: 'Upgrade to Premium',
+          text: 'Actualizar a Premium',
           onPress: () => {
             navigation.navigate('SubscriptionStack', {
               screen: 'PlansScreen',
             });
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
       ]
     );
   }

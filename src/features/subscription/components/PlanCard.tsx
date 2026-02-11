@@ -34,7 +34,7 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
       {/* Popular badge */}
       {plan.isPopular && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>Most Popular</Text>
+          <Text style={styles.badgeText}>Más Popular</Text>
         </View>
       )}
 
@@ -49,9 +49,9 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
         <Text style={styles.currency}>$</Text>
         <Text style={styles.price}>{plan.price.toFixed(2)}</Text>
         {plan.interval && plan.interval !== 'lifetime' && (
-          <Text style={styles.interval}>/{plan.interval}</Text>
+          <Text style={styles.interval}>/{plan.interval === 'month' ? 'mes' : plan.interval === 'year' ? 'año' : plan.interval}</Text>
         )}
-        {plan.interval === 'lifetime' && <Text style={styles.interval}>once</Text>}
+        {plan.interval === 'lifetime' && <Text style={styles.interval}>pago único</Text>}
       </View>
 
       {/* Savings */}
@@ -89,7 +89,7 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
             isCurrentPlan && styles.buttonTextDisabled,
           ]}
         >
-          {isCurrentPlan ? 'Current Plan' : isFree ? 'Continue with Free' : 'Select Plan'}
+          {isCurrentPlan ? 'Plan Actual' : isFree ? 'Continuar con Gratuito' : 'Seleccionar Plan'}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>

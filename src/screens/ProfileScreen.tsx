@@ -237,7 +237,7 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {isPremium
-                    ? `Plan ${subscription?.plan === SubscriptionPlan.LIFETIME ? "Lifetime" : subscription?.plan === SubscriptionPlan.YEARLY ? "Anual" : "Mensual"} · Activo`
+                    ? `Plan ${subscription?.plan === SubscriptionPlan.LIFETIME ? "de por Vida" : subscription?.plan === SubscriptionPlan.YEARLY ? "Anual" : "Mensual"} · Activo`
                     : "Rutinas ilimitadas, AI, y más"}
                 </Text>
               </View>

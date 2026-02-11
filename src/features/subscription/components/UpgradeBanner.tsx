@@ -25,8 +25,8 @@ export function UpgradeBanner({ message, compact }: UpgradeBannerProps) {
   };
 
   const defaultMessage = compact
-    ? 'Unlock Premium Features'
-    : 'Upgrade to Premium for unlimited routines, AI analysis, and more!';
+    ? 'Desbloquea las Funciones Premium'
+    : '¡Actualiza a Premium para rutinas ilimitadas, análisis con IA y más!';
 
   return (
     <TouchableOpacity
