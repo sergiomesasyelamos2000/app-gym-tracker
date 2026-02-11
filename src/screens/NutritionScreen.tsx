@@ -34,6 +34,9 @@ import {
   sendPhotoThunk,
 } from "../store/chatSlice";
 import { useAuthStore } from "../store/useAuthStore";
+import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
+import { useNavigation } from "@react-navigation/native";
+import { Crown } from "lucide-react-native";
 
 // Typing indicator component with animated dots
 const TypingIndicator = ({ theme }: { theme: any }) => {
@@ -170,6 +173,10 @@ export default function NutritionScreen() {
   const user = useAuthStore((state) => state.user);
   const dispatch = useAppDispatch();
   const { theme, isDark } = useTheme();
+  const navigation = useNavigation<any>();
+
+  // Hook para límite de uso de IA
+  const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } = useAIUsageLimit();
 
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
@@ -210,12 +217,42 @@ export default function NutritionScreen() {
   const handleSend = async () => {
     if (!chatInput.trim() || loading) return;
 
+    // Verificar límite de uso para usuarios gratuitos
+    if (!canUseAI()) {
+      Alert.alert(
+        "Límite Alcanzado",
+        `Has alcanzado el límite de ${dailyLimit} consultas diarias en el plan gratuito. Actualiza a Premium para consultas ilimitadas.`,
+        [
+          {
+            text: "Actualizar a Premium",
+            onPress: () => {
+              navigation.navigate("SubscriptionStack", {
+                screen: "PlansScreen",
+              });
+            },
+          },
+          { text: "Cancelar", style: "cancel" },
+        ]
+      );
+      return;
+    }
+
     const messageText = chatInput;
     dispatch(addMessage({ text: messageText, sender: "user" }));
     setChatInput("");
     setLoadingMessage(true);
 
     try {
+      // Incrementar uso antes de enviar
+      const allowed = await incrementUsage();
+      if (!allowed) {
+        Alert.alert(
+          "Límite Alcanzado",
+          `Has alcanzado el límite de ${dailyLimit} consultas diarias. El límite se restablecerá mañana.`
+        );
+        return;
+      }
+
       await dispatch(sendMessageThunk({ text: messageText, userId: user?.id }));
     } catch (error) {
       console.error("❌ Error sending message:", error);
@@ -225,6 +262,26 @@ export default function NutritionScreen() {
   };
 
   const handleImagePicker = async () => {
+    // Verificar límite de uso para usuarios gratuitos
+    if (!canUseAI()) {
+      Alert.alert(
+        "Límite Alcanzado",
+        `Has alcanzado el límite de ${dailyLimit} consultas diarias en el plan gratuito. Actualiza a Premium para análisis ilimitados.`,
+        [
+          {
+            text: "Actualizar a Premium",
+            onPress: () => {
+              navigation.navigate("SubscriptionStack", {
+                screen: "PlansScreen",
+              });
+            },
+          },
+          { text: "Cancelar", style: "cancel" },
+        ]
+      );
+      return;
+    }
+
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -244,6 +301,16 @@ export default function NutritionScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        // Incrementar uso antes de enviar
+        const allowed = await incrementUsage();
+        if (!allowed) {
+          Alert.alert(
+            "Límite Alcanzado",
+            `Has alcanzado el límite de ${dailyLimit} consultas diarias. El límite se restablecerá mañana.`
+          );
+          return;
+        }
+
         const photo = result.assets[0];
         dispatch(
           addMessage({
@@ -322,6 +389,51 @@ export default function NutritionScreen() {
             </View>
           </View>
         </View>
+
+        {/* Banner de uso de IA para usuarios gratuitos */}
+        {!isPremium && remainingCalls !== null && (
+          <TouchableOpacity
+            style={[
+              styles.usageBanner,
+              {
+                backgroundColor: remainingCalls > 3 ? theme.info + "20" : theme.warning + "20",
+                borderColor: remainingCalls > 3 ? theme.info : theme.warning,
+              },
+            ]}
+            onPress={() => {
+              navigation.navigate("SubscriptionStack", {
+                screen: "PlansScreen",
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.usageBannerContent}>
+              <View style={styles.usageBannerLeft}>
+                <Ionicons
+                  name={remainingCalls > 3 ? "information-circle" : "warning"}
+                  size={20}
+                  color={remainingCalls > 3 ? theme.info : theme.warning}
+                />
+                <Text
+                  style={[
+                    styles.usageBannerText,
+                    { color: remainingCalls > 3 ? theme.info : theme.warning },
+                  ]}
+                >
+                  {remainingCalls > 0
+                    ? `${remainingCalls} de ${dailyLimit} consultas restantes hoy`
+                    : "Límite diario alcanzado"}
+                </Text>
+              </View>
+              <View style={styles.usageBannerRight}>
+                <Crown size={16} color={theme.warning} />
+                <Text style={[styles.upgradeBannerText, { color: theme.warning }]}>
+                  Actualizar
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.chatWrapper}>
           <FlatList
@@ -418,6 +530,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
     opacity: 0.9,
+  },
+  usageBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  usageBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  usageBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 8,
+  },
+  usageBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    flex: 1,
+  },
+  usageBannerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+  },
+  upgradeBannerText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   chatWrapper: {
     flex: 1,

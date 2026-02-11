@@ -45,6 +45,7 @@ import { useNutritionStore } from "../../../store/useNutritionStore";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
+import { canCreateCustomProduct, canCreateCustomMeal } from "../../../utils/subscriptionHelpers";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -521,7 +522,11 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
           {searchText && (
             <TouchableOpacity
               style={styles.createButton}
-              onPress={() => navigation.navigate("CreateProductScreen")}
+              onPress={() => {
+                if (canCreateCustomProduct(customProducts.length, navigation)) {
+                  navigation.navigate("CreateProductScreen");
+                }
+              }}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />
               <Text style={styles.createButtonText}>Crear Producto</Text>
@@ -1041,7 +1046,11 @@ function CustomProductsTab({
         </Text>
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => navigation.navigate("CreateProductScreen")}
+          onPress={() => {
+            if (canCreateCustomProduct(customProducts.length, navigation)) {
+              navigation.navigate("CreateProductScreen");
+            }
+          }}
         >
           <Ionicons name="add-circle" size={24} color="#fff" />
           <Text style={styles.createButtonText}>Crear Producto</Text>
@@ -1073,7 +1082,11 @@ function CustomProductsTab({
       />
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => navigation.navigate("CreateProductScreen")}
+        onPress={() => {
+          if (canCreateCustomProduct(customProducts.length, navigation)) {
+            navigation.navigate("CreateProductScreen");
+          }
+        }}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
@@ -1309,7 +1322,11 @@ function CustomMealsTab({
         </Text>
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => navigation.navigate("CreateMealScreen")}
+          onPress={() => {
+            if (canCreateCustomMeal(customMeals.length, navigation)) {
+              navigation.navigate("CreateMealScreen");
+            }
+          }}
         >
           <Ionicons name="add-circle" size={24} color="#fff" />
           <Text style={styles.createButtonText}>Crear Comida</Text>
@@ -1341,7 +1358,11 @@ function CustomMealsTab({
       />
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => navigation.navigate("CreateMealScreen")}
+        onPress={() => {
+          if (canCreateCustomMeal(customMeals.length, navigation)) {
+            navigation.navigate("CreateMealScreen");
+          }
+        }}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>

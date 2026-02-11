@@ -463,52 +463,54 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Data Settings */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-            DATOS
-          </Text>
+        {/* Data Settings - Only for Premium */}
+        {isPremium && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+              DATOS
+            </Text>
 
-          <View
-            style={[
-              styles.settingsGroup,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            {/* Export Data */}
-            <TouchableOpacity
+            <View
               style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderBottomColor: theme.divider },
+                styles.settingsGroup,
+                { backgroundColor: theme.card, borderColor: theme.border },
               ]}
-              onPress={handleExportData}
             >
-              <View
+              {/* Export Data */}
+              <TouchableOpacity
                 style={[
-                  styles.settingIconContainer,
-                  { backgroundColor: theme.success + "20" },
+                  styles.settingRow,
+                  styles.settingRowBorder,
+                  { borderBottomColor: theme.divider },
                 ]}
+                onPress={handleExportData}
               >
-                <Download color={theme.success} size={20} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Exportar Datos
-                </Text>
-                <Text
+                <View
                   style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
+                    styles.settingIconContainer,
+                    { backgroundColor: theme.success + "20" },
                   ]}
                 >
-                  Descarga tus datos de nutrición y entrenamiento
-                </Text>
-              </View>
-              <ChevronRight color={theme.textTertiary} size={20} />
-            </TouchableOpacity>
+                  <Download color={theme.success} size={20} />
+                </View>
+                <View style={styles.settingContent}>
+                  <Text style={[styles.settingTitle, { color: theme.text }]}>
+                    Exportar Datos
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Descarga tus datos de nutrición y entrenamiento
+                  </Text>
+                </View>
+                <ChevronRight color={theme.textTertiary} size={20} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Account Actions */}
         <View style={styles.section}>

@@ -6,7 +6,7 @@ import {
   FileJson,
   FileText,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,11 +24,38 @@ import {
   ExportFormat,
   exportService,
 } from "../../../services/exportService";
+import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
 
 export default function ExportDataScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
+  const { isPremium, features } = useSubscriptionStore();
+
+  // Verificar acceso premium al cargar
+  useEffect(() => {
+    if (!features?.exportDataEnabled) {
+      Alert.alert(
+        "Función Premium",
+        "La exportación de datos es una función premium. Actualiza a Premium para exportar tus datos de entrenamiento y nutrición.",
+        [
+          {
+            text: "Actualizar a Premium",
+            onPress: () => {
+              navigation.navigate("SubscriptionStack" as any, {
+                screen: "PlansScreen",
+              });
+            },
+          },
+          {
+            text: "Volver",
+            style: "cancel",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    }
+  }, [features, navigation]);
 
   // State
   const [startDate, setStartDate] = useState(

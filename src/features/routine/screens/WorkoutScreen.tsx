@@ -31,6 +31,7 @@ import {
   duplicateRoutine,
   findAllRoutines,
 } from "../services/routineService";
+import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -204,11 +205,14 @@ export default function WorkoutScreen() {
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => {
-            navigation.navigate("ExerciseList", {
-              onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
-                // lógica para crear nueva rutina
-              },
-            });
+            // Verificar límite de rutinas antes de permitir crear
+            if (canCreateRoutine(routines.length, navigation)) {
+              navigation.navigate("ExerciseList", {
+                onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
+                  // lógica para crear nueva rutina
+                },
+              });
+            }
           }}
         >
           <MaterialIcons name="add" size={22} color="#fff" />
