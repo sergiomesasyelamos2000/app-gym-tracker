@@ -177,16 +177,13 @@ export function StatusScreen() {
                 <CreditCard size={20} color="#6b7280" />
                 <Text style={styles.detailLabel}>Precio:</Text>
                 <Text style={styles.detailValue}>
-                  {typeof subscription.price === "number"
-                    ? subscription.price.toFixed(2)
-                    : "0.00"}
-                  /
-                  {planMetadata.interval === "month"
-                    ? "mes"
-                    : planMetadata.interval === "year"
-                      ? "año"
-                      : planMetadata.interval}
-                  €
+                  {planMetadata.price.toFixed(2)}€
+                  {planMetadata.interval && planMetadata.interval !== "lifetime" && (
+                    <>
+                      /{planMetadata.interval === "month" ? "mes" : "año"}
+                    </>
+                  )}
+                  {planMetadata.interval === "lifetime" && " (pago único)"}
                 </Text>
               </View>
 
