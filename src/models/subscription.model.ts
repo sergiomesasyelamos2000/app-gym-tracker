@@ -1,18 +1,18 @@
 // Subscription enums
 export enum SubscriptionPlan {
-  FREE = 'free',
-  MONTHLY = 'monthly',
-  YEARLY = 'yearly',
-  LIFETIME = 'lifetime',
+  FREE = "free",
+  MONTHLY = "monthly",
+  YEARLY = "yearly",
+  LIFETIME = "lifetime",
 }
 
 export enum SubscriptionStatus {
-  ACTIVE = 'active',
-  CANCELED = 'canceled',
-  EXPIRED = 'expired',
-  PAST_DUE = 'past_due',
-  INCOMPLETE = 'incomplete',
-  TRIAL = 'trial',
+  ACTIVE = "active",
+  CANCELED = "canceled",
+  EXPIRED = "expired",
+  PAST_DUE = "past_due",
+  INCOMPLETE = "incomplete",
+  TRIAL = "trial",
 }
 
 // Subscription models
@@ -84,7 +84,7 @@ export interface PlanMetadata {
   description: string;
   price: number;
   currency: string;
-  interval?: 'month' | 'year' | 'lifetime';
+  interval?: "month" | "year" | "lifetime";
   features: string[];
   isPopular?: boolean;
   savings?: string; // e.g., "Save 17%"
@@ -93,66 +93,66 @@ export interface PlanMetadata {
 export const PLAN_METADATA: Record<SubscriptionPlan, PlanMetadata> = {
   [SubscriptionPlan.FREE]: {
     id: SubscriptionPlan.FREE,
-    name: 'Gratuito',
-    description: 'Comienza con funciones básicas',
+    name: "Gratuito",
+    description: "Comienza con funciones básicas",
     price: 0,
-    currency: 'usd',
+    currency: "eur",
     features: [
-      'Hasta 3 rutinas',
-      'Hasta 5 productos personalizados',
-      'Hasta 3 comidas personalizadas',
-      'Estadísticas básicas',
-      'Soporte comunitario',
+      "Hasta 3 rutinas",
+      "Hasta 5 productos personalizados",
+      "Hasta 3 comidas personalizadas",
+      "Estadísticas básicas",
+      "Soporte comunitario",
     ],
   },
   [SubscriptionPlan.MONTHLY]: {
     id: SubscriptionPlan.MONTHLY,
-    name: 'Premium Mensual',
-    description: 'Acceso completo con facturación mensual',
-    price: 9.99,
-    currency: 'usd',
-    interval: 'month',
+    name: "Premium Mensual",
+    description: "Acceso completo con facturación mensual",
+    price: 0.99,
+    currency: "eur",
+    interval: "month",
     features: [
-      'Rutinas ilimitadas',
-      'Productos y comidas personalizadas ilimitadas',
-      'Análisis de alimentos con IA',
-      'Estadísticas avanzadas',
-      'Exportación de datos',
-      'Soporte prioritario',
+      "Rutinas ilimitadas",
+      "Productos y comidas personalizadas ilimitadas",
+      "Análisis de alimentos con IA",
+      "Estadísticas avanzadas",
+      "Exportación de datos",
+      "Soporte prioritario",
     ],
   },
   [SubscriptionPlan.YEARLY]: {
     id: SubscriptionPlan.YEARLY,
-    name: 'Premium Anual',
-    description: 'Mejor precio - ahorra con facturación anual',
-    price: 99.99,
-    currency: 'usd',
-    interval: 'year',
+    name: "Premium Anual",
+    description: "Mejor precio - ahorra con facturación anual",
+    price: 9.99,
+    currency: "eur",
+    interval: "year",
     isPopular: true,
-    savings: 'Ahorra 17%',
+    savings: "Ahorra 17%",
     features: [
-      'Rutinas ilimitadas',
-      'Productos y comidas personalizadas ilimitadas',
-      'Análisis de alimentos con IA',
-      'Estadísticas avanzadas',
-      'Exportación de datos',
-      'Soporte prioritario',
-      '¡2 meses gratis!',
+      "Rutinas ilimitadas",
+      "Productos y comidas personalizadas ilimitadas",
+      "Análisis de alimentos con IA",
+      "Estadísticas avanzadas",
+      "Exportación de datos",
+      "Soporte prioritario",
+      "¡2 meses gratis!",
     ],
   },
   [SubscriptionPlan.LIFETIME]: {
     id: SubscriptionPlan.LIFETIME,
-    name: 'Acceso de por Vida',
-    description: 'Pago único, acceso para siempre',
-    price: 199.99,
-    currency: 'usd',
-    interval: 'lifetime',
+    name: "Acceso de por Vida",
+    description: "Pago único, acceso para siempre",
+    price: 19.99,
+    currency: "eur",
+    interval: "lifetime",
     features: [
-      'Todo lo incluido en Premium',
-      'Acceso de por vida',
-      'Todas las actualizaciones futuras',
-      'Sin pagos recurrentes',
-      'Mejor valor a largo plazo',
+      "Todo lo incluido en Premium",
+      "Acceso de por vida",
+      "Todas las actualizaciones futuras",
+      "Sin pagos recurrentes",
+      "Mejor valor a largo plazo",
     ],
   },
 };

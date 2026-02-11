@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-} from 'react-native';
-import { Crown, X, Check } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+} from "react-native";
+import { Crown, X, Check } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 
 interface PaywallScreenProps {
   visible: boolean;
@@ -29,23 +29,23 @@ export function PaywallScreen({
 
   const handleUpgrade = () => {
     onClose();
-    navigation.navigate('SubscriptionStack', {
-      screen: 'PlansScreen',
+    navigation.navigate("SubscriptionStack", {
+      screen: "PlansScreen",
     });
   };
 
-  const defaultTitle = 'Desbloquea las Funciones Premium';
+  const defaultTitle = "Desbloquea las Funciones Premium";
   const defaultMessage =
-    'Actualiza a Premium para acceder a rutinas ilimitadas, análisis con IA, estadísticas avanzadas y más.';
+    "Actualiza a Premium para acceder a rutinas ilimitadas, análisis con IA, estadísticas avanzadas y más.";
 
   const premiumFeatures = [
-    'Rutinas de entrenamiento ilimitadas',
-    'Productos y comidas personalizadas ilimitadas',
-    'Análisis de fotos de alimentos con IA',
-    'Estadísticas e información avanzada',
-    'Exportación de datos',
-    'Soporte prioritario',
-    'Experiencia sin anuncios',
+    "Rutinas de entrenamiento ilimitadas",
+    "Productos y comidas personalizadas ilimitadas",
+    "Análisis de fotos de alimentos con IA",
+    "Estadísticas e información avanzada",
+    "Exportación de datos",
+    "Soporte prioritario",
+    "Experiencia sin anuncios",
   ];
 
   return (
@@ -85,7 +85,8 @@ export function PaywallScreen({
           {feature && (
             <View style={styles.featureContext}>
               <Text style={styles.featureContextText}>
-                Estás intentando acceder a: <Text style={styles.featureName}>{feature}</Text>
+                Estás intentando acceder a:{" "}
+                <Text style={styles.featureName}>{feature}</Text>
               </Text>
             </View>
           )}
@@ -105,12 +106,12 @@ export function PaywallScreen({
           <View style={styles.pricingPreview}>
             <View style={styles.pricingOption}>
               <Text style={styles.pricingLabel}>Mensual</Text>
-              <Text style={styles.pricingPrice}>$9.99/mes</Text>
+              <Text style={styles.pricingPrice}>0.99€/mes</Text>
             </View>
             <View style={styles.pricingDivider} />
             <View style={styles.pricingOption}>
               <Text style={styles.pricingLabel}>Anual</Text>
-              <Text style={styles.pricingPrice}>$99.99/año</Text>
+              <Text style={styles.pricingPrice}>9.99€/año</Text>
               <Text style={styles.pricingSavings}>Ahorra 17%</Text>
             </View>
           </View>
@@ -146,26 +147,26 @@ export function PaywallScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTitle: {
     marginLeft: 8,
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   closeButton: {
     padding: 4,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   hero: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 24,
@@ -186,38 +187,38 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#fef3c7',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fef3c7",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
     marginBottom: 12,
   },
   message: {
     fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
+    color: "#6b7280",
+    textAlign: "center",
     lineHeight: 24,
   },
   featureContext: {
     marginHorizontal: 24,
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#eff6ff',
+    backgroundColor: "#eff6ff",
     borderRadius: 12,
   },
   featureContextText: {
     fontSize: 14,
-    color: '#1e40af',
-    textAlign: 'center',
+    color: "#1e40af",
+    textAlign: "center",
   },
   featureName: {
-    fontWeight: '600',
+    fontWeight: "600",
   },
   featuresContainer: {
     marginHorizontal: 24,
@@ -225,13 +226,13 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 16,
   },
   featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   checkIcon: {
@@ -239,52 +240,52 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 15,
-    color: '#374151',
+    color: "#374151",
     flex: 1,
   },
   pricingPreview: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
     borderRadius: 12,
     padding: 16,
   },
   pricingOption: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   pricingDivider: {
     width: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: "#e5e7eb",
     marginHorizontal: 16,
   },
   pricingLabel: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#6b7280',
+    fontWeight: "500",
+    color: "#6b7280",
     marginBottom: 4,
   },
   pricingPrice: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "700",
+    color: "#111827",
   },
   pricingSavings: {
     marginTop: 4,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#10b981',
+    fontWeight: "600",
+    color: "#10b981",
   },
   actions: {
     paddingHorizontal: 24,
     marginBottom: 16,
   },
   upgradeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f59e0b',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f59e0b",
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -294,25 +295,25 @@ const styles = StyleSheet.create({
   },
   upgradeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#ffffff",
   },
   laterButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
   },
   laterButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
+    fontWeight: "500",
+    color: "#6b7280",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 24,
   },
   footerText: {
     fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'center',
+    color: "#9ca3af",
+    textAlign: "center",
   },
 });
