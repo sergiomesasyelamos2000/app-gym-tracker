@@ -19,6 +19,7 @@ import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { store } from "./src/store/store";
 import { useNotificationSettingsStore } from "./src/store/useNotificationSettingsStore";
 import CustomToast from "./src/ui/CustomToast";
+import { SyncProvider } from "./src/components/SyncProvider";
 
 LogBox.ignoreLogs([
   "expo-notifications: Android Push notifications",
@@ -109,7 +110,9 @@ export default function App() {
       <ThemeProvider>
         <PaperProvider>
           <SafeAreaProvider>
-            <AppContent />
+            <SyncProvider>
+              <AppContent />
+            </SyncProvider>
           </SafeAreaProvider>
         </PaperProvider>
       </ThemeProvider>
