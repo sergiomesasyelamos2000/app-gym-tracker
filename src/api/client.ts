@@ -3,6 +3,10 @@ import { useAuthStore } from "../store/useAuthStore";
 
 const BASE_URL = ENV.API_URL;
 
+// Track if a token refresh is in progress to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
 /**
  * Get authentication headers
  * @returns Object with Authorization header if user is authenticated
@@ -21,43 +25,62 @@ function getAuthHeaders(): Record<string, string> {
 
 /**
  * Refresh the access token using the refresh token
+ * Prevents multiple simultaneous refresh attempts using a shared promise
  * @returns New tokens or null if refresh failed
  */
 async function attemptTokenRefresh(): Promise<boolean> {
+  // If already refreshing, return the existing promise
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
   const { refreshToken } = useAuthStore.getState();
 
   if (!refreshToken) {
     return false;
   }
 
-  try {
-    // Call refresh endpoint directly (without using apiFetch to avoid recursion)
-    const response = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      body: JSON.stringify({ refreshToken }),
-    });
+  // Set refreshing flag and create new promise
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      // Call refresh endpoint directly (without using apiFetch to avoid recursion)
+      const response = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        console.error("Token refresh failed:", response.status, response.statusText);
+        return false;
+      }
+
+      const data = await response.json();
+
+      // Update tokens in store
+      if (data.tokens) {
+        useAuthStore.getState().updateTokens(data.tokens);
+        console.log("Token refreshed successfully");
+        return true;
+      }
+
+      console.error("Token refresh response missing tokens field");
       return false;
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      return false;
+    } finally {
+      // Reset refreshing state
+      isRefreshing = false;
+      refreshPromise = null;
     }
+  })();
 
-    const data = await response.json();
-
-    // Update tokens in store
-    if (data.tokens) {
-      useAuthStore.getState().updateTokens(data.tokens);
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.error("Token refresh failed:", error);
-    return false;
-  }
+  return refreshPromise;
 }
 
 export class ApiError extends Error {
