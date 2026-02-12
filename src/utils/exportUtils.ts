@@ -61,8 +61,6 @@ export const exportToPDF = async (
   userName?: string
 ): Promise<void> => {
   try {
-    console.log("Iniciando exportación PDF...");
-
     const arrayBuffer = await apiFetch<ArrayBuffer>("export/pdf", {
       method: "POST",
       body: JSON.stringify({
@@ -72,8 +70,6 @@ export const exportToPDF = async (
       }),
     });
 
-    console.log("ArrayBuffer recibido, tamaño:", arrayBuffer.byteLength);
-
     const bytes = new Uint8Array(arrayBuffer);
     let binary = "";
     for (let i = 0; i < bytes.byteLength; i++) {
@@ -81,18 +77,12 @@ export const exportToPDF = async (
     }
     const base64 = btoa(binary);
 
-    console.log("PDF convertido a base64");
-
     const fileName = `${title.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
     const fileUri = `${Paths.cache.uri}${fileName}`;
-
-    console.log("Guardando PDF en:", fileUri);
 
     await FileSystem.writeAsStringAsync(fileUri, base64, {
       encoding: "base64",
     });
-
-    console.log("PDF guardado exitosamente");
 
     // NOTA: shareAsync se queda colgado en Expo Go con PDFs
     // El archivo ya está guardado en el dispositivo
@@ -101,8 +91,6 @@ export const exportToPDF = async (
       "Tu plan de nutrición se ha guardado correctamente en tu dispositivo.",
       [{ text: "OK" }]
     );
-
-    console.log("Exportación completada");
   } catch (error) {
     console.error("Error exporting PDF:", error);
     const errorMessage =

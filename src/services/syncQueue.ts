@@ -9,7 +9,10 @@ const PENDING_ROUTINES_KEY = "@pending_routines";
 export type OperationPayload =
   | { type: "CREATE_ROUTINE"; data: RoutineRequestDto }
   | { type: "UPDATE_ROUTINE"; data: { id: string; routine: RoutineRequestDto } }
-  | { type: "CREATE_SESSION"; data: { routineId: string; session: Partial<RoutineSessionEntity> } };
+  | {
+      type: "CREATE_SESSION";
+      data: { routineId: string; session: Partial<RoutineSessionEntity> };
+    };
 
 export interface PendingOperation {
   id: string;
@@ -39,7 +42,6 @@ export async function addToSyncQueue(
     const queue: PendingOperation[] = queueStr ? JSON.parse(queueStr) : [];
     queue.push(operation);
     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
-    console.log(`[SyncQueue] Added ${type} operation:`, operation.id);
     return operation.id;
   } catch (error) {
     console.error("[SyncQueue] Failed to add operation:", error);
@@ -68,7 +70,6 @@ export async function removeFromSyncQueue(operationId: string): Promise<void> {
     const queue = await getPendingOperations();
     const filtered = queue.filter((op) => op.id !== operationId);
     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
-    console.log("[SyncQueue] Removed operation:", operationId);
   } catch (error) {
     console.error("[SyncQueue] Failed to remove operation:", error);
   }

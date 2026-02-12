@@ -50,23 +50,18 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
     await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
     await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
 
-    console.log("[ExerciseService] Exercises fetched from API and cached");
     return data;
   } catch (error: CaughtError) {
     // If network fails, try to load from cache
-    const isNetworkError =
-      error?.message?.includes("Network") ||
-      error?.message?.includes("network") ||
-      error?.message?.includes("fetch");
-
-    console.log("[ExerciseService] API failed (network:", isNetworkError, "), attempting to load from cache");
 
     try {
       const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
       if (cached) {
         const exercises = JSON.parse(cached);
-        await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
-        console.log("[ExerciseService] Loaded", exercises.length, "exercises from cache");
+        await AsyncStorage.setItem(
+          `${CACHE_KEYS.EXERCISES}_from_cache`,
+          "true"
+        );
         return exercises;
       }
     } catch (cacheError) {
@@ -86,7 +81,9 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
  */
 export const isUsingCache = async (): Promise<boolean> => {
   try {
-    const fromCache = await AsyncStorage.getItem(`${CACHE_KEYS.EXERCISES}_from_cache`);
+    const fromCache = await AsyncStorage.getItem(
+      `${CACHE_KEYS.EXERCISES}_from_cache`
+    );
     return fromCache === "true";
   } catch {
     return false;
@@ -94,15 +91,14 @@ export const isUsingCache = async (): Promise<boolean> => {
 };
 
 export const searchExercises = async (
-  query: string,
+  query: string
 ): Promise<ExerciseRequestDto[]> => {
   try {
     return await apiFetch<ExerciseRequestDto[]>(
-      `exercises/search?name=${encodeURIComponent(query)}`,
+      `exercises/search?name=${encodeURIComponent(query)}`
     );
   } catch (error) {
     // Fallback to local filtering if offline
-    console.log("[ExerciseService] Search API failed, using local cache");
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
     if (cached) {
       const exercises: ExerciseRequestDto[] = JSON.parse(cached);
@@ -115,7 +111,7 @@ export const searchExercises = async (
 };
 
 export const createExercise = async (
-  exercise: CreateExerciseDto,
+  exercise: CreateExerciseDto
 ): Promise<ExerciseRequestDto> => {
   return apiFetch<ExerciseRequestDto>("exercises", {
     method: "POST",
@@ -134,7 +130,6 @@ export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EQUIPMENT);
     if (cached) {
-      console.log("[ExerciseService] Loaded equipment from cache");
       return JSON.parse(cached);
     }
     throw error;
@@ -143,13 +138,14 @@ export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
 
 export const fetchExerciseTypes = async (): Promise<ExerciseTypeDto[]> => {
   try {
-    const data = await apiFetch<ExerciseTypeDto[]>("exercises/exercise-types/all");
+    const data = await apiFetch<ExerciseTypeDto[]>(
+      "exercises/exercise-types/all"
+    );
     await AsyncStorage.setItem(CACHE_KEYS.EXERCISE_TYPES, JSON.stringify(data));
     return data;
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISE_TYPES);
     if (cached) {
-      console.log("[ExerciseService] Loaded exercise types from cache");
       return JSON.parse(cached);
     }
     throw error;
@@ -164,7 +160,6 @@ export const fetchMuscles = async (): Promise<MuscleDto[]> => {
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.MUSCLES);
     if (cached) {
-      console.log("[ExerciseService] Loaded muscles from cache");
       return JSON.parse(cached);
     }
     throw error;

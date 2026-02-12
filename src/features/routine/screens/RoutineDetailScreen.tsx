@@ -1,4 +1,10 @@
 import {
+  RoutineExerciseResponseDto,
+  RoutineResponseDto,
+  RoutineSessionEntity,
+  SetResponseDto,
+} from "@entity-data-models/index";
+import {
   NavigationProp,
   RouteProp,
   useNavigation,
@@ -19,14 +25,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
-import {
-  RoutineResponseDto,
-  RoutineSessionEntity,
-  RoutineExerciseResponseDto,
-  SetResponseDto
-} from "@entity-data-models/index";
 import { notificationService } from "../../../services/notificationService";
-import { CaughtError, getErrorMessage, AppTheme, SessionData, ExerciseSet, BaseNavigation } from "../../../types";
 import {
   saveRoutineOffline,
   saveSessionOffline,
@@ -36,6 +35,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import { useRecordsStore } from "../../../store/useRecordsStore";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { CaughtError, getErrorMessage } from "../../../types";
 import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import UndoSnackbar from "../components/ExerciseCard/UndoSnackbar";
@@ -69,7 +69,9 @@ export default function RoutineDetailScreen() {
   );
 
   const [loading, setLoading] = useState(!!routine?.id);
-  const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(routine || null);
+  const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(
+    routine || null
+  );
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
   const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
   const [started, setStarted] = useState(false);
@@ -93,7 +95,9 @@ export default function RoutineDetailScreen() {
   const restTimerEndTimeRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [previousSessions, setPreviousSessions] = useState<RoutineSessionEntity[]>([]);
+  const [previousSessions, setPreviousSessions] = useState<
+    RoutineSessionEntity[]
+  >([]);
 
   // Undo deletion state
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
@@ -154,18 +158,8 @@ export default function RoutineDetailScreen() {
 
     const fetchRoutine = async () => {
       try {
-        console.log(`[RoutineDetail] Fetching routine: ${routineId}`);
         const data = await getRoutineById(routineId);
-        console.log(`[RoutineDetail] Received routine:`, {
-          id: data.id,
-          title: data.title,
-          hasRoutineExercises: !!data.routineExercises,
-          routineExercisesCount: data.routineExercises?.length || 0,
-          routineExercises: data.routineExercises?.map((re) => ({
-            exerciseName: re.exercise?.name,
-            setsCount: re.sets?.length,
-          })),
-        });
+
         setRoutineData(data);
       } catch (err: CaughtError) {
         console.error("Error fetching routine by id", err);
@@ -173,7 +167,8 @@ export default function RoutineDetailScreen() {
         // Show user-friendly error message
         Alert.alert(
           "Error",
-          getErrorMessage(err) || "No se pudo cargar la rutina. Verifica tu conexión."
+          getErrorMessage(err) ||
+            "No se pudo cargar la rutina. Verifica tu conexión."
         );
 
         // Navigate back if routine cannot be loaded
@@ -721,24 +716,28 @@ export default function RoutineDetailScreen() {
     setShowRestToast(false);
   };
 
-  const mapRoutineExercises = (data: RoutineResponseDto): ExerciseRequestDto[] => {
-    const mapped = data.routineExercises?.map((re: RoutineExerciseResponseDto) => {
-      const exercise: ExerciseRequestDto = {
-        ...re.exercise,
-        sets: re.sets.map((set: SetResponseDto) => ({
-          ...set,
-          previousWeight: set.weight,
-          previousReps: set.reps || set.repsMin,
-        })),
-        notes: re.notes,
-        restSeconds: re.restSeconds,
-        weightUnit: re.weightUnit || "kg",
-        repsType: re.repsType || "reps",
-        supersetWith: re.supersetWith || undefined,
-      };
+  const mapRoutineExercises = (
+    data: RoutineResponseDto
+  ): ExerciseRequestDto[] => {
+    const mapped = data.routineExercises?.map(
+      (re: RoutineExerciseResponseDto) => {
+        const exercise: ExerciseRequestDto = {
+          ...re.exercise,
+          sets: re.sets.map((set: SetResponseDto) => ({
+            ...set,
+            previousWeight: set.weight,
+            previousReps: set.reps || set.repsMin,
+          })),
+          notes: re.notes,
+          restSeconds: re.restSeconds,
+          weightUnit: re.weightUnit || "kg",
+          repsType: re.repsType || "reps",
+          supersetWith: re.supersetWith || undefined,
+        };
 
-      return exercise;
-    });
+        return exercise;
+      }
+    );
 
     return mapped || [];
   };

@@ -1,35 +1,51 @@
-import { execQuery, execRun, getDatabase } from '../database/sqliteClient';
 import type {
+  CreateCustomMealDto,
+  CreateCustomProductDto,
+  CreateFoodEntryDto,
   RoutineRequestDto,
   RoutineSessionRequestDto,
-  CreateFoodEntryDto,
-  CreateCustomProductDto,
-  CreateCustomMealDto,
-  UpdateFoodEntryDto,
   UpdateCustomProductDto,
-} from '@entity-data-models/index';
+  UpdateFoodEntryDto,
+} from "@entity-data-models/index";
+import { execQuery, execRun, getDatabase } from "../database/sqliteClient";
 
 export type EntityType =
-  | 'routine'
-  | 'routine_exercise'
-  | 'set'
-  | 'routine_session'
-  | 'food_entry'
-  | 'custom_product'
-  | 'custom_meal';
+  | "routine"
+  | "routine_exercise"
+  | "set"
+  | "routine_session"
+  | "food_entry"
+  | "custom_product"
+  | "custom_meal";
 
-export type OperationType = 'CREATE' | 'UPDATE' | 'DELETE';
+export type OperationType = "CREATE" | "UPDATE" | "DELETE";
 
 // Union type for all possible payload types
 export type QueuePayload =
-  | (RoutineRequestDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | (RoutineRequestDto & {
+      id?: string;
+      createdAt?: string;
+      updatedAt?: string;
+    })
   | { id: string; routine: RoutineRequestDto }
-  | (RoutineSessionRequestDto & { id?: string; routineId?: string; createdAt?: string })
+  | (RoutineSessionRequestDto & {
+      id?: string;
+      routineId?: string;
+      createdAt?: string;
+    })
   | (CreateFoodEntryDto & { id?: string; createdAt?: string })
   | (UpdateFoodEntryDto & { id: string })
-  | (CreateCustomProductDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | (CreateCustomProductDto & {
+      id?: string;
+      createdAt?: string;
+      updatedAt?: string;
+    })
   | (UpdateCustomProductDto & { id: string; updatedAt?: string })
-  | (CreateCustomMealDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | (CreateCustomMealDto & {
+      id?: string;
+      createdAt?: string;
+      updatedAt?: string;
+    })
   | { id: string }; // For DELETE operations
 
 export interface QueueItem {
@@ -66,8 +82,6 @@ export async function enqueueOperation(
     JSON.stringify(payload),
     new Date().toISOString(),
   ]);
-
-  console.log(`✅ Enqueued ${operation} operation for ${entityType}:${entityId}`);
 }
 
 /**
@@ -89,13 +103,15 @@ export async function getPendingOperations(): Promise<QueueItem[]> {
 export async function removeQueueItem(id: number): Promise<void> {
   const query = `DELETE FROM sync_queue WHERE id = ?`;
   await execRun(query, [id]);
-  console.log(`✅ Removed queue item ${id}`);
 }
 
 /**
  * Incrementa el contador de intentos de una operación
  */
-export async function incrementAttempts(id: number, error: string): Promise<void> {
+export async function incrementAttempts(
+  id: number,
+  error: string
+): Promise<void> {
   const query = `
     UPDATE sync_queue
     SET attempts = attempts + 1, last_error = ?
@@ -110,7 +126,7 @@ export async function incrementAttempts(id: number, error: string): Promise<void
  */
 export async function getPendingCount(): Promise<number> {
   const result = await execQuery<{ count: number }>(
-    'SELECT COUNT(*) as count FROM sync_queue'
+    "SELECT COUNT(*) as count FROM sync_queue"
   );
   return result[0]?.count || 0;
 }
@@ -118,12 +134,13 @@ export async function getPendingCount(): Promise<number> {
 /**
  * Limpia operaciones que han fallado muchas veces
  */
-export async function cleanupFailedOperations(maxAttempts: number = 5): Promise<void> {
+export async function cleanupFailedOperations(
+  maxAttempts: number = 5
+): Promise<void> {
   const query = `DELETE FROM sync_queue WHERE attempts >= ?`;
   const result = await execRun(query, [maxAttempts]);
 
   if (result.changes > 0) {
-    console.log(`🗑️ Cleaned up ${result.changes} failed operations`);
   }
 }
 

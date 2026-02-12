@@ -69,14 +69,6 @@ async function attemptTokenRefresh(): Promise<boolean> {
 
       // Update tokens in store
       if (data.tokens) {
-        const oldToken =
-          useAuthStore.getState().accessToken?.substring(0, 20) + "...";
-        useAuthStore.getState().updateTokens(data.tokens);
-        const newToken =
-          useAuthStore.getState().accessToken?.substring(0, 20) + "...";
-        console.log("[TokenRefresh] Tokens updated successfully");
-        console.log("[TokenRefresh] Old token:", oldToken);
-        console.log("[TokenRefresh] New token:", newToken);
         return true;
       }
 

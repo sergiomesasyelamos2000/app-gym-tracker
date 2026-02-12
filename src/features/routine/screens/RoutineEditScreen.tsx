@@ -18,12 +18,16 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto, SetRequestDto, RoutineExerciseResponseDto } from "../../../models";
+import {
+  ExerciseRequestDto,
+  RoutineExerciseResponseDto,
+  SetRequestDto,
+} from "../../../models";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
+import { AppTheme, CaughtError, getErrorMessage } from "../../../types";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { CaughtError, getErrorMessage, AppTheme } from "../../../types";
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
@@ -62,18 +66,8 @@ export default function RoutineEditScreen() {
     const fetchRoutine = async () => {
       if (id) {
         try {
-          console.log(`[RoutineEdit] Fetching routine: ${id}`);
           const data = await getRoutineById(id);
-          console.log(`[RoutineEdit] Received routine:`, {
-            id: data.id,
-            title: data.title,
-            hasRoutineExercises: !!data.routineExercises,
-            routineExercisesCount: data.routineExercises?.length || 0,
-            routineExercises: data.routineExercises?.map((re) => ({
-              exerciseName: re.exercise?.name,
-              setsCount: re.sets?.length,
-            })),
-          });
+
           const exercises: ExerciseRequestDto[] = Array.isArray(
             data.routineExercises
           )

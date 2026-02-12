@@ -1,5 +1,5 @@
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import { AppState, AppStateStatus, Linking, Platform } from "react-native";
 
 // Track app state globally
@@ -36,7 +36,8 @@ export interface RestTimerNotification {
 class NotificationService {
   private activeTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private notificationIds: Map<string, string> = new Map();
-  private autoDismissTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private autoDismissTimers: Map<string, ReturnType<typeof setTimeout>> =
+    new Map();
 
   /**
    * Request notification permissions with better handling
@@ -96,7 +97,7 @@ class NotificationService {
    */
   async startRestTimer(
     restSeconds: number,
-    exerciseName?: string,
+    exerciseName?: string
   ): Promise<string | null> {
     try {
       // Ensure permissions before scheduling
@@ -147,17 +148,14 @@ class NotificationService {
 
       // Auto-dismiss logic remains relevant for cleanup
       if (isAppInForeground) {
-        const dismissTimer = setTimeout(
-          async () => {
-            try {
-              await Notifications.dismissNotificationAsync(notificationId);
-            } catch (e) {
-              // Ignore dismissal errors
-            }
-            this.autoDismissTimers.delete(timerId);
-          },
-          (restSeconds + 2) * 1000,
-        ); // Dismiss 2 seconds after notification fires
+        const dismissTimer = setTimeout(async () => {
+          try {
+            await Notifications.dismissNotificationAsync(notificationId);
+          } catch (e) {
+            // Ignore dismissal errors
+          }
+          this.autoDismissTimers.delete(timerId);
+        }, (restSeconds + 2) * 1000); // Dismiss 2 seconds after notification fires
 
         this.autoDismissTimers.set(timerId, dismissTimer);
       }
@@ -198,7 +196,7 @@ class NotificationService {
       for (const notification of scheduledNotifications) {
         if (notification.content.data?.type === "rest-complete") {
           await Notifications.cancelScheduledNotificationAsync(
-            notification.identifier,
+            notification.identifier
           );
         }
       }
@@ -217,7 +215,7 @@ class NotificationService {
   async scheduleReminder(
     title: string,
     body: string,
-    triggerDate: Date,
+    triggerDate: Date
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
@@ -252,7 +250,7 @@ class NotificationService {
     title: string,
     body: string,
     seconds: number,
-    repeats: boolean = false,
+    repeats: boolean = false
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
@@ -288,7 +286,7 @@ class NotificationService {
     title: string,
     body: string,
     hour: number,
-    minute: number = 0,
+    minute: number = 0
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
@@ -325,7 +323,7 @@ class NotificationService {
     body: string,
     weekday: number, // 1 = Sunday, 2 = Monday, ... 7 = Saturday
     hour: number,
-    minute: number = 0,
+    minute: number = 0
   ): Promise<string | null> {
     try {
       const hasPermissions = await this.requestPermissions();
@@ -388,7 +386,6 @@ class NotificationService {
 
     const hasPermissions = await this.requestPermissions();
     if (!hasPermissions) {
-      console.log("Permission not granted for push notifications.");
       return null;
     }
 
@@ -400,9 +397,6 @@ class NotificationService {
         Constants.easConfig?.projectId;
 
       if (!projectId) {
-        console.log(
-          "EAS Project ID not found. Skipping push token registration. To enable push notifications, run `eas init`.",
-        );
         return null;
       }
 
@@ -411,7 +405,6 @@ class NotificationService {
         projectId,
       });
       const token = tokenData.data;
-      console.log("Expo Push Token:", token);
       return token;
     } catch (error) {
       // Gracefully handle the error if it still occurs

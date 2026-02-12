@@ -19,7 +19,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { AppTheme } from "../../../types";
-import { fetchExercises, isUsingCache } from "../../../services/exerciseService";
+import {
+  fetchExercises,
+  isUsingCache,
+} from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 
@@ -71,11 +74,9 @@ export default function ExerciseList() {
       // Check if we're using cached data (offline mode)
       const fromCache = await isUsingCache();
       setIsOfflineMode(fromCache);
-
-      console.log(`[ExerciseList] Loaded ${data.length} exercises (from cache: ${fromCache})`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
-      console.error("[ExerciseList] Failed to load exercises:", errorMessage);
+      const errorMessage =
+        err instanceof Error ? err.message : "Error desconocido";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -126,10 +127,7 @@ export default function ExerciseList() {
       ) : error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={loadExercises}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={loadExercises}>
             <Text style={styles.retryButtonText}>Reintentar</Text>
           </TouchableOpacity>
         </View>

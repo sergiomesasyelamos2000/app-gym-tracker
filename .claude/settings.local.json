@@ -29,7 +29,9 @@
       "Bash(npm start)",
       "Bash(lsof -i:8081)",
       "Bash(curl -s http://localhost:8081/status)",
-      "Bash(grep -l \"class-validator\\\\|class-transformer\" /Users/smyelamos/Desktop/gym_app/api-gym-tracker/libs/entity-data-models/src/dtos/*.ts)"
+      "Bash(grep -l \"class-validator\\\\|class-transformer\" /Users/smyelamos/Desktop/gym_app/api-gym-tracker/libs/entity-data-models/src/dtos/*.ts)",
+      "Bash(grep -r \"saveRoutineSession\\\\|sessions.*POST\" ../api-gym-tracker --include=*.controller.ts -B 3 -A 20)",
+      "Bash(grep -r \"@Post.*session\\\\|createSession\\\\|saveSession\" ../api-gym-tracker --include=*.ts -B 5 -A 10)"
     ],
     "deny": [],
     "ask": []

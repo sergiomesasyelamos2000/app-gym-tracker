@@ -29,18 +29,19 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import CachedExerciseImage from "../components/CachedExerciseImage";
 import { useTheme } from "../contexts/ThemeContext";
 import { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
+  GlobalStats,
   findAllRoutineSessions,
   getGlobalStats,
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";
-import CachedExerciseImage from "../components/CachedExerciseImage";
 
-// Types for session exercises
+// Types for session exercises (from backend)
 interface SessionExercise {
   exerciseId: string;
   name: string;
@@ -52,7 +53,7 @@ interface SessionExercise {
     completed: boolean;
     isRecord?: boolean;
   }[];
-  totalReps: number;
+  totalReps?: number; // Optional, calculated on the fly
 }
 
 // Type for session with calculated totals
@@ -70,15 +71,16 @@ interface SessionWithTotals {
   createdAt: Date | string;
 }
 
-// Type for global stats
-interface GlobalStats {
-  totalTime: number;
-  totalWeight: number;
-  completedSets: number;
-}
+// GlobalStats is now imported from routineService
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
-const ExerciseImage = ({ exercise, style }: { exercise: SessionExercise; style: StyleProp<ImageStyle> }) => {
+const ExerciseImage = ({
+  exercise,
+  style,
+}: {
+  exercise: SessionExercise;
+  style: StyleProp<ImageStyle>;
+}) => {
   // Use giftUrl if available (animated GIF), otherwise use imageUrl with caching
   if (exercise.giftUrl) {
     return (
@@ -91,18 +93,18 @@ const ExerciseImage = ({ exercise, style }: { exercise: SessionExercise; style: 
   }
 
   // Use cached image component for regular images
-  return (
-    <CachedExerciseImage
-      imageUrl={exercise.imageUrl}
-      style={style}
-    />
-  );
+  return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
 };
 
 type BottomTabsParamList = {
   Inicio: undefined;
   Login: undefined;
-  Entreno: undefined | { screen?: keyof WorkoutStackParamList; params?: Record<string, unknown> };
+  Entreno:
+    | undefined
+    | {
+        screen?: keyof WorkoutStackParamList;
+        params?: Record<string, unknown>;
+      };
   Nutrición: undefined;
   Macros: undefined;
 };
@@ -210,27 +212,35 @@ export default function HomeScreen() {
         findAllRoutineSessions(),
       ]);
 
-      const sessionsWithTotals = sessionsData.map((session): SessionWithTotals => {
-        const totalWeight = session.exercises?.reduce(
-          (sum: number, e: SessionExercise) =>
-            sum +
-            e.sets.reduce(
-              (acc: number, s) => acc + (s.weight || 0) * (s.reps || 0),
-              0,
-            ),
-          0,
-        );
-        const totalReps = session.exercises?.reduce(
-          (sum: number, e: SessionExercise) => sum + e.totalReps,
-          0,
-        );
+      const sessionsWithTotals = sessionsData.map(
+        (session): SessionWithTotals => {
+          const totalWeight =
+            session.exercises?.reduce(
+              (sum: number, e) =>
+                sum +
+                e.sets.reduce(
+                  (acc: number, s) => acc + (s.weight || 0) * (s.reps || 0),
+                  0
+                ),
+              0
+            ) || 0;
 
-        return {
-          ...session,
-          totalWeight,
-          totalReps,
-        };
-      });
+          const totalReps =
+            session.exercises?.reduce((sum: number, e) => {
+              const exerciseTotalReps = e.sets.reduce(
+                (acc: number, s) => acc + (s.reps || 0),
+                0
+              );
+              return sum + exerciseTotalReps;
+            }, 0) || 0;
+
+          return {
+            ...session,
+            totalWeight,
+            totalReps,
+          };
+        }
+      );
 
       setStats(globalStats);
       setSessions(sessionsWithTotals);
@@ -250,7 +260,7 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }).start();
       fetchData();
-    }, [fetchData]),
+    }, [fetchData])
   );
 
   const onRefresh = useCallback(() => {
@@ -350,11 +360,14 @@ export default function HomeScreen() {
             {/* Récords en la sesión */}
             {(() => {
               const totalRecords =
-                session.exercises?.reduce((acc: number, ex: SessionExercise) => {
-                  return (
-                    acc + (ex.sets?.filter((s) => s.isRecord).length || 0)
-                  );
-                }, 0) || 0;
+                session.exercises?.reduce(
+                  (acc: number, ex: SessionExercise) => {
+                    return (
+                      acc + (ex.sets?.filter((s) => s.isRecord).length || 0)
+                    );
+                  },
+                  0
+                ) || 0;
 
               if (totalRecords > 0) {
                 return (
@@ -414,7 +427,8 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   ))}
-                {(session.exercises?.length ?? 0) > (responsive.isTablet ? 3 : 4) && (
+                {(session.exercises?.length ?? 0) >
+                  (responsive.isTablet ? 3 : 4) && (
                   <View style={styles.moreExercises}>
                     <Text
                       style={[
@@ -423,7 +437,8 @@ export default function HomeScreen() {
                       ]}
                     >
                       +
-                      {(session.exercises?.length ?? 0) - (responsive.isTablet ? 3 : 4)}{" "}
+                      {(session.exercises?.length ?? 0) -
+                        (responsive.isTablet ? 3 : 4)}{" "}
                       más
                     </Text>
                   </View>
@@ -434,7 +449,7 @@ export default function HomeScreen() {
         </Pressable>
       );
     },
-    [theme, isDark, responsive],
+    [theme, isDark, responsive]
   );
 
   return (
@@ -494,21 +509,21 @@ export default function HomeScreen() {
             <View style={styles.quickStats}>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatValue}>
-                  {stats ? Math.round(stats.totalTime / 60) : 0}
+                  {stats ? Math.round(stats.totalDuration / 60) : 0}
                 </Text>
                 <Text style={styles.quickStatLabel}>Min</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatValue}>
-                  {stats ? stats.completedSets : 0}
+                  {stats ? stats.totalSessions : 0}
                 </Text>
-                <Text style={styles.quickStatLabel}>Series</Text>
+                <Text style={styles.quickStatLabel}>Sesiones</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatValue}>
-                  {stats ? stats.totalWeight : 0}
+                  {stats ? Math.round(stats.totalVolume) : 0}
                 </Text>
                 <Text style={styles.quickStatLabel}>Kg</Text>
               </View>
@@ -547,7 +562,7 @@ export default function HomeScreen() {
                     <Text style={styles.statIcon}>⏱️</Text>
                   </View>
                   <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? Math.round(stats.totalTime / 60) : 0}
+                    {stats ? Math.round(stats.totalDuration / 60) : 0}
                   </Text>
                   <Text
                     style={[styles.statLabel, { color: theme.textSecondary }]}
@@ -575,15 +590,15 @@ export default function HomeScreen() {
                       { backgroundColor: theme.success + "20" },
                     ]}
                   >
-                    <Text style={styles.statIcon}>✅</Text>
+                    <Text style={styles.statIcon}>📊</Text>
                   </View>
                   <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? stats.completedSets : 0}
+                    {stats ? stats.totalSessions : 0}
                   </Text>
                   <Text
                     style={[styles.statLabel, { color: theme.textSecondary }]}
                   >
-                    Series completadas
+                    Sesiones totales
                   </Text>
                 </View>
 
@@ -609,7 +624,7 @@ export default function HomeScreen() {
                     <Text style={styles.statIcon}>🏋️</Text>
                   </View>
                   <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? stats.totalWeight : 0}
+                    {stats ? Math.round(stats.totalVolume) : 0}
                   </Text>
                   <Text
                     style={[styles.statLabel, { color: theme.textSecondary }]}

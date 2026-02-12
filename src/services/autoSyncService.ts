@@ -1,18 +1,18 @@
+import type { RoutineResponseDto } from "@entity-data-models/index";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import {
-  getPendingOperations,
-  removeFromSyncQueue,
-  PendingOperation,
-  isOnline,
-} from "./syncQueue";
-import {
   saveRoutine,
-  updateRoutineById,
   saveRoutineSession,
+  updateRoutineById,
 } from "../features/routine/services/routineService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CaughtError, getErrorMessage } from "../types";
-import type { RoutineResponseDto } from "@entity-data-models/index";
+import {
+  PendingOperation,
+  getPendingOperations,
+  isOnline,
+  removeFromSyncQueue,
+} from "./syncQueue";
 
 const MAX_RETRIES = 3;
 const SYNC_INTERVAL_MS = 60000; // 1 minute
@@ -27,18 +27,15 @@ export async function processSyncQueue(): Promise<{
   failed: number;
 }> {
   if (isSyncing) {
-    console.log("[AutoSync] Already syncing, skipping...");
     return { success: 0, failed: 0 };
   }
 
   const online = await isOnline();
   if (!online) {
-    console.log("[AutoSync] Device offline, skipping sync");
     return { success: 0, failed: 0 };
   }
 
   isSyncing = true;
-  console.log("[AutoSync] Starting sync process...");
 
   let successCount = 0;
   let failedCount = 0;
@@ -47,11 +44,8 @@ export async function processSyncQueue(): Promise<{
     const operations = await getPendingOperations();
 
     if (operations.length === 0) {
-      console.log("[AutoSync] No pending operations");
       return { success: 0, failed: 0 };
     }
-
-    console.log(`[AutoSync] Processing ${operations.length} operations`);
 
     for (const operation of operations) {
       try {
@@ -59,10 +53,8 @@ export async function processSyncQueue(): Promise<{
         if (success) {
           await removeFromSyncQueue(operation.id);
           successCount++;
-          console.log(`[AutoSync] ✅ Synced ${operation.type}:`, operation.id);
         } else {
           failedCount++;
-          console.log(`[AutoSync] ❌ Failed ${operation.type}:`, operation.id);
         }
       } catch (error) {
         console.error(`[AutoSync] Error processing operation:`, error);
@@ -70,14 +62,7 @@ export async function processSyncQueue(): Promise<{
       }
     }
 
-    console.log(
-      `[AutoSync] Sync complete. Success: ${successCount}, Failed: ${failedCount}`
-    );
-
     // If any routines were synced successfully, trigger a cache refresh
-    if (successCount > 0) {
-      console.log("[AutoSync] Sync successful, cache updated");
-    }
   } finally {
     isSyncing = false;
   }
@@ -90,10 +75,7 @@ export async function processSyncQueue(): Promise<{
  */
 async function processOperation(operation: PendingOperation): Promise<boolean> {
   if (operation.retries >= MAX_RETRIES) {
-    console.warn(
-      `[AutoSync] Max retries reached for operation:`,
-      operation.id
-    );
+    console.warn(`[AutoSync] Max retries reached for operation:`, operation.id);
     return false;
   }
 
@@ -116,7 +98,10 @@ async function processOperation(operation: PendingOperation): Promise<boolean> {
         return false;
     }
   } catch (error: CaughtError) {
-    console.error(`[AutoSync] Error syncing ${operation.type}:`, getErrorMessage(error));
+    console.error(
+      `[AutoSync] Error syncing ${operation.type}:`,
+      getErrorMessage(error)
+    );
 
     // Increment retry count
     operation.retries++;
@@ -142,10 +127,6 @@ async function syncCreateRoutine(operation: PendingOperation): Promise<void> {
   // Save to backend
   const savedRoutine = await saveRoutine(routine);
 
-  console.log(
-    `[AutoSync] Routine synced. Local ID: ${localId} → Server ID: ${savedRoutine.id}`
-  );
-
   // Update local cache with server ID
   await updateLocalRoutineId(localId, savedRoutine.id);
 
@@ -164,12 +145,9 @@ async function syncUpdateRoutine(operation: PendingOperation): Promise<void> {
 
   if (realId) {
     await updateRoutineById(realId, routine);
-    console.log(`[AutoSync] Routine updated. ID: ${realId}`);
   } else {
     // If no mapping exists, treat as create
-    console.log(
-      `[AutoSync] No server ID found for ${id}, creating new routine`
-    );
+
     await syncCreateRoutine({ ...operation, type: "CREATE_ROUTINE" });
   }
 }
@@ -191,7 +169,6 @@ async function syncCreateSession(operation: PendingOperation): Promise<void> {
   }
 
   await saveRoutineSession(realRoutineId, session);
-  console.log(`[AutoSync] Session synced for routine: ${realRoutineId}`);
 }
 
 /**
@@ -227,8 +204,10 @@ async function updateLocalRoutineId(
       const updatedMain = mainCache.map((r) =>
         r.id === localId ? { ...r, id: serverId, _isPending: false } : r
       );
-      await AsyncStorage.setItem("@routines_cache", JSON.stringify(updatedMain));
-      console.log("[AutoSync] Updated main routines cache: local_id → server_id");
+      await AsyncStorage.setItem(
+        "@routines_cache",
+        JSON.stringify(updatedMain)
+      );
     }
   } catch (error) {
     console.error("[AutoSync] Failed to update routine ID mapping:", error);
@@ -238,9 +217,7 @@ async function updateLocalRoutineId(
 /**
  * Get server ID for local ID
  */
-async function getServerIdForLocalId(
-  localId: string
-): Promise<string | null> {
+async function getServerIdForLocalId(localId: string): Promise<string | null> {
   try {
     // If it's not a local ID, return as-is
     if (!localId.startsWith("local_")) {
@@ -268,10 +245,7 @@ async function updateSessionRoutineIds(
   try {
     const operations = await getPendingOperations();
     const updated = operations.map((op) => {
-      if (
-        op.type === "CREATE_SESSION" &&
-        op.payload.routineId === oldId
-      ) {
+      if (op.type === "CREATE_SESSION" && op.payload.routineId === oldId) {
         return {
           ...op,
           payload: { ...op.payload, routineId: newId },
@@ -290,12 +264,9 @@ async function updateSessionRoutineIds(
  * Start automatic sync (triggers on network change and periodic intervals)
  */
 export function startAutoSync(): void {
-  console.log("[AutoSync] Starting auto-sync service");
-
   // Listen to network changes
   const unsubscribe = NetInfo.addEventListener(async (state) => {
     if (state.isConnected && state.isInternetReachable) {
-      console.log("[AutoSync] Network connected, triggering sync...");
       await processSyncQueue();
     }
   });
@@ -316,8 +287,6 @@ export function startAutoSync(): void {
  * Stop automatic sync
  */
 export function stopAutoSync(): void {
-  console.log("[AutoSync] Stopping auto-sync service");
-
   if (syncIntervalId) {
     clearInterval(syncIntervalId);
     syncIntervalId = null;
@@ -336,7 +305,6 @@ export async function forceSyncNow(): Promise<{
   success: number;
   failed: number;
 }> {
-  console.log("[AutoSync] Force sync requested");
   return await processSyncQueue();
 }
 

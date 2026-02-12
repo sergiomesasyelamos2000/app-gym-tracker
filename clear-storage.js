@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 (async () => {
   await AsyncStorage.clear();
-  console.log('AsyncStorage cleared!');
+  console.log("AsyncStorage cleared!");
 })();

@@ -4,13 +4,13 @@ import {
   ActivityIndicator,
   BackHandler,
   Dimensions,
+  Linking,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   Vibration,
   View,
-  Linking,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -52,7 +52,7 @@ export default function ReusableCameraView({
       () => {
         onCloseCamera?.();
         return true;
-      },
+      }
     );
     return () => backHandler.remove();
   }, [onCloseCamera]);
@@ -66,7 +66,6 @@ export default function ReusableCameraView({
     hasScannedRef.current = true;
     setScanned(true);
 
-    console.log("Código escaneado:", data);
     Vibration.vibrate(100);
 
     // Dar feedback visual antes de cerrar
@@ -179,7 +178,7 @@ export default function ReusableCameraView({
   }
 
   const renderCorner = (
-    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight",
+    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
   ) => {
     const styleMap = {
       topLeft: [

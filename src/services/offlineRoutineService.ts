@@ -1,8 +1,8 @@
+import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
 import {
   RoutineRequestDto,
   RoutineResponseDto,
 } from "@entity-data-models/index";
-import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   saveRoutine as apiSaveRoutine,
@@ -30,14 +30,8 @@ export async function saveRoutineOffline(
       // Update local cache
       await updateLocalRoutineCache(result);
 
-      console.log(
-        `[OfflineRoutine] Routine saved to API: ${result.id} with ${
-          result.routineExercises?.length || 0
-        } exercises`
-      );
       return result;
     } catch (error) {
-      console.log("[OfflineRoutine] API failed, saving locally", error);
       // Fall through to offline save
     }
   }
@@ -45,8 +39,14 @@ export async function saveRoutineOffline(
   // Save locally - preserve complete structure
   const localRoutine: RoutineResponseDto = {
     ...routine,
-    id: 'id' in routine && typeof routine.id === 'string' ? routine.id : `local_${Date.now()}`,
-    createdAt: 'createdAt' in routine && routine.createdAt instanceof Date ? routine.createdAt : new Date(),
+    id:
+      "id" in routine && typeof routine.id === "string"
+        ? routine.id
+        : `local_${Date.now()}`,
+    createdAt:
+      "createdAt" in routine && routine.createdAt instanceof Date
+        ? routine.createdAt
+        : new Date(),
     updatedAt: new Date(),
     userId: "", // Will be filled on sync
     totalSets:
@@ -88,11 +88,6 @@ export async function saveRoutineOffline(
   await cacheIndividualRoutineLocally(localRoutineWithMetadata); // Cache individually too
   await addToSyncQueue("CREATE_ROUTINE", routine);
 
-  console.log(
-    `[OfflineRoutine] Routine saved locally: ${localRoutineWithMetadata.id} with ${
-      localRoutineWithMetadata.routineExercises?.length || 0
-    } exercises`
-  );
   return localRoutineWithMetadata;
 }
 
@@ -109,11 +104,8 @@ export async function updateRoutineOffline(
     try {
       const result = await apiUpdateRoutine(id, routine);
       await updateLocalRoutineCache(result);
-      console.log("[OfflineRoutine] Routine updated on API:", result.id);
       return result;
-    } catch (error) {
-      console.log("[OfflineRoutine] API failed, updating locally");
-    }
+    } catch (error) {}
   }
 
   // Update locally - preserve complete structure
@@ -159,11 +151,6 @@ export async function updateRoutineOffline(
   await cacheIndividualRoutineLocally(localRoutineWithMetadata); // Update individual cache
   await addToSyncQueue("UPDATE_ROUTINE", { id, routine });
 
-  console.log(
-    `[OfflineRoutine] Routine updated locally: ${id} with ${
-      localRoutineWithMetadata.routineExercises?.length || 0
-    } exercises`
-  );
   return localRoutineWithMetadata;
 }
 
@@ -180,10 +167,18 @@ export async function saveSessionOffline(
     try {
       const result = await apiSaveSession(routineId, session);
       await saveLocalSession(result);
-      console.log("[OfflineRoutine] Session saved to API:", result.id);
       return result;
     } catch (error) {
-      console.log("[OfflineRoutine] API failed, saving session locally");
+      console.error("[OfflineRoutine] API failed with error:", error);
+      if (error instanceof Error) {
+        console.error("[OfflineRoutine] Error message:", error.message);
+        console.error("[OfflineRoutine] Error stack:", error.stack);
+      }
+      // Check if it's an HTTP error
+      if (error && typeof error === "object" && "status" in error) {
+        console.error("[OfflineRoutine] HTTP status:", (error as any).status);
+        console.error("[OfflineRoutine] Response:", (error as any).response);
+      }
     }
   }
 
@@ -199,7 +194,6 @@ export async function saveSessionOffline(
   await saveLocalSession(localSession);
   await addToSyncQueue("CREATE_SESSION", { routineId, session });
 
-  console.log("[OfflineRoutine] Session saved locally:", localSession.id);
   return localSession;
 }
 
@@ -248,7 +242,10 @@ async function saveLocalSession(session: RoutineSessionEntity): Promise<void> {
 async function updateLocalRoutineCache(
   routine: RoutineResponseDto
 ): Promise<void> {
-  await saveLocalRoutine({ ...routine, _isPending: false } as RoutineResponseDto & { _isPending: boolean });
+  await saveLocalRoutine({
+    ...routine,
+    _isPending: false,
+  } as RoutineResponseDto & { _isPending: boolean });
 
   // Also update the main routines cache so it shows in the list
   await updateRoutinesCache(routine);
@@ -275,7 +272,6 @@ async function updateRoutinesCache(routine: RoutineResponseDto): Promise<void> {
     }
 
     await AsyncStorage.setItem(ROUTINES_CACHE_KEY, JSON.stringify(routines));
-    console.log(`[OfflineRoutine] Updated routines cache with: ${routine.id}`);
   } catch (error) {
     console.error("[OfflineRoutine] Failed to update routines cache:", error);
   }
@@ -290,11 +286,6 @@ async function cacheIndividualRoutineLocally(
   try {
     const INDIVIDUAL_CACHE_KEY = `@routine_${routine.id}`;
     await AsyncStorage.setItem(INDIVIDUAL_CACHE_KEY, JSON.stringify(routine));
-    console.log(
-      `[OfflineRoutine] Cached individual routine ${routine.id} with ${
-        routine.routineExercises?.length || 0
-      } exercises`
-    );
   } catch (error) {
     console.error(
       "[OfflineRoutine] Failed to cache individual routine:",

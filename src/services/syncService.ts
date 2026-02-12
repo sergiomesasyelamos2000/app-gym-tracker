@@ -1,16 +1,16 @@
 import NetInfo from "@react-native-community/netinfo";
 import { apiFetch } from "../api/client";
-import {
-  getPendingOperations,
-  removeQueueItem,
-  incrementAttempts,
-  getPendingCount,
-  cleanupFailedOperations,
-  QueueItem,
-  EntityType,
-} from "./offlineQueueService";
 import { useSyncStore } from "../store/useSyncStore";
 import { CaughtError, getErrorMessage } from "../types";
+import {
+  EntityType,
+  QueueItem,
+  cleanupFailedOperations,
+  getPendingCount,
+  getPendingOperations,
+  incrementAttempts,
+  removeQueueItem,
+} from "./offlineQueueService";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const SYNC_BATCH_SIZE = 20;
@@ -39,7 +39,6 @@ export class SyncService {
     // Subscribe to network changes
     NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable) {
-        console.log("📡 Network connected, triggering sync...");
         this.sync();
       }
     });
@@ -51,8 +50,6 @@ export class SyncService {
 
     // Run initial sync
     this.sync();
-
-    console.log(`✅ Auto-sync started (every ${intervalMinutes} minutes)`);
   }
 
   /**
@@ -62,7 +59,6 @@ export class SyncService {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
-      console.log("⏹️ Auto-sync stopped");
     }
   }
 
@@ -72,14 +68,12 @@ export class SyncService {
   async sync(): Promise<{ success: boolean; synced: number; errors: number }> {
     // Check if already running
     if (this.isRunning) {
-      console.log("⏳ Sync already running, skipping...");
       return { success: false, synced: 0, errors: 0 };
     }
 
     // Check network status
     const netState = await NetInfo.fetch();
     if (!netState.isConnected || !netState.isInternetReachable) {
-      console.log("📴 No internet connection, skipping sync");
       return { success: false, synced: 0, errors: 0 };
     }
 
@@ -97,12 +91,9 @@ export class SyncService {
       const pendingOps = await getPendingOperations();
 
       if (pendingOps.length === 0) {
-        console.log("✅ No pending operations to sync");
         useSyncStore.getState().setPendingOperations(0);
         return { success: true, synced: 0, errors: 0 };
       }
-
-      console.log(`🔄 Syncing ${pendingOps.length} pending operations...`);
 
       // Process operations in batches
       for (let i = 0; i < pendingOps.length; i += SYNC_BATCH_SIZE) {
@@ -130,7 +121,9 @@ export class SyncService {
             useSyncStore
               .getState()
               .addSyncError(
-                `Failed to sync ${operation.entity_type}:${operation.entity_id} - ${getErrorMessage(error)}`
+                `Failed to sync ${operation.entity_type}:${
+                  operation.entity_id
+                } - ${getErrorMessage(error)}`
               );
           }
         }
@@ -141,10 +134,6 @@ export class SyncService {
       useSyncStore.getState().setPendingOperations(remainingCount);
       useSyncStore.getState().setLastSyncAt(new Date().toISOString());
 
-      console.log(
-        `✅ Sync completed: ${syncedCount} synced, ${errorCount} errors, ${remainingCount} remaining`
-      );
-
       return {
         success: errorCount === 0,
         synced: syncedCount,
@@ -152,7 +141,9 @@ export class SyncService {
       };
     } catch (error: CaughtError) {
       console.error("❌ Sync failed:", error);
-      useSyncStore.getState().addSyncError(`Sync failed: ${getErrorMessage(error)}`);
+      useSyncStore
+        .getState()
+        .addSyncError(`Sync failed: ${getErrorMessage(error)}`);
       return { success: false, synced: syncedCount, errors: errorCount + 1 };
     } finally {
       this.isRunning = false;
@@ -169,8 +160,6 @@ export class SyncService {
 
     const endpoint = this.getEndpoint(entity_type, entity_id, op);
     const method = this.getMethod(op);
-
-    console.log(`📤 Processing ${op} for ${entity_type}:${entity_id}`);
 
     if (op === "DELETE") {
       // For DELETE, no body needed
@@ -248,7 +237,6 @@ export class SyncService {
    * Fuerza una sincronización inmediata
    */
   async forceSync(): Promise<void> {
-    console.log("🔄 Forcing immediate sync...");
     await this.sync();
   }
 

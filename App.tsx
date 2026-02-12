@@ -50,7 +50,6 @@ function AppContent() {
         useNotificationSettingsStore.getState().setPermissionsGranted;
 
       if (token) {
-        console.log("Push Token obtained:", token);
         setPermissionsGranted(true);
         // TODO: Send token to backend when user is logged in
       } else {
@@ -61,10 +60,6 @@ function AppContent() {
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
-        console.log(
-          "App opened via notification (cold start):",
-          lastNotificationResponse,
-        );
         // Handle deep linking logic here if needed
       }
     };
@@ -75,7 +70,7 @@ function AppContent() {
     const notificationListener = Notifications.addNotificationReceivedListener(
       (notification) => {
         console.log("Notification received in foreground:", notification);
-      },
+      }
     );
 
     // Listener for when user taps on a notification
