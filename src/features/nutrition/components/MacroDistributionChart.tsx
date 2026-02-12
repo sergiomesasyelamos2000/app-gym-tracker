@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import CircularProgress from "react-native-circular-progress-indicator";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { AppTheme } from "../../../types";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 
 interface MacroData {
   current: number;
@@ -77,7 +76,7 @@ export const MacroDistributionChart: React.FC<Props> = ({
     color: string,
     value: number,
     goal: number,
-    current: number,
+    current: number
   ) => {
     const remaining = goal - value;
 
@@ -112,7 +111,7 @@ export const MacroDistributionChart: React.FC<Props> = ({
           "#FFB74D",
           displayCarbs,
           carbs.target,
-          carbs.current,
+          carbs.current
         )}
         {renderMacroCircle(
           "protein",
@@ -120,7 +119,7 @@ export const MacroDistributionChart: React.FC<Props> = ({
           "#2196F3",
           displayProtein,
           protein.target,
-          protein.current,
+          protein.current
         )}
         {renderMacroCircle(
           "fat",
@@ -128,14 +127,14 @@ export const MacroDistributionChart: React.FC<Props> = ({
           "#FF9800",
           displayFat,
           fat.target,
-          fat.current,
+          fat.current
         )}
       </View>
     </View>
   );
 };
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     macrosSection: {
       backgroundColor: theme.card,

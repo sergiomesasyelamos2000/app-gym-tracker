@@ -17,14 +17,18 @@ import DraggableFlatList, {
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   ExerciseRequestDto,
   RoutineExerciseResponseDto,
   SetRequestDto,
 } from "../../../models";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
-import { AppTheme, CaughtError, getErrorMessage } from "../../../types";
+import {
+  CaughtError,
+  getErrorMessage,
+  getErrorStatusCode,
+} from "../../../types";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
@@ -76,9 +80,9 @@ export default function RoutineEditScreen() {
                 sets: re.sets || [],
                 notes: re.notes,
                 restSeconds: re.restSeconds,
-                weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
-                repsType: re.repsType || re.exercise.repsType || "reps",
-                supersetWith: re.supersetWith,
+                weightUnit: re.weightUnit || "kg", // Quitar re.exercise.weightUnit ya que no existe
+                repsType: re.repsType || "reps", // Quitar re.exercise.repsType ya que no existe
+                supersetWith: re.supersetWith ?? undefined, // Convertir null a undefined
               }))
             : [];
 
@@ -602,7 +606,7 @@ export default function RoutineEditScreen() {
   );
 }
 
-const createStyles = (theme: AppTheme, isDark: boolean) =>
+const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

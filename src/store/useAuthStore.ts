@@ -1,19 +1,20 @@
+import { UserResponseDto } from "@entity-data-models/auth.dto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { AuthTokens, User } from "../models";
+import { AuthTokens } from "../models";
 
 interface AuthState {
   // State
-  user: User | null;
+  user: UserResponseDto | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
   // Actions
-  setAuth: (user: User, tokens: AuthTokens) => void;
-  updateUser: (user: Partial<User>) => void;
+  setAuth: (user: UserResponseDto, tokens: AuthTokens) => void;
+  updateUser: (user: Partial<UserResponseDto>) => void;
   updateTokens: (tokens: AuthTokens) => void;
   clearAuth: () => void;
   setLoading: (isLoading: boolean) => void;
@@ -31,7 +32,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
 
       // Set authentication (login/register success)
-      setAuth: (user: User, tokens: AuthTokens) => {
+      setAuth: (user: UserResponseDto, tokens: AuthTokens) => {
         set({
           user,
           accessToken: tokens.accessToken,
@@ -42,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Update user profile
-      updateUser: (userData: Partial<User>) => {
+      updateUser: (userData: Partial<UserResponseDto>) => {
         const currentUser = get().user;
         if (currentUser) {
           set({

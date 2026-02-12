@@ -39,6 +39,7 @@ import {
   Product,
 } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { CaughtError } from "../../../types";
 import {
   canCreateCustomMeal,
   canCreateCustomProduct,
@@ -46,7 +47,6 @@ import {
 import ReusableCameraView from "../../common/components/ReusableCameraView";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
-import { CaughtError } from "../../../types";
 
 const Tab = createMaterialTopTabNavigator();
 

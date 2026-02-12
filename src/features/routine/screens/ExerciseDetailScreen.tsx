@@ -1,3 +1,4 @@
+import { RoutineSessionEntity } from "@entity-data-models/frontend-types";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -6,6 +7,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  ImageStyle,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -13,16 +15,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ViewStyle,
-  ImageStyle,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
+import { ExerciseSet, SessionData, SessionExercise } from "../../../types";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { AppTheme, ExerciseSet, SessionExercise, SessionData } from "../../../types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IS_SMALL_DEVICE = SCREEN_WIDTH < 375;
@@ -51,7 +51,7 @@ interface ExerciseHistoryItem {
 interface ExerciseImageProps {
   exercise: ExerciseRequestDto & { giftUrl?: string; imageUrl?: string };
   style: ImageStyle;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 // ============================================================================
@@ -151,43 +151,38 @@ const calculatePersonalBestProgress = (
 // ============================================================================
 // PROCESAMIENTO DE DATOS
 // ============================================================================
+type RoutineSessionExercise = RoutineSessionEntity["exercises"][number];
+
 const processExerciseFromSession = (
-  session: SessionData,
+  session: RoutineSessionEntity,
   exerciseId: string
 ): ExerciseHistoryItem | null => {
-  const exerciseEntry = session.exercises?.find(
-    (e: SessionExercise) => e.exerciseId === exerciseId
-  );
+  const exerciseEntry: RoutineSessionExercise | undefined =
+    session.exercises?.find((e) => e.exerciseId === exerciseId);
 
   if (!exerciseEntry) return null;
 
   const sets = exerciseEntry.sets || [];
-  const completedSets = sets.filter((s: ExerciseSet) => s.completed).length;
-  const totalWeight = sets.reduce(
-    (sum: number, s: ExerciseSet) => sum + (s.weight || 0),
-    0
-  );
-  const totalReps = sets.reduce(
-    (sum: number, s: ExerciseSet) => sum + (s.reps || 0),
-    0
-  );
+  const completedSets = sets.filter((s) => s.completed).length;
+  const totalWeight = sets.reduce((sum, s) => sum + (s.weight || 0), 0);
+  const totalReps = sets.reduce((sum, s) => sum + (s.reps || 0), 0);
   const maxWeight = sets
-    .filter((s: ExerciseSet) => s.completed && s.weight > 0)
-    .reduce((max: number, s: ExerciseSet) => Math.max(max, s.weight), 0);
+    .filter((s) => s.completed && s.weight > 0)
+    .reduce((max, s) => Math.max(max, s.weight), 0);
 
   return {
     id: session.id,
-    date: session.startTime.toString(),
+    date: session.createdAt?.toString() || new Date().toString(),
     routineName: (session as any).routine?.title || "Entrenamiento sin título",
-    routineId: session.routineId,
-    sets,
+    routineId: session.routineId ?? "",
+    sets: sets as ExerciseSet[],
     completedSets,
     totalWeight,
     totalReps,
     volume: totalWeight * totalReps,
     maxWeight,
-    totalTime: session.duration || 0,
-    sessionData: session,
+    totalTime: session.totalTime || 0,
+    sessionData: session as unknown as SessionData,
   };
 };
 
@@ -202,7 +197,7 @@ const formatNumber = (num: number) => {
 // ============================================================================
 // COMPONENTES
 // ============================================================================
-const LoadingView = ({ theme }: { theme: AppTheme }) => {
+const LoadingView = ({ theme }: { theme: Theme }) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -214,7 +209,7 @@ const LoadingView = ({ theme }: { theme: AppTheme }) => {
   );
 };
 
-const EmptyStateView = ({ theme }: { theme: AppTheme }) => {
+const EmptyStateView = ({ theme }: { theme: Theme }) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.emptyState}>
@@ -231,7 +226,7 @@ const EmptyStateView = ({ theme }: { theme: AppTheme }) => {
 interface HeaderProps {
   exercise: ExerciseRequestDto;
   fadeAnim: Animated.Value;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
@@ -263,7 +258,7 @@ interface QuickStatsProps {
   currentWeight: number;
   totalSessions: number;
   maxWeight: number;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 const QuickStats = ({
@@ -320,7 +315,7 @@ interface ProgressCardProps {
   title: string;
   value: number;
   icon: string;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 const ProgressCard = ({ title, value, icon, theme }: ProgressCardProps) => {
@@ -362,7 +357,7 @@ interface ProgressSectionProps {
   totalProgress: number;
   monthlyProgress: number;
   personalBestProgress: number;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 const ProgressSection = ({
@@ -406,7 +401,7 @@ interface HistoryCardProps {
   item: ExerciseHistoryItem;
   fadeAnim: Animated.Value;
   onNavigateToRoutine: (routineId: string, routine: SessionData) => void;
-  theme: AppTheme;
+  theme: Theme;
 }
 
 const HistoryCard = ({
@@ -420,10 +415,15 @@ const HistoryCard = ({
     item.maxWeight ===
     Math.max(
       ...item.sessionData.exercises
-        .filter((e: SessionExercise) => e.exerciseId === item.sessionData.exercises[0].id)
+        .filter(
+          (e: SessionExercise) =>
+            e.exerciseId === item.sessionData.exercises[0].id
+        )
         .map((e: SessionExercise) =>
           Math.max(
-            ...e.sets.filter((s: ExerciseSet) => s.completed).map((s: ExerciseSet) => s.weight)
+            ...e.sets
+              .filter((s: ExerciseSet) => s.completed)
+              .map((s: ExerciseSet) => s.weight)
           )
         )
     );
@@ -567,7 +567,11 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
       const sessionsData = await findAllRoutineSessions();
 
       const exerciseHistory = sessionsData
-        .map((session: SessionData) => processExerciseFromSession(session, exercise.id))
+        .map(
+          (
+            session: RoutineSessionEntity // ✅ Cambiar tipo aquí
+          ) => processExerciseFromSession(session, exercise.id)
+        )
         .filter((item): item is ExerciseHistoryItem => item !== null)
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -614,8 +618,9 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 
   // Navegación
   const handleNavigateToRoutine = useCallback(
-    (routineId: string, routine: SessionData) => {
-      navigation.navigate("RoutineDetail", { routineId, routine });
+    (routineId: string) => {
+      // ✅ Solo pasar routineId
+      navigation.navigate("RoutineDetail", { routineId }); // routine es opcional
     },
     [navigation]
   );
@@ -728,7 +733,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 // ============================================================================
 // ESTILOS
 // ============================================================================
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

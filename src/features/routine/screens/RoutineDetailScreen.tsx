@@ -260,7 +260,7 @@ export default function RoutineDetailScreen() {
     setExercises(exercisesWithSets);
 
     const setsMap = exercisesWithSets.reduce(
-      (acc, ex) => ({ ...acc, [ex.id]: ex.sets }),
+      (acc, ex) => ({ ...acc, [ex.id]: ex.sets || [] }), // Agregar || []
       {} as { [exerciseId: string]: SetRequestDto[] }
     );
 
@@ -763,7 +763,7 @@ export default function RoutineDetailScreen() {
           })) || [],
         weightUnit: exercise.weightUnit || "kg",
         repsType: exercise.repsType || "reps",
-        supersetWith: exercise.supersetWith || null, // 🔥 INCLUIR SUPERSERIES
+        supersetWith: exercise.supersetWith ?? undefined, // 🔥 Convertir null a undefined
       })),
     };
 

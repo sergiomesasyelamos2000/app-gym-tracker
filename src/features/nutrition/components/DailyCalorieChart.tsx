@@ -1,9 +1,8 @@
-import React from "react";
-import { StyleSheet, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../../../contexts/ThemeContext";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { MealType } from "../../../models/nutrition.model";
-import { AppTheme } from "../../../types";
 
 interface Props {
   consumed: number;
@@ -62,7 +61,7 @@ export const DailyCalorieChart: React.FC<Props> = ({ consumed, target }) => {
   );
 };
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       alignItems: "center",

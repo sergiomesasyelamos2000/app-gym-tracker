@@ -1,25 +1,27 @@
-import { execQuery, getDatabase } from '../../database/sqliteClient';
-import { enqueueOperation } from '../offlineQueueService';
-import { syncService } from '../syncService';
-import uuid from 'react-native-uuid';
 import {
-  CreateFoodEntryDto,
-  FoodEntryResponseDto,
-  UpdateFoodEntryDto,
-  CreateCustomProductDto,
-  CustomProductResponseDto,
-  UpdateCustomProductDto,
   CreateCustomMealDto,
+  CreateCustomProductDto,
+  CreateFoodEntryDto,
   CustomMealResponseDto,
+  CustomProductResponseDto,
+  FoodEntryResponseDto,
   MealProductDto,
-} from '@entity-data-models/index';
+  UpdateCustomProductDto,
+  UpdateFoodEntryDto,
+} from "@entity-data-models/index";
+import uuid from "react-native-uuid";
+import { execQuery, getDatabase } from "../../database/sqliteClient";
+import { enqueueOperation } from "../offlineQueueService";
+import { syncService } from "../syncService";
 
 /**
  * Guarda una entrada de comida offline
  */
-export async function saveFoodEntryOffline(entry: CreateFoodEntryDto & { id?: string }): Promise<FoodEntryResponseDto> {
+export async function saveFoodEntryOffline(
+  entry: CreateFoodEntryDto & { id?: string }
+): Promise<FoodEntryResponseDto> {
   const db = await getDatabase();
-  const entryId = entry.id || uuid.v4() as string;
+  const entryId = entry.id || (uuid.v4() as string);
   const now = new Date().toISOString();
 
   const query = `
@@ -53,14 +55,14 @@ export async function saveFoodEntryOffline(entry: CreateFoodEntryDto & { id?: st
   ]);
 
   // Add to sync queue
-  await enqueueOperation('food_entry', entryId, 'CREATE', {
+  await enqueueOperation("food_entry", entryId, "CREATE", {
     ...entry,
     id: entryId,
     createdAt: now,
   });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 
   return { ...entry, id: entryId, createdAt: new Date(now) };
 }
@@ -68,7 +70,10 @@ export async function saveFoodEntryOffline(entry: CreateFoodEntryDto & { id?: st
 /**
  * Obtiene entradas de comida por usuario y fecha
  */
-export async function getFoodEntriesOffline(userId: string, date: string): Promise<FoodEntryResponseDto[]> {
+export async function getFoodEntriesOffline(
+  userId: string,
+  date: string
+): Promise<FoodEntryResponseDto[]> {
   const query = `
     SELECT * FROM food_entries
     WHERE userId = ? AND date = ? AND deleted = 0
@@ -81,7 +86,10 @@ export async function getFoodEntriesOffline(userId: string, date: string): Promi
 /**
  * Actualiza una entrada de comida
  */
-export async function updateFoodEntryOffline(entryId: string, updates: UpdateFoodEntryDto): Promise<void> {
+export async function updateFoodEntryOffline(
+  entryId: string,
+  updates: UpdateFoodEntryDto
+): Promise<void> {
   const db = await getDatabase();
 
   const query = `
@@ -100,13 +108,13 @@ export async function updateFoodEntryOffline(entryId: string, updates: UpdateFoo
   ]);
 
   // Add to sync queue
-  await enqueueOperation('food_entry', entryId, 'UPDATE', {
+  await enqueueOperation("food_entry", entryId, "UPDATE", {
     id: entryId,
     ...updates,
   });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 }
 
 /**
@@ -124,18 +132,23 @@ export async function deleteFoodEntryOffline(entryId: string): Promise<void> {
   await db.runAsync(query, [entryId]);
 
   // Add to sync queue
-  await enqueueOperation('food_entry', entryId, 'DELETE', { id: entryId });
+  await enqueueOperation("food_entry", entryId, "DELETE", { id: entryId });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 }
 
 /**
  * Guarda un producto personalizado offline
  */
-export async function saveCustomProductOffline(product: CreateCustomProductDto & { id?: string }): Promise<CustomProductResponseDto> {
+export async function saveCustomProductOffline(
+  product: CreateCustomProductDto & { id?: string }
+): Promise<CustomProductResponseDto> {
   const db = await getDatabase();
-  const productId = ('id' in product && typeof product.id === 'string') ? product.id : uuid.v4() as string;
+  const productId =
+    "id" in product && typeof product.id === "string"
+      ? product.id
+      : (uuid.v4() as string);
   const now = new Date().toISOString();
 
   const query = `
@@ -151,25 +164,25 @@ export async function saveCustomProductOffline(product: CreateCustomProductDto &
     productId,
     product.userId,
     product.name,
-    product.description,
-    product.image,
-    product.brand,
-    product.barcode,
-    product.caloriesPer100,
-    product.proteinPer100,
-    product.carbsPer100,
-    product.fatPer100,
-    product.fiberPer100,
-    product.sugarPer100,
-    product.sodiumPer100,
-    product.servingSize,
-    product.servingUnit,
+    product.description ?? null,
+    product.image ?? null,
+    product.brand ?? null,
+    product.barcode ?? null,
+    product.caloriesPer100 ?? null,
+    product.proteinPer100 ?? null,
+    product.carbsPer100 ?? null,
+    product.fatPer100 ?? null,
+    product.fiberPer100 ?? null,
+    product.sugarPer100 ?? null,
+    product.sodiumPer100 ?? null,
+    product.servingSize ?? null,
+    product.servingUnit ?? null,
     now,
     now,
   ]);
 
   // Add to sync queue
-  await enqueueOperation('custom_product', productId, 'CREATE', {
+  await enqueueOperation("custom_product", productId, "CREATE", {
     ...product,
     id: productId,
     createdAt: now,
@@ -177,15 +190,22 @@ export async function saveCustomProductOffline(product: CreateCustomProductDto &
   });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 
-  return { ...product, id: productId, createdAt: new Date(now), updatedAt: new Date(now) };
+  return {
+    ...product,
+    id: productId,
+    createdAt: new Date(now),
+    updatedAt: new Date(now),
+  };
 }
 
 /**
  * Obtiene productos personalizados por usuario
  */
-export async function getCustomProductsOffline(userId: string): Promise<CustomProductResponseDto[]> {
+export async function getCustomProductsOffline(
+  userId: string
+): Promise<CustomProductResponseDto[]> {
   const query = `
     SELECT * FROM custom_products
     WHERE userId = ? AND deleted = 0
@@ -213,31 +233,25 @@ export async function updateCustomProductOffline(
   `;
 
   await db.runAsync(query, [
-    updates.name ?? '',
+    updates.name ?? null,
     updates.description ?? null,
-    updates.caloriesPer100 ?? 0,
-    updates.proteinPer100 ?? 0,
-    updates.carbsPer100 ?? 0,
-    updates.fatPer100 ?? 0,
+    updates.caloriesPer100 ?? null,
+    updates.proteinPer100 ?? null,
+    updates.carbsPer100 ?? null,
+    updates.fatPer100 ?? null,
     now,
     productId,
   ]);
 
-  // Add to sync queue
-  await enqueueOperation('custom_product', productId, 'UPDATE', {
-    id: productId,
-    ...updates,
-    updatedAt: now,
-  });
-
-  // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  // ... resto del código
 }
 
 /**
  * Elimina un producto personalizado
  */
-export async function deleteCustomProductOffline(productId: string): Promise<void> {
+export async function deleteCustomProductOffline(
+  productId: string
+): Promise<void> {
   const db = await getDatabase();
 
   const query = `
@@ -249,28 +263,56 @@ export async function deleteCustomProductOffline(productId: string): Promise<voi
   await db.runAsync(query, [new Date().toISOString(), productId]);
 
   // Add to sync queue
-  await enqueueOperation('custom_product', productId, 'DELETE', { id: productId });
+  await enqueueOperation("custom_product", productId, "DELETE", {
+    id: productId,
+  });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 }
 
 /**
  * Guarda una comida personalizada offline
  */
-export async function saveCustomMealOffline(meal: CreateCustomMealDto & { id?: string }): Promise<CustomMealResponseDto> {
+export async function saveCustomMealOffline(
+  meal: CreateCustomMealDto & { id?: string }
+): Promise<CustomMealResponseDto> {
   const db = await getDatabase();
-  const mealId = ('id' in meal && typeof meal.id === 'string') ? meal.id : uuid.v4() as string;
+  const mealId =
+    "id" in meal && typeof meal.id === "string"
+      ? meal.id
+      : (uuid.v4() as string);
   const now = new Date().toISOString();
 
   // Calculate totals from products
-  const totalCalories = meal.products.reduce((sum: number, p: MealProductDto) => sum + p.calories, 0);
-  const totalProtein = meal.products.reduce((sum: number, p: MealProductDto) => sum + p.protein, 0);
-  const totalCarbs = meal.products.reduce((sum: number, p: MealProductDto) => sum + p.carbs, 0);
-  const totalFat = meal.products.reduce((sum: number, p: MealProductDto) => sum + p.fat, 0);
-  const totalSugar = meal.products.reduce((sum: number, p: MealProductDto) => sum + (p.sugar || 0), 0);
-  const totalFiber = meal.products.reduce((sum: number, p: MealProductDto) => sum + (p.fiber || 0), 0);
-  const totalSodium = meal.products.reduce((sum: number, p: MealProductDto) => sum + (p.sodium || 0), 0);
+  const totalCalories = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + p.calories,
+    0
+  );
+  const totalProtein = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + p.protein,
+    0
+  );
+  const totalCarbs = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + p.carbs,
+    0
+  );
+  const totalFat = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + p.fat,
+    0
+  );
+  const totalSugar = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + (p.sugar || 0),
+    0
+  );
+  const totalFiber = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + (p.fiber || 0),
+    0
+  );
+  const totalSodium = meal.products.reduce(
+    (sum: number, p: MealProductDto) => sum + (p.sodium || 0),
+    0
+  );
 
   const query = `
     INSERT OR REPLACE INTO custom_meals
@@ -284,8 +326,8 @@ export async function saveCustomMealOffline(meal: CreateCustomMealDto & { id?: s
     mealId,
     meal.userId,
     meal.name,
-    meal.description,
-    meal.image,
+    meal.description ?? null, // Cambio aquí
+    meal.image ?? null, // Cambio aquí
     JSON.stringify(meal.products),
     totalCalories,
     totalProtein,
@@ -296,7 +338,7 @@ export async function saveCustomMealOffline(meal: CreateCustomMealDto & { id?: s
   ]);
 
   // Add to sync queue
-  await enqueueOperation('custom_meal', mealId, 'CREATE', {
+  await enqueueOperation("custom_meal", mealId, "CREATE", {
     ...meal,
     id: mealId,
     createdAt: now,
@@ -304,7 +346,7 @@ export async function saveCustomMealOffline(meal: CreateCustomMealDto & { id?: s
   });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 
   return {
     ...meal,
@@ -317,14 +359,16 @@ export async function saveCustomMealOffline(meal: CreateCustomMealDto & { id?: s
     totalFiber: totalFiber || null,
     totalSodium: totalSodium || null,
     createdAt: new Date(now),
-    updatedAt: new Date(now)
+    updatedAt: new Date(now),
   };
 }
 
 /**
  * Obtiene comidas personalizadas por usuario
  */
-export async function getCustomMealsOffline(userId: string): Promise<CustomMealResponseDto[]> {
+export async function getCustomMealsOffline(
+  userId: string
+): Promise<CustomMealResponseDto[]> {
   const query = `
     SELECT * FROM custom_meals
     WHERE userId = ? AND deleted = 0
@@ -336,7 +380,9 @@ export async function getCustomMealsOffline(userId: string): Promise<CustomMealR
   // Parse products JSON
   return meals.map((meal: CustomMealResponseDto) => ({
     ...meal,
-    products: JSON.parse(meal.products as unknown as string) as MealProductDto[],
+    products: JSON.parse(
+      meal.products as unknown as string
+    ) as MealProductDto[],
   }));
 }
 
@@ -355,8 +401,8 @@ export async function deleteCustomMealOffline(mealId: string): Promise<void> {
   await db.runAsync(query, [new Date().toISOString(), mealId]);
 
   // Add to sync queue
-  await enqueueOperation('custom_meal', mealId, 'DELETE', { id: mealId });
+  await enqueueOperation("custom_meal", mealId, "DELETE", { id: mealId });
 
   // Try to sync
-  syncService.sync().catch((err) => console.log('Sync deferred:', err));
+  syncService.sync().catch((err) => console.log("Sync deferred:", err));
 }

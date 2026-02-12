@@ -16,9 +16,8 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
-import { AppTheme } from "../../../types";
 import {
   fetchExercises,
   isUsingCache,
@@ -205,7 +204,7 @@ export default function ExerciseList() {
   );
 }
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

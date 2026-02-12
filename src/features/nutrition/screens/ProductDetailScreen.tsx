@@ -297,6 +297,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         productImage: producto.image ?? undefined,
         quantity: parseFloat(quantity) || 100,
         unit: (unit === "g" ? "gram" : unit) as FoodUnit,
+        updatedAt: new Date(), // ✅ Agregar updatedAt
       });
       Alert.alert("¡Añadido!", "Producto agregado a la lista de compras");
     } catch (error) {
@@ -483,36 +484,38 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         <View style={styles.nutritionSection}>
           <Text style={styles.sectionTitle}>Información Nutricional</Text>
           <View style={styles.nutritionGrid}>
-            {([
-              {
-                key: "calories",
-                label: "Calorías",
-                icon: "flame" as const,
-                color: "#6FCF97",
-                suffix: "",
-              },
-              {
-                key: "carbs",
-                label: "Carbohidratos",
-                icon: "nutrition" as const,
-                color: "#FFB74D",
-                suffix: "g",
-              },
-              {
-                key: "protein",
-                label: "Proteína",
-                icon: "barbell" as const,
-                color: "#409CFF",
-                suffix: "g",
-              },
-              {
-                key: "fat",
-                label: "Grasa",
-                icon: "water" as const,
-                color: "#FF6B6B",
-                suffix: "g",
-              },
-            ] as const).map(({ key, label, icon, color, suffix }) => (
+            {(
+              [
+                {
+                  key: "calories",
+                  label: "Calorías",
+                  icon: "flame" as const,
+                  color: "#6FCF97",
+                  suffix: "",
+                },
+                {
+                  key: "carbs",
+                  label: "Carbohidratos",
+                  icon: "nutrition" as const,
+                  color: "#FFB74D",
+                  suffix: "g",
+                },
+                {
+                  key: "protein",
+                  label: "Proteína",
+                  icon: "barbell" as const,
+                  color: "#409CFF",
+                  suffix: "g",
+                },
+                {
+                  key: "fat",
+                  label: "Grasa",
+                  icon: "water" as const,
+                  color: "#FF6B6B",
+                  suffix: "g",
+                },
+              ] as const
+            ).map(({ key, label, icon, color, suffix }) => (
               <View
                 key={key}
                 style={[
@@ -633,14 +636,14 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
             {showMore && (
               <View style={styles.additionalNutrients}>
-                {producto.others
-                  .slice(0, 10)
-                  .map((item, index: number) => (
-                    <View key={index} style={styles.nutrientRow}>
-                      <Text style={styles.nutrientLabel}>{item.label}</Text>
-                      <Text style={styles.nutrientValue}>{item.value ?? 'N/A'}</Text>
-                    </View>
-                  ))}
+                {producto.others.slice(0, 10).map((item, index: number) => (
+                  <View key={index} style={styles.nutrientRow}>
+                    <Text style={styles.nutrientLabel}>{item.label}</Text>
+                    <Text style={styles.nutrientValue}>
+                      {item.value ?? "N/A"}
+                    </Text>
+                  </View>
+                ))}
               </View>
             )}
           </View>

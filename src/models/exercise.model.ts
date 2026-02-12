@@ -1,19 +1,19 @@
 import {
+  CreateExerciseDto,
+  EquipmentDto,
   ExerciseRequestDto,
+  ExerciseTypeDto,
+  MuscleDto,
   SetRequestDto,
-  ExerciseTypeEntity as ExerciseTypeDto,
-  MuscleEntity as MuscleDto,
-  EquipmentEntity as EquipmentDto,
-  CreateExerciseDto, // Verify if this exists in shared or not. Step 146 didn't show it explicitly but it might be in exercise.model shared.
 } from "@entity-data-models/index";
 
 export {
+  CreateExerciseDto,
+  EquipmentDto,
   ExerciseRequestDto,
-  SetRequestDto,
   ExerciseTypeDto,
   MuscleDto,
-  EquipmentDto,
-  CreateExerciseDto,
+  SetRequestDto,
 };
 
 export interface ExerciseNote {

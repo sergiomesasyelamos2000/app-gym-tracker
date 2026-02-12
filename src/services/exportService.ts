@@ -47,11 +47,9 @@ export const exportService = {
     const data: ExportData = {};
 
     // Normalize dates to include full days
-    // Set startDate to beginning of day (00:00:00)
     const startDate = new Date(options.startDate);
     startDate.setHours(0, 0, 0, 0);
 
-    // Set endDate to end of day (23:59:59.999)
     const endDate = new Date(options.endDate);
     endDate.setHours(23, 59, 59, 999);
 
@@ -61,8 +59,13 @@ export const exportService = {
         findAllRoutineSessions(),
       ]);
 
+      // Crear un mapa de routineId -> title para búsqueda rápida
+      const routineMap = new Map<string, string>();
+      routines.forEach((routine: RoutineResponseDto) => {
+        routineMap.set(routine.id, routine.title);
+      });
+
       // Filter sessions by date and attach routine title
-      // The backend returns session.routine (not session.routineId) with the full routine object
       const filteredSessions = sessions
         .filter((session: RoutineSessionEntity) => {
           const sessionDate = new Date(session.createdAt);
@@ -70,7 +73,7 @@ export const exportService = {
         })
         .map((session: RoutineSessionEntity) => ({
           ...session,
-          routineTitle: session.routine?.title || "Unknown",
+          routineTitle: routineMap.get(session.routineId ?? "") || "Unknown", // ✅ Buscar el título usando routineId
         }));
 
       data.workouts = {
@@ -80,7 +83,7 @@ export const exportService = {
     }
 
     if (dataType === "nutrition" || dataType === "all") {
-      // Fetch nutrition data month by month
+      // ... resto del código igual
       const nutritionData: DailyNutritionSummary[] = [];
       let currentDate = new Date(startDate);
       const endMonth = new Date(endDate);
@@ -95,14 +98,13 @@ export const exportService = {
         } catch (e) {
           console.warn(
             `Could not fetch nutrition data for ${year}-${month}`,
-            e,
+            e
           );
         }
 
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
 
-      // Filter strictly by date range (since monthly fetch might include extra days)
       data.nutrition = nutritionData.filter((entry: DailyNutritionSummary) => {
         const entryDate = new Date(entry.date);
         return entryDate >= startDate && entryDate <= endDate;
@@ -147,9 +149,9 @@ export const exportService = {
             const exerciseName = `"${exercise.name || "Unknown"}"`;
             if (exercise.sets && Array.isArray(exercise.sets)) {
               exercise.sets.forEach((set, index: number) => {
-                csv += `${date},${routine},${exerciseName},${
-                  index + 1
-                },${set.weight || 0},${set.reps || 0}\n`;
+                csv += `${date},${routine},${exerciseName},${index + 1},${
+                  set.weight || 0
+                },${set.reps || 0}\n`;
               });
             }
           });

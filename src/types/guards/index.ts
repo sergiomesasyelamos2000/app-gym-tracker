@@ -3,8 +3,8 @@
  * Funciones para verificar tipos en runtime de forma type-safe
  */
 
-import { ApiError, ApiResponse, ApiResult } from '../global';
-import { Product } from '@entity-data-models/entities';
+import { Product } from "../../models";
+import { ApiError, ApiResponse, ApiResult } from "../global";
 
 // ============= Guards Básicos =============
 
@@ -42,14 +42,14 @@ export function isNullish(value: unknown): value is null | undefined {
  * Verifica si un valor es un string
  */
 export function isString(value: unknown): value is string {
-  return typeof value === 'string';
+  return typeof value === "string";
 }
 
 /**
  * Verifica si un valor es un string no vacío
  */
 export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 /**
@@ -67,7 +67,7 @@ export function isEmail(value: unknown): value is string {
  * Verifica si un valor es un número
  */
 export function isNumber(value: unknown): value is number {
-  return typeof value === 'number' && !Number.isNaN(value);
+  return typeof value === "number" && !Number.isNaN(value);
 }
 
 /**
@@ -123,7 +123,7 @@ export function isArrayOf<T>(
  * Verifica si un valor es un objeto (no array, no null)
  */
 export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -172,8 +172,8 @@ export function isISODateString(value: unknown): value is string {
 export function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
   return (
     isObject(value) &&
-    hasProperty(value, 'data') &&
-    hasProperty(value, 'timestamp') &&
+    hasProperty(value, "data") &&
+    hasProperty(value, "timestamp") &&
     isString(value.timestamp)
   );
 }
@@ -184,9 +184,9 @@ export function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
 export function isApiError(value: unknown): value is ApiError {
   return (
     isObject(value) &&
-    hasProperty(value, 'code') &&
-    hasProperty(value, 'message') &&
-    hasProperty(value, 'statusCode') &&
+    hasProperty(value, "code") &&
+    hasProperty(value, "message") &&
+    hasProperty(value, "statusCode") &&
     isString(value.code) &&
     isString(value.message) &&
     isNumber(value.statusCode)
@@ -227,9 +227,7 @@ export function isErrorLike(
   value: unknown
 ): value is { message: string; name?: string; stack?: string } {
   return (
-    isObject(value) &&
-    hasProperty(value, 'message') &&
-    isString(value.message)
+    isObject(value) && hasProperty(value, "message") && isString(value.message)
   );
 }
 
@@ -241,9 +239,9 @@ export function isErrorLike(
 export function isProduct(value: unknown): value is Product {
   return (
     isObject(value) &&
-    hasProperty(value, 'id') &&
-    hasProperty(value, 'name') &&
-    hasProperty(value, 'barcode') &&
+    hasProperty(value, "id") &&
+    hasProperty(value, "name") &&
+    hasProperty(value, "barcode") &&
     isString(value.id) &&
     isString(value.name)
   );
@@ -264,8 +262,8 @@ export function isProductArray(value: unknown): value is Product[] {
 export function isPromise<T = unknown>(value: unknown): value is Promise<T> {
   return (
     isObject(value) &&
-    hasProperty(value, 'then') &&
-    typeof value.then === 'function'
+    hasProperty(value, "then") &&
+    typeof value.then === "function"
   );
 }
 
@@ -275,14 +273,16 @@ export function isPromise<T = unknown>(value: unknown): value is Promise<T> {
  * Verifica si un valor es una función
  */
 export function isFunction(value: unknown): value is (...args: any[]) => any {
-  return typeof value === 'function';
+  return typeof value === "function";
 }
 
 /**
  * Verifica si un valor es una función asíncrona
  */
-export function isAsyncFunction(value: unknown): value is (...args: any[]) => Promise<any> {
-  return isFunction(value) && value.constructor.name === 'AsyncFunction';
+export function isAsyncFunction(
+  value: unknown
+): value is (...args: any[]) => Promise<any> {
+  return isFunction(value) && value.constructor.name === "AsyncFunction";
 }
 
 // ============= Guards Compuestos =============

@@ -1,6 +1,7 @@
-import { useSubscriptionStore } from '../store/useSubscriptionStore';
-import { Alert } from 'react-native';
-import { BaseNavigation } from '../types/common';
+import { NavigationProp } from "@react-navigation/native";
+import { Alert } from "react-native";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
+import { BaseNavigation } from "../types/common";
 
 /**
  * Check if user can create a new routine
@@ -24,18 +25,18 @@ export function canCreateRoutine(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Función Premium',
+      "Función Premium",
       `Has alcanzado el límite de ${features.maxRoutines} rutinas en el plan gratuito. Actualiza a Premium para rutinas ilimitadas.`,
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }
@@ -51,7 +52,7 @@ export function canCreateRoutine(
  */
 export function canCreateCustomProduct(
   currentCount: number,
-  navigation?: BaseNavigation
+  navigation?: NavigationProp<any>
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
@@ -65,18 +66,18 @@ export function canCreateCustomProduct(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Función Premium',
+      "Función Premium",
       `Has alcanzado el límite de ${features.maxCustomProducts} productos personalizados en el plan gratuito. Actualiza a Premium para productos ilimitados.`,
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }
@@ -92,7 +93,7 @@ export function canCreateCustomProduct(
  */
 export function canCreateCustomMeal(
   currentCount: number,
-  navigation?: BaseNavigation
+  navigation?: NavigationProp<any>
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
@@ -106,18 +107,18 @@ export function canCreateCustomMeal(
 
   if (!canCreate && navigation) {
     Alert.alert(
-      'Función Premium',
+      "Función Premium",
       `Has alcanzado el límite de ${features.maxCustomMeals} comidas personalizadas en el plan gratuito. Actualiza a Premium para comidas ilimitadas.`,
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }
@@ -139,18 +140,18 @@ export function canUseAI(navigation?: BaseNavigation): boolean {
 
   if (!canUse && navigation) {
     Alert.alert(
-      'Función Premium',
-      'El análisis de alimentos con IA es una función premium. Actualiza a Premium para analizar alimentos desde fotos.',
+      "Función Premium",
+      "El análisis de alimentos con IA es una función premium. Actualiza a Premium para analizar alimentos desde fotos.",
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }
@@ -172,18 +173,18 @@ export function canAccessAdvancedStats(navigation?: BaseNavigation): boolean {
 
   if (!canAccess && navigation) {
     Alert.alert(
-      'Función Premium',
-      'Las estadísticas avanzadas están disponibles con Premium. Actualiza para desbloquear información detallada.',
+      "Función Premium",
+      "Las estadísticas avanzadas están disponibles con Premium. Actualiza para desbloquear información detallada.",
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }
@@ -205,18 +206,18 @@ export function canExportData(navigation?: BaseNavigation): boolean {
 
   if (!canExport && navigation) {
     Alert.alert(
-      'Función Premium',
-      'La exportación de datos es una función premium. Actualiza para exportar tus datos de entrenamiento y nutrición.',
+      "Función Premium",
+      "La exportación de datos es una función premium. Actualiza para exportar tus datos de entrenamiento y nutrición.",
       [
         {
-          text: 'Actualizar a Premium',
+          text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate('SubscriptionStack', {
-              screen: 'PlansScreen',
+            navigation.navigate("SubscriptionStack", {
+              screen: "PlansScreen",
             });
           },
         },
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
       ]
     );
   }

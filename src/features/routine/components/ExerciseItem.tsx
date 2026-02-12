@@ -3,9 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
-import { AppTheme } from "../../../types";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -29,7 +28,7 @@ export default function ExerciseItem({
         styles.exerciseItem,
         isSelected && styles.selectedItem,
         {
-          borderWidth: isDark ? 1 : isSelected ? 2 : 0,
+          borderWidth: isDark ? 1 : isSelected ? 2 : 0, // ✅ Usar isDark directamente, no theme.isDark
           borderColor: isSelected ? theme.primary : theme.border,
         },
       ]}
@@ -57,7 +56,7 @@ export default function ExerciseItem({
   );
 }
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     exerciseItem: {
       flexDirection: "row",
@@ -73,9 +72,7 @@ const createStyles = (theme: AppTheme) =>
       shadowRadius: 4,
     },
     selectedItem: {
-      backgroundColor: theme.isDark
-        ? theme.primaryDark + "40"
-        : theme.primary + "20",
+      backgroundColor: theme.primaryDark + "40", // ✅ Simplificado - siempre usar primaryDark con opacidad
     },
     exerciseImage: {
       width: 80,

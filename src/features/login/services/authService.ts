@@ -5,13 +5,16 @@
  * register, Google OAuth, logout, and token refresh.
  */
 
+import {
+  UpdateUserProfileDto,
+  UserResponseDto,
+} from "@entity-data-models/auth.dto";
 import { apiFetch } from "../../../api/client";
 import {
   AuthResponse,
   GoogleAuthRequestDto,
   LoginRequestDto,
   RegisterRequestDto,
-  User,
 } from "../../../models";
 
 /**
@@ -79,8 +82,8 @@ export async function refreshAccessToken(
 /**
  * Get current user profile
  */
-export async function getCurrentUser(): Promise<User> {
-  return await apiFetch<User>("auth/me", {
+export async function getCurrentUser(): Promise<UserResponseDto> {
+  return await apiFetch<UserResponseDto>("auth/me", {
     method: "GET",
   });
 }
@@ -90,9 +93,9 @@ export async function getCurrentUser(): Promise<User> {
  */
 export async function updateUserProfile(
   userId: string,
-  updates: Partial<User>
-): Promise<User> {
-  return await apiFetch<User>(`auth/users/${userId}`, {
+  updates: Partial<UpdateUserProfileDto>
+): Promise<UserResponseDto> {
+  return await apiFetch<UserResponseDto>(`auth/users/${userId}`, {
     method: "PUT",
     body: JSON.stringify(updates),
   });
@@ -101,7 +104,10 @@ export async function updateUserProfile(
 /**
  * Verify token validity
  */
-export async function verifyToken(): Promise<{ valid: boolean; user?: User }> {
+export async function verifyToken(): Promise<{
+  valid: boolean;
+  user?: UserResponseDto;
+}> {
   try {
     const user = await getCurrentUser();
     return { valid: true, user };

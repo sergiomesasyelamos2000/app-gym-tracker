@@ -1,8 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { DailyCalorieChart } from "../components/DailyCalorieChart";
-import { MacroDistributionChart } from "../components/MacroDistributionChart";
 import {
   ActivityIndicator,
   Alert,
@@ -22,22 +20,26 @@ import {
   View,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
-import CircularProgress from "react-native-circular-progress-indicator";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { FoodEntry, MealType } from "../../../models/nutrition.model";
-import { AppTheme } from "../../../types";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import {
+  CaughtError,
+  getErrorMessage,
+  getErrorStatusCode,
+} from "../../../types";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
+import { DailyCalorieChart } from "../components/DailyCalorieChart";
+import { MacroDistributionChart } from "../components/MacroDistributionChart";
 import * as nutritionService from "../services/nutritionService";
 import {
   deleteFoodEntry,
   getProductDetail,
   scanBarcode,
 } from "../services/nutritionService";
-import { CaughtError, getErrorMessage, getErrorStatusCode } from "../../../types";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -117,17 +119,17 @@ export default function MacrosScreen({ navigation }: Props) {
   const hasProfile = useNutritionStore((state) => state.hasProfile);
   const setHasProfile = useNutritionStore((state) => state.setHasProfile);
   const setTabVisibility = useNavigationStore(
-    (state) => state.setTabVisibility,
+    (state) => state.setTabVisibility
   );
 
   const [calendarKey, setCalendarKey] = useState(0);
   const [showSetupPrompt, setShowSetupPrompt] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [notEatenEntries, setNotEatenEntries] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [refreshing, setRefreshing] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(false);
@@ -135,7 +137,7 @@ export default function MacrosScreen({ navigation }: Props) {
   const [showScanner, setShowScanner] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
+    new Date().toISOString().split("T")[0]
   );
   const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(
     {
@@ -143,7 +145,7 @@ export default function MacrosScreen({ navigation }: Props) {
       lunch: true,
       dinner: true,
       snack: true,
-    },
+    }
   );
 
   // Animation logic moved to MacroDistributionChart
@@ -155,7 +157,7 @@ export default function MacrosScreen({ navigation }: Props) {
 
   const isSelectionMode = selectedEntries.size > 0;
   const isAllNotEatenSelected = Array.from(selectedEntries).every((id) =>
-    notEatenEntries.has(id),
+    notEatenEntries.has(id)
   );
   const isToday = selectedDate === new Date().toISOString().split("T")[0];
 
@@ -200,9 +202,17 @@ export default function MacrosScreen({ navigation }: Props) {
             [
               {
                 text: "OK",
-                onPress: () => navigation.navigate("Login"),
+                onPress: () => {
+                  // Resetea la navegación completa al stack de Auth/Login
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: "Auth" as never }], // o 'Login' dependiendo de tu estructura
+                    })
+                  );
+                },
               },
-            ],
+            ]
           );
           return;
         }
@@ -263,7 +273,7 @@ export default function MacrosScreen({ navigation }: Props) {
       }
       setTabVisibility("Macros", true);
       return () => setTabVisibility("Macros", true);
-    }, [selectedDate, user, setTabVisibility]),
+    }, [selectedDate, user, setTabVisibility])
   );
 
   // Animar apertura/cierre del calendario con efecto fluido
@@ -321,9 +331,17 @@ export default function MacrosScreen({ navigation }: Props) {
             [
               {
                 text: "OK",
-                onPress: () => navigation.navigate("Login"),
+                onPress: () => {
+                  // Resetea la navegación completa al stack de Auth/Login
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: "Auth" as never }], // o 'Login' dependiendo de tu estructura
+                    })
+                  );
+                },
               },
-            ],
+            ]
           );
           return;
         }
@@ -386,7 +404,7 @@ export default function MacrosScreen({ navigation }: Props) {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -405,7 +423,7 @@ export default function MacrosScreen({ navigation }: Props) {
               setDuplicating(true);
 
               const entriesToDuplicate = todayEntries.filter((entry) =>
-                selectedEntries.has(entry.id || ""),
+                selectedEntries.has(entry.id || "")
               );
 
               for (const entry of entriesToDuplicate) {
@@ -430,7 +448,7 @@ export default function MacrosScreen({ navigation }: Props) {
 
               Alert.alert(
                 "¡Éxito!",
-                `${entriesToDuplicate.length} alimento(s) duplicado(s) correctamente`,
+                `${entriesToDuplicate.length} alimento(s) duplicado(s) correctamente`
               );
             } catch (error) {
               console.error("Error duplicating entries:", error);
@@ -440,7 +458,7 @@ export default function MacrosScreen({ navigation }: Props) {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -484,7 +502,7 @@ export default function MacrosScreen({ navigation }: Props) {
       } else {
         Alert.alert(
           "Producto no encontrado",
-          "No se pudo encontrar el producto con ese código de barras",
+          "No se pudo encontrar el producto con ese código de barras"
         );
       }
     } catch (error) {
@@ -503,8 +521,8 @@ export default function MacrosScreen({ navigation }: Props) {
       LayoutAnimation.create(
         150,
         LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity,
-      ),
+        LayoutAnimation.Properties.opacity
+      )
     );
     setSelectedDate(day.dateString);
     setCalendarKey((prev) => prev + 1);
@@ -516,8 +534,8 @@ export default function MacrosScreen({ navigation }: Props) {
       LayoutAnimation.create(
         150,
         LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity,
-      ),
+        LayoutAnimation.Properties.opacity
+      )
     );
     setSelectedDate(today);
     setCalendarKey((prev) => prev + 1);
@@ -665,20 +683,20 @@ export default function MacrosScreen({ navigation }: Props) {
   };
 
   const effectiveEntries = todayEntries.filter(
-    (entry) => !notEatenEntries.has(entry.id || ""),
+    (entry) => !notEatenEntries.has(entry.id || "")
   );
 
   const totals = effectiveEntries.reduce(
     (
       acc: { calories: number; protein: number; carbs: number; fat: number },
-      entry: FoodEntry,
+      entry: FoodEntry
     ) => ({
       calories: acc.calories + (entry.calories || 0),
       protein: acc.protein + (entry.protein || 0),
       carbs: acc.carbs + (entry.carbs || 0),
       fat: acc.fat + (entry.fat || 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
   const remaining = {
@@ -698,7 +716,7 @@ export default function MacrosScreen({ navigation }: Props) {
       acc[entry.mealType].push(entry);
       return acc;
     },
-    {} as Record<MealType, FoodEntry[]>,
+    {} as Record<MealType, FoodEntry[]>
   );
 
   const renderFoodEntry = (entry: FoodEntry) => {
@@ -965,7 +983,7 @@ export default function MacrosScreen({ navigation }: Props) {
         <View style={styles.diarySection}>
           <Text style={styles.sectionTitle}>Diario de Alimentos</Text>
           {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map(
-            renderMealSection,
+            renderMealSection
           )}
         </View>
 
@@ -1162,7 +1180,7 @@ export default function MacrosScreen({ navigation }: Props) {
                 style={styles.confirmButton}
                 onPress={() => {
                   LayoutAnimation.configureNext(
-                    LayoutAnimation.Presets.easeInEaseOut,
+                    LayoutAnimation.Presets.easeInEaseOut
                   );
                   setShowCalendar(false);
                   loadEntriesForDate(selectedDate);
@@ -1237,7 +1255,7 @@ export default function MacrosScreen({ navigation }: Props) {
   );
 }
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
     screen: { flex: 1 },

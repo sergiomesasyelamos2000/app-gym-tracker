@@ -12,9 +12,9 @@ import { Portal } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../../components/CachedExerciseImage";
-import { useTheme } from "../../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../../models";
-import { AppTheme, BaseNavigation } from "../../../../types";
+import { BaseNavigation } from "../../../../types";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -304,7 +304,7 @@ const ExerciseHeader = ({
   );
 };
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     header: {
       flexDirection: "row",

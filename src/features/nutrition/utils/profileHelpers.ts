@@ -1,4 +1,4 @@
-import { UserNutritionProfileResponseDto } from "@entity-data-models/dtos";
+import { UserNutritionProfileResponseDto } from "@entity-data-models/frontend-types";
 
 export type ProfileInput = Omit<
   UserNutritionProfileResponseDto,

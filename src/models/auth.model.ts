@@ -12,7 +12,7 @@ import {
   GoogleAuthRequestDto,
   AuthTokensDto as AuthTokens,
 } from "@entity-data-models/index";
-import { UserEntity as User } from "@entity-data-models/index";
+import { UserContext } from "@entity-data-models/index";
 
 export {
   AuthResponse,
@@ -20,11 +20,11 @@ export {
   RegisterRequestDto,
   GoogleAuthRequestDto,
   AuthTokens,
-  User,
+  UserContext,
 };
 
 export interface AuthState {
-  user: User | null;
+  user: UserContext | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;

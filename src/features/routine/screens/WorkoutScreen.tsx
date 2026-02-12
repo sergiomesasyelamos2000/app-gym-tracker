@@ -13,13 +13,12 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   ExerciseRequestDto,
   RoutineResponseDto,
 } from "../../../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import { AppTheme } from "../../../types";
 
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -202,7 +201,7 @@ export default function WorkoutScreen() {
           style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => {
             // Verificar límite de rutinas antes de permitir crear
-            if (canCreateRoutine(routines.length, navigation)) {
+            if (canCreateRoutine(routines.length)) {
               navigation.navigate("ExerciseList", {
                 onFinishSelection: (
                   selectedExercises: ExerciseRequestDto[]
@@ -446,7 +445,7 @@ export default function WorkoutScreen() {
   );
 }
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     header: {
       paddingTop: 32,

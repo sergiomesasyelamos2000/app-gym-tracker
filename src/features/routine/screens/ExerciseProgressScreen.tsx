@@ -17,8 +17,7 @@ import {
   View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { AppTheme } from "../../../types";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   ProgressStats,
   RoutineSession,
@@ -65,12 +64,15 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
       setLoading(true);
       const allSessions = await findAllRoutineSessions();
       // Convertir RoutineSessionEntity[] a RoutineSession[]
-      const convertedSessions: RoutineSession[] = allSessions.map(session => ({
-        ...session,
-        createdAt: session.createdAt instanceof Date
-          ? session.createdAt.toISOString()
-          : session.createdAt
-      }));
+      const convertedSessions: RoutineSession[] = allSessions.map(
+        (session) => ({
+          ...session,
+          createdAt:
+            session.createdAt instanceof Date
+              ? session.createdAt.toISOString()
+              : session.createdAt,
+        })
+      );
       setSessions(convertedSessions);
     } catch (error) {
       console.error("Error loading sessions:", error);
@@ -346,7 +348,7 @@ function hexToRgb(hex: string): string {
   )}`;
 }
 
-const createStyles = (theme: AppTheme) =>
+const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

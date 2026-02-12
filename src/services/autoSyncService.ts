@@ -1,4 +1,8 @@
-import type { RoutineResponseDto } from "@entity-data-models/index";
+import type {
+  RoutineRequestDto,
+  RoutineResponseDto,
+  RoutineSessionEntity,
+} from "@entity-data-models/index";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import {
@@ -75,7 +79,6 @@ export async function processSyncQueue(): Promise<{
  */
 async function processOperation(operation: PendingOperation): Promise<boolean> {
   if (operation.retries >= MAX_RETRIES) {
-    console.warn(`[AutoSync] Max retries reached for operation:`, operation.id);
     return false;
   }
 
@@ -121,24 +124,40 @@ async function processOperation(operation: PendingOperation): Promise<boolean> {
  * Sync CREATE_ROUTINE operation
  */
 async function syncCreateRoutine(operation: PendingOperation): Promise<void> {
-  const routine = operation.payload;
-  const localId = routine.id;
+  // Type guard: aseguramos que el payload es RoutineRequestDto
+  if (operation.type !== "CREATE_ROUTINE") {
+    throw new Error("Invalid operation type for syncCreateRoutine");
+  }
+
+  const routine = operation.payload as RoutineRequestDto & { id?: string };
+  const localId = routine.id || "";
 
   // Save to backend
   const savedRoutine = await saveRoutine(routine);
 
   // Update local cache with server ID
-  await updateLocalRoutineId(localId, savedRoutine.id);
+  if (localId) {
+    await updateLocalRoutineId(localId, savedRoutine.id);
 
-  // Update any sessions that reference this routine
-  await updateSessionRoutineIds(localId, savedRoutine.id);
+    // Update any sessions that reference this routine
+    await updateSessionRoutineIds(localId, savedRoutine.id);
+  }
 }
 
 /**
  * Sync UPDATE_ROUTINE operation
  */
 async function syncUpdateRoutine(operation: PendingOperation): Promise<void> {
-  const { id, routine } = operation.payload;
+  // Type guard: aseguramos que el payload tiene la estructura correcta
+  if (operation.type !== "UPDATE_ROUTINE") {
+    throw new Error("Invalid operation type for syncUpdateRoutine");
+  }
+
+  const payload = operation.payload as {
+    id: string;
+    routine: RoutineRequestDto;
+  };
+  const { id, routine } = payload;
 
   // If it's a local ID, we need to find the real ID first
   const realId = await getServerIdForLocalId(id);
@@ -147,8 +166,11 @@ async function syncUpdateRoutine(operation: PendingOperation): Promise<void> {
     await updateRoutineById(realId, routine);
   } else {
     // If no mapping exists, treat as create
-
-    await syncCreateRoutine({ ...operation, type: "CREATE_ROUTINE" });
+    await syncCreateRoutine({
+      ...operation,
+      type: "CREATE_ROUTINE",
+      payload: { ...routine, id } as RoutineRequestDto & { id: string },
+    });
   }
 }
 
@@ -156,7 +178,16 @@ async function syncUpdateRoutine(operation: PendingOperation): Promise<void> {
  * Sync CREATE_SESSION operation
  */
 async function syncCreateSession(operation: PendingOperation): Promise<void> {
-  const { routineId, session } = operation.payload;
+  // Type guard: aseguramos que el payload tiene la estructura correcta
+  if (operation.type !== "CREATE_SESSION") {
+    throw new Error("Invalid operation type for syncCreateSession");
+  }
+
+  const payload = operation.payload as {
+    routineId: string;
+    session: Partial<RoutineSessionEntity>;
+  };
+  const { routineId, session } = payload;
 
   // If routine has local ID, map to server ID
   const realRoutineId = await getServerIdForLocalId(routineId);
@@ -245,7 +276,13 @@ async function updateSessionRoutineIds(
   try {
     const operations = await getPendingOperations();
     const updated = operations.map((op) => {
-      if (op.type === "CREATE_SESSION" && op.payload.routineId === oldId) {
+      if (
+        op.type === "CREATE_SESSION" &&
+        typeof op.payload === "object" &&
+        op.payload !== null &&
+        "routineId" in op.payload &&
+        op.payload.routineId === oldId
+      ) {
         return {
           ...op,
           payload: { ...op.payload, routineId: newId },

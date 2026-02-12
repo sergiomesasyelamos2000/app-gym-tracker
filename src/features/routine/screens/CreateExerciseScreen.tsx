@@ -22,22 +22,21 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
-import { AppTheme } from "../../../types";
 import {
   createExercise,
   fetchEquipment,
   fetchExerciseTypes,
   fetchMuscles,
 } from "../../../services/exerciseService";
-import { WorkoutStackParamList } from "./WorkoutStack";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { WorkoutStackParamList } from "./WorkoutStack";
 
 interface DropdownOption {
   id: string;
@@ -60,7 +59,10 @@ export default function CreateExerciseScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  const styles = React.useMemo(() => createStyles(theme, isDark), [theme, isDark]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
 
   // ==================== STATE ====================
   const [name, setName] = useState("");
@@ -238,7 +240,10 @@ export default function CreateExerciseScreen() {
 
       navigation.goBack();
     } catch (error: CaughtError) {
-      Alert.alert("Error", `Error al crear el ejercicio: ${getErrorMessage(error)}`);
+      Alert.alert(
+        "Error",
+        `Error al crear el ejercicio: ${getErrorMessage(error)}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -688,8 +693,7 @@ export default function CreateExerciseScreen() {
   );
 }
 
-
-const createStyles = (theme: AppTheme, isDark: boolean) =>
+const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { Crown } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -17,24 +19,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useTheme } from "../contexts/ThemeContext";
+import { Theme, useTheme } from "../contexts/ThemeContext";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
 import ImageModal from "../features/common/components/ImageModal";
+import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
 import {
+  Message,
+  selectLoading,
   useChatStore,
   useMessages,
-  selectLoading,
-  Message
 } from "../store/useChatStore";
-import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
-import { useNavigation } from "@react-navigation/native";
-import { Crown } from "lucide-react-native";
-import { AppTheme, BaseNavigation } from "../types";
+import { BaseNavigation } from "../types";
 
 // Typing indicator component with animated dots
-const TypingIndicator = ({ theme }: { theme: AppTheme }) => {
+const TypingIndicator = ({ theme }: { theme: Theme }) => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
@@ -54,7 +54,7 @@ const TypingIndicator = ({ theme }: { theme: AppTheme }) => {
             duration: 400,
             useNativeDriver: true,
           }),
-        ]),
+        ])
       );
     };
 
@@ -120,7 +120,7 @@ const TypingIndicator = ({ theme }: { theme: AppTheme }) => {
 };
 
 // Empty state component
-const EmptyState = ({ theme }: { theme: AppTheme }) => (
+const EmptyState = ({ theme }: { theme: Theme }) => (
   <View style={styles.emptyStateContainer}>
     <Ionicons
       name="nutrition-outline"
@@ -177,7 +177,8 @@ export default function NutritionScreen() {
   const navigation = useNavigation<BaseNavigation>();
 
   // Hook para límite de uso de IA
-  const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } = useAIUsageLimit();
+  const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } =
+    useAIUsageLimit();
 
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
@@ -288,7 +289,7 @@ export default function NutritionScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Permisos necesarios",
-          "Necesitamos permisos para acceder a tus fotos",
+          "Necesitamos permisos para acceder a tus fotos"
         );
         return;
       }
@@ -316,11 +317,14 @@ export default function NutritionScreen() {
         }
 
         const photo = result.assets[0];
-        addMessage({
-          text: "📸 Imagen seleccionada:",
-          sender: "user",
-          imageUri: photo.uri,
-        }, user.id);
+        addMessage(
+          {
+            text: "📸 Imagen seleccionada:",
+            sender: "user",
+            imageUri: photo.uri,
+          },
+          user.id
+        );
 
         const formData = new FormData();
         // FormData.append expects Blob | File | string, but React Native uses a custom type
@@ -352,7 +356,7 @@ export default function NutritionScreen() {
     const isAtBottom =
       layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
     setShowScrollButton(
-      !isAtBottom && contentSize.height > layoutMeasurement.height,
+      !isAtBottom && contentSize.height > layoutMeasurement.height
     );
   };
 
@@ -364,12 +368,12 @@ export default function NutritionScreen() {
     ({ item }) => (
       <MessageBubble message={item} onImagePress={handleImagePress} />
     ),
-    [handleImagePress],
+    [handleImagePress]
   );
 
   const renderEmptyComponent = useCallback(
     () => <EmptyState theme={theme} />,
-    [theme],
+    [theme]
   );
 
   return (
@@ -400,7 +404,8 @@ export default function NutritionScreen() {
             style={[
               styles.usageBanner,
               {
-                backgroundColor: remainingCalls > 3 ? theme.info + "20" : theme.warning + "20",
+                backgroundColor:
+                  remainingCalls > 3 ? theme.info + "20" : theme.warning + "20",
                 borderColor: remainingCalls > 3 ? theme.info : theme.warning,
               },
             ]}
@@ -431,7 +436,9 @@ export default function NutritionScreen() {
               </View>
               <View style={styles.usageBannerRight}>
                 <Crown size={16} color={theme.warning} />
-                <Text style={[styles.upgradeBannerText, { color: theme.warning }]}>
+                <Text
+                  style={[styles.upgradeBannerText, { color: theme.warning }]}
+                >
                   Actualizar
                 </Text>
               </View>

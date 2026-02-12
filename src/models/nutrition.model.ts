@@ -10,7 +10,7 @@ import {
   MealProductDto as MealProduct,
   MealType,
   MappedProduct as Product,
-  ShoppingListItemEntity as ShoppingListItem,
+  ShoppingListItem,
   WeightGoal,
   WeightUnit,
 } from "@entity-data-models/index";

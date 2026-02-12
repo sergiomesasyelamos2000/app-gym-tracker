@@ -58,22 +58,28 @@ export async function saveRoutineOffline(
     routineExercises:
       routine.exercises?.map((exercise, index) => ({
         id: `local_re_${Date.now()}_${index}`,
-        exercise: exercise,
+        exercise: exercise as any, // Type assertion - el ejercicio ya tiene los datos necesarios
         sets: exercise.sets || [],
         notes: exercise.notes
-          ? [
-              {
-                id: `note_${index}`,
-                text: exercise.notes,
+          ? Array.isArray(exercise.notes)
+            ? exercise.notes.map((note, noteIndex) => ({
+                id: `note_${index}_${noteIndex}`,
+                text: typeof note === "string" ? note : note.text,
                 createdAt: new Date().toISOString(),
-              },
-            ]
+              }))
+            : [
+                {
+                  id: `note_${index}`,
+                  text: exercise.notes as any,
+                  createdAt: new Date().toISOString(),
+                },
+              ]
           : [],
         restSeconds: exercise.restSeconds?.toString() || "60",
         weightUnit: exercise.weightUnit || "kg",
         repsType: exercise.repsType || "reps",
         order: exercise.order || index + 1,
-        supersetWith: exercise.supersetWith || null,
+        supersetWith: exercise.supersetWith ?? null, // Cambio aquí: || a ??
       })) || [],
   };
 
@@ -121,23 +127,30 @@ export async function updateRoutineOffline(
     routineExercises:
       routine.exercises?.map((exercise, index) => ({
         id: `local_re_${Date.now()}_${index}`,
-        exercise: exercise,
+        exercise: exercise as any,
         sets: exercise.sets || [],
         notes: exercise.notes
-          ? [
-              {
-                id: `note_${index}`,
-                text: exercise.notes,
+          ? Array.isArray(exercise.notes)
+            ? exercise.notes.map((note, noteIndex) => ({
+                id: `note_${index}_${noteIndex}`,
+                text: typeof note === "string" ? note : note.text,
                 createdAt: new Date().toISOString(),
-              },
-            ]
+              }))
+            : [
+                {
+                  id: `note_${index}`,
+                  text: exercise.notes as any,
+                  createdAt: new Date().toISOString(),
+                },
+              ]
           : [],
         restSeconds: exercise.restSeconds?.toString() || "60",
         weightUnit: exercise.weightUnit || "kg",
         repsType: exercise.repsType || "reps",
         order: exercise.order || index + 1,
-        supersetWith: exercise.supersetWith || null,
+        supersetWith: exercise.supersetWith ?? null, // Cambio aquí: || a ??
       })) || [],
+    isPublic: false,
   };
 
   // Add _isPending metadata flag

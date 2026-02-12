@@ -22,14 +22,13 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMeal,
   CustomProduct,
   FavoriteProduct,
   Product,
 } from "../../../models/nutrition.model";
-import { AppTheme } from "../../../types";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -836,7 +835,7 @@ export default function ProductSelectionScreen() {
   );
 }
 
-const createStyles = (theme: AppTheme, isDark: boolean) =>
+const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
