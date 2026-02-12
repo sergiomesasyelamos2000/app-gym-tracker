@@ -14,6 +14,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../../models";
+import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -98,16 +99,21 @@ const ExerciseHeader = ({
     (ex) => ex.id !== exercise.id,
   );
 
+  console.log('[ExerciseHeader] Rendering:', {
+    name: exercise.name,
+    readonly,
+    showOptions,
+    hasImageUrl: !!exercise.imageUrl,
+    imageUrlLength: exercise.imageUrl?.length || 0,
+    imageUrlPreview: exercise.imageUrl?.substring(0, 50)
+  });
+
   return (
     <>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8}>
-          <Image
-            source={
-              exercise.imageUrl
-                ? { uri: `data:image/png;base64,${exercise.imageUrl}` }
-                : require("./../../../../../assets/not-image.png")
-            }
+          <CachedExerciseImage
+            imageUrl={exercise.imageUrl}
             style={styles.exerciseImage}
           />
         </TouchableOpacity>
@@ -278,12 +284,8 @@ const ExerciseHeader = ({
                     ]}
                     onPress={() => handleSelectSupersetExercise(item)}
                   >
-                    <Image
-                      source={
-                        item.imageUrl
-                          ? { uri: `data:image/png;base64,${item.imageUrl}` }
-                          : require("./../../../../../assets/not-image.png")
-                      }
+                    <CachedExerciseImage
+                      imageUrl={item.imageUrl}
                       style={[
                         styles.supersetImage,
                         { backgroundColor: theme.border },

@@ -19,6 +19,7 @@ const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const fetchSubscription = useSubscriptionStore((state) => state.setSubscription);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -26,6 +27,9 @@ export const RootNavigator = () => {
   useEffect(() => {
     // Small delay to ensure zustand persist has loaded state from AsyncStorage
     const timer = setTimeout(() => {
+      const currentUser = useAuthStore.getState().user;
+      const currentAuth = useAuthStore.getState().isAuthenticated;
+      console.log('[RootNavigator] Initialization complete. User:', currentUser?.id, 'Auth:', currentAuth);
       setIsInitializing(false);
     }, 100);
 

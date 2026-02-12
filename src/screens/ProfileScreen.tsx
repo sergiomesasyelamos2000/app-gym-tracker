@@ -9,6 +9,7 @@ import {
   Moon,
   User,
   Utensils,
+  Trash2,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -24,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../contexts/ThemeContext";
 import { logout as logoutService } from "../features/login/services/authService";
 import { useAuthStore } from "../store/useAuthStore";
@@ -97,6 +99,57 @@ export default function ProfileScreen() {
 
   const handleExportData = () => {
     navigation.navigate("ExportData");
+  };
+
+  const handleClearCache = () => {
+    Alert.alert(
+      "Limpiar Caché",
+      "Se eliminarán los siguientes datos del dispositivo:\n\n• Ejercicios guardados\n• Rutinas offline\n• Datos temporales\n\n¿Deseas continuar?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Limpiar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Get all keys from AsyncStorage
+              const keys = await AsyncStorage.getAllKeys();
+
+              // Filter keys to remove (cache-related keys)
+              const cacheKeys = keys.filter(key =>
+                key.includes('cache') ||
+                key.includes('exercises') ||
+                key.includes('offline') ||
+                key.includes('last_sync')
+              );
+
+              // Remove cache keys
+              if (cacheKeys.length > 0) {
+                await AsyncStorage.multiRemove(cacheKeys);
+              }
+
+              Alert.alert(
+                "Caché Limpiada",
+                `Se eliminaron ${cacheKeys.length} elementos de la caché. La app cargará datos frescos la próxima vez que te conectes.`,
+                [{ text: "OK" }]
+              );
+
+              console.log('[Cache] Cleared cache keys:', cacheKeys);
+            } catch (error) {
+              console.error('[Cache] Error clearing cache:', error);
+              Alert.alert(
+                "Error",
+                "No se pudo limpiar la caché. Intenta de nuevo.",
+                [{ text: "OK" }]
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = () => {
@@ -463,20 +516,20 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Data Settings - Only for Premium */}
-        {isPremium && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-              DATOS
-            </Text>
+        {/* Data Settings */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            DATOS
+          </Text>
 
-            <View
-              style={[
-                styles.settingsGroup,
-                { backgroundColor: theme.card, borderColor: theme.border },
-              ]}
-            >
-              {/* Export Data */}
+          <View
+            style={[
+              styles.settingsGroup,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            {/* Export Data - Only for Premium */}
+            {isPremium && (
               <TouchableOpacity
                 style={[
                   styles.settingRow,
@@ -508,9 +561,42 @@ export default function ProfileScreen() {
                 </View>
                 <ChevronRight color={theme.textTertiary} size={20} />
               </TouchableOpacity>
-            </View>
+            )}
+
+            {/* Clear Cache - Available for all users */}
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                !isPremium && styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+              onPress={handleClearCache}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.warning + "20" },
+                ]}
+              >
+                <Trash2 color={theme.warning} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Limpiar Caché
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Elimina ejercicios y datos guardados offline
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </TouchableOpacity>
           </View>
-        )}
+        </View>
 
         {/* Account Actions */}
         <View style={styles.section}>

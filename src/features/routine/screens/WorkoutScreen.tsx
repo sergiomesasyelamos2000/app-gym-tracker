@@ -209,7 +209,14 @@ export default function WorkoutScreen() {
             if (canCreateRoutine(routines.length, navigation)) {
               navigation.navigate("ExerciseList", {
                 onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
-                  // lógica para crear nueva rutina
+                  console.log('[WorkoutScreen] Creating new routine with exercises:', selectedExercises.length);
+                  // Navigate to RoutineDetail with selected exercises to create new routine
+                  navigation.navigate("RoutineDetail", {
+                    routine: undefined,
+                    routineId: undefined,
+                    exercises: selectedExercises,
+                    start: false,
+                  });
                 },
               });
             }

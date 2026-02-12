@@ -20,6 +20,7 @@ import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { notificationService } from "../../../services/notificationService";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import { useRecordsStore } from "../../../store/useRecordsStore";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
@@ -37,6 +38,11 @@ import {
   saveRoutineSession,
   updateRoutineById,
 } from "../services/routineService";
+import {
+  saveRoutineOffline,
+  updateRoutineOffline,
+  saveSessionOffline,
+} from "../../../services/offlineRoutineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
@@ -144,10 +150,30 @@ export default function RoutineDetailScreen() {
 
     const fetchRoutine = async () => {
       try {
+        console.log(`[RoutineDetail] Fetching routine: ${routineId}`);
         const data = await getRoutineById(routineId);
+        console.log(`[RoutineDetail] Received routine:`, {
+          id: data.id,
+          title: data.title,
+          hasRoutineExercises: !!data.routineExercises,
+          routineExercisesCount: data.routineExercises?.length || 0,
+          routineExercises: data.routineExercises?.map(re => ({
+            exerciseName: re.exercise?.name,
+            setsCount: re.sets?.length
+          }))
+        });
         setRoutineData(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching routine by id", err);
+
+        // Show user-friendly error message
+        Alert.alert(
+          "Error",
+          err.message || "No se pudo cargar la rutina. Verifica tu conexión."
+        );
+
+        // Navigate back if routine cannot be loaded
+        navigation.goBack();
       } finally {
         setLoading(false);
       }
@@ -195,12 +221,29 @@ export default function RoutineDetailScreen() {
   }, [initialExercises, hasInitializedFromStore, routine?.title]);
 
   useEffect(() => {
+    console.log('[RoutineDetail] Mapping effect triggered:', {
+      hasInitializedFromStore,
+      initialExercisesLength: initialExercises?.length,
+      hasRoutineData: !!routineData,
+      routineDataExercisesCount: routineData?.routineExercises?.length
+    });
+
     if (hasInitializedFromStore || initialExercises?.length || !routineData) {
+      console.log('[RoutineDetail] Skipping mapping because:', {
+        hasInitializedFromStore,
+        hasInitialExercises: !!initialExercises?.length,
+        noRoutineData: !routineData
+      });
       return;
     }
 
+    console.log('[RoutineDetail] Mapping routineExercises to exercises');
     const mappedExercises: ExerciseRequestDto[] =
       mapRoutineExercises(routineData);
+    console.log('[RoutineDetail] Mapped exercises:', {
+      count: mappedExercises.length,
+      exercises: mappedExercises.map(e => ({ id: e.id, name: e.name }))
+    });
     setExercises(mappedExercises);
     setRoutineTitle(routineData.title || "");
 
@@ -448,6 +491,24 @@ export default function RoutineDetailScreen() {
 
   const processFinishRoutine = async () => {
     try {
+      // Debug: Check auth state before saving
+      const currentUser = useAuthStore.getState().user;
+      const isAuth = useAuthStore.getState().isAuthenticated;
+      const token = useAuthStore.getState().accessToken;
+
+      console.log('[FinishRoutine] Current user:', currentUser?.id);
+      console.log('[FinishRoutine] Is authenticated:', isAuth);
+      console.log('[FinishRoutine] Has token:', !!token);
+
+      if (!currentUser?.id) {
+        Alert.alert(
+          "Error de Sesión",
+          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión.",
+        );
+        setStarted(true);
+        return;
+      }
+
       setStarted(false);
       setHasInitializedFromStore(false);
 
@@ -464,20 +525,29 @@ export default function RoutineDetailScreen() {
 
       await notificationService.cancelAllRestTimers();
 
+      const routineToSave = buildRoutinePayload();
+
+      // Use offline-first service
+      const updatedRoutine = routineData?.id
+        ? await updateRoutineOffline(routineData.id, routineToSave)
+        : await saveRoutineOffline(routineToSave);
+
+      const sessionToSave = buildSessionPayload();
+      await saveSessionOffline(updatedRoutine.id, sessionToSave);
+
+      // Only clear workout after successful save
       clearWorkoutInProgress();
       navigation.setParams({ start: undefined, routineId: undefined });
 
-      const routineToSave = buildRoutinePayload();
-      const updatedRoutine = routineData?.id
-        ? await updateRoutineById(routineData.id, routineToSave)
-        : await saveRoutine(routineToSave);
-
-      const sessionToSave = buildSessionPayload();
-      await saveRoutineSession(updatedRoutine.id, sessionToSave);
-
       resetSetsCompletionStatus();
 
-      Alert.alert("¡Éxito!", "Rutina y sesión guardadas exitosamente");
+      // Check if saved offline or online
+      const isPending = (updatedRoutine as any)._isPending;
+      const message = isPending
+        ? "Rutina guardada localmente. Se sincronizará cuando haya conexión."
+        : "Rutina y sesión guardadas exitosamente";
+
+      Alert.alert("¡Éxito!", message);
 
       navigation.reset({
         index: 0,
@@ -486,8 +556,28 @@ export default function RoutineDetailScreen() {
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
         ],
       });
-    } catch (err) {
-      Alert.alert("Error", "Error al guardar la rutina");
+    } catch (err: any) {
+      console.error("Error saving routine:", err);
+
+      let errorMessage = "Error al guardar la rutina. Por favor intenta de nuevo.";
+
+      if (err?.status === 401) {
+        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+      } else if (err?.status === 403) {
+        errorMessage = "No tienes permisos para realizar esta acción.";
+      } else if (err?.status === 500) {
+        errorMessage = "Error del servidor. Por favor intenta más tarde.";
+      } else if (err?.message?.toLowerCase().includes("network")) {
+        errorMessage = "Sin conexión a internet. Verifica tu conexión.";
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      Alert.alert("Error", errorMessage);
+
+      // Restore workout state if save failed
+      setStarted(true);
+      setHasInitializedFromStore(false);
     }
   };
 
@@ -514,10 +604,32 @@ export default function RoutineDetailScreen() {
 
   const handleSaveRoutine = async () => {
     try {
-      const routineToSave = buildRoutinePayload();
-      const savedRoutine = await saveRoutine(routineToSave);
+      // Debug: Check auth state before saving
+      const currentUser = useAuthStore.getState().user;
+      const isAuth = useAuthStore.getState().isAuthenticated;
+      const token = useAuthStore.getState().accessToken;
 
-      Alert.alert("¡Éxito!", "Rutina guardada exitosamente");
+      console.log('[SaveRoutine] Current user:', currentUser?.id);
+      console.log('[SaveRoutine] Is authenticated:', isAuth);
+      console.log('[SaveRoutine] Has token:', !!token);
+
+      if (!currentUser?.id) {
+        Alert.alert(
+          "Error de Sesión",
+          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión.",
+        );
+        return;
+      }
+
+      const routineToSave = buildRoutinePayload();
+      const savedRoutine = await saveRoutineOffline(routineToSave);
+
+      const isPending = (savedRoutine as any)._isPending;
+      const message = isPending
+        ? "Rutina guardada localmente. Se sincronizará cuando haya conexión."
+        : "Rutina guardada exitosamente";
+
+      Alert.alert("¡Éxito!", message);
 
       navigation.reset({
         index: 1,
@@ -526,8 +638,24 @@ export default function RoutineDetailScreen() {
           { name: "RoutineDetail", params: { routine: savedRoutine } },
         ],
       });
-    } catch {
-      Alert.alert("Error", "Error al guardar la rutina");
+    } catch (err: any) {
+      console.error("Error saving routine:", err);
+
+      let errorMessage = "Error al guardar la rutina. Por favor intenta de nuevo.";
+
+      if (err?.status === 401) {
+        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+      } else if (err?.status === 403) {
+        errorMessage = "No tienes permisos para realizar esta acción.";
+      } else if (err?.status === 500) {
+        errorMessage = "Error del servidor. Por favor intenta más tarde.";
+      } else if (err?.message?.toLowerCase().includes("network")) {
+        errorMessage = "Sin conexión a internet. Verifica tu conexión.";
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      Alert.alert("Error", errorMessage);
     }
   };
 
@@ -640,8 +768,8 @@ export default function RoutineDetailScreen() {
   };
 
   const mapRoutineExercises = (data: any): ExerciseRequestDto[] => {
-    return (
-      data.routineExercises?.map((re: any) => ({
+    const mapped = data.routineExercises?.map((re: any) => {
+      const exercise = {
         ...re.exercise,
         sets: re.sets.map((set: any) => ({
           ...set,
@@ -653,7 +781,21 @@ export default function RoutineDetailScreen() {
         weightUnit: re.weightUnit || "kg",
         repsType: re.repsType || "reps",
         supersetWith: re.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
-      })) ||
+      };
+
+      console.log('[RoutineDetail] Mapped exercise:', {
+        id: exercise.id,
+        name: exercise.name,
+        hasImageUrl: !!exercise.imageUrl,
+        imageUrlLength: exercise.imageUrl?.length || 0,
+        imageUrlPreview: exercise.imageUrl?.substring(0, 50)
+      });
+
+      return exercise;
+    });
+
+    return (
+      mapped ||
       data.exercises?.map((ex: any) => ({
         ...ex,
         weightUnit: ex.weightUnit || "kg",
@@ -664,29 +806,45 @@ export default function RoutineDetailScreen() {
     );
   };
 
-  const buildRoutinePayload = () => ({
-    ...routineData,
-    id: routineData?.id || (uuid.v4() as string),
-    title: routineTitle,
-    createdAt: routineData?.createdAt
-      ? new Date(routineData.createdAt)
-      : new Date(),
-    exercises: exercisesState.map((exercise) => ({
-      ...exercise,
-      imageUrl: exercise.imageUrl,
-      sets:
-        sets[exercise.id]?.map((set) => ({
-          ...set,
-          weight: set.weight || 0,
-          reps: set.reps || 0,
-          repsMin: set.repsMin || 0,
-          repsMax: set.repsMax || 0,
-        })) || [],
-      weightUnit: exercise.weightUnit || "kg",
-      repsType: exercise.repsType || "reps",
-      supersetWith: exercise.supersetWith || null, // 🔥 INCLUIR SUPERSERIES
-    })),
-  });
+  const buildRoutinePayload = () => {
+    const payload = {
+      ...routineData,
+      id: routineData?.id || (uuid.v4() as string),
+      title: routineTitle,
+      createdAt: routineData?.createdAt
+        ? new Date(routineData.createdAt)
+        : new Date(),
+      exercises: exercisesState.map((exercise) => ({
+        ...exercise,
+        imageUrl: exercise.imageUrl,
+        sets:
+          sets[exercise.id]?.map((set) => ({
+            ...set,
+            weight: set.weight || 0,
+            reps: set.reps || 0,
+            repsMin: set.repsMin || 0,
+            repsMax: set.repsMax || 0,
+          })) || [],
+        weightUnit: exercise.weightUnit || "kg",
+        repsType: exercise.repsType || "reps",
+        supersetWith: exercise.supersetWith || null, // 🔥 INCLUIR SUPERSERIES
+      })),
+    };
+
+    console.log('[RoutineDetail] buildRoutinePayload:', {
+      exercisesStateCount: exercisesState.length,
+      payloadExercisesCount: payload.exercises.length,
+      exercises: payload.exercises.map(e => ({
+        id: e.id,
+        name: e.name,
+        hasImageUrl: !!e.imageUrl,
+        imageUrlLength: e.imageUrl?.length || 0,
+        setsCount: e.sets?.length || 0
+      }))
+    });
+
+    return payload;
+  };
 
   const buildSessionPayload = () => {
     const allRecords = useRecordsStore.getState().records;
@@ -736,6 +894,12 @@ export default function RoutineDetailScreen() {
   };
 
   const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => {
+    console.log('[RoutineDetail] Rendering ExerciseCard for:', {
+      id: item.id,
+      name: item.name,
+      setsCount: sets[item.id]?.length || 0
+    });
+
     // 🔥 Buscar el nombre del ejercicio con el que hace superserie
     const supersetExercise = item.supersetWith
       ? exercisesState.find((ex) => ex.id === item.supersetWith)
@@ -767,6 +931,14 @@ export default function RoutineDetailScreen() {
       />
     );
   };
+
+  console.log('[RoutineDetail] RENDER - State:', {
+    exercisesCount: exercisesState.length,
+    exercises: exercisesState.map(e => ({ id: e.id, name: e.name })),
+    loading,
+    started,
+    routineDataId: routineData?.id
+  });
 
   if (loading) {
     return (
@@ -800,6 +972,9 @@ export default function RoutineDetailScreen() {
       <FlatList
         data={exercisesState}
         keyExtractor={(item) => item.id}
+        onViewableItemsChanged={(info) => {
+          console.log('[RoutineDetail] FlatList viewable items:', info.viewableItems.length);
+        }}
         ListHeaderComponent={
           <RoutineHeader
             routineTitle={routineTitle}

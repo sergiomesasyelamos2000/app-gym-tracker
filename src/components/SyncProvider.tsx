@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import NetInfo from '@react-native-community/netinfo';
 import { initDatabase } from '../database/sqliteClient';
 import { syncService } from '../services/syncService';
 import { useSyncStore } from '../store/useSyncStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useTheme } from '../contexts/ThemeContext';
+import { getPendingCount } from '../services/syncQueue';
+import {
+  startAutoSync,
+  stopAutoSync,
+  forceSyncNow,
+  isSyncInProgress,
+} from '../services/autoSyncService';
 
 interface SyncProviderProps {
   children: React.ReactNode;
@@ -13,9 +21,18 @@ interface SyncProviderProps {
 
 export function SyncProvider({ children }: SyncProviderProps) {
   const [initialized, setInitialized] = useState(false);
+  const [pendingOpsCount, setPendingOpsCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
+  const [showSyncBanner, setShowSyncBanner] = useState(false);
   const { theme } = useTheme();
   const networkStatus = useNetworkStatus();
   const { isSyncing, pendingOperations, lastSyncAt } = useSyncStore();
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
+  const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     async function initialize() {
@@ -24,9 +41,15 @@ export function SyncProvider({ children }: SyncProviderProps) {
         await initDatabase();
         console.log('✅ SQLite database initialized');
 
-        // Start auto-sync (every 5 minutes)
-        await syncService.startAutoSync(5);
-        console.log('✅ Auto-sync started');
+        // Check pending operations
+        const count = await getPendingCount();
+        setPendingOpsCount(count);
+        console.log('📊 Pending operations:', count);
+
+        // Start both sync services
+        await syncService.startAutoSync(5); // Original SQLite sync
+        startAutoSync(); // New AsyncStorage routine sync
+        console.log('✅ Auto-sync services started');
 
         setInitialized(true);
       } catch (error) {
@@ -37,16 +60,133 @@ export function SyncProvider({ children }: SyncProviderProps) {
 
     initialize();
 
+    // Monitor network status
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected === true);
+      if (state.isConnected) {
+        console.log('🌐 Network connected, checking sync queue...');
+        updatePendingCount();
+      }
+    });
+
+    // Check pending ops and sync status periodically
+    const interval = setInterval(async () => {
+      await updatePendingCount();
+      const syncing = isSyncInProgress();
+      setIsSyncingNow(syncing);
+    }, 5000); // Every 5 seconds
+
     return () => {
       syncService.stopAutoSync();
+      stopAutoSync();
+      unsubscribe();
+      clearInterval(interval);
     };
   }, []);
 
+  const updatePendingCount = async () => {
+    const count = await getPendingCount();
+    setPendingOpsCount(count);
+  };
+
+  // Animate sync banner in/out
+  useEffect(() => {
+    if (isSyncing || isSyncingNow) {
+      setShowSyncBanner(true);
+
+      // Fade in and slide down
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+      ]).start();
+
+      // Start spinning animation
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      // Fade out and slide up
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowSyncBanner(false);
+        spinValue.setValue(0);
+      });
+    }
+  }, [isSyncing, isSyncingNow]);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   const handleManualSync = async () => {
-    if (!networkStatus.isConnected) {
+    if (!isOnline) {
+      Alert.alert(
+        'Sin conexión',
+        'No hay conexión a internet. Por favor, conéctate e intenta de nuevo.'
+      );
       return;
     }
-    await syncService.forceSync();
+
+    if (isSyncingNow) {
+      Alert.alert('Sincronizando', 'Ya hay una sincronización en progreso.');
+      return;
+    }
+
+    setIsSyncingNow(true);
+
+    try {
+      // Sync both systems
+      await syncService.forceSync();
+      const result = await forceSyncNow();
+
+      await updatePendingCount();
+
+      if (result.success > 0) {
+        Alert.alert(
+          '✅ Sincronización completa',
+          `${result.success} cambios sincronizados correctamente.${result.failed > 0 ? `\n${result.failed} cambios fallaron.` : ''}`
+        );
+      } else if (result.failed > 0) {
+        Alert.alert(
+          '⚠️ Error de sincronización',
+          `No se pudieron sincronizar ${result.failed} cambios. Reintentando automáticamente.`
+        );
+      } else {
+        Alert.alert('ℹ️ Sin cambios', 'No hay cambios pendientes para sincronizar.');
+      }
+    } catch (error) {
+      console.error('[SyncProvider] Manual sync failed:', error);
+      Alert.alert(
+        '❌ Error',
+        'Ocurrió un error durante la sincronización. Reintentando automáticamente.'
+      );
+    } finally {
+      setIsSyncingNow(false);
+    }
   };
 
   if (!initialized) {
@@ -63,38 +203,26 @@ export function SyncProvider({ children }: SyncProviderProps) {
   return (
     <>
       {children}
-      {/* Sync Status Banner */}
-      {(isSyncing || pendingOperations > 0) && (
-        <View style={[styles.syncBanner, { backgroundColor: theme.card }]}>
-          <View style={styles.syncBannerContent}>
-            {isSyncing ? (
-              <>
-                <Ionicons name="sync" size={16} color={theme.primary} />
-                <Text style={[styles.syncText, { color: theme.text }]}>
-                  Sincronizando...
-                </Text>
-              </>
-            ) : (
-              <>
-                <Ionicons
-                  name={networkStatus.isConnected ? 'cloud-upload-outline' : 'cloud-offline'}
-                  size={16}
-                  color={networkStatus.isConnected ? theme.warning : theme.error}
-                />
-                <Text style={[styles.syncText, { color: theme.text }]}>
-                  {pendingOperations} cambios pendientes
-                </Text>
-                {networkStatus.isConnected && (
-                  <TouchableOpacity onPress={handleManualSync} style={styles.syncButton}>
-                    <Text style={[styles.syncButtonText, { color: theme.primary }]}>
-                      Sincronizar
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+      {/* Subtle Sync Banner - Top positioned, auto-hide */}
+      {showSyncBanner && (
+        <Animated.View
+          style={[
+            styles.syncToast,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={[styles.syncToastContent, { backgroundColor: `${theme.primary}15` }]}>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Ionicons name="sync-outline" size={14} color={theme.primary} />
+            </Animated.View>
+            <Text style={[styles.syncToastText, { color: theme.text }]}>
+              Sincronizando...
+            </Text>
           </View>
-        </View>
+        </Animated.View>
       )}
     </>
   );
@@ -112,37 +240,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  syncBanner: {
+  syncToast: {
     position: 'absolute',
-    bottom: 80,
+    top: 60,
     left: 16,
     right: 16,
-    padding: 12,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    zIndex: 9999,
   },
-  syncBannerContent: {
+  syncToastContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     gap: 8,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  syncToastText: {
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  // Deprecated styles (keeping for backwards compatibility)
+  syncBanner: {
+    display: 'none',
+  },
+  syncBannerContent: {
+    display: 'none',
   },
   syncText: {
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
+    display: 'none',
   },
   syncButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    display: 'none',
   },
   syncButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    display: 'none',
+  },
+  spinningIcon: {
+    display: 'none',
   },
 });

@@ -55,6 +55,8 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
     });
   };
 
+  console.log('[ExerciseNotes] Rendering with notes:', notes.length, 'readonly:', readonly);
+
   return (
     <View style={styles.container}>
       {/* Lista de notas existentes */}

@@ -18,7 +18,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
-import { fetchExercises } from "../../../services/exerciseService";
+import { fetchExercises, isUsingCache } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 
@@ -36,6 +36,7 @@ export default function ExerciseList() {
   } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const [selectedExercises, setSelectedExercises] = useState<
@@ -57,19 +58,30 @@ export default function ExerciseList() {
 
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadExercises = async () => {
-      try {
-        setError(null);
-        const data = await fetchExercises();
-        setExercises(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadExercises = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setIsOfflineMode(false);
 
+      const data = await fetchExercises();
+      setExercises(data);
+
+      // Check if we're using cached data (offline mode)
+      const fromCache = await isUsingCache();
+      setIsOfflineMode(fromCache);
+
+      console.log(`[ExerciseList] Loaded ${data.length} exercises (from cache: ${fromCache})`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      console.error("[ExerciseList] Failed to load exercises:", errorMessage);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadExercises();
   }, []);
 
@@ -115,9 +127,7 @@ export default function ExerciseList() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => {
-              /* Recargar los ejercicios */
-            }}
+            onPress={loadExercises}
           >
             <Text style={styles.retryButtonText}>Reintentar</Text>
           </TouchableOpacity>
@@ -125,6 +135,15 @@ export default function ExerciseList() {
       ) : (
         // Tu contenido actual aquí
         <View style={styles.container}>
+          {/* Offline mode banner */}
+          {isOfflineMode && exercises.length > 0 && (
+            <View style={styles.offlineBanner}>
+              <Text style={styles.offlineBannerText}>
+                📡 Modo sin conexión - Mostrando ejercicios guardados
+              </Text>
+            </View>
+          )}
+
           {/* Header con buscador */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
@@ -281,5 +300,18 @@ const createStyles = (theme: any) =>
       color: "#fff",
       fontSize: RFValue(16),
       fontWeight: "bold",
+    },
+    offlineBanner: {
+      backgroundColor: "#FFA500",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      marginBottom: 12,
+    },
+    offlineBannerText: {
+      color: "#fff",
+      fontSize: RFValue(14),
+      fontWeight: "600",
+      textAlign: "center",
     },
   });

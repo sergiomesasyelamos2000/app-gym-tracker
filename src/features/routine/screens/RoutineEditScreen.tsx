@@ -20,8 +20,10 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
-import { getRoutineById, updateRoutineById } from "../services/routineService";
+import { getRoutineById } from "../services/routineService";
+import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
@@ -59,39 +61,59 @@ export default function RoutineEditScreen() {
   useEffect(() => {
     const fetchRoutine = async () => {
       if (id) {
-        const data = await getRoutineById(id);
-        const exercises: ExerciseRequestDto[] = Array.isArray(
-          data.routineExercises
-        )
-          ? data.routineExercises.map((re: any) => ({
-              ...re.exercise,
-              sets: re.sets || [],
-              notes: re.notes,
-              restSeconds: re.restSeconds,
-              weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
-              repsType: re.repsType || re.exercise.repsType || "reps",
-              supersetWith: re.supersetWith,
+        try {
+          console.log(`[RoutineEdit] Fetching routine: ${id}`);
+          const data = await getRoutineById(id);
+          console.log(`[RoutineEdit] Received routine:`, {
+            id: data.id,
+            title: data.title,
+            hasRoutineExercises: !!data.routineExercises,
+            routineExercisesCount: data.routineExercises?.length || 0,
+            routineExercises: data.routineExercises?.map(re => ({
+              exerciseName: re.exercise?.name,
+              setsCount: re.sets?.length
             }))
-          : [];
-
-        setEditTitle(data.title || "");
-        setExercises(exercises);
-
-        const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
-        const initialSupersets: { [key: string]: string } = {};
-
-        exercises.forEach((exercise) => {
-          initialSets[exercise.id] = Array.isArray(exercise.sets)
-            ? exercise.sets
+          });
+          const exercises: ExerciseRequestDto[] = Array.isArray(
+            data.routineExercises
+          )
+            ? data.routineExercises.map((re: any) => ({
+                ...re.exercise,
+                sets: re.sets || [],
+                notes: re.notes,
+                restSeconds: re.restSeconds,
+                weightUnit: re.weightUnit || re.exercise.weightUnit || "kg",
+                repsType: re.repsType || re.exercise.repsType || "reps",
+                supersetWith: re.supersetWith,
+              }))
             : [];
 
-          if (exercise.supersetWith) {
-            initialSupersets[exercise.id] = exercise.supersetWith;
-          }
-        });
+          setEditTitle(data.title || "");
+          setExercises(exercises);
 
-        setSets(initialSets);
-        setSupersets(initialSupersets);
+          const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
+          const initialSupersets: { [key: string]: string } = {};
+
+          exercises.forEach((exercise) => {
+            initialSets[exercise.id] = Array.isArray(exercise.sets)
+              ? exercise.sets
+              : [];
+
+            if (exercise.supersetWith) {
+              initialSupersets[exercise.id] = exercise.supersetWith;
+            }
+          });
+
+          setSets(initialSets);
+          setSupersets(initialSupersets);
+        } catch (error: any) {
+          console.error("[RoutineEdit] Failed to load routine:", error);
+          Alert.alert(
+            "Error",
+            error.message || "No se pudo cargar la rutina. Verifica tu conexión."
+          );
+          navigation.goBack();
+        }
       }
     };
     fetchRoutine();
@@ -136,12 +158,19 @@ export default function RoutineEditScreen() {
         })),
       };
 
-      const updatedRoutine = await updateRoutineById(
+      // Use offline-first update
+      const updatedRoutine = await updateRoutineOffline(
         routineToUpdate.id,
         routineToUpdate
       );
 
-      Alert.alert("¡Éxito!", "Rutina actualizada exitosamente");
+      // Check if saved offline or online
+      const isPending = (updatedRoutine as any)._isPending;
+      const message = isPending
+        ? "Rutina actualizada localmente. Se sincronizará cuando haya conexión."
+        : "Rutina actualizada exitosamente";
+
+      Alert.alert("¡Éxito!", message);
       navigation.reset({
         index: 1,
         routes: [
@@ -149,9 +178,20 @@ export default function RoutineEditScreen() {
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
         ],
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar la rutina:", error);
-      Alert.alert("Error", "Error al actualizar la rutina");
+
+      let errorMessage = "Error al actualizar la rutina. Por favor intenta de nuevo.";
+
+      if (error?.status === 401) {
+        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+      } else if (error?.message?.toLowerCase().includes("network")) {
+        errorMessage = "Sin conexión a internet. La rutina se guardará cuando te conectes.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Error", errorMessage);
     }
   };
 
@@ -365,12 +405,8 @@ export default function RoutineEditScreen() {
                 />
               </View>
 
-              <Image
-                source={
-                  item.imageUrl
-                    ? { uri: `data:image/png;base64,${item.imageUrl}` }
-                    : require("../../../../assets/not-image.png")
-                }
+              <CachedExerciseImage
+                imageUrl={item.imageUrl}
                 style={styles.reorderImage}
               />
 

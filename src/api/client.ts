@@ -31,14 +31,18 @@ function getAuthHeaders(): Record<string, string> {
 async function attemptTokenRefresh(): Promise<boolean> {
   // If already refreshing, return the existing promise
   if (isRefreshing && refreshPromise) {
+    console.log('[TokenRefresh] Already refreshing, waiting for existing promise...');
     return refreshPromise;
   }
 
   const { refreshToken } = useAuthStore.getState();
 
   if (!refreshToken) {
+    console.error('[TokenRefresh] No refresh token available');
     return false;
   }
+
+  console.log('[TokenRefresh] Starting token refresh...');
 
   // Set refreshing flag and create new promise
   isRefreshing = true;
@@ -55,23 +59,29 @@ async function attemptTokenRefresh(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        console.error("Token refresh failed:", response.status, response.statusText);
+        const errorText = await response.text();
+        console.error("[TokenRefresh] Failed with status:", response.status, errorText);
         return false;
       }
 
       const data = await response.json();
+      console.log('[TokenRefresh] Response received:', { hasTokens: !!data.tokens, hasUser: !!data.user });
 
       // Update tokens in store
       if (data.tokens) {
+        const oldToken = useAuthStore.getState().accessToken?.substring(0, 20) + '...';
         useAuthStore.getState().updateTokens(data.tokens);
-        console.log("Token refreshed successfully");
+        const newToken = useAuthStore.getState().accessToken?.substring(0, 20) + '...';
+        console.log("[TokenRefresh] Tokens updated successfully");
+        console.log("[TokenRefresh] Old token:", oldToken);
+        console.log("[TokenRefresh] New token:", newToken);
         return true;
       }
 
       console.error("Token refresh response missing tokens field");
       return false;
     } catch (error) {
-      console.error("Token refresh failed:", error);
+      console.error("[TokenRefresh] Exception:", error);
       return false;
     } finally {
       // Reset refreshing state
@@ -108,6 +118,11 @@ export async function apiFetch<T = unknown>(
   isRetry: boolean = false,
 ): Promise<T> {
   const authHeaders = getAuthHeaders();
+  const tokenPreview = authHeaders.Authorization?.substring(0, 30) + '...';
+
+  if (isRetry) {
+    console.log(`[ApiClient] Retry request to ${endpoint} with token: ${tokenPreview}`);
+  }
 
   const response = await fetch(`${BASE_URL}/${endpoint}`, {
     headers: {
@@ -150,12 +165,16 @@ export async function apiFetch<T = unknown>(
 
       // If it's not a resource-not-found endpoint and we haven't retried yet
       if (!isResourceNotFound && !isRetry) {
+        console.log('[ApiClient] Received 401, attempting token refresh...');
         // Attempt to refresh the token
         const refreshSuccess = await attemptTokenRefresh();
 
         if (refreshSuccess) {
+          console.log('[ApiClient] Token refresh successful, retrying request');
           // Retry the original request with the new token
           return apiFetch<T>(endpoint, options, true);
+        } else {
+          console.error('[ApiClient] Token refresh failed');
         }
       }
 
@@ -164,6 +183,7 @@ export async function apiFetch<T = unknown>(
       // 2. Token refresh failed (logout)
       // 3. This is already a retry (logout to avoid infinite loop)
       if (!isResourceNotFound) {
+        console.warn('[ApiClient] Token refresh failed. Clearing auth. Endpoint:', endpoint);
         const authStore = useAuthStore.getState();
         authStore.clearAuth();
       }

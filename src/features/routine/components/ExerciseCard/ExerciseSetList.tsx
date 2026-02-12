@@ -147,6 +147,8 @@ const ExerciseSetList = ({
 
   const modalStyles = getModalStyle(theme);
 
+  console.log('[ExerciseSetList] Rendering with sets:', sets.length, 'readonly:', readonly, 'started:', started);
+
   const WeightModal = () => (
     <Modal
       visible={showWeightModal}

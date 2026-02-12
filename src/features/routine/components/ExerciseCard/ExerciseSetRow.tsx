@@ -134,6 +134,8 @@ const ExerciseSetRow = ({
     ],
   });
 
+  console.log('[ExerciseSetRow] Rendering set:', item.id, 'order:', item.order, 'completed:', item.completed);
+
   return (
     <Animated.View
       style={[

@@ -37,42 +37,26 @@ import { formatTime } from "../features/routine/utils/routineHelpers";
 import { useResponsive } from "../hooks/useResponsive";
 import { ExerciseRequestDto } from "../models";
 import { useAuthStore } from "../store/useAuthStore";
-
-// Función auxiliar para formatear la URI de la imagen
-const getImageSource = (exercise: ExerciseRequestDto) => {
-  if (exercise.imageUrl) {
-    if (
-      exercise.imageUrl.startsWith("/9j/") ||
-      exercise.imageUrl.startsWith("iVBORw")
-    ) {
-      return { uri: `data:image/jpeg;base64,${exercise.imageUrl}` };
-    }
-    return { uri: exercise.imageUrl };
-  }
-
-  if (exercise.giftUrl) {
-    return { uri: exercise.giftUrl };
-  }
-
-  return null;
-};
+import CachedExerciseImage from "../components/CachedExerciseImage";
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
-  const [imageError, setImageError] = useState(false);
-  const { theme } = useTheme();
-  const imageSource = getImageSource(exercise);
-
-  if (!imageSource || imageError) {
-    return <View style={[style, { backgroundColor: theme.border }]}></View>;
+  // Use giftUrl if available (animated GIF), otherwise use imageUrl with caching
+  if (exercise.giftUrl) {
+    return (
+      <Image
+        source={{ uri: exercise.giftUrl }}
+        style={style}
+        resizeMode="cover"
+      />
+    );
   }
 
+  // Use cached image component for regular images
   return (
-    <Image
-      source={imageSource}
+    <CachedExerciseImage
+      imageUrl={exercise.imageUrl}
       style={style}
-      onError={() => setImageError(true)}
-      resizeMode="cover"
     />
   );
 };

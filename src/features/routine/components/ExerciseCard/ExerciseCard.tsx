@@ -71,6 +71,14 @@ const ExerciseCard = ({
   showOptions = false,
   previousSessions = [],
 }: Props) => {
+  console.log('[ExerciseCard] RENDER:', {
+    exerciseId: exercise.id,
+    exerciseName: exercise.name,
+    initialSetsCount: initialSets.length,
+    readonly,
+    started
+  });
+
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [notes, setNotes] = useState<ExerciseNote[]>(exercise.notes || []);
   const [restTime, setRestTime] = useState(() => {
@@ -302,6 +310,8 @@ const ExerciseCard = ({
       repsType: type,
     });
   };
+
+  console.log('[ExerciseCard] About to return JSX for:', exercise.name, 'sets:', sets.length);
 
   return (
     <Card

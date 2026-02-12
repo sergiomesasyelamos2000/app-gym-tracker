@@ -19,6 +19,7 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IS_SMALL_DEVICE = SCREEN_WIDTH < 375;
@@ -47,24 +48,6 @@ interface ExerciseHistoryItem {
 // ============================================================================
 // UTILIDADES DE IMAGEN
 // ============================================================================
-const getImageSource = (exercise: ExerciseRequestDto) => {
-  if (exercise.giftUrl) {
-    return { uri: exercise.giftUrl };
-  }
-
-  if (!exercise.imageUrl) return null;
-
-  const isBase64 =
-    exercise.imageUrl.startsWith("/9j/") ||
-    exercise.imageUrl.startsWith("iVBORw");
-
-  return {
-    uri: isBase64
-      ? `data:image/jpeg;base64,${exercise.imageUrl}`
-      : exercise.imageUrl,
-  };
-};
-
 const ExerciseImage = ({
   exercise,
   style,
@@ -74,24 +57,22 @@ const ExerciseImage = ({
   style: any;
   theme: any;
 }) => {
-  const [imageError, setImageError] = useState(false);
-  const imageSource = getImageSource(exercise);
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
-
-  if (!imageSource || imageError) {
+  // Use giftUrl if available (animated GIF)
+  if (exercise.giftUrl) {
     return (
-      <View style={[style, styles.exercisePlaceholder]}>
-        <Text style={styles.exercisePlaceholderIcon}>💪</Text>
-      </View>
+      <Image
+        source={{ uri: exercise.giftUrl }}
+        style={style}
+        resizeMode="cover"
+      />
     );
   }
 
+  // Use cached image for regular exercise images
   return (
-    <Image
-      source={imageSource}
+    <CachedExerciseImage
+      imageUrl={exercise.imageUrl}
       style={style}
-      onError={() => setImageError(true)}
-      resizeMode="cover"
     />
   );
 };

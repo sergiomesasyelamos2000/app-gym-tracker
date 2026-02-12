@@ -4,6 +4,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -33,12 +34,8 @@ export default function ExerciseItem({
       ]}
       onPress={() => onSelect(item)}
     >
-      <Image
-        source={
-          item.imageUrl
-            ? { uri: `data:image/png;base64,${item.imageUrl}` }
-            : require("./../../../../assets/not-image.png")
-        }
+      <CachedExerciseImage
+        imageUrl={item.imageUrl}
         style={styles.exerciseImage}
       />
       <View style={styles.exerciseInfo}>

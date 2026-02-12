@@ -473,7 +473,17 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                   ? "Ganancia de peso recomendada: 0.35 kg/semana"
                   : "Mantener peso actual"}
             </Text>
-            {weightGoal !== "maintain" && (
+            {weightGoal === "maintain" ? (
+              <View style={styles.maintainCard}>
+                <Ionicons name="checkmark-circle" size={64} color={theme.success} />
+                <Text style={styles.maintainTitle}>
+                  Tu objetivo es mantener tu peso actual
+                </Text>
+                <Text style={styles.maintainDescription}>
+                  Calcularemos tus macros para que mantengas tu peso de {weight} kg de forma saludable y equilibrada.
+                </Text>
+              </View>
+            ) : (
               <>
                 <View style={styles.rateContainer}>
                   {[0.25, 0.5, 0.75, 1.0].map((rate) => (
@@ -739,6 +749,29 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       color: "#fff",
       fontWeight: "700",
       marginTop: 4,
+    },
+    maintainCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 30,
+      alignItems: "center",
+      marginTop: 20,
+      borderWidth: 2,
+      borderColor: theme.success,
+    },
+    maintainTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "center",
+      marginTop: 16,
+      marginBottom: 12,
+    },
+    maintainDescription: {
+      fontSize: RFValue(14),
+      color: theme.textSecondary,
+      textAlign: "center",
+      lineHeight: 22,
     },
     footer: {
       position: "absolute",
