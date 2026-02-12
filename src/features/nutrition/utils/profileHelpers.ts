@@ -1,4 +1,4 @@
-import { UserNutritionProfileResponseDto } from "../../models/user-nutrition-profile.model";
+import { UserNutritionProfileResponseDto } from "@entity-data-models/dtos";
 
 export type ProfileInput = Omit<
   UserNutritionProfileResponseDto,
@@ -9,7 +9,7 @@ export type ProfileInput = Omit<
 
 export const normalizeProfileDTO = (
   profile: ProfileInput,
-  currentUserId: string,
+  currentUserId: string
 ) => {
   const userId = profile.userId || currentUserId;
 

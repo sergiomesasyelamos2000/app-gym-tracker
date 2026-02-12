@@ -91,8 +91,8 @@ export default function EditProductScreen() {
   );
   const [servingUnit, setServingUnit] = useState<FoodUnit>(
     (product?.servingUnit === "gram"
-      ? "g"
-      : (product?.servingUnit as FoodUnit)) || "g",
+      ? ("g" as FoodUnit)
+      : (product?.servingUnit as FoodUnit)) || ("g" as FoodUnit),
   );
   const [isModalVisible, setIsModalVisible] = useState(false);
 

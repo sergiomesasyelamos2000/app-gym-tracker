@@ -1,3 +1,4 @@
+import { WeightUnit } from "@entity-data-models/entities";
 import { normalizeProfileDTO, ProfileInput } from "../profileHelpers";
 
 describe("normalizeProfileDTO", () => {
@@ -21,7 +22,7 @@ describe("normalizeProfileDTO", () => {
       fat: 60.0,
     },
     preferences: {
-      weightUnit: "kg",
+      weightUnit: WeightUnit.KG,
       heightUnit: "cm",
     },
   };

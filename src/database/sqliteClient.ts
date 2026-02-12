@@ -1,6 +1,6 @@
-import * as SQLite from 'expo-sqlite';
+import * as SQLite from "expo-sqlite";
 
-const DB_NAME = 'gym_tracker_offline.db';
+const DB_NAME = "gym_tracker_offline.db";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -163,7 +163,6 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
   `);
 
-  console.log('✅ SQLite database initialized successfully');
   return db;
 }
 
@@ -191,7 +190,10 @@ export async function execQuery<T = any>(
   return result;
 }
 
-export async function execRun(query: string, params: any[] = []): Promise<SQLite.SQLiteRunResult> {
+export async function execRun(
+  query: string,
+  params: any[] = []
+): Promise<SQLite.SQLiteRunResult> {
   const database = await getDatabase();
   return await database.runAsync(query, params);
 }

@@ -14,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const MAX_RETRIES = 3;
 const SYNC_INTERVAL_MS = 60000; // 1 minute
-let syncIntervalId: NodeJS.Timeout | null = null;
+let syncIntervalId: ReturnType<typeof setTimeout> | null = null;
 let isSyncing = false;
 
 /**

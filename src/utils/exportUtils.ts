@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import { Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import { apiFetch } from "../api";
@@ -39,11 +40,9 @@ export const exportToCSV = async (
       return;
     }
 
-    const fileUri = `${
-      FileSystem.documentDirectory
-    }${fileName}_${Date.now()}.csv`;
+    const fileUri = `${Paths.cache.uri}${fileName}_${Date.now()}.csv`;
     await FileSystem.writeAsStringAsync(fileUri, csv, {
-      encoding: FileSystem.EncodingType.UTF8,
+      encoding: "utf8",
     });
 
     if (!(await Sharing.isAvailableAsync())) {
@@ -85,12 +84,12 @@ export const exportToPDF = async (
     console.log("PDF convertido a base64");
 
     const fileName = `${title.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
-    const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+    const fileUri = `${Paths.cache.uri}${fileName}`;
 
     console.log("Guardando PDF en:", fileUri);
 
     await FileSystem.writeAsStringAsync(fileUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64",
     });
 
     console.log("PDF guardado exitosamente");

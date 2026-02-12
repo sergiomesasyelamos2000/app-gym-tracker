@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import * as Haptics from "expo-haptics";
 
 import {
   GestureHandlerRootView,
@@ -21,15 +22,15 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { SetRequestDto } from "../../../../models";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
-import { COLUMN_FLEX } from "./columnConstants";
 import ExerciseSetRow from "./ExerciseSetRow";
+import { COLUMN_FLEX } from "./columnConstants";
 
 interface Props {
   sets: SetRequestDto[];
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean,
+    value: number | boolean
   ) => void;
   onDelete: (id: string) => void;
   weightUnit: "kg" | "lbs";
@@ -67,7 +68,7 @@ const ExerciseSetList = ({
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>,
-    itemId: string,
+    itemId: string
   ) => {
     const scale = progress.interpolate({
       inputRange: [0, 1],
@@ -146,8 +147,6 @@ const ExerciseSetList = ({
   };
 
   const modalStyles = getModalStyle(theme);
-
-  console.log('[ExerciseSetList] Rendering with sets:', sets.length, 'readonly:', readonly, 'started:', started);
 
   const WeightModal = () => (
     <Modal
@@ -433,8 +432,8 @@ const ExerciseSetList = ({
                 ? COLUMN_FLEX.small.repsRange
                 : COLUMN_FLEX.small.reps
               : !started && repsType === "range"
-                ? COLUMN_FLEX.normal.repsRange
-                : COLUMN_FLEX.normal.reps,
+              ? COLUMN_FLEX.normal.repsRange
+              : COLUMN_FLEX.normal.reps,
             marginHorizontal: 2,
             alignItems: "center",
             justifyContent: "center",
@@ -499,9 +498,7 @@ const ExerciseSetList = ({
               }
               overshootRight={false}
               onSwipeableWillOpen={() => {
-                import("expo-haptics").then((Haptics) => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                });
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
             >
               <ExerciseSetRow
@@ -510,13 +507,13 @@ const ExerciseSetList = ({
                 repsType={repsType}
                 readonly={readonly}
                 previousMark={
-                  started && item.previousWeight && item.previousReps
-                    ? `${item.previousWeight || 0} ${weightUnit} x ${
-                        item.previousReps || 0
+                  started && (item as any).previousWeight && (item as any).previousReps
+                    ? `${(item as any).previousWeight || 0} ${weightUnit} x ${
+                        (item as any).previousReps || 0
                       }`
                     : started
-                      ? "-"
-                      : undefined
+                    ? "-"
+                    : undefined
                 }
                 started={started}
                 recordType={recordSetTypes[item.id]}

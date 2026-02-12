@@ -15,11 +15,11 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IS_SMALL_DEVICE = SCREEN_WIDTH < 375;
@@ -69,12 +69,7 @@ const ExerciseImage = ({
   }
 
   // Use cached image for regular exercise images
-  return (
-    <CachedExerciseImage
-      imageUrl={exercise.imageUrl}
-      style={style}
-    />
-  );
+  return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
 };
 
 // ============================================================================
@@ -251,10 +246,10 @@ const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
         <Text style={styles.exerciseName} numberOfLines={2}>
           {exercise.name}
         </Text>
-        {exercise.targetMuscles?.length > 0 && (
+        {exercise.muscularGroup && (
           <View style={styles.muscleGroupTag}>
             <Text style={styles.muscleGroupText} numberOfLines={1}>
-              {exercise.targetMuscles[0]}
+              {exercise.muscularGroup}
             </Text>
           </View>
         )}

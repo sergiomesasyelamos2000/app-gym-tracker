@@ -3,7 +3,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -17,13 +16,13 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById } from "../services/routineService";
-import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
-import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
@@ -69,10 +68,10 @@ export default function RoutineEditScreen() {
             title: data.title,
             hasRoutineExercises: !!data.routineExercises,
             routineExercisesCount: data.routineExercises?.length || 0,
-            routineExercises: data.routineExercises?.map(re => ({
+            routineExercises: data.routineExercises?.map((re) => ({
               exerciseName: re.exercise?.name,
-              setsCount: re.sets?.length
-            }))
+              setsCount: re.sets?.length,
+            })),
           });
           const exercises: ExerciseRequestDto[] = Array.isArray(
             data.routineExercises
@@ -110,7 +109,8 @@ export default function RoutineEditScreen() {
           console.error("[RoutineEdit] Failed to load routine:", error);
           Alert.alert(
             "Error",
-            error.message || "No se pudo cargar la rutina. Verifica tu conexión."
+            error.message ||
+              "No se pudo cargar la rutina. Verifica tu conexión."
           );
           navigation.goBack();
         }
@@ -147,14 +147,15 @@ export default function RoutineEditScreen() {
     try {
       const routineToUpdate = {
         id: id,
-        title: editTitle,
+        title: editTitle || "Sin título", // Asegurar que title no sea undefined
+        createdAt: new Date(), // Agregar createdAt requerido por RoutineRequestDto
         exercises: exercisesState.map((exercise, index) => ({
           ...exercise,
           sets: sets[exercise.id] || [],
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
           order: index + 1,
-          supersetWith: supersets[exercise.id] || null,
+          supersetWith: supersets[exercise.id] || undefined, // undefined en lugar de null
         })),
       };
 
@@ -181,12 +182,15 @@ export default function RoutineEditScreen() {
     } catch (error: any) {
       console.error("Error al actualizar la rutina:", error);
 
-      let errorMessage = "Error al actualizar la rutina. Por favor intenta de nuevo.";
+      let errorMessage =
+        "Error al actualizar la rutina. Por favor intenta de nuevo.";
 
       if (error?.status === 401) {
-        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+        errorMessage =
+          "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
       } else if (error?.message?.toLowerCase().includes("network")) {
-        errorMessage = "Sin conexión a internet. La rutina se guardará cuando te conectes.";
+        errorMessage =
+          "Sin conexión a internet. La rutina se guardará cuando te conectes.";
       } else if (error?.message) {
         errorMessage = error.message;
       }

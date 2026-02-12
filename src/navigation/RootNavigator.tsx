@@ -6,21 +6,23 @@
  * Includes SubscriptionStack as modal accessible from anywhere
  */
 
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AuthScreen from "../features/login/screens/AuthScreen";
+import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { BottomTabs } from "./BottomTabs";
-import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
 
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
-  const fetchSubscription = useSubscriptionStore((state) => state.setSubscription);
+  const fetchSubscription = useSubscriptionStore(
+    (state) => state.setSubscription
+  );
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Check if auth state is loaded from AsyncStorage
@@ -29,7 +31,6 @@ export const RootNavigator = () => {
     const timer = setTimeout(() => {
       const currentUser = useAuthStore.getState().user;
       const currentAuth = useAuthStore.getState().isAuthenticated;
-      console.log('[RootNavigator] Initialization complete. User:', currentUser?.id, 'Auth:', currentAuth);
       setIsInitializing(false);
     }, 100);
 

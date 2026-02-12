@@ -10,8 +10,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
@@ -26,12 +26,12 @@ import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useShallow } from "zustand/react/shallow";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 import {
   deleteRoutine,
   duplicateRoutine,
   findAllRoutines,
 } from "../services/routineService";
-import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
   WorkoutStackParamList,
@@ -54,7 +54,7 @@ export default function WorkoutScreen() {
       useShallow((state) => ({
         workoutInProgress: state.workoutInProgress,
         clearWorkoutInProgress: state.clearWorkoutInProgress,
-      })),
+      }))
     );
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
 
@@ -66,7 +66,7 @@ export default function WorkoutScreen() {
       try {
         // Verificar directamente en AsyncStorage
         const stored = await AsyncStorage.getItem(
-          "workout-in-progress-storage",
+          "workout-in-progress-storage"
         );
         if (!stored) {
           setShowWorkoutBanner(false);
@@ -111,23 +111,18 @@ export default function WorkoutScreen() {
       const data = await findAllRoutines();
 
       // Ordenar rutinas por fecha de creación (más recientes primero)
-      const sortedRoutines = data.sort(
-        (
-          a: { createdAt: any; creationDate: any },
-          b: { createdAt: any; creationDate: any },
-        ) => {
-          // Convertir las fechas a timestamps para comparar
-          const dateA = new Date(
-            a.createdAt || a.creationDate || Date.now(),
-          ).getTime();
-          const dateB = new Date(
-            b.createdAt || b.creationDate || Date.now(),
-          ).getTime();
+      const sortedRoutines = data.sort((a, b) => {
+        // Convertir las fechas a timestamps para comparar
+        const dateA = new Date(
+          a.createdAt || (a as any).creationDate || Date.now()
+        ).getTime();
+        const dateB = new Date(
+          b.createdAt || (b as any).creationDate || Date.now()
+        ).getTime();
 
-          // Orden descendente (más recientes primero)
-          return dateB - dateA;
-        },
-      );
+        // Orden descendente (más recientes primero)
+        return dateB - dateA;
+      });
 
       setRoutines(sortedRoutines);
     } catch (err) {
@@ -142,7 +137,7 @@ export default function WorkoutScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchRoutines();
-    }, [fetchRoutines]),
+    }, [fetchRoutines])
   );
 
   // Función para el pull-to-refresh
@@ -163,7 +158,7 @@ export default function WorkoutScreen() {
 
   // Centraliza las acciones del modal
   const handleRoutineAction = async (
-    action: "duplicate" | "delete" | "edit",
+    action: "duplicate" | "delete" | "edit"
   ) => {
     if (!selectedRoutine) return;
     if (action === "duplicate") {
@@ -208,8 +203,9 @@ export default function WorkoutScreen() {
             // Verificar límite de rutinas antes de permitir crear
             if (canCreateRoutine(routines.length, navigation)) {
               navigation.navigate("ExerciseList", {
-                onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
-                  console.log('[WorkoutScreen] Creating new routine with exercises:', selectedExercises.length);
+                onFinishSelection: (
+                  selectedExercises: ExerciseRequestDto[]
+                ) => {
                   // Navigate to RoutineDetail with selected exercises to create new routine
                   navigation.navigate("RoutineDetail", {
                     routine: undefined,

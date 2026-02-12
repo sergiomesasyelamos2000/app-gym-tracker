@@ -1,7 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +11,9 @@ import Modal from "react-native-modal";
 import { Portal } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../../models";
-import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -62,7 +61,7 @@ const ExerciseHeader = ({
   };
 
   const handleExerciseAction = (
-    action: "reorder" | "replace" | "superset" | "delete",
+    action: "reorder" | "replace" | "superset" | "delete"
   ) => {
     setPendingAction(action);
     setActionModalVisible(false);
@@ -96,17 +95,8 @@ const ExerciseHeader = ({
   };
 
   const filteredExercises = availableExercises.filter(
-    (ex) => ex.id !== exercise.id,
+    (ex) => ex.id !== exercise.id
   );
-
-  console.log('[ExerciseHeader] Rendering:', {
-    name: exercise.name,
-    readonly,
-    showOptions,
-    hasImageUrl: !!exercise.imageUrl,
-    imageUrlLength: exercise.imageUrl?.length || 0,
-    imageUrlPreview: exercise.imageUrl?.substring(0, 50)
-  });
 
   return (
     <>

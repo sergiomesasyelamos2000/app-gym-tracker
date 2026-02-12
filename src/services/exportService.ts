@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import { Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { getMonthlySummary } from "../features/nutrition/services/nutritionService";
 import {
@@ -6,7 +7,7 @@ import {
   findAllRoutineSessions,
 } from "../features/routine/services/routineService";
 import type {
-  RoutineEntity,
+  RoutineResponseDto,
   RoutineSessionEntity,
 } from "@entity-data-models/index";
 import { DailyNutritionSummary } from "../models/nutrition.model";
@@ -23,7 +24,7 @@ export interface ExportOptions {
 
 export interface ExportData {
   workouts?: {
-    routines: RoutineEntity[];
+    routines: RoutineResponseDto[];
     sessions: (RoutineSessionEntity & { routineTitle: string })[];
   };
   nutrition?: DailyNutritionSummary[];
@@ -115,7 +116,7 @@ export const exportService = {
     const fileName = `gym-tracker-export-${
       new Date().toISOString().split("T")[0]
     }.${format}`;
-    const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+    const fileUri = `${Paths.cache.uri}${fileName}`;
 
     let content = "";
     if (format === "json") {
@@ -125,7 +126,7 @@ export const exportService = {
     }
 
     await FileSystem.writeAsStringAsync(fileUri, content, {
-      encoding: FileSystem.EncodingType.UTF8,
+      encoding: "utf8",
     });
 
     return fileUri;

@@ -23,7 +23,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean,
+    value: number | boolean
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
@@ -133,8 +133,6 @@ const ExerciseSetRow = ({
       "#FFD70040", // Gold with opacity for flash
     ],
   });
-
-  console.log('[ExerciseSetRow] Rendering set:', item.id, 'order:', item.order, 'completed:', item.completed);
 
   return (
     <Animated.View

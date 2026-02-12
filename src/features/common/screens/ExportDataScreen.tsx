@@ -42,9 +42,7 @@ export default function ExportDataScreen() {
           {
             text: "Actualizar a Premium",
             onPress: () => {
-              navigation.navigate("SubscriptionStack" as any, {
-                screen: "PlansScreen",
-              });
+              (navigation as any).navigate("PlansScreen");
             },
           },
           {

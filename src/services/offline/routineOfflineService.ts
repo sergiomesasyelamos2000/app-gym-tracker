@@ -3,7 +3,7 @@ import { enqueueOperation } from '../offlineQueueService';
 import { syncService } from '../syncService';
 import * as routineService from '../../features/routine/services/routineService';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { v4 as uuidv4 } from 'react-native-uuid';
+import uuid from 'react-native-uuid';
 
 /**
  * Guarda una rutina offline
@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'react-native-uuid';
 export async function saveRoutineOffline(routine: any): Promise<any> {
   const db = await getDatabase();
 
-  const routineId = routine.id || uuidv4();
+  const routineId = routine.id || uuid.v4() as string;
   const now = new Date().toISOString();
 
   // Save to local database
@@ -58,7 +58,7 @@ export async function saveRoutineExerciseOffline(
   exercise: any
 ): Promise<void> {
   const db = await getDatabase();
-  const exerciseId = exercise.id || uuidv4();
+  const exerciseId = exercise.id || uuid.v4() as string;
 
   const query = `
     INSERT OR REPLACE INTO routine_exercises
@@ -92,7 +92,7 @@ export async function saveRoutineExerciseOffline(
  */
 export async function saveSetOffline(routineExerciseId: string, set: any): Promise<void> {
   const db = await getDatabase();
-  const setId = set.id || uuidv4();
+  const setId = set.id || uuid.v4() as string;
 
   const query = `
     INSERT OR REPLACE INTO sets
@@ -223,7 +223,7 @@ export async function deleteRoutineOffline(routineId: string): Promise<void> {
  */
 export async function saveRoutineSessionOffline(routineId: string, session: any): Promise<any> {
   const db = await getDatabase();
-  const sessionId = session.id || uuidv4();
+  const sessionId = session.id || uuid.v4() as string;
   const now = new Date().toISOString();
 
   const query = `

@@ -58,8 +58,6 @@ const ExerciseRestPicker = ({
     setShowPicker(false);
   };
 
-  console.log('[ExerciseRestPicker] Rendering with restTime:', restTime, 'readonly:', readonly);
-
   return (
     <>
       <TouchableOpacity

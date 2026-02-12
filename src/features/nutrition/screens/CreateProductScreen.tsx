@@ -82,7 +82,7 @@ export default function CreateProductScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [barcode, setBarcode] = useState("");
   const [servingSize, setServingSize] = useState("");
-  const [servingUnit, setServingUnit] = useState<FoodUnit>("g");
+  const [servingUnit, setServingUnit] = useState<FoodUnit>("g" as FoodUnit);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Inicializar barcode si viene de los parámetros de navegación

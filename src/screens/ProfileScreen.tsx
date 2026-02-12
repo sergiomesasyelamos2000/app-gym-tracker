@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import {
   Bell,
@@ -7,9 +8,9 @@ import {
   Download,
   LogOut,
   Moon,
+  Trash2,
   User,
   Utensils,
-  Trash2,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -25,14 +26,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../contexts/ThemeContext";
 import { logout as logoutService } from "../features/login/services/authService";
+import { SubscriptionPlan } from "../models/subscription.model";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
-import { SubscriptionPlan } from "../models/subscription.model";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
   const logout = useAuthStore((state) => state.logout);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const isProfileComplete = useNutritionStore(
-    (state) => state.isProfileComplete,
+    (state) => state.isProfileComplete
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
@@ -52,10 +52,10 @@ export default function ProfileScreen() {
 
   // Notification settings from store
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
-    (state) => state.restTimerNotificationsEnabled,
+    (state) => state.restTimerNotificationsEnabled
   );
   const toggleRestTimerNotifications = useNotificationSettingsStore(
-    (state) => state.toggleRestTimerNotifications,
+    (state) => state.toggleRestTimerNotifications
   );
 
   const handleEditNutritionProfile = () => {
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
               }
             },
           },
-        ],
+        ]
       );
     }
   };
@@ -119,11 +119,12 @@ export default function ProfileScreen() {
               const keys = await AsyncStorage.getAllKeys();
 
               // Filter keys to remove (cache-related keys)
-              const cacheKeys = keys.filter(key =>
-                key.includes('cache') ||
-                key.includes('exercises') ||
-                key.includes('offline') ||
-                key.includes('last_sync')
+              const cacheKeys = keys.filter(
+                (key) =>
+                  key.includes("cache") ||
+                  key.includes("exercises") ||
+                  key.includes("offline") ||
+                  key.includes("last_sync")
               );
 
               // Remove cache keys
@@ -136,10 +137,7 @@ export default function ProfileScreen() {
                 `Se eliminaron ${cacheKeys.length} elementos de la caché. La app cargará datos frescos la próxima vez que te conectes.`,
                 [{ text: "OK" }]
               );
-
-              console.log('[Cache] Cleared cache keys:', cacheKeys);
             } catch (error) {
-              console.error('[Cache] Error clearing cache:', error);
               Alert.alert(
                 "Error",
                 "No se pudo limpiar la caché. Intenta de nuevo.",
@@ -176,7 +174,7 @@ export default function ProfileScreen() {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -281,7 +279,9 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.settingContent}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  {isPremium ? "Gestionar Suscripción" : "🚀 Desbloquear Premium"}
+                  {isPremium
+                    ? "Gestionar Suscripción"
+                    : "🚀 Desbloquear Premium"}
                 </Text>
                 <Text
                   style={[
@@ -290,7 +290,13 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {isPremium
-                    ? `Plan ${subscription?.plan === SubscriptionPlan.LIFETIME ? "de por Vida" : subscription?.plan === SubscriptionPlan.YEARLY ? "Anual" : "Mensual"} · Activo`
+                    ? `Plan ${
+                        subscription?.plan === SubscriptionPlan.LIFETIME
+                          ? "de por Vida"
+                          : subscription?.plan === SubscriptionPlan.YEARLY
+                          ? "Anual"
+                          : "Mensual"
+                      } · Activo`
                     : "Rutinas ilimitadas, AI, y más"}
                 </Text>
               </View>
@@ -378,8 +384,8 @@ export default function ProfileScreen() {
                       {userProfile.goals.weightGoal === "lose"
                         ? "Perder peso"
                         : userProfile.goals.weightGoal === "gain"
-                          ? "Ganar peso"
-                          : "Mantener peso"}
+                        ? "Ganar peso"
+                        : "Mantener peso"}
                     </Text>
                   </View>
                   <View
@@ -461,8 +467,8 @@ export default function ProfileScreen() {
                   {themeMode === "auto"
                     ? "Automático (Sistema)"
                     : isDark
-                      ? "Activado"
-                      : "Desactivado"}
+                    ? "Activado"
+                    : "Desactivado"}
                 </Text>
               </View>
               <Switch

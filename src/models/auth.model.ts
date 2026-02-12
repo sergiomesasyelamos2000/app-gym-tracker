@@ -6,11 +6,11 @@
  */
 
 import {
-  AuthResponse,
+  AuthResponseDto as AuthResponse,
   LoginRequestDto,
   RegisterRequestDto,
   GoogleAuthRequestDto,
-  AuthTokens,
+  AuthTokensDto as AuthTokens,
 } from "@entity-data-models/index";
 import { UserEntity as User } from "@entity-data-models/index";
 

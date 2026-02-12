@@ -34,9 +34,9 @@ export interface RestTimerNotification {
 }
 
 class NotificationService {
-  private activeTimers: Map<string, NodeJS.Timeout> = new Map();
+  private activeTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private notificationIds: Map<string, string> = new Map();
-  private autoDismissTimers: Map<string, NodeJS.Timeout> = new Map();
+  private autoDismissTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   /**
    * Request notification permissions with better handling

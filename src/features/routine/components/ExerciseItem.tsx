@@ -1,10 +1,10 @@
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
-import CachedExerciseImage from "../../../components/CachedExerciseImage";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -28,7 +28,7 @@ export default function ExerciseItem({
         styles.exerciseItem,
         isSelected && styles.selectedItem,
         {
-          borderWidth: isDark ? 1 : (isSelected ? 2 : 0),
+          borderWidth: isDark ? 1 : isSelected ? 2 : 0,
           borderColor: isSelected ? theme.primary : theme.border,
         },
       ]}
@@ -40,9 +40,11 @@ export default function ExerciseItem({
       />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseTitle}>{item.name}</Text>
-        <Text style={styles.exerciseMuscleGroup}>
-          Grupo muscular: {item.bodyParts.join(", ")}
-        </Text>
+        {item.muscularGroup && (
+          <Text style={styles.exerciseMuscleGroup}>
+            Grupo muscular: {item.muscularGroup}
+          </Text>
+        )}
       </View>
       <TouchableOpacity
         style={styles.redirectButton}
@@ -70,7 +72,9 @@ const createStyles = (theme: any) =>
       shadowRadius: 4,
     },
     selectedItem: {
-      backgroundColor: theme.isDark ? theme.primaryDark + "40" : theme.primary + "20",
+      backgroundColor: theme.isDark
+        ? theme.primaryDark + "40"
+        : theme.primary + "20",
     },
     exerciseImage: {
       width: 80,
@@ -95,4 +99,3 @@ const createStyles = (theme: any) =>
       padding: 8,
     },
   });
-

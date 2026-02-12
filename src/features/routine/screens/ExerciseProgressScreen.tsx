@@ -63,7 +63,14 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     try {
       setLoading(true);
       const allSessions = await findAllRoutineSessions();
-      setSessions(allSessions);
+      // Convertir RoutineSessionEntity[] a RoutineSession[]
+      const convertedSessions: RoutineSession[] = allSessions.map(session => ({
+        ...session,
+        createdAt: session.createdAt instanceof Date
+          ? session.createdAt.toISOString()
+          : session.createdAt
+      }));
+      setSessions(convertedSessions);
     } catch (error) {
       console.error("Error loading sessions:", error);
     } finally {

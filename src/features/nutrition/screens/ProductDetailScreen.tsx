@@ -16,12 +16,25 @@ import {
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { FoodEntry, FoodUnit, MealType } from "../../../models/nutrition.model";
+import {
+  FoodEntry,
+  FoodUnit,
+  MealType,
+  Product,
+} from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
 
 const { width } = Dimensions.get("window");
+
+// Local unit type for component state (converts to FoodUnit for API calls)
+type LocalFoodUnit = "g" | "ml" | "portion";
+
+// Extended Product type with servingUnit (CustomProduct has it, MappedProduct doesn't)
+type ProductWithServingUnit = Product & {
+  servingUnit?: string;
+};
 
 // Función auxiliar para obtener el color según el Nutri-Score
 function getNutritionGradeColor(grade: string): string {
@@ -52,25 +65,25 @@ type Props = NativeStackScreenProps<
 
 const UNITS_CONFIG: {
   label: string;
-  value: FoodUnit;
+  value: LocalFoodUnit;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
 }[] = [
   {
     label: "Gramos",
-    value: "g" as FoodUnit,
+    value: "g",
     icon: "scale-outline",
     color: "#10B981",
   },
   {
     label: "Mililitros",
-    value: "ml" as FoodUnit,
+    value: "ml",
     icon: "water-outline",
     color: "#3B82F6",
   },
   {
     label: "Porción",
-    value: "portion" as FoodUnit,
+    value: "portion",
     icon: "restaurant-outline",
     color: "#F59E0B",
   },
@@ -84,25 +97,25 @@ const MEALS_CONFIG: {
 }[] = [
   {
     label: "Desayuno",
-    value: "breakfast" as MealType,
+    value: "breakfast",
     icon: "sunny",
     color: "#FFB74D",
   },
   {
     label: "Almuerzo",
-    value: "lunch" as MealType,
+    value: "lunch",
     icon: "restaurant",
     color: "#6FCF97",
   },
   {
     label: "Cena",
-    value: "dinner" as MealType,
+    value: "dinner",
     icon: "moon",
     color: "#6C3BAA",
   },
   {
     label: "Snack",
-    value: "snack" as MealType,
+    value: "snack",
     icon: "fast-food",
     color: "#409CFF",
   },
@@ -111,7 +124,7 @@ const MEALS_CONFIG: {
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const { theme } = useTheme();
   const {
-    producto,
+    producto: rawProducto,
     fromDiary = false,
     selectedMeal: initialMeal,
     quantity: initialQty,
@@ -120,26 +133,35 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     entryId,
   } = route.params;
 
+  // Cast to extended type with servingUnit
+  const producto = rawProducto as ProductWithServingUnit;
+
   const userProfile = useNutritionStore((state) => state.userProfile);
   const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
   const updateFoodEntryInStore = useNutritionStore(
-    (state) => state.updateFoodEntry,
+    (state) => state.updateFoodEntry
   );
   const triggerFavoritesUpdate = useNutritionStore(
-    (state) => state.triggerFavoritesUpdate,
+    (state) => state.triggerFavoritesUpdate
   );
 
-  const [quantity, setQuantity] = useState(
-    initialQty?.toString() ||
-      producto.servingSize?.toString() ||
-      producto.grams?.toString() ||
-      "100",
-  );
-  const [unit, setUnit] = useState<FoodUnit>(() => {
+  const [quantity, setQuantity] = useState(() => {
+    if (initialQty) return initialQty.toString();
+    if (producto.servingSize) return producto.servingSize.toString();
+    if (producto.grams) return producto.grams.toString();
+    return "100";
+  });
+  const [unit, setUnit] = useState<LocalFoodUnit>(() => {
     // Si viene de una edición (initialUnit), usarlo. Si no, usar la unidad por defecto del producto.
-    if (initialUnit) return initialUnit;
+    if (initialUnit) {
+      // Convert FoodUnit to LocalFoodUnit
+      if (initialUnit === "gram") return "g";
+      if (initialUnit === "ml") return "ml";
+      if (initialUnit === "portion") return "portion";
+      return "g";
+    }
 
-    // Mapeo seguro de la unidad del producto
+    // Mapeo seguro de la unidad del producto (si existe)
     const productUnit = producto.servingUnit;
     if (productUnit === "gram" || productUnit === "g") return "g";
     if (productUnit === "ml") return "ml";
@@ -186,17 +208,23 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       if (producto.servingSize) {
         setQuantity(producto.servingSize.toString());
       }
-      if (producto.servingUnit) {
-        setUnit(
-          producto.servingUnit === "gram"
-            ? "g"
-            : (producto.servingUnit as FoodUnit),
-        );
+      const productUnit = producto.servingUnit;
+      if (productUnit) {
+        if (productUnit === "gram" || productUnit === "g") {
+          setUnit("g");
+        } else if (productUnit === "ml") {
+          setUnit("ml");
+        } else if (productUnit === "portion" || productUnit === "unit") {
+          setUnit("portion");
+        } else {
+          setUnit("g");
+        }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [producto]);
 
-  const getUnitLabel = (value: FoodUnit): string => {
+  const getUnitLabel = (value: LocalFoodUnit): string => {
     return UNITS_CONFIG.find((u) => u.value === value)?.label || "Gramos";
   };
 
@@ -210,7 +238,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     try {
       const favorite = await nutritionService.isFavorite(
         producto.code,
-        userProfile.userId,
+        userProfile.userId
       );
       setIsFavorite(favorite);
     } catch (error) {
@@ -228,9 +256,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       if (isFavorite) {
         await nutritionService.removeFavoriteByProductCode(
           producto.code,
-          userProfile.userId,
+          userProfile.userId
         );
-        setIsFavorite(false);
         setIsFavorite(false);
         triggerFavoritesUpdate();
         Alert.alert("Eliminado", "Producto eliminado de favoritos");
@@ -239,13 +266,12 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           userId: userProfile.userId,
           productCode: producto.code,
           productName: producto.name,
-          productImage: producto.image,
+          productImage: producto.image ?? undefined,
           calories: calculateNutrients.calories,
           protein: calculateNutrients.protein,
           carbs: calculateNutrients.carbs,
           fat: calculateNutrients.fat,
         });
-        setIsFavorite(true);
         setIsFavorite(true);
         triggerFavoritesUpdate();
         Alert.alert("Agregado", "Producto agregado a favoritos");
@@ -268,9 +294,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         userId: userProfile.userId,
         productCode: producto.code,
         productName: producto.name,
-        productImage: producto.image,
+        productImage: producto.image ?? undefined,
         quantity: parseFloat(quantity) || 100,
-        unit: (unit === "g" ? "gram" : unit) as any,
+        unit: (unit === "g" ? "gram" : unit) as FoodUnit,
       });
       Alert.alert("¡Añadido!", "Producto agregado a la lista de compras");
     } catch (error) {
@@ -314,7 +340,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         const updatedEntry: Partial<FoodEntry> = {
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: (unit === "g" ? "gram" : unit) as any,
+          unit: (unit === "g" ? "gram" : unit) as FoodUnit,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,
@@ -335,11 +361,11 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           userId: userProfile.userId,
           productCode: producto.code,
           productName: producto.name,
-          productImage: producto.image,
+          productImage: producto.image ?? undefined,
           date: today,
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: (unit === "g" ? "gram" : unit) as any,
+          unit: (unit === "g" ? "gram" : unit) as FoodUnit,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,
@@ -441,13 +467,13 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   styles.nutritionGradeBadge,
                   {
                     backgroundColor: getNutritionGradeColor(
-                      producto.nutritionGrade,
+                      producto.nutritionGrade
                     ),
                   },
                 ]}
               >
                 <Text style={styles.nutritionGradeText}>
-                  {producto.nutritionGrade.toUpperCase()}
+                  {(producto.nutritionGrade || "").toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -519,8 +545,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
               {producto.servingUnit === "gram"
                 ? "g"
                 : producto.servingUnit === "portion"
-                  ? "porción"
-                  : producto.servingUnit}
+                ? "porción"
+                : producto.servingUnit}
             </Text>
           </View>
         )}

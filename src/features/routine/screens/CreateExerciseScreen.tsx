@@ -177,7 +177,7 @@ export default function CreateExerciseScreen() {
     );
 
     return await FileSystem.readAsStringAsync(optimizedImage.uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64",
     });
   };
 

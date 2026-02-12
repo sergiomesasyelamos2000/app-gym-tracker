@@ -3,8 +3,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Button, Card } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -71,14 +71,6 @@ const ExerciseCard = ({
   showOptions = false,
   previousSessions = [],
 }: Props) => {
-  console.log('[ExerciseCard] RENDER:', {
-    exerciseId: exercise.id,
-    exerciseName: exercise.name,
-    initialSetsCount: initialSets.length,
-    readonly,
-    started
-  });
-
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
   const [notes, setNotes] = useState<ExerciseNote[]>(exercise.notes || []);
   const [restTime, setRestTime] = useState(() => {
@@ -98,7 +90,7 @@ const ExerciseCard = ({
   // Undo deletion state
   const [pendingDelete, setPendingDelete] = useState<{
     set: SetRequestDto;
-    timeoutId: NodeJS.Timeout;
+    timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
   // Record detection state (no modal, just tracking)
@@ -107,7 +99,7 @@ const ExerciseCard = ({
   }>({});
   const addOrUpdateRecord = useRecordsStore((state) => state.addOrUpdateRecord);
   const removeRecordBySetId = useRecordsStore(
-    (state) => state.removeRecordBySetId,
+    (state) => state.removeRecordBySetId
   );
 
   const { width } = useWindowDimensions();
@@ -131,21 +123,21 @@ const ExerciseCard = ({
   const addSet = () => {
     const newSet: SetRequestDto =
       exercise.repsType === "range"
-        ? {
+        ? ({
             id: uuid.v4() as string,
             order: sets.length + 1,
             weight: 0,
             repsMin: 0,
             repsMax: 0,
             completed: false,
-          }
-        : {
+          } as SetRequestDto)
+        : ({
             id: uuid.v4() as string,
             order: sets.length + 1,
             weight: 0,
             reps: 0,
             completed: false,
-          };
+          } as SetRequestDto);
     setSets([...sets, newSet]);
   };
 
@@ -166,7 +158,7 @@ const ExerciseCard = ({
       setSets((prev) =>
         prev
           .filter((set) => set.id !== pendingDelete.set.id)
-          .map((s, i) => ({ ...s, order: i + 1 })),
+          .map((s, i) => ({ ...s, order: i + 1 }))
       );
     }
 
@@ -191,7 +183,7 @@ const ExerciseCard = ({
     setSets((prev) =>
       prev
         .filter((set) => set.id !== id)
-        .map((s, i) => ({ ...s, order: i + 1 })),
+        .map((s, i) => ({ ...s, order: i + 1 }))
     );
 
     // Remove from record tracking if it was a PR
@@ -217,7 +209,7 @@ const ExerciseCard = ({
   const updateSet = (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean,
+    value: number | boolean
   ) => {
     // 1. Calculate the new state first
     const currentSets = sets;
@@ -255,7 +247,7 @@ const ExerciseCard = ({
           exercise.id,
           exercise.name,
           updatedSet,
-          previousSessions,
+          previousSessions
         );
 
         if (record) {
@@ -310,8 +302,6 @@ const ExerciseCard = ({
       repsType: type,
     });
   };
-
-  console.log('[ExerciseCard] About to return JSX for:', exercise.name, 'sets:', sets.length);
 
   return (
     <Card

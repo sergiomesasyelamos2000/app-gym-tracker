@@ -32,7 +32,6 @@ export const useAuthStore = create<AuthState>()(
 
       // Set authentication (login/register success)
       setAuth: (user: User, tokens: AuthTokens) => {
-        console.log('[AuthStore] Setting auth for user:', user.id);
         set({
           user,
           accessToken: tokens.accessToken,
@@ -40,7 +39,6 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isLoading: false,
         });
-        console.log('[AuthStore] Auth state updated. isAuthenticated:', true);
       },
 
       // Update user profile
@@ -63,8 +61,8 @@ export const useAuthStore = create<AuthState>()(
 
       // Clear authentication state
       clearAuth: () => {
-        console.warn('[AuthStore] Clearing auth state');
-        console.trace('[AuthStore] clearAuth called from:');
+        console.warn("[AuthStore] Clearing auth state");
+        console.trace("[AuthStore] clearAuth called from:");
         set({
           user: null,
           accessToken: null,

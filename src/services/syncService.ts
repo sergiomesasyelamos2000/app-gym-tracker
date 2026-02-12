@@ -1,5 +1,5 @@
-import NetInfo from '@react-native-community/netinfo';
-import { apiFetch } from '../api/client';
+import NetInfo from "@react-native-community/netinfo";
+import { apiFetch } from "../api/client";
 import {
   getPendingOperations,
   removeQueueItem,
@@ -8,8 +8,8 @@ import {
   cleanupFailedOperations,
   QueueItem,
   EntityType,
-} from './offlineQueueService';
-import { useSyncStore } from '../store/useSyncStore';
+} from "./offlineQueueService";
+import { useSyncStore } from "../store/useSyncStore";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const SYNC_BATCH_SIZE = 20;
@@ -17,7 +17,7 @@ const SYNC_BATCH_SIZE = 20;
 export class SyncService {
   private static instance: SyncService;
   private isRunning: boolean = false;
-  private syncInterval: NodeJS.Timeout | null = null;
+  private syncInterval: ReturnType<typeof setTimeout> | null = null;
 
   private constructor() {}
 
@@ -38,7 +38,7 @@ export class SyncService {
     // Subscribe to network changes
     NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable) {
-        console.log('📡 Network connected, triggering sync...');
+        console.log("📡 Network connected, triggering sync...");
         this.sync();
       }
     });
@@ -61,7 +61,7 @@ export class SyncService {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
-      console.log('⏹️ Auto-sync stopped');
+      console.log("⏹️ Auto-sync stopped");
     }
   }
 
@@ -71,14 +71,14 @@ export class SyncService {
   async sync(): Promise<{ success: boolean; synced: number; errors: number }> {
     // Check if already running
     if (this.isRunning) {
-      console.log('⏳ Sync already running, skipping...');
+      console.log("⏳ Sync already running, skipping...");
       return { success: false, synced: 0, errors: 0 };
     }
 
     // Check network status
     const netState = await NetInfo.fetch();
     if (!netState.isConnected || !netState.isInternetReachable) {
-      console.log('📴 No internet connection, skipping sync');
+      console.log("📴 No internet connection, skipping sync");
       return { success: false, synced: 0, errors: 0 };
     }
 
@@ -96,7 +96,7 @@ export class SyncService {
       const pendingOps = await getPendingOperations();
 
       if (pendingOps.length === 0) {
-        console.log('✅ No pending operations to sync');
+        console.log("✅ No pending operations to sync");
         useSyncStore.getState().setPendingOperations(0);
         return { success: true, synced: 0, errors: 0 };
       }
@@ -113,11 +113,17 @@ export class SyncService {
             await removeQueueItem(operation.id);
             syncedCount++;
           } catch (error: any) {
-            console.error(`❌ Failed to sync operation ${operation.id}:`, error);
+            console.error(
+              `❌ Failed to sync operation ${operation.id}:`,
+              error
+            );
             errorCount++;
 
             // Increment attempts
-            await incrementAttempts(operation.id, error.message || 'Unknown error');
+            await incrementAttempts(
+              operation.id,
+              error.message || "Unknown error"
+            );
 
             // Add to sync errors
             useSyncStore
@@ -144,7 +150,7 @@ export class SyncService {
         errors: errorCount,
       };
     } catch (error: any) {
-      console.error('❌ Sync failed:', error);
+      console.error("❌ Sync failed:", error);
       useSyncStore.getState().addSyncError(`Sync failed: ${error.message}`);
       return { success: false, synced: syncedCount, errors: errorCount + 1 };
     } finally {
@@ -165,7 +171,7 @@ export class SyncService {
 
     console.log(`📤 Processing ${op} for ${entity_type}:${entity_id}`);
 
-    if (op === 'DELETE') {
+    if (op === "DELETE") {
       // For DELETE, no body needed
       await apiFetch(endpoint, { method });
     } else {
@@ -180,36 +186,40 @@ export class SyncService {
   /**
    * Obtiene el endpoint correcto para cada tipo de entidad
    */
-  private getEndpoint(entityType: EntityType, entityId: string, operation: string): string {
+  private getEndpoint(
+    entityType: EntityType,
+    entityId: string,
+    operation: string
+  ): string {
     switch (entityType) {
-      case 'routine':
-        return operation === 'CREATE' ? '/routines' : `/routines/${entityId}`;
+      case "routine":
+        return operation === "CREATE" ? "/routines" : `/routines/${entityId}`;
 
-      case 'routine_exercise':
+      case "routine_exercise":
         // Routine exercises are nested, need routine ID from payload
-        return '/routines/exercises';
+        return "/routines/exercises";
 
-      case 'set':
+      case "set":
         // Sets are nested under routine exercises
-        return '/routines/sets';
+        return "/routines/sets";
 
-      case 'routine_session':
+      case "routine_session":
         // Sessions need routine ID
         return `/routines/${entityId}/sessions`;
 
-      case 'food_entry':
-        return operation === 'CREATE'
-          ? '/nutrition/diary/entries'
+      case "food_entry":
+        return operation === "CREATE"
+          ? "/nutrition/diary/entries"
           : `/nutrition/diary/entries/${entityId}`;
 
-      case 'custom_product':
-        return operation === 'CREATE'
-          ? '/nutrition/custom-products'
+      case "custom_product":
+        return operation === "CREATE"
+          ? "/nutrition/custom-products"
           : `/nutrition/custom-products/${entityId}`;
 
-      case 'custom_meal':
-        return operation === 'CREATE'
-          ? '/nutrition/custom-meals'
+      case "custom_meal":
+        return operation === "CREATE"
+          ? "/nutrition/custom-meals"
           : `/nutrition/custom-meals/${entityId}`;
 
       default:
@@ -222,12 +232,12 @@ export class SyncService {
    */
   private getMethod(operation: string): string {
     switch (operation) {
-      case 'CREATE':
-        return 'POST';
-      case 'UPDATE':
-        return 'PUT';
-      case 'DELETE':
-        return 'DELETE';
+      case "CREATE":
+        return "POST";
+      case "UPDATE":
+        return "PUT";
+      case "DELETE":
+        return "DELETE";
       default:
         throw new Error(`Unknown operation: ${operation}`);
     }
@@ -237,7 +247,7 @@ export class SyncService {
    * Fuerza una sincronización inmediata
    */
   async forceSync(): Promise<void> {
-    console.log('🔄 Forcing immediate sync...');
+    console.log("🔄 Forcing immediate sync...");
     await this.sync();
   }
 

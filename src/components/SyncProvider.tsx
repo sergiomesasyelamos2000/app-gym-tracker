@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import NetInfo from '@react-native-community/netinfo';
-import { initDatabase } from '../database/sqliteClient';
-import { syncService } from '../services/syncService';
-import { useSyncStore } from '../store/useSyncStore';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useTheme } from '../contexts/ThemeContext';
-import { getPendingCount } from '../services/syncQueue';
+import { Ionicons } from "@expo/vector-icons";
+import NetInfo from "@react-native-community/netinfo";
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Animated, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
+import { initDatabase } from "../database/sqliteClient";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import {
-  startAutoSync,
-  stopAutoSync,
   forceSyncNow,
   isSyncInProgress,
-} from '../services/autoSyncService';
+  startAutoSync,
+  stopAutoSync,
+} from "../services/autoSyncService";
+import { getPendingCount } from "../services/syncQueue";
+import { syncService } from "../services/syncService";
+import { useSyncStore } from "../store/useSyncStore";
 
 interface SyncProviderProps {
   children: React.ReactNode;
@@ -39,21 +39,17 @@ export function SyncProvider({ children }: SyncProviderProps) {
       try {
         // Initialize SQLite database
         await initDatabase();
-        console.log('✅ SQLite database initialized');
 
         // Check pending operations
         const count = await getPendingCount();
         setPendingOpsCount(count);
-        console.log('📊 Pending operations:', count);
 
         // Start both sync services
         await syncService.startAutoSync(5); // Original SQLite sync
         startAutoSync(); // New AsyncStorage routine sync
-        console.log('✅ Auto-sync services started');
 
         setInitialized(true);
       } catch (error) {
-        console.error('❌ Failed to initialize offline system:', error);
         setInitialized(true); // Continue anyway
       }
     }
@@ -64,7 +60,6 @@ export function SyncProvider({ children }: SyncProviderProps) {
     const unsubscribe = NetInfo.addEventListener((state) => {
       setIsOnline(state.isConnected === true);
       if (state.isConnected) {
-        console.log('🌐 Network connected, checking sync queue...');
         updatePendingCount();
       }
     });
@@ -139,20 +134,20 @@ export function SyncProvider({ children }: SyncProviderProps) {
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ["0deg", "360deg"],
   });
 
   const handleManualSync = async () => {
     if (!isOnline) {
       Alert.alert(
-        'Sin conexión',
-        'No hay conexión a internet. Por favor, conéctate e intenta de nuevo.'
+        "Sin conexión",
+        "No hay conexión a internet. Por favor, conéctate e intenta de nuevo."
       );
       return;
     }
 
     if (isSyncingNow) {
-      Alert.alert('Sincronizando', 'Ya hay una sincronización en progreso.');
+      Alert.alert("Sincronizando", "Ya hay una sincronización en progreso.");
       return;
     }
 
@@ -167,22 +162,27 @@ export function SyncProvider({ children }: SyncProviderProps) {
 
       if (result.success > 0) {
         Alert.alert(
-          '✅ Sincronización completa',
-          `${result.success} cambios sincronizados correctamente.${result.failed > 0 ? `\n${result.failed} cambios fallaron.` : ''}`
+          "✅ Sincronización completa",
+          `${result.success} cambios sincronizados correctamente.${
+            result.failed > 0 ? `\n${result.failed} cambios fallaron.` : ""
+          }`
         );
       } else if (result.failed > 0) {
         Alert.alert(
-          '⚠️ Error de sincronización',
+          "⚠️ Error de sincronización",
           `No se pudieron sincronizar ${result.failed} cambios. Reintentando automáticamente.`
         );
       } else {
-        Alert.alert('ℹ️ Sin cambios', 'No hay cambios pendientes para sincronizar.');
+        Alert.alert(
+          "ℹ️ Sin cambios",
+          "No hay cambios pendientes para sincronizar."
+        );
       }
     } catch (error) {
-      console.error('[SyncProvider] Manual sync failed:', error);
+      console.error("[SyncProvider] Manual sync failed:", error);
       Alert.alert(
-        '❌ Error',
-        'Ocurrió un error durante la sincronización. Reintentando automáticamente.'
+        "❌ Error",
+        "Ocurrió un error durante la sincronización. Reintentando automáticamente."
       );
     } finally {
       setIsSyncingNow(false);
@@ -192,7 +192,11 @@ export function SyncProvider({ children }: SyncProviderProps) {
   if (!initialized) {
     return (
       <View style={styles.loadingContainer}>
-        <Ionicons name="cloud-download-outline" size={48} color={theme.primary} />
+        <Ionicons
+          name="cloud-download-outline"
+          size={48}
+          color={theme.primary}
+        />
         <Text style={[styles.loadingText, { color: theme.text }]}>
           Inicializando sistema offline...
         </Text>
@@ -214,7 +218,12 @@ export function SyncProvider({ children }: SyncProviderProps) {
             },
           ]}
         >
-          <View style={[styles.syncToastContent, { backgroundColor: `${theme.primary}15` }]}>
+          <View
+            style={[
+              styles.syncToastContent,
+              { backgroundColor: `${theme.primary}15` },
+            ]}
+          >
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
               <Ionicons name="sync-outline" size={14} color={theme.primary} />
             </Animated.View>
@@ -231,32 +240,32 @@ export function SyncProvider({ children }: SyncProviderProps) {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   syncToast: {
-    position: 'absolute',
+    position: "absolute",
     top: 60,
     left: 16,
     right: 16,
     zIndex: 9999,
   },
   syncToastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     gap: 8,
-    alignSelf: 'center',
-    shadowColor: '#000',
+    alignSelf: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -264,26 +273,26 @@ const styles = StyleSheet.create({
   },
   syncToastText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     opacity: 0.8,
   },
   // Deprecated styles (keeping for backwards compatibility)
   syncBanner: {
-    display: 'none',
+    display: "none",
   },
   syncBannerContent: {
-    display: 'none',
+    display: "none",
   },
   syncText: {
-    display: 'none',
+    display: "none",
   },
   syncButton: {
-    display: 'none',
+    display: "none",
   },
   syncButtonText: {
-    display: 'none',
+    display: "none",
   },
   spinningIcon: {
-    display: 'none',
+    display: "none",
   },
 });

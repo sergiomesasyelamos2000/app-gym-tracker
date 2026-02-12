@@ -20,6 +20,11 @@ import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { notificationService } from "../../../services/notificationService";
+import {
+  saveRoutineOffline,
+  saveSessionOffline,
+  updateRoutineOffline,
+} from "../../../services/offlineRoutineService";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import { useRecordsStore } from "../../../store/useRecordsStore";
@@ -34,15 +39,7 @@ import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal
 import {
   findAllRoutineSessions,
   getRoutineById,
-  saveRoutine,
-  saveRoutineSession,
-  updateRoutineById,
 } from "../services/routineService";
-import {
-  saveRoutineOffline,
-  updateRoutineOffline,
-  saveSessionOffline,
-} from "../../../services/offlineRoutineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
@@ -61,7 +58,7 @@ export default function RoutineDetailScreen() {
 
   // Notification settings
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
-    (state) => state.restTimerNotificationsEnabled,
+    (state) => state.restTimerNotificationsEnabled
   );
 
   const [loading, setLoading] = useState(!!routine?.id);
@@ -72,7 +69,7 @@ export default function RoutineDetailScreen() {
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
-    {},
+    {}
   );
   const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
 
@@ -95,7 +92,7 @@ export default function RoutineDetailScreen() {
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
   const [undoMessage, setUndoMessage] = useState("");
   const [onUndoCallback, setOnUndoCallback] = useState<(() => void) | null>(
-    null,
+    null
   );
 
   const handleShowUndoSnackbar = (message: string, onUndo: () => void) => {
@@ -120,7 +117,7 @@ export default function RoutineDetailScreen() {
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
   const completedSets = useMemo(
     () => allSets.filter((s) => s.completed).length,
-    [allSets],
+    [allSets]
   );
 
   // Calculate records achieved in this session
@@ -157,10 +154,10 @@ export default function RoutineDetailScreen() {
           title: data.title,
           hasRoutineExercises: !!data.routineExercises,
           routineExercisesCount: data.routineExercises?.length || 0,
-          routineExercises: data.routineExercises?.map(re => ({
+          routineExercises: data.routineExercises?.map((re) => ({
             exerciseName: re.exercise?.name,
-            setsCount: re.sets?.length
-          }))
+            setsCount: re.sets?.length,
+          })),
         });
         setRoutineData(data);
       } catch (err: any) {
@@ -221,29 +218,13 @@ export default function RoutineDetailScreen() {
   }, [initialExercises, hasInitializedFromStore, routine?.title]);
 
   useEffect(() => {
-    console.log('[RoutineDetail] Mapping effect triggered:', {
-      hasInitializedFromStore,
-      initialExercisesLength: initialExercises?.length,
-      hasRoutineData: !!routineData,
-      routineDataExercisesCount: routineData?.routineExercises?.length
-    });
-
     if (hasInitializedFromStore || initialExercises?.length || !routineData) {
-      console.log('[RoutineDetail] Skipping mapping because:', {
-        hasInitializedFromStore,
-        hasInitialExercises: !!initialExercises?.length,
-        noRoutineData: !routineData
-      });
       return;
     }
 
-    console.log('[RoutineDetail] Mapping routineExercises to exercises');
     const mappedExercises: ExerciseRequestDto[] =
       mapRoutineExercises(routineData);
-    console.log('[RoutineDetail] Mapped exercises:', {
-      count: mappedExercises.length,
-      exercises: mappedExercises.map(e => ({ id: e.id, name: e.name }))
-    });
+
     setExercises(mappedExercises);
     setRoutineTitle(routineData.title || "");
 
@@ -278,7 +259,7 @@ export default function RoutineDetailScreen() {
 
     const setsMap = exercisesWithSets.reduce(
       (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
-      {},
+      {}
     );
 
     setWorkoutInProgress({
@@ -496,14 +477,10 @@ export default function RoutineDetailScreen() {
       const isAuth = useAuthStore.getState().isAuthenticated;
       const token = useAuthStore.getState().accessToken;
 
-      console.log('[FinishRoutine] Current user:', currentUser?.id);
-      console.log('[FinishRoutine] Is authenticated:', isAuth);
-      console.log('[FinishRoutine] Has token:', !!token);
-
       if (!currentUser?.id) {
         Alert.alert(
           "Error de Sesión",
-          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión.",
+          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión."
         );
         setStarted(true);
         return;
@@ -559,10 +536,12 @@ export default function RoutineDetailScreen() {
     } catch (err: any) {
       console.error("Error saving routine:", err);
 
-      let errorMessage = "Error al guardar la rutina. Por favor intenta de nuevo.";
+      let errorMessage =
+        "Error al guardar la rutina. Por favor intenta de nuevo.";
 
       if (err?.status === 401) {
-        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+        errorMessage =
+          "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
       } else if (err?.status === 403) {
         errorMessage = "No tienes permisos para realizar esta acción.";
       } else if (err?.status === 500) {
@@ -609,14 +588,10 @@ export default function RoutineDetailScreen() {
       const isAuth = useAuthStore.getState().isAuthenticated;
       const token = useAuthStore.getState().accessToken;
 
-      console.log('[SaveRoutine] Current user:', currentUser?.id);
-      console.log('[SaveRoutine] Is authenticated:', isAuth);
-      console.log('[SaveRoutine] Has token:', !!token);
-
       if (!currentUser?.id) {
         Alert.alert(
           "Error de Sesión",
-          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión.",
+          "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión."
         );
         return;
       }
@@ -641,10 +616,12 @@ export default function RoutineDetailScreen() {
     } catch (err: any) {
       console.error("Error saving routine:", err);
 
-      let errorMessage = "Error al guardar la rutina. Por favor intenta de nuevo.";
+      let errorMessage =
+        "Error al guardar la rutina. Por favor intenta de nuevo.";
 
       if (err?.status === 401) {
-        errorMessage = "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
+        errorMessage =
+          "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
       } else if (err?.status === 403) {
         errorMessage = "No tienes permisos para realizar esta acción.";
       } else if (err?.status === 500) {
@@ -675,7 +652,7 @@ export default function RoutineDetailScreen() {
 
   const handleStartRestTimer = async (
     restSeconds: number,
-    exerciseName?: string,
+    exerciseName?: string
   ) => {
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
@@ -694,7 +671,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         restSeconds,
-        exerciseName,
+        exerciseName
       );
       setActiveNotificationId(notificationId);
     }
@@ -726,7 +703,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         newTime,
-        currentExerciseName,
+        currentExerciseName
       );
       setActiveNotificationId(notificationId);
     }
@@ -745,7 +722,7 @@ export default function RoutineDetailScreen() {
       // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         newTime,
-        currentExerciseName,
+        currentExerciseName
       );
       setActiveNotificationId(notificationId);
     }
@@ -782,14 +759,6 @@ export default function RoutineDetailScreen() {
         repsType: re.repsType || "reps",
         supersetWith: re.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
       };
-
-      console.log('[RoutineDetail] Mapped exercise:', {
-        id: exercise.id,
-        name: exercise.name,
-        hasImageUrl: !!exercise.imageUrl,
-        imageUrlLength: exercise.imageUrl?.length || 0,
-        imageUrlPreview: exercise.imageUrl?.substring(0, 50)
-      });
 
       return exercise;
     });
@@ -831,18 +800,6 @@ export default function RoutineDetailScreen() {
       })),
     };
 
-    console.log('[RoutineDetail] buildRoutinePayload:', {
-      exercisesStateCount: exercisesState.length,
-      payloadExercisesCount: payload.exercises.length,
-      exercises: payload.exercises.map(e => ({
-        id: e.id,
-        name: e.name,
-        hasImageUrl: !!e.imageUrl,
-        imageUrlLength: e.imageUrl?.length || 0,
-        setsCount: e.sets?.length || 0
-      }))
-    });
-
     return payload;
   };
 
@@ -853,7 +810,7 @@ export default function RoutineDetailScreen() {
       : new Date(Date.now() - duration * 1000);
 
     const sessionRecords = allRecords.filter(
-      (r) => new Date(r.date) >= startTime,
+      (r) => new Date(r.date) >= startTime
     );
 
     return {
@@ -868,7 +825,7 @@ export default function RoutineDetailScreen() {
             (r) =>
               r.exerciseId === exercise.id &&
               r.setData.weight === (s.weight || 0) &&
-              r.setData.reps === (s.reps || 0),
+              r.setData.reps === (s.reps || 0)
           );
 
           return {
@@ -894,12 +851,6 @@ export default function RoutineDetailScreen() {
   };
 
   const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => {
-    console.log('[RoutineDetail] Rendering ExerciseCard for:', {
-      id: item.id,
-      name: item.name,
-      setsCount: sets[item.id]?.length || 0
-    });
-
     // 🔥 Buscar el nombre del ejercicio con el que hace superserie
     const supersetExercise = item.supersetWith
       ? exercisesState.find((ex) => ex.id === item.supersetWith)
@@ -915,8 +866,8 @@ export default function RoutineDetailScreen() {
         onChangeExercise={(updatedExercise) =>
           setExercises((prev) =>
             prev.map((ex) =>
-              ex.id === updatedExercise.id ? updatedExercise : ex,
-            ),
+              ex.id === updatedExercise.id ? updatedExercise : ex
+            )
           )
         }
         readonly={readonly && !started}
@@ -931,14 +882,6 @@ export default function RoutineDetailScreen() {
       />
     );
   };
-
-  console.log('[RoutineDetail] RENDER - State:', {
-    exercisesCount: exercisesState.length,
-    exercises: exercisesState.map(e => ({ id: e.id, name: e.name })),
-    loading,
-    started,
-    routineDataId: routineData?.id
-  });
 
   if (loading) {
     return (
@@ -972,9 +915,7 @@ export default function RoutineDetailScreen() {
       <FlatList
         data={exercisesState}
         keyExtractor={(item) => item.id}
-        onViewableItemsChanged={(info) => {
-          console.log('[RoutineDetail] FlatList viewable items:', info.viewableItems.length);
-        }}
+        onViewableItemsChanged={(info) => {}}
         ListHeaderComponent={
           <RoutineHeader
             routineTitle={routineTitle}

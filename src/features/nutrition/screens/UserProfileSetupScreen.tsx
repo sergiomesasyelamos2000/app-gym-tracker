@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,9 +18,11 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityLevel,
   Gender,
+  HeightUnit,
   UserAnthropometrics,
   UserGoals,
   WeightGoal,
+  WeightUnit,
 } from "../../../models/nutrition.model";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -31,7 +33,7 @@ import {
 import { createUserProfile } from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 type Props = NativeStackScreenProps<
   NutritionStackParamList,
@@ -40,9 +42,9 @@ type Props = NativeStackScreenProps<
 
 export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const currentUser = useAuthStore((state) => state.user);
-  const userId = route.params?.userId || currentUser?.id;
+  const userId = route.params?.userId || currentUser?.id || "";
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   // Validar que tenemos un userId válido
   React.useEffect(() => {
@@ -53,7 +55,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         [{ text: "OK", onPress: () => navigation.goBack() }],
       );
     }
-  }, [userId]);
+  }, [userId, navigation]);
 
   // Step tracking
   const [currentStep, setCurrentStep] = useState(1);
@@ -72,7 +74,6 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
 
   // Modal states
   const [showActivityModal, setShowActivityModal] = useState(false);
-  const [showGoalModal, setShowGoalModal] = useState(false);
 
   const activityLevels: {
     value: ActivityLevel;
@@ -174,8 +175,8 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         goals,
         macroGoals,
         preferences: {
-          weightUnit: "kg" as const,
-          heightUnit: "cm" as const,
+          weightUnit: WeightUnit.KG,
+          heightUnit: "cm" as HeightUnit,
         },
       };
 
@@ -343,19 +344,32 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 2:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>¿Cuál es tu peso actual?</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>
+              ¿Cuál es tu peso actual?
+            </Text>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               Ingresa tu peso en kilogramos
             </Text>
             <View style={styles.inputWithUnit}>
               <TextInput
-                style={[styles.input, styles.largeInput]}
+                style={[
+                  styles.input,
+                  styles.largeInput,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    color: theme.text,
+                    borderColor: theme.border,
+                  },
+                ]}
                 value={weight}
                 onChangeText={setWeight}
                 placeholder="Ej: 70"
+                placeholderTextColor={theme.textTertiary}
                 keyboardType="decimal-pad"
               />
-              <Text style={styles.unitLabel}>kg</Text>
+              <Text style={[styles.unitLabel, { color: theme.textSecondary }]}>
+                kg
+              </Text>
             </View>
           </View>
         );
@@ -363,19 +377,32 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 3:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>¿Cuál es tu estatura?</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>
+              ¿Cuál es tu estatura?
+            </Text>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               Ingresa tu estatura en centímetros
             </Text>
             <View style={styles.inputWithUnit}>
               <TextInput
-                style={[styles.input, styles.largeInput]}
+                style={[
+                  styles.input,
+                  styles.largeInput,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    color: theme.text,
+                    borderColor: theme.border,
+                  },
+                ]}
                 value={height}
                 onChangeText={setHeight}
                 placeholder="Ej: 175"
+                placeholderTextColor={theme.textTertiary}
                 keyboardType="numeric"
               />
-              <Text style={styles.unitLabel}>cm</Text>
+              <Text style={[styles.unitLabel, { color: theme.textSecondary }]}>
+                cm
+              </Text>
             </View>
           </View>
         );
@@ -383,28 +410,43 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 4:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>
               ¿Cuál es tu nivel de actividad?
             </Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               Selecciona el que mejor te describa
             </Text>
             <TouchableOpacity
-              style={styles.activitySelector}
+              style={[
+                styles.activitySelector,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
               onPress={() => setShowActivityModal(true)}
             >
               <View>
-                <Text style={styles.activityLabel}>
+                <Text style={[styles.activityLabel, { color: theme.text }]}>
                   {activityLevels.find((a) => a.value === activityLevel)?.label}
                 </Text>
-                <Text style={styles.activityDescription}>
+                <Text
+                  style={[
+                    styles.activityDescription,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   {
                     activityLevels.find((a) => a.value === activityLevel)
                       ?.description
                   }
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={24} color="#808080" />
+              <Ionicons
+                name="chevron-down"
+                size={24}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
           </View>
         );
@@ -412,26 +454,38 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 5:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>¿Cuál es tu objetivo?</Text>
-            <Text style={styles.stepSubtitle}>Selecciona tu meta de peso</Text>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>
+              ¿Cuál es tu objetivo?
+            </Text>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
+              Selecciona tu meta de peso
+            </Text>
             <View style={styles.goalsContainer}>
               {weightGoals.map((goal) => (
                 <TouchableOpacity
                   key={goal.value}
                   style={[
                     styles.goalOption,
-                    weightGoal === goal.value && styles.optionSelected,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
+                    },
+                    weightGoal === goal.value && {
+                      backgroundColor: theme.primary,
+                      borderColor: theme.primary,
+                    },
                   ]}
                   onPress={() => setWeightGoal(goal.value)}
                 >
                   <Ionicons
                     name={goal.icon}
                     size={32}
-                    color={weightGoal === goal.value ? "#fff" : "#6C3BAA"}
+                    color={weightGoal === goal.value ? "#fff" : theme.primary}
                   />
                   <Text
                     style={[
                       styles.goalText,
+                      { color: theme.text },
                       weightGoal === goal.value && styles.optionTextSelected,
                     ]}
                   >
@@ -442,18 +496,30 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
             </View>
             {weightGoal !== "maintain" && (
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
+                <Text style={[styles.inputLabel, { color: theme.text }]}>
                   ¿Cuál es tu peso objetivo?
                 </Text>
                 <View style={styles.inputWithUnit}>
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.inputBackground,
+                        color: theme.text,
+                        borderColor: theme.border,
+                      },
+                    ]}
                     value={targetWeight}
                     onChangeText={setTargetWeight}
                     placeholder={`Ej: ${weightGoal === "lose" ? "65" : "75"}`}
+                    placeholderTextColor={theme.textTertiary}
                     keyboardType="decimal-pad"
                   />
-                  <Text style={styles.unitLabel}>kg</Text>
+                  <Text
+                    style={[styles.unitLabel, { color: theme.textSecondary }]}
+                  >
+                    kg
+                  </Text>
                 </View>
               </View>
             )}
@@ -463,10 +529,10 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       case 6:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>
+            <Text style={[styles.stepTitle, { color: theme.text }]}>
               ¿Qué tan rápido quieres lograrlo?
             </Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               {weightGoal === "lose"
                 ? "Pérdida de peso recomendada: 0.5 kg/semana"
                 : weightGoal === "gain"
@@ -474,13 +540,31 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                   : "Mantener peso actual"}
             </Text>
             {weightGoal === "maintain" ? (
-              <View style={styles.maintainCard}>
-                <Ionicons name="checkmark-circle" size={64} color={theme.success} />
-                <Text style={styles.maintainTitle}>
+              <View
+                style={[
+                  styles.maintainCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.success,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={64}
+                  color={theme.success}
+                />
+                <Text style={[styles.maintainTitle, { color: theme.text }]}>
                   Tu objetivo es mantener tu peso actual
                 </Text>
-                <Text style={styles.maintainDescription}>
-                  Calcularemos tus macros para que mantengas tu peso de {weight} kg de forma saludable y equilibrada.
+                <Text
+                  style={[
+                    styles.maintainDescription,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Calcularemos tus macros para que mantengas tu peso de {weight}{" "}
+                  kg de forma saludable y equilibrada.
                 </Text>
               </View>
             ) : (
@@ -491,13 +575,21 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                       key={rate}
                       style={[
                         styles.rateOption,
-                        weeklyWeightChange === rate && styles.optionSelected,
+                        {
+                          backgroundColor: theme.card,
+                          borderColor: theme.border,
+                        },
+                        weeklyWeightChange === rate && {
+                          backgroundColor: theme.primary,
+                          borderColor: theme.primary,
+                        },
                       ]}
                       onPress={() => setWeeklyWeightChange(rate)}
                     >
                       <Text
                         style={[
                           styles.rateText,
+                          { color: theme.text },
                           weeklyWeightChange === rate &&
                             styles.optionTextSelected,
                         ]}
@@ -507,6 +599,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                       <Text
                         style={[
                           styles.rateSubtext,
+                          { color: theme.textSecondary },
                           weeklyWeightChange === rate &&
                             styles.optionTextSelected,
                         ]}
@@ -517,14 +610,19 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
                   ))}
                 </View>
                 {weight && targetWeight && (
-                  <View style={styles.estimateCard}>
+                  <View
+                    style={[
+                      styles.estimateCard,
+                      { backgroundColor: theme.success },
+                    ]}
+                  >
                     <Text style={styles.estimateTitle}>Tiempo estimado:</Text>
                     <Text style={styles.estimateValue}>
                       {
                         getEstimatedTimeToGoal(
                           parseFloat(weight),
                           parseFloat(targetWeight),
-                          weeklyWeightChange,
+                          weeklyWeightChange
                         ).months
                       }{" "}
                       meses
@@ -541,8 +639,10 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     }
   };
 
-  // Styles using theme
-  const styles = StyleSheet.create({
+  // Styles using theme - memoized to avoid recreation on every render
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
@@ -591,12 +691,10 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     stepTitle: {
       fontSize: RFValue(22),
       fontWeight: "700",
-      color: theme.text,
       marginBottom: 8,
     },
     stepSubtitle: {
       fontSize: RFValue(14),
-      color: theme.textSecondary,
       marginBottom: 30,
     },
     optionsRow: {
@@ -607,12 +705,10 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     genderOption: {
       width: width * 0.28,
       aspectRatio: 1,
-      backgroundColor: theme.card,
       borderRadius: 16,
       justifyContent: "center",
       alignItems: "center",
       borderWidth: 2,
-      borderColor: theme.border,
       elevation: 2,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
@@ -626,7 +722,6 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     optionText: {
       fontSize: RFValue(14),
       fontWeight: "600",
-      color: theme.text,
       marginTop: 8,
     },
     optionTextSelected: {
@@ -638,20 +733,16 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     inputLabel: {
       fontSize: RFValue(16),
       fontWeight: "600",
-      color: theme.text,
       marginBottom: 12,
     },
     inputWithUnit: {
       position: "relative",
     },
     input: {
-      backgroundColor: theme.card,
       borderRadius: 12,
       padding: 16,
       fontSize: RFValue(16),
       borderWidth: 1,
-      borderColor: theme.border,
-      color: theme.text,
     },
     largeInput: {
       fontSize: RFValue(32),
@@ -666,26 +757,21 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       transform: [{ translateY: -12 }],
       fontSize: RFValue(20),
       fontWeight: "600",
-      color: theme.textSecondary,
     },
     activitySelector: {
-      backgroundColor: theme.card,
       borderRadius: 12,
       padding: 20,
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
       borderWidth: 1,
-      borderColor: theme.border,
     },
     activityLabel: {
       fontSize: RFValue(16),
       fontWeight: "600",
-      color: theme.text,
     },
     activityDescription: {
       fontSize: RFValue(13),
-      color: theme.textSecondary,
       marginTop: 4,
     },
     goalsContainer: {
@@ -693,19 +779,16 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       marginBottom: 20,
     },
     goalOption: {
-      backgroundColor: theme.card,
       borderRadius: 12,
       padding: 20,
       flexDirection: "row",
       alignItems: "center",
       borderWidth: 2,
-      borderColor: theme.border,
       gap: 16,
     },
     goalText: {
       fontSize: RFValue(16),
       fontWeight: "600",
-      color: theme.text,
     },
     rateContainer: {
       flexDirection: "row",
@@ -716,25 +799,20 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
     },
     rateOption: {
       width: (width - 56) / 2,
-      backgroundColor: theme.card,
       borderRadius: 12,
       padding: 20,
       alignItems: "center",
       borderWidth: 2,
-      borderColor: theme.border,
     },
     rateText: {
       fontSize: RFValue(18),
       fontWeight: "700",
-      color: theme.text,
     },
     rateSubtext: {
       fontSize: RFValue(12),
-      color: theme.textSecondary,
       marginTop: 4,
     },
     estimateCard: {
-      backgroundColor: theme.success,
       borderRadius: 12,
       padding: 20,
       alignItems: "center",
@@ -751,25 +829,21 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       marginTop: 4,
     },
     maintainCard: {
-      backgroundColor: theme.card,
       borderRadius: 16,
       padding: 30,
       alignItems: "center",
       marginTop: 20,
       borderWidth: 2,
-      borderColor: theme.success,
     },
     maintainTitle: {
       fontSize: RFValue(18),
       fontWeight: "700",
-      color: theme.text,
       textAlign: "center",
       marginTop: 16,
       marginBottom: 12,
     },
     maintainDescription: {
       fontSize: RFValue(14),
-      color: theme.textSecondary,
       textAlign: "center",
       lineHeight: 22,
     },
@@ -831,7 +905,9 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       color: theme.textSecondary,
       marginTop: 4,
     },
-  });
+  }),
+    [theme]
+  );
 
   return (
     <SafeAreaView style={styles.container}>

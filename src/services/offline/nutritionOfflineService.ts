@@ -1,14 +1,14 @@
 import { execQuery, execRun, getDatabase } from '../../database/sqliteClient';
 import { enqueueOperation } from '../offlineQueueService';
 import { syncService } from '../syncService';
-import { v4 as uuidv4 } from 'react-native-uuid';
+import uuid from 'react-native-uuid';
 
 /**
  * Guarda una entrada de comida offline
  */
 export async function saveFoodEntryOffline(entry: any): Promise<any> {
   const db = await getDatabase();
-  const entryId = entry.id || uuidv4();
+  const entryId = entry.id || uuid.v4() as string;
   const now = new Date().toISOString();
 
   const query = `
@@ -124,7 +124,7 @@ export async function deleteFoodEntryOffline(entryId: string): Promise<void> {
  */
 export async function saveCustomProductOffline(product: any): Promise<any> {
   const db = await getDatabase();
-  const productId = product.id || uuidv4();
+  const productId = product.id || uuid.v4() as string;
   const now = new Date().toISOString();
 
   const query = `
@@ -249,7 +249,7 @@ export async function deleteCustomProductOffline(productId: string): Promise<voi
  */
 export async function saveCustomMealOffline(meal: any): Promise<any> {
   const db = await getDatabase();
-  const mealId = meal.id || uuidv4();
+  const mealId = meal.id || uuid.v4() as string;
   const now = new Date().toISOString();
 
   const query = `
