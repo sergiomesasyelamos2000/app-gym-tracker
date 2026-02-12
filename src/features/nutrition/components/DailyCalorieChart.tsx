@@ -1,11 +1,24 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { MealType } from "../../../models/nutrition.model";
 
 interface Props {
   consumed: number;
   target: number;
 }
+
+// Configuración de tipos de comida con iconos, etiquetas y colores
+export const MEAL_CONFIG: Record<
+  MealType,
+  { icon: keyof typeof Ionicons.glyphMap; label: string; color: string }
+> = {
+  breakfast: { icon: "cafe-outline", label: "Desayuno", color: "#FF9800" },
+  lunch: { icon: "restaurant-outline", label: "Almuerzo", color: "#4CAF50" },
+  dinner: { icon: "moon-outline", label: "Cena", color: "#673AB7" },
+  snack: { icon: "pizza-outline", label: "Snack", color: "#2196F3" },
+};
 
 export const DailyCalorieChart: React.FC<Props> = ({ consumed, target }) => {
   const { theme } = useTheme();
@@ -15,27 +28,66 @@ export const DailyCalorieChart: React.FC<Props> = ({ consumed, target }) => {
   const percentage = Math.min(100, (consumed / target) * 100);
 
   return (
-    <View style={styles.caloriesCard}>
-      <Text>Dummy Chart</Text>
+    <View style={styles.container}>
+      <View style={styles.caloriesCard}>
+        <Text style={styles.caloriesLabel}>
+          {remaining > 0 ? "Calorías disponibles" : "Calorías excedidas"}
+        </Text>
+        <Text
+          style={[
+            styles.caloriesValue,
+            remaining < 0 && styles.caloriesValueExceeded,
+          ]}
+        >
+          {Math.abs(Math.round(remaining))}
+        </Text>
+        <Text style={styles.caloriesSubtext}>
+          {Math.round(consumed)} de {target} kcal
+        </Text>
+      </View>
+
+      <View style={styles.caloriesProgressBar}>
+        <View
+          style={[
+            styles.caloriesProgressFill,
+            {
+              width: `${percentage}%`,
+              backgroundColor: remaining > 0 ? "#4CAF50" : "#FF6B6B",
+            },
+          ]}
+        />
+      </View>
     </View>
   );
 };
 
 const createStyles = (theme: any) =>
   StyleSheet.create({
-    caloriesCard: { alignItems: "center", marginBottom: 16 },
+    container: {
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    caloriesCard: {
+      alignItems: "center",
+      marginBottom: 16,
+    },
     caloriesLabel: {
       fontSize: 14,
       color: theme.textSecondary,
       marginBottom: 8,
     },
-    caloriesValue: { fontSize: 48, fontWeight: "700", color: theme.success },
-    caloriesValueExceeded: { color: theme.error },
+    caloriesValue: {
+      fontSize: 48,
+      fontWeight: "700",
+      color: theme.success,
+    },
+    caloriesValueExceeded: {
+      color: theme.error,
+    },
     caloriesSubtext: {
       fontSize: 14,
       color: theme.textTertiary,
       marginTop: 4,
-      marginBottom: 12,
     },
     caloriesProgressBar: {
       width: "100%",
@@ -44,5 +96,8 @@ const createStyles = (theme: any) =>
       borderRadius: 4,
       overflow: "hidden",
     },
-    caloriesProgressFill: { height: "100%", borderRadius: 4 },
+    caloriesProgressFill: {
+      height: "100%",
+      borderRadius: 4,
+    },
   });

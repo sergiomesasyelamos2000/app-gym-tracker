@@ -21,19 +21,13 @@ import { useTheme } from "../contexts/ThemeContext";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
 import ImageModal from "../features/common/components/ImageModal";
-import {
-  useAppDispatch,
-  useAppSelector,
-} from "../features/common/hooks/useStore";
-import {
-  addMessage,
-  loadChatHistory,
-  Message,
-  saveChatHistory,
-  sendMessageThunk,
-  sendPhotoThunk,
-} from "../store/chatSlice";
 import { useAuthStore } from "../store/useAuthStore";
+import {
+  useChatStore,
+  useMessages,
+  selectLoading,
+  Message
+} from "../store/useChatStore";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useNavigation } from "@react-navigation/native";
 import { Crown } from "lucide-react-native";
@@ -167,11 +161,17 @@ export default function NutritionScreen() {
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  const messages = useAppSelector((state) => state.chat.messages);
-  const loading = useAppSelector((state) => state.chat.loading);
-  const nextId = useAppSelector((state) => state.chat.nextId);
+  // Selectores de Zustand
+  const messages = useMessages(); // Hook personalizado sin loop
+  const loading = useChatStore(selectLoading);
   const user = useAuthStore((state) => state.user);
-  const dispatch = useAppDispatch();
+
+  // Acciones de Zustand
+  const addMessage = useChatStore((state) => state.addMessage);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const sendPhoto = useChatStore((state) => state.sendPhoto);
+  const setCurrentUser = useChatStore((state) => state.setCurrentUser);
+
   const { theme, isDark } = useTheme();
   const navigation = useNavigation<any>();
 
@@ -181,12 +181,13 @@ export default function NutritionScreen() {
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
 
-  // Load chat history on mount
+  // Set current user and load chat history on mount
+  // Establecer usuario actual cuando cambia
   useEffect(() => {
     if (user?.id) {
-      dispatch(loadChatHistory(user.id));
+      setCurrentUser(user.id);
     }
-  }, [user?.id]);
+  }, [user?.id, setCurrentUser]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -196,14 +197,6 @@ export default function NutritionScreen() {
       }, 100);
     }
   }, [messages]);
-
-  // Save chat history when messages change
-  useEffect(() => {
-    if (messages.length > 1 && user?.id) {
-      const state = { messages, loading, nextId };
-      dispatch(saveChatHistory({ state: state as any, userId: user.id }));
-    }
-  }, [messages, nextId, user?.id]);
 
   // Animate scroll button appearance
   useEffect(() => {
@@ -237,8 +230,13 @@ export default function NutritionScreen() {
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert("Error", "Debes iniciar sesión para usar el chat");
+      return;
+    }
+
     const messageText = chatInput;
-    dispatch(addMessage({ text: messageText, sender: "user" }));
+    addMessage({ text: messageText, sender: "user" }, user.id);
     setChatInput("");
     setLoadingMessage(true);
 
@@ -253,7 +251,7 @@ export default function NutritionScreen() {
         return;
       }
 
-      await dispatch(sendMessageThunk({ text: messageText, userId: user?.id }));
+      await sendMessage(messageText, user.id);
     } catch (error) {
       console.error("❌ Error sending message:", error);
     } finally {
@@ -301,6 +299,11 @@ export default function NutritionScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        if (!user?.id) {
+          Alert.alert("Error", "Debes iniciar sesión para usar el chat");
+          return;
+        }
+
         // Incrementar uso antes de enviar
         const allowed = await incrementUsage();
         if (!allowed) {
@@ -312,13 +315,11 @@ export default function NutritionScreen() {
         }
 
         const photo = result.assets[0];
-        dispatch(
-          addMessage({
-            text: "📸 Imagen seleccionada:",
-            sender: "user",
-            imageUri: photo.uri,
-          }),
-        );
+        addMessage({
+          text: "📸 Imagen seleccionada:",
+          sender: "user",
+          imageUri: photo.uri,
+        }, user.id);
 
         const formData = new FormData();
         formData.append("file", {
@@ -328,7 +329,7 @@ export default function NutritionScreen() {
         } as any);
 
         setLoadingMessage(true);
-        dispatch(sendPhotoThunk(formData)).finally(() => {
+        sendPhoto(formData, user.id).finally(() => {
           setLoadingMessage(false);
         });
       }

@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   LayoutAnimation,
   Modal,
   Platform,
@@ -147,6 +148,7 @@ export default function MacrosScreen({ navigation }: Props) {
   const [actionBarAnim] = useState(new Animated.Value(0));
   const [addButtonAnim] = useState(new Animated.Value(1));
   const calendarSlideAnim = useRef(new Animated.Value(0)).current;
+  const calendarModalAnim = useRef(new Animated.Value(0)).current;
   const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   const isSelectionMode = selectedEntries.size > 0;
@@ -260,6 +262,25 @@ export default function MacrosScreen({ navigation }: Props) {
       return () => setTabVisibility("Macros", true);
     }, [selectedDate, user, setTabVisibility]),
   );
+
+  // Animar apertura/cierre del calendario con efecto fluido
+  useEffect(() => {
+    if (showCalendar) {
+      Animated.spring(calendarModalAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 10,
+      }).start();
+    } else {
+      Animated.timing(calendarModalAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+        easing: Easing.in(Easing.ease),
+      }).start();
+    }
+  }, [showCalendar]);
 
   const loadEntriesForDate = async (date: string) => {
     if (!user?.id) return;
@@ -474,14 +495,26 @@ export default function MacrosScreen({ navigation }: Props) {
   };
 
   const handleDateSelect = (day: { dateString: string }) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        150,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
+    );
     setSelectedDate(day.dateString);
     setCalendarKey((prev) => prev + 1);
   };
 
   const handleTodayPress = () => {
     const today = new Date().toISOString().split("T")[0];
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        150,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
+    );
     setSelectedDate(today);
     setCalendarKey((prev) => prev + 1);
   };
@@ -959,14 +992,48 @@ export default function MacrosScreen({ navigation }: Props) {
       </Modal>
 
       {/* Calendar Modal */}
-      <Modal visible={showCalendar} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowCalendar(false)}
+      <Modal visible={showCalendar} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCalendar(false)}
+        >
+          <Animated.View
+            style={[
+              styles.modalOverlayBackground,
+              {
+                opacity: calendarModalAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            ]}
           />
-          <View style={styles.calendarModalContainer}>
+        </TouchableOpacity>
+        <View style={styles.modalContent} pointerEvents="box-none">
+          <Animated.View
+            style={[
+              styles.calendarModalContainer,
+              {
+                transform: [
+                  {
+                    scale: calendarModalAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    }),
+                  },
+                  {
+                    translateY: calendarModalAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [50, 0],
+                    }),
+                  },
+                ],
+                opacity: calendarModalAnim,
+              },
+            ]}
+            pointerEvents="auto"
+          >
             <View style={styles.calendarModalHeader}>
               <Text style={styles.calendarModalTitle}>Seleccionar Fecha</Text>
               <TouchableOpacity
@@ -995,6 +1062,10 @@ export default function MacrosScreen({ navigation }: Props) {
             <Animated.View
               style={{
                 transform: [{ translateX: calendarSlideAnim }],
+                opacity: calendarSlideAnim.interpolate({
+                  inputRange: [-30, 0, 30],
+                  outputRange: [0.7, 1, 0.7],
+                }),
               }}
             >
               <Calendar
@@ -1025,13 +1096,13 @@ export default function MacrosScreen({ navigation }: Props) {
                   const newMonthDate = new Date(month.dateString);
                   const direction = newMonthDate > currentMonthDate ? 1 : -1;
 
-                  // Animar desde el lado correspondiente
-                  calendarSlideAnim.setValue(direction * 50);
-                  Animated.spring(calendarSlideAnim, {
+                  // Animar desde el lado correspondiente con timing suave
+                  calendarSlideAnim.setValue(direction * 30);
+                  Animated.timing(calendarSlideAnim, {
                     toValue: 0,
+                    duration: 250,
                     useNativeDriver: true,
-                    tension: 50,
-                    friction: 8,
+                    easing: Easing.out(Easing.cubic),
                   }).start();
 
                   setCurrentMonth(month.dateString);
@@ -1097,7 +1168,7 @@ export default function MacrosScreen({ navigation }: Props) {
                 <Text style={styles.confirmButtonText}>Confirmar</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1470,8 +1541,14 @@ const createStyles = (theme: any) =>
       shadowRadius: 8,
     },
     modalOverlay: {
-      flex: 1,
+      ...StyleSheet.absoluteFillObject,
+    },
+    modalOverlayBackground: {
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.5)",
+    },
+    modalContent: {
+      ...StyleSheet.absoluteFillObject,
       justifyContent: "center",
       alignItems: "center",
       padding: 16,

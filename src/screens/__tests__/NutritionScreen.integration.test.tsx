@@ -2,10 +2,8 @@ import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import NutritionScreen from "../NutritionScreen";
 import * as NutritionService from "../../features/nutrition/services/nutritionService";
-import chatReducer from "../../store/chatSlice";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Provider } from "react-redux";
-import { configureStore } from "@reduxjs/toolkit";
+import { useChatStore } from "../../store/useChatStore";
 
 // Increase timeout for this file
 jest.setTimeout(120000);
@@ -40,21 +38,24 @@ jest.mock("expo-image-picker", () => ({
 }));
 
 describe("NutritionScreen Integration", () => {
+  beforeEach(() => {
+    // Reset Zustand store before each test
+    useChatStore.getState().reset();
+  });
+
   it("should send a message to the chatbot and display the response", async () => {
-    // 1. Setup Store
-    const store = configureStore({ reducer: { chat: chatReducer } });
+    // 1. Setup Auth & Chat Store
     useAuthStore.setState({ user: { id: "1", email: "test@test.com" } as any });
+    useChatStore.getState().setCurrentUser("1");
 
     // 2. Mock Response
     (NutritionService.postText as jest.Mock).mockResolvedValue({
       reply: "Respuesta Mock",
     });
 
-    // 3. Render
-    const { getByPlaceholderText, getByText, getByTestId, debug } = render(
-      <Provider store={store}>
-        <NutritionScreen />
-      </Provider>,
+    // 3. Render (no Redux Provider needed with Zustand)
+    const { getByPlaceholderText, getByText, getByTestId } = render(
+      <NutritionScreen />,
     );
 
     // 4. Find Input
@@ -73,7 +74,6 @@ describe("NutritionScreen Integration", () => {
     });
 
     // 6. Verify Response UI
-    // Note: If chatSlice handles response, it updates state -> UI updates.
     await waitFor(() => {
       expect(getByText("Respuesta Mock")).toBeTruthy();
     });

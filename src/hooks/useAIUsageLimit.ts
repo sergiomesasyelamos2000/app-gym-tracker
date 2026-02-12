@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
+import { useAuthStore } from '../store/useAuthStore';
 
-const AI_USAGE_KEY = 'ai_usage_limit';
+const AI_USAGE_KEY_PREFIX = 'ai_usage_limit'; // Prefijo base
 const FREE_TIER_DAILY_LIMIT = 10; // Límite diario para usuarios gratuitos
 
 interface AIUsageData {
@@ -10,19 +11,35 @@ interface AIUsageData {
   lastResetDate: string;
 }
 
+// Helper para obtener la clave específica del usuario
+const getAIUsageKey = (userId: string): string => `${AI_USAGE_KEY_PREFIX}_${userId}`;
+
 export function useAIUsageLimit() {
   const { isPremium } = useSubscriptionStore();
+  const user = useAuthStore((state) => state.user);
+  const userId = user?.id;
+
   const [remainingCalls, setRemainingCalls] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos de uso al montar
+  // Cargar datos de uso al montar o cuando cambia el usuario
   useEffect(() => {
-    loadUsageData();
-  }, []);
+    if (userId) {
+      loadUsageData();
+    } else {
+      setRemainingCalls(null);
+      setLoading(false);
+    }
+  }, [userId]);
 
   const loadUsageData = async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await AsyncStorage.getItem(AI_USAGE_KEY);
+      const data = await AsyncStorage.getItem(getAIUsageKey(userId));
       if (data) {
         const usageData: AIUsageData = JSON.parse(data);
         const today = new Date().toDateString();
@@ -45,11 +62,13 @@ export function useAIUsageLimit() {
   };
 
   const resetUsage = async () => {
+    if (!userId) return;
+
     const usageData: AIUsageData = {
       count: 0,
       lastResetDate: new Date().toDateString(),
     };
-    await AsyncStorage.setItem(AI_USAGE_KEY, JSON.stringify(usageData));
+    await AsyncStorage.setItem(getAIUsageKey(userId), JSON.stringify(usageData));
     setRemainingCalls(FREE_TIER_DAILY_LIMIT);
   };
 
@@ -59,8 +78,14 @@ export function useAIUsageLimit() {
       return true;
     }
 
+    // Sin userId, no se puede incrementar (bloquear)
+    if (!userId) {
+      console.warn('Cannot increment AI usage: no user ID');
+      return false;
+    }
+
     try {
-      const data = await AsyncStorage.getItem(AI_USAGE_KEY);
+      const data = await AsyncStorage.getItem(getAIUsageKey(userId));
       let usageData: AIUsageData;
 
       if (data) {
@@ -89,7 +114,7 @@ export function useAIUsageLimit() {
 
       // Incrementar contador
       usageData.count += 1;
-      await AsyncStorage.setItem(AI_USAGE_KEY, JSON.stringify(usageData));
+      await AsyncStorage.setItem(getAIUsageKey(userId), JSON.stringify(usageData));
       setRemainingCalls(FREE_TIER_DAILY_LIMIT - usageData.count);
       return true;
     } catch (error) {

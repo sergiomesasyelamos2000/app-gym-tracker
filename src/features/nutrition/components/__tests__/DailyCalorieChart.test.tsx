@@ -16,11 +16,14 @@ jest.mock("../../../../contexts/ThemeContext", () => ({
   useTheme: () => ({ theme: mockTheme }),
 }));
 
-describe("DailyCalorieChart Import", () => {
-  it("renders imported component", () => {
-    const { getByText } = render(
-      <DailyCalorieChart consumed={1500} target={2000} />,
-    );
-    expect(getByText("Dummy Chart")).toBeTruthy();
+describe("DailyCalorieChart", () => {
+  it("renders without crashing", () => {
+    const result = render(<DailyCalorieChart consumed={1500} target={2000} />);
+    expect(result).toBeTruthy();
+  });
+
+  it("accepts consumed and target props", () => {
+    const result = render(<DailyCalorieChart consumed={2500} target={2000} />);
+    expect(result).toBeTruthy();
   });
 });
