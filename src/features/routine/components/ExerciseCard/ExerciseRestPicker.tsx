@@ -52,7 +52,12 @@ const ExerciseRestPicker = ({
   const modalPadding = isSmallScreen ? 16 : isMediumScreen ? 20 : 24;
   const modalWidth = isLargeScreen ? width * 0.5 : width * 0.85;
 
-  const handleTimeConfirm = (pickedDuration: any) => {
+  const handleTimeConfirm = (pickedDuration: {
+    hours: number;
+    minutes: number;
+    seconds: number;
+    days: number;
+  }) => {
     const newTime = formatTime(pickedDuration);
     setRestTime(newTime);
     setShowPicker(false);

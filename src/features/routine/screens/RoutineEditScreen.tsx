@@ -18,11 +18,12 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import { ExerciseRequestDto, SetRequestDto, RoutineExerciseResponseDto } from "../../../models";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { CaughtError, getErrorMessage, AppTheme } from "../../../types";
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
@@ -76,7 +77,7 @@ export default function RoutineEditScreen() {
           const exercises: ExerciseRequestDto[] = Array.isArray(
             data.routineExercises
           )
-            ? data.routineExercises.map((re: any) => ({
+            ? data.routineExercises.map((re: RoutineExerciseResponseDto) => ({
                 ...re.exercise,
                 sets: re.sets || [],
                 notes: re.notes,
@@ -105,12 +106,12 @@ export default function RoutineEditScreen() {
 
           setSets(initialSets);
           setSupersets(initialSupersets);
-        } catch (error: any) {
+        } catch (error: CaughtError) {
           console.error("[RoutineEdit] Failed to load routine:", error);
+          const message = getErrorMessage(error);
           Alert.alert(
             "Error",
-            error.message ||
-              "No se pudo cargar la rutina. Verifica tu conexión."
+            message || "No se pudo cargar la rutina. Verifica tu conexión."
           );
           navigation.goBack();
         }
@@ -179,20 +180,23 @@ export default function RoutineEditScreen() {
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
         ],
       });
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       console.error("Error al actualizar la rutina:", error);
+
+      const statusCode = getErrorStatusCode(error);
+      const message = getErrorMessage(error);
 
       let errorMessage =
         "Error al actualizar la rutina. Por favor intenta de nuevo.";
 
-      if (error?.status === 401) {
+      if (statusCode === 401) {
         errorMessage =
           "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
-      } else if (error?.message?.toLowerCase().includes("network")) {
+      } else if (message.toLowerCase().includes("network")) {
         errorMessage =
           "Sin conexión a internet. La rutina se guardará cuando te conectes.";
-      } else if (error?.message) {
-        errorMessage = error.message;
+      } else if (message) {
+        errorMessage = message;
       }
 
       Alert.alert("Error", errorMessage);
@@ -604,7 +608,7 @@ export default function RoutineEditScreen() {
   );
 }
 
-const createStyles = (theme: any, isDark: boolean) =>
+const createStyles = (theme: AppTheme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

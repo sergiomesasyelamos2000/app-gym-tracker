@@ -7,6 +7,7 @@ import {
   ExerciseTypeDto,
   MuscleDto,
 } from "../models/index.js";
+import { CaughtError } from "../types";
 
 const CACHE_KEYS = {
   EXERCISES: "@exercises_cache",
@@ -51,7 +52,7 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
 
     console.log("[ExerciseService] Exercises fetched from API and cached");
     return data;
-  } catch (error: any) {
+  } catch (error: CaughtError) {
     // If network fails, try to load from cache
     const isNetworkError =
       error?.message?.includes("Network") ||

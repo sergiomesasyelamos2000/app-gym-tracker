@@ -29,6 +29,7 @@ import {
   FavoriteProduct,
   Product,
 } from "../../../models/nutrition.model";
+import { AppTheme } from "../../../types";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -835,7 +836,7 @@ export default function ProductSelectionScreen() {
   );
 }
 
-const createStyles = (theme: any, isDark: boolean) =>
+const createStyles = (theme: AppTheme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

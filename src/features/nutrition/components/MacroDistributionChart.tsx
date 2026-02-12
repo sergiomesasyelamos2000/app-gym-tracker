@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import CircularProgress from "react-native-circular-progress-indicator";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppTheme } from "../../../types";
 
 interface MacroData {
   current: number;
@@ -134,7 +135,7 @@ export const MacroDistributionChart: React.FC<Props> = ({
   );
 };
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     macrosSection: {
       backgroundColor: theme.card,

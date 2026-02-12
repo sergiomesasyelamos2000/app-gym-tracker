@@ -1,13 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
+import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import type { RoutineRequestDto } from "../models";
 
 const SYNC_QUEUE_KEY = "@sync_queue";
 const PENDING_ROUTINES_KEY = "@pending_routines";
 
+export type OperationPayload =
+  | { type: "CREATE_ROUTINE"; data: RoutineRequestDto }
+  | { type: "UPDATE_ROUTINE"; data: { id: string; routine: RoutineRequestDto } }
+  | { type: "CREATE_SESSION"; data: { routineId: string; session: Partial<RoutineSessionEntity> } };
+
 export interface PendingOperation {
   id: string;
   type: "CREATE_ROUTINE" | "UPDATE_ROUTINE" | "CREATE_SESSION";
-  payload: any;
+  payload: OperationPayload["data"];
   timestamp: number;
   retries: number;
 }
@@ -17,7 +24,7 @@ export interface PendingOperation {
  */
 export async function addToSyncQueue(
   type: PendingOperation["type"],
-  payload: any
+  payload: OperationPayload["data"]
 ): Promise<string> {
   const operation: PendingOperation = {
     id: `${Date.now()}_${Math.random().toString(36).substring(7)}`,

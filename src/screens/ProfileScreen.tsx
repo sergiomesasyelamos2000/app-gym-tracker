@@ -13,6 +13,7 @@ import {
   Utensils,
 } from "lucide-react-native";
 import React, { useState } from "react";
+import { BaseNavigation } from "../types/common";
 import {
   ActivityIndicator,
   Alert,
@@ -35,7 +36,7 @@ import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
 export default function ProfileScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);

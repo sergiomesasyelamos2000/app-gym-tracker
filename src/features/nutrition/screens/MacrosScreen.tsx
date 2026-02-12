@@ -26,6 +26,7 @@ import CircularProgress from "react-native-circular-progress-indicator";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { FoodEntry, MealType } from "../../../models/nutrition.model";
+import { AppTheme } from "../../../types";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -36,6 +37,7 @@ import {
   getProductDetail,
   scanBarcode,
 } from "../services/nutritionService";
+import { CaughtError, getErrorMessage, getErrorStatusCode } from "../../../types";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -174,10 +176,11 @@ export default function MacrosScreen({ navigation }: Props) {
       setUserProfile(profile);
       setHasProfile(true);
       setShowSetupPrompt(false);
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       // ✅ Check if it's a 401 Unauthorized error (real auth issue)
-      if (error.status === 401) {
-        const messageLower = error.message?.toLowerCase() || "";
+      const statusCode = getErrorStatusCode(error);
+      if (statusCode === 401) {
+        const messageLower = getErrorMessage(error)?.toLowerCase() || "";
 
         // Check if it's truly an auth error (token expired, invalid, etc)
         // Generic "Unauthorized" without context is treated as missing profile
@@ -197,7 +200,7 @@ export default function MacrosScreen({ navigation }: Props) {
             [
               {
                 text: "OK",
-                onPress: () => (navigation as any).navigate("Login"),
+                onPress: () => navigation.navigate("Login"),
               },
             ],
           );
@@ -294,10 +297,11 @@ export default function MacrosScreen({ navigation }: Props) {
       if (!data.hasProfile) {
         setShowSetupPrompt(true);
       }
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       // ✅ Handle 401 Unauthorized (real authentication error)
-      if (error.status === 401) {
-        const messageLower = error.message?.toLowerCase() || "";
+      const statusCode = getErrorStatusCode(error);
+      if (statusCode === 401) {
+        const messageLower = getErrorMessage(error)?.toLowerCase() || "";
 
         // Check if it's truly an auth error (token expired, invalid, etc)
         // Generic "Unauthorized" without context is treated as missing profile
@@ -317,7 +321,7 @@ export default function MacrosScreen({ navigation }: Props) {
             [
               {
                 text: "OK",
-                onPress: () => (navigation as any).navigate("Login"),
+                onPress: () => navigation.navigate("Login"),
               },
             ],
           );
@@ -1233,7 +1237,7 @@ export default function MacrosScreen({ navigation }: Props) {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
     screen: { flex: 1 },

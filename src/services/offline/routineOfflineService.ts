@@ -1,17 +1,22 @@
-import { execQuery, execRun, getDatabase } from '../../database/sqliteClient';
+import { execQuery, getDatabase } from '../../database/sqliteClient';
 import { enqueueOperation } from '../offlineQueueService';
 import { syncService } from '../syncService';
-import * as routineService from '../../features/routine/services/routineService';
-import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import uuid from 'react-native-uuid';
+import {
+  RoutineRequestDto,
+  RoutineResponseDto,
+  ExerciseRequestDto,
+  SetRequestDto,
+  RoutineSessionRequestDto,
+} from '@entity-data-models/index';
 
 /**
  * Guarda una rutina offline
  */
-export async function saveRoutineOffline(routine: any): Promise<any> {
+export async function saveRoutineOffline(routine: RoutineRequestDto & { id?: string; userId?: string; totalTime?: number }): Promise<RoutineResponseDto> {
   const db = await getDatabase();
 
-  const routineId = routine.id || uuid.v4() as string;
+  const routineId = ('id' in routine && typeof routine.id === 'string') ? routine.id : uuid.v4() as string;
   const now = new Date().toISOString();
 
   // Save to local database
@@ -23,8 +28,8 @@ export async function saveRoutineOffline(routine: any): Promise<any> {
   await db.runAsync(query, [
     routineId,
     routine.title,
-    routine.totalTime || 0,
-    routine.userId,
+    ('totalTime' in routine && typeof routine.totalTime === 'number') ? routine.totalTime : 0,
+    ('userId' in routine && typeof routine.userId === 'string') ? routine.userId : undefined,
     routine.createdAt || now,
     now,
   ]);
@@ -47,7 +52,16 @@ export async function saveRoutineOffline(routine: any): Promise<any> {
   // Try to sync immediately if online
   syncService.sync().catch((err) => console.log('Sync deferred:', err));
 
-  return { ...routine, id: routineId, createdAt: routine.createdAt || now, updatedAt: now };
+  return {
+    id: routineId,
+    title: routine.title,
+    totalSets: 0,
+    totalExercises: routine.exercises?.length || 0,
+    isPublic: false,
+    createdAt: new Date(routine.createdAt || now),
+    updatedAt: new Date(now),
+    routineExercises: [],
+  } as RoutineResponseDto;
 }
 
 /**
@@ -55,7 +69,7 @@ export async function saveRoutineOffline(routine: any): Promise<any> {
  */
 export async function saveRoutineExerciseOffline(
   routineId: string,
-  exercise: any
+  exercise: ExerciseRequestDto
 ): Promise<void> {
   const db = await getDatabase();
   const exerciseId = exercise.id || uuid.v4() as string;
@@ -69,13 +83,13 @@ export async function saveRoutineExerciseOffline(
   await db.runAsync(query, [
     exerciseId,
     routineId,
-    exercise.exercise?.id || exercise.exerciseId,
-    exercise.exercise?.name || exercise.exerciseName,
-    exercise.order || 0,
-    exercise.restSeconds,
-    exercise.weightUnit || 'kg',
-    exercise.repsType || 'reps',
-    exercise.supersetWith,
+    exercise.id,
+    exercise.name,
+    exercise.order ?? 0,
+    exercise.restSeconds ?? null,
+    exercise.weightUnit ?? 'kg',
+    exercise.repsType ?? 'reps',
+    exercise.supersetWith ?? null,
     exercise.notes ? JSON.stringify(exercise.notes) : null,
   ]);
 
@@ -90,7 +104,7 @@ export async function saveRoutineExerciseOffline(
 /**
  * Guarda un set offline
  */
-export async function saveSetOffline(routineExerciseId: string, set: any): Promise<void> {
+export async function saveSetOffline(routineExerciseId: string, set: SetRequestDto): Promise<void> {
   const db = await getDatabase();
   const setId = set.id || uuid.v4() as string;
 
@@ -103,21 +117,21 @@ export async function saveSetOffline(routineExerciseId: string, set: any): Promi
   await db.runAsync(query, [
     setId,
     routineExerciseId,
-    set.order || 0,
+    set.order,
     set.weight,
     set.reps,
-    set.repsMin,
-    set.repsMax,
+    set.repsMin ?? null,
+    set.repsMax ?? null,
     set.completed ? 1 : 0,
-    set.weightUnit || 'kg',
-    set.repsType || 'reps',
+    set.weightUnit ?? 'kg',
+    set.repsType ?? 'reps',
   ]);
 }
 
 /**
  * Obtiene todas las rutinas (locales + sincronizadas)
  */
-export async function findAllRoutinesOffline(userId: string): Promise<any[]> {
+export async function findAllRoutinesOffline(userId: string): Promise<RoutineResponseDto[]> {
   const query = `
     SELECT * FROM routines
     WHERE userId = ? AND deleted = 0
@@ -130,7 +144,7 @@ export async function findAllRoutinesOffline(userId: string): Promise<any[]> {
 /**
  * Obtiene una rutina por ID
  */
-export async function getRoutineByIdOffline(routineId: string): Promise<any | null> {
+export async function getRoutineByIdOffline(routineId: string): Promise<RoutineResponseDto | null> {
   const routineQuery = `
     SELECT * FROM routines
     WHERE id = ? AND deleted = 0
@@ -170,7 +184,7 @@ export async function getRoutineByIdOffline(routineId: string): Promise<any | nu
 /**
  * Actualiza una rutina
  */
-export async function updateRoutineOffline(routineId: string, updates: any): Promise<void> {
+export async function updateRoutineOffline(routineId: string, updates: Partial<RoutineRequestDto>): Promise<void> {
   const db = await getDatabase();
 
   const query = `
@@ -180,8 +194,8 @@ export async function updateRoutineOffline(routineId: string, updates: any): Pro
   `;
 
   await db.runAsync(query, [
-    updates.title,
-    updates.totalTime || 0,
+    updates.title ?? '',
+    0, // totalTime is not part of RoutineRequestDto
     new Date().toISOString(),
     routineId,
   ]);
@@ -221,9 +235,9 @@ export async function deleteRoutineOffline(routineId: string): Promise<void> {
 /**
  * Guarda una sesión de rutina
  */
-export async function saveRoutineSessionOffline(routineId: string, session: any): Promise<any> {
+export async function saveRoutineSessionOffline(routineId: string, session: RoutineSessionRequestDto & { id?: string }): Promise<RoutineSessionRequestDto & { id: string; createdAt: string }> {
   const db = await getDatabase();
-  const sessionId = session.id || uuid.v4() as string;
+  const sessionId = ('id' in session && typeof session.id === 'string') ? session.id : uuid.v4() as string;
   const now = new Date().toISOString();
 
   const query = `
@@ -258,7 +272,7 @@ export async function saveRoutineSessionOffline(routineId: string, session: any)
 /**
  * Obtiene sesiones de una rutina
  */
-export async function findRoutineSessionsOffline(routineId: string): Promise<any[]> {
+export async function findRoutineSessionsOffline(routineId: string): Promise<(RoutineSessionRequestDto & { id: string; createdAt: string })[]> {
   const query = `
     SELECT * FROM routine_sessions
     WHERE routineId = ? AND deleted = 0
@@ -268,8 +282,8 @@ export async function findRoutineSessionsOffline(routineId: string): Promise<any
   const sessions = await execQuery(query, [routineId]);
 
   // Parse exercises JSON
-  return sessions.map((session: any) => ({
+  return sessions.map((session: RoutineSessionRequestDto & { id: string; createdAt: string; exercises: string }) => ({
     ...session,
-    exercises: JSON.parse(session.exercises),
+    exercises: JSON.parse(session.exercises) as RoutineSessionRequestDto['exercises'],
   }));
 }

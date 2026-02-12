@@ -16,9 +16,10 @@ import {
   PLAN_METADATA,
 } from '../../../models/subscription.model';
 import { createCheckoutSession } from '../services/subscriptionService';
+import { CaughtError, getErrorMessage, BaseNavigation } from '../../../types';
 
 export function PlansScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const { subscription, isPremium } = useSubscription();
   const [loading, setLoading] = useState(false);
 
@@ -41,11 +42,11 @@ export function PlansScreen() {
         checkoutUrl,
         planId,
       });
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       console.error('Error creating checkout session:', error);
       Alert.alert(
         'Error',
-        error.message || 'No se pudo crear la sesión de pago. Por favor, inténtalo de nuevo.'
+        getErrorMessage(error) || 'No se pudo crear la sesión de pago. Por favor, inténtalo de nuevo.'
       );
     } finally {
       setLoading(false);

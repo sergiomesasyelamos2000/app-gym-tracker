@@ -16,6 +16,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { AppTheme } from "../../../types";
 import * as nutritionService from "../services/nutritionService";
 
 interface ShoppingListItem {
@@ -348,7 +349,7 @@ export default function ShoppingListScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,

@@ -30,11 +30,16 @@ import {
   SubscriptionPlan,
   PLAN_METADATA,
 } from "../../../models/subscription.model";
+import { CaughtError, getErrorMessage, BaseNavigation } from "../../../types";
+
+interface StatusScreenParams {
+  success?: boolean;
+}
 
 export function StatusScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const route = useRoute();
-  const { success } = (route.params as any) || {};
+  const { success } = (route.params as StatusScreenParams) || {};
 
   const {
     subscription,
@@ -71,10 +76,10 @@ export function StatusScreen() {
                 "Éxito",
                 "Tu suscripción se cancelará al final del período de facturación.",
               );
-            } catch (error: any) {
+            } catch (error: CaughtError) {
               Alert.alert(
                 "Error",
-                error.message || "No se pudo cancelar la suscripción",
+                getErrorMessage(error) || "No se pudo cancelar la suscripción",
               );
             } finally {
               setActionLoading(false);
@@ -91,10 +96,10 @@ export function StatusScreen() {
       await reactivateSubscription();
       await fetchSubscription();
       Alert.alert("Éxito", "¡Tu suscripción ha sido reactivada!");
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       Alert.alert(
         "Error",
-        error.message || "No se pudo reactivar la suscripción",
+        getErrorMessage(error) || "No se pudo reactivar la suscripción",
       );
     } finally {
       setActionLoading(false);
@@ -106,10 +111,10 @@ export function StatusScreen() {
       setActionLoading(true);
       const { portalUrl } = await getCustomerPortalUrl();
       await Linking.openURL(portalUrl);
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       Alert.alert(
         "Error",
-        error.message || "No se pudo abrir el portal de cliente",
+        getErrorMessage(error) || "No se pudo abrir el portal de cliente",
       );
     } finally {
       setActionLoading(false);

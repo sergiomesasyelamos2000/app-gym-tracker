@@ -2,9 +2,10 @@ import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useSubscriptionStore } from '../../../store/useSubscriptionStore';
 import { Alert } from 'react-native';
+import { BaseNavigation } from '../../../types';
 
 export function usePaywall() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const { canAccessFeature, isPremium, features } = useSubscriptionStore();
 
   /**

@@ -29,6 +29,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
+import { AppTheme } from "../../../types";
 import {
   createExercise,
   fetchEquipment,
@@ -36,6 +37,7 @@ import {
   fetchMuscles,
 } from "../../../services/exerciseService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { CaughtError, getErrorMessage } from "../../../types";
 
 interface DropdownOption {
   id: string;
@@ -235,8 +237,8 @@ export default function CreateExerciseScreen() {
       }
 
       navigation.goBack();
-    } catch (error: any) {
-      Alert.alert("Error", `Error al crear el ejercicio: ${error.message}`);
+    } catch (error: CaughtError) {
+      Alert.alert("Error", `Error al crear el ejercicio: ${getErrorMessage(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -687,7 +689,7 @@ export default function CreateExerciseScreen() {
 }
 
 
-const createStyles = (theme: any, isDark: boolean) =>
+const createStyles = (theme: AppTheme, isDark: boolean) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

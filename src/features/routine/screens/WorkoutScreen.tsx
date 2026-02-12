@@ -19,6 +19,7 @@ import {
   RoutineResponseDto,
 } from "../../../models/index.js";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { AppTheme } from "../../../types";
 
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -445,7 +446,7 @@ export default function WorkoutScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     header: {
       paddingTop: 32,

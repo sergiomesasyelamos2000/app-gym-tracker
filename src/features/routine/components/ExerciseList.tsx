@@ -18,6 +18,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
+import { AppTheme } from "../../../types";
 import { fetchExercises, isUsingCache } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
@@ -206,7 +207,7 @@ export default function ExerciseList() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

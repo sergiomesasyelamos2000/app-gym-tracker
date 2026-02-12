@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Crown, ArrowRight } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSubscription } from '../hooks/useSubscription';
+import { BaseNavigation } from '../../../types';
 
 interface UpgradeBannerProps {
   message?: string;
@@ -10,7 +11,7 @@ interface UpgradeBannerProps {
 }
 
 export function UpgradeBanner({ message, compact }: UpgradeBannerProps) {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const { isPremium, getDaysRemaining } = useSubscription();
 
   // Don't show banner if user is premium

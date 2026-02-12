@@ -7,6 +7,7 @@ import {
   FileText,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
+import { BaseNavigation } from "../../../types/common";
 import {
   ActivityIndicator,
   Alert,
@@ -28,7 +29,7 @@ import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
 
 export default function ExportDataScreen() {
   const { theme } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<BaseNavigation>();
   const [loading, setLoading] = useState(false);
   const { isPremium, features } = useSubscriptionStore();
 
@@ -42,7 +43,7 @@ export default function ExportDataScreen() {
           {
             text: "Actualizar a Premium",
             onPress: () => {
-              (navigation as any).navigate("PlansScreen");
+              navigation.navigate("PlansScreen");
             },
           },
           {

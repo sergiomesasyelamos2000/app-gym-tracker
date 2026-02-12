@@ -507,9 +507,9 @@ const ExerciseSetList = ({
                 repsType={repsType}
                 readonly={readonly}
                 previousMark={
-                  started && (item as any).previousWeight && (item as any).previousReps
-                    ? `${(item as any).previousWeight || 0} ${weightUnit} x ${
-                        (item as any).previousReps || 0
+                  started && 'previousWeight' in item && 'previousReps' in item && item.previousWeight && item.previousReps
+                    ? `${item.previousWeight || 0} ${weightUnit} x ${
+                        item.previousReps || 0
                       }`
                     : started
                     ? "-"

@@ -1,8 +1,8 @@
 import {
   RoutineRequestDto,
   RoutineResponseDto,
-  RoutineSessionEntity,
 } from "@entity-data-models/index";
+import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   saveRoutine as apiSaveRoutine,
@@ -45,8 +45,8 @@ export async function saveRoutineOffline(
   // Save locally - preserve complete structure
   const localRoutine: RoutineResponseDto = {
     ...routine,
-    id: (routine as any).id || `local_${Date.now()}`,
-    createdAt: (routine as any).createdAt || new Date(),
+    id: 'id' in routine && typeof routine.id === 'string' ? routine.id : `local_${Date.now()}`,
+    createdAt: 'createdAt' in routine && routine.createdAt instanceof Date ? routine.createdAt : new Date(),
     updatedAt: new Date(),
     userId: "", // Will be filled on sync
     totalSets:
@@ -75,20 +75,25 @@ export async function saveRoutineOffline(
         order: exercise.order || index + 1,
         supersetWith: exercise.supersetWith || null,
       })) || [],
-    _isPending: true, // Flag for pending sync
-  } as any;
+  };
 
-  await saveLocalRoutine(localRoutine);
-  await updateRoutinesCache(localRoutine); // Add to main cache so it shows in list
-  await cacheIndividualRoutineLocally(localRoutine); // Cache individually too
+  // Add _isPending metadata flag
+  const localRoutineWithMetadata = {
+    ...localRoutine,
+    _isPending: true, // Flag for pending sync
+  } as RoutineResponseDto & { _isPending: boolean };
+
+  await saveLocalRoutine(localRoutineWithMetadata);
+  await updateRoutinesCache(localRoutineWithMetadata); // Add to main cache so it shows in list
+  await cacheIndividualRoutineLocally(localRoutineWithMetadata); // Cache individually too
   await addToSyncQueue("CREATE_ROUTINE", routine);
 
   console.log(
-    `[OfflineRoutine] Routine saved locally: ${localRoutine.id} with ${
-      localRoutine.routineExercises?.length || 0
+    `[OfflineRoutine] Routine saved locally: ${localRoutineWithMetadata.id} with ${
+      localRoutineWithMetadata.routineExercises?.length || 0
     } exercises`
   );
-  return localRoutine;
+  return localRoutineWithMetadata;
 }
 
 /**
@@ -141,20 +146,25 @@ export async function updateRoutineOffline(
         order: exercise.order || index + 1,
         supersetWith: exercise.supersetWith || null,
       })) || [],
-    _isPending: true,
-  } as any;
+  };
 
-  await saveLocalRoutine(localRoutine);
-  await updateRoutinesCache(localRoutine); // Update in main cache
-  await cacheIndividualRoutineLocally(localRoutine); // Update individual cache
+  // Add _isPending metadata flag
+  const localRoutineWithMetadata = {
+    ...localRoutine,
+    _isPending: true,
+  } as RoutineResponseDto & { _isPending: boolean };
+
+  await saveLocalRoutine(localRoutineWithMetadata);
+  await updateRoutinesCache(localRoutineWithMetadata); // Update in main cache
+  await cacheIndividualRoutineLocally(localRoutineWithMetadata); // Update individual cache
   await addToSyncQueue("UPDATE_ROUTINE", { id, routine });
 
   console.log(
     `[OfflineRoutine] Routine updated locally: ${id} with ${
-      localRoutine.routineExercises?.length || 0
+      localRoutineWithMetadata.routineExercises?.length || 0
     } exercises`
   );
-  return localRoutine;
+  return localRoutineWithMetadata;
 }
 
 /**
@@ -178,13 +188,13 @@ export async function saveSessionOffline(
   }
 
   // Save locally
-  const localSession: RoutineSessionEntity = {
+  const localSession: RoutineSessionEntity & { _isPending: boolean } = {
     ...session,
     id: `local_session_${Date.now()}`,
     routineId,
     createdAt: new Date(),
     _isPending: true,
-  } as any;
+  } as RoutineSessionEntity & { _isPending: boolean };
 
   await saveLocalSession(localSession);
   await addToSyncQueue("CREATE_SESSION", { routineId, session });
@@ -238,7 +248,7 @@ async function saveLocalSession(session: RoutineSessionEntity): Promise<void> {
 async function updateLocalRoutineCache(
   routine: RoutineResponseDto
 ): Promise<void> {
-  await saveLocalRoutine({ ...routine, _isPending: false } as any);
+  await saveLocalRoutine({ ...routine, _isPending: false } as RoutineResponseDto & { _isPending: boolean });
 
   // Also update the main routines cache so it shows in the list
   await updateRoutinesCache(routine);

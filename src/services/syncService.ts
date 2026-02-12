@@ -10,6 +10,7 @@ import {
   EntityType,
 } from "./offlineQueueService";
 import { useSyncStore } from "../store/useSyncStore";
+import { CaughtError, getErrorMessage } from "../types";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const SYNC_BATCH_SIZE = 20;
@@ -112,7 +113,7 @@ export class SyncService {
             await this.processOperation(operation);
             await removeQueueItem(operation.id);
             syncedCount++;
-          } catch (error: any) {
+          } catch (error: CaughtError) {
             console.error(
               `❌ Failed to sync operation ${operation.id}:`,
               error
@@ -122,14 +123,14 @@ export class SyncService {
             // Increment attempts
             await incrementAttempts(
               operation.id,
-              error.message || "Unknown error"
+              getErrorMessage(error) || "Unknown error"
             );
 
             // Add to sync errors
             useSyncStore
               .getState()
               .addSyncError(
-                `Failed to sync ${operation.entity_type}:${operation.entity_id} - ${error.message}`
+                `Failed to sync ${operation.entity_type}:${operation.entity_id} - ${getErrorMessage(error)}`
               );
           }
         }
@@ -149,9 +150,9 @@ export class SyncService {
         synced: syncedCount,
         errors: errorCount,
       };
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       console.error("❌ Sync failed:", error);
-      useSyncStore.getState().addSyncError(`Sync failed: ${error.message}`);
+      useSyncStore.getState().addSyncError(`Sync failed: ${getErrorMessage(error)}`);
       return { success: false, synced: syncedCount, errors: errorCount + 1 };
     } finally {
       this.isRunning = false;

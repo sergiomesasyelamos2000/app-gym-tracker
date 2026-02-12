@@ -32,6 +32,7 @@ import {
 } from "../../../utils/macroCalculator";
 import { createUserProfile } from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
+import { CaughtError, getErrorMessage } from "../../../types";
 
 const { width } = Dimensions.get("window");
 
@@ -188,22 +189,23 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
 
       // Navigate to MacrosScreen
       navigation.replace("MacrosScreen");
-    } catch (error: any) {
+    } catch (error: CaughtError) {
+      const errorMsg = getErrorMessage(error);
       let errorMessage =
         "No se pudo guardar tu perfil. Por favor, intenta nuevamente.";
 
       // Provide more specific error messages based on the error type
-      if (error.message?.toLowerCase().includes("unauthorized")) {
+      if (errorMsg?.toLowerCase().includes("unauthorized")) {
         errorMessage =
           "Hubo un problema de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.";
-      } else if (error.message?.toLowerCase().includes("network")) {
+      } else if (errorMsg?.toLowerCase().includes("network")) {
         errorMessage =
           "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
-      } else if (error.message?.toLowerCase().includes("ya existe")) {
+      } else if (errorMsg?.toLowerCase().includes("ya existe")) {
         errorMessage =
           "Ya existe un perfil para este usuario. Intenta actualizar el perfil existente.";
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
+      } else if (errorMsg) {
+        errorMessage = `Error: ${errorMsg}`;
       }
 
       Alert.alert("Error al Guardar", errorMessage, [{ text: "OK" }]);

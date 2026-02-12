@@ -11,6 +11,8 @@ import {
   saveRoutineSession,
 } from "../features/routine/services/routineService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CaughtError, getErrorMessage } from "../types";
+import type { RoutineResponseDto } from "@entity-data-models/index";
 
 const MAX_RETRIES = 3;
 const SYNC_INTERVAL_MS = 60000; // 1 minute
@@ -113,8 +115,8 @@ async function processOperation(operation: PendingOperation): Promise<boolean> {
         console.warn(`[AutoSync] Unknown operation type:`, operation.type);
         return false;
     }
-  } catch (error: any) {
-    console.error(`[AutoSync] Error syncing ${operation.type}:`, error.message);
+  } catch (error: CaughtError) {
+    console.error(`[AutoSync] Error syncing ${operation.type}:`, getErrorMessage(error));
 
     // Increment retry count
     operation.retries++;
@@ -211,8 +213,8 @@ async function updateLocalRoutineId(
     // Update local routines cache
     const routinesStr = await AsyncStorage.getItem("@local_routines");
     if (routinesStr) {
-      const routines = JSON.parse(routinesStr);
-      const updated = routines.map((r: any) =>
+      const routines = JSON.parse(routinesStr) as RoutineResponseDto[];
+      const updated = routines.map((r) =>
         r.id === localId ? { ...r, id: serverId, _isPending: false } : r
       );
       await AsyncStorage.setItem("@local_routines", JSON.stringify(updated));
@@ -221,8 +223,8 @@ async function updateLocalRoutineId(
     // Update main routines cache (for WorkoutScreen list)
     const mainCacheStr = await AsyncStorage.getItem("@routines_cache");
     if (mainCacheStr) {
-      const mainCache = JSON.parse(mainCacheStr);
-      const updatedMain = mainCache.map((r: any) =>
+      const mainCache = JSON.parse(mainCacheStr) as RoutineResponseDto[];
+      const updatedMain = mainCache.map((r) =>
         r.id === localId ? { ...r, id: serverId, _isPending: false } : r
       );
       await AsyncStorage.setItem("@routines_cache", JSON.stringify(updatedMain));

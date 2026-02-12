@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
+import { BaseNavigation } from "../../../types/common";
 import {
   Alert,
   ScrollView,
@@ -26,7 +27,7 @@ interface SettingItem {
 }
 
 export default function SettingsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const isProfileComplete = useNutritionStore(
     (state) => state.isProfileComplete
   );

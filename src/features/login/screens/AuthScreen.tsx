@@ -21,6 +21,7 @@ import {
 import { useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { googleAuth, login, register } from "../services/authService";
+import { CaughtError, getErrorMessage } from "../../../types";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -159,8 +160,8 @@ export default function AuthScreen() {
         mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
         `Bienvenido ${authResponse.user.name}`,
       );
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Error en la autenticación");
+    } catch (error: CaughtError) {
+      Alert.alert("Error", getErrorMessage(error) || "Error en la autenticación");
     } finally {
       setIsLoading(false);
     }

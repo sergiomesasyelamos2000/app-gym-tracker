@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppTheme } from "../../../types";
 import {
   ProgressStats,
   RoutineSession,
@@ -345,7 +346,7 @@ function hexToRgb(hex: string): string {
   )}`;
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,

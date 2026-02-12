@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Crown, X, Check } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
+import { BaseNavigation } from "../../../types";
 
 interface PaywallScreenProps {
   visible: boolean;
@@ -25,7 +26,7 @@ export function PaywallScreen({
   title,
   message,
 }: PaywallScreenProps) {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
 
   const handleUpgrade = () => {
     onClose();

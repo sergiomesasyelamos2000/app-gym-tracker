@@ -1,4 +1,13 @@
 import { execQuery, execRun, getDatabase } from '../database/sqliteClient';
+import type {
+  RoutineRequestDto,
+  RoutineSessionRequestDto,
+  CreateFoodEntryDto,
+  CreateCustomProductDto,
+  CreateCustomMealDto,
+  UpdateFoodEntryDto,
+  UpdateCustomProductDto,
+} from '@entity-data-models/index';
 
 export type EntityType =
   | 'routine'
@@ -10,6 +19,18 @@ export type EntityType =
   | 'custom_meal';
 
 export type OperationType = 'CREATE' | 'UPDATE' | 'DELETE';
+
+// Union type for all possible payload types
+export type QueuePayload =
+  | (RoutineRequestDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | { id: string; routine: RoutineRequestDto }
+  | (RoutineSessionRequestDto & { id?: string; routineId?: string; createdAt?: string })
+  | (CreateFoodEntryDto & { id?: string; createdAt?: string })
+  | (UpdateFoodEntryDto & { id: string })
+  | (CreateCustomProductDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | (UpdateCustomProductDto & { id: string; updatedAt?: string })
+  | (CreateCustomMealDto & { id?: string; createdAt?: string; updatedAt?: string })
+  | { id: string }; // For DELETE operations
 
 export interface QueueItem {
   id: number;
@@ -29,7 +50,7 @@ export async function enqueueOperation(
   entityType: EntityType,
   entityId: string,
   operation: OperationType,
-  payload: any
+  payload: QueuePayload
 ): Promise<void> {
   const db = await getDatabase();
 

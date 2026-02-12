@@ -7,12 +7,13 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, WebViewNavigation } from 'react-native-webview';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, X } from 'lucide-react-native';
 import { verifyPayment } from '../services/subscriptionService';
 import { useSubscriptionStore } from '../../../store/useSubscriptionStore';
+import { CaughtError, getErrorMessage, BaseNavigation } from '../../../types';
 
 interface CheckoutScreenParams {
   sessionId: string;
@@ -21,7 +22,7 @@ interface CheckoutScreenParams {
 }
 
 export function CheckoutScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const route = useRoute();
   const params = route.params as CheckoutScreenParams;
   const webViewRef = useRef<WebView>(null);
@@ -30,7 +31,7 @@ export function CheckoutScreen() {
   const [verifying, setVerifying] = useState(false);
   const { setSubscription } = useSubscriptionStore();
 
-  const handleNavigationStateChange = async (navState: any) => {
+  const handleNavigationStateChange = async (navState: WebViewNavigation) => {
     const { url } = navState;
 
     // Check if success URL
@@ -70,7 +71,7 @@ export function CheckoutScreen() {
           index: 0,
           routes: [{ name: 'StatusScreen', params: { success: true } }],
         });
-      } catch (error: any) {
+      } catch (error: CaughtError) {
         console.error('Error verifying payment:', error);
         Alert.alert(
           'Error de Verificación',

@@ -19,7 +19,14 @@ import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../models";
+import {
+  RoutineResponseDto,
+  RoutineSessionEntity,
+  RoutineExerciseResponseDto,
+  SetResponseDto
+} from "@entity-data-models/index";
 import { notificationService } from "../../../services/notificationService";
+import { CaughtError, getErrorMessage, AppTheme, SessionData, ExerciseSet, BaseNavigation } from "../../../types";
 import {
   saveRoutineOffline,
   saveSessionOffline,
@@ -62,7 +69,7 @@ export default function RoutineDetailScreen() {
   );
 
   const [loading, setLoading] = useState(!!routine?.id);
-  const [routineData, setRoutineData] = useState<any>(routine || null);
+  const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(routine || null);
   const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
   const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
   const [started, setStarted] = useState(false);
@@ -86,7 +93,7 @@ export default function RoutineDetailScreen() {
   const restTimerEndTimeRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [previousSessions, setPreviousSessions] = useState<any[]>([]);
+  const [previousSessions, setPreviousSessions] = useState<RoutineSessionEntity[]>([]);
 
   // Undo deletion state
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
@@ -160,13 +167,13 @@ export default function RoutineDetailScreen() {
           })),
         });
         setRoutineData(data);
-      } catch (err: any) {
+      } catch (err: CaughtError) {
         console.error("Error fetching routine by id", err);
 
         // Show user-friendly error message
         Alert.alert(
           "Error",
-          err.message || "No se pudo cargar la rutina. Verifica tu conexión."
+          getErrorMessage(err) || "No se pudo cargar la rutina. Verifica tu conexión."
         );
 
         // Navigate back if routine cannot be loaded
@@ -247,7 +254,7 @@ export default function RoutineDetailScreen() {
 
     const exercisesWithSets = mapRoutineExercises(routineData).map((ex) => ({
       ...ex,
-      sets: ex?.sets?.map((set: any) => ({
+      sets: ex?.sets?.map((set) => ({
         ...set,
         completed: false,
         previousWeight: set.weight,
@@ -258,8 +265,8 @@ export default function RoutineDetailScreen() {
     setExercises(exercisesWithSets);
 
     const setsMap = exercisesWithSets.reduce(
-      (acc: any, ex: any) => ({ ...acc, [ex.id]: ex.sets }),
-      {}
+      (acc, ex) => ({ ...acc, [ex.id]: ex.sets }),
+      {} as { [exerciseId: string]: SetRequestDto[] }
     );
 
     setWorkoutInProgress({
@@ -533,25 +540,10 @@ export default function RoutineDetailScreen() {
           { name: "RoutineDetail", params: { routine: updatedRoutine } },
         ],
       });
-    } catch (err: any) {
+    } catch (err: CaughtError) {
       console.error("Error saving routine:", err);
 
-      let errorMessage =
-        "Error al guardar la rutina. Por favor intenta de nuevo.";
-
-      if (err?.status === 401) {
-        errorMessage =
-          "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
-      } else if (err?.status === 403) {
-        errorMessage = "No tienes permisos para realizar esta acción.";
-      } else if (err?.status === 500) {
-        errorMessage = "Error del servidor. Por favor intenta más tarde.";
-      } else if (err?.message?.toLowerCase().includes("network")) {
-        errorMessage = "Sin conexión a internet. Verifica tu conexión.";
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
+      const errorMessage = getErrorMessage(err);
       Alert.alert("Error", errorMessage);
 
       // Restore workout state if save failed
@@ -613,25 +605,10 @@ export default function RoutineDetailScreen() {
           { name: "RoutineDetail", params: { routine: savedRoutine } },
         ],
       });
-    } catch (err: any) {
+    } catch (err: CaughtError) {
       console.error("Error saving routine:", err);
 
-      let errorMessage =
-        "Error al guardar la rutina. Por favor intenta de nuevo.";
-
-      if (err?.status === 401) {
-        errorMessage =
-          "Tu sesión ha expirado. Por favor inicia sesión nuevamente.";
-      } else if (err?.status === 403) {
-        errorMessage = "No tienes permisos para realizar esta acción.";
-      } else if (err?.status === 500) {
-        errorMessage = "Error del servidor. Por favor intenta más tarde.";
-      } else if (err?.message?.toLowerCase().includes("network")) {
-        errorMessage = "Sin conexión a internet. Verifica tu conexión.";
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
+      const errorMessage = getErrorMessage(err);
       Alert.alert("Error", errorMessage);
     }
   };
@@ -744,11 +721,11 @@ export default function RoutineDetailScreen() {
     setShowRestToast(false);
   };
 
-  const mapRoutineExercises = (data: any): ExerciseRequestDto[] => {
-    const mapped = data.routineExercises?.map((re: any) => {
-      const exercise = {
+  const mapRoutineExercises = (data: RoutineResponseDto): ExerciseRequestDto[] => {
+    const mapped = data.routineExercises?.map((re: RoutineExerciseResponseDto) => {
+      const exercise: ExerciseRequestDto = {
         ...re.exercise,
-        sets: re.sets.map((set: any) => ({
+        sets: re.sets.map((set: SetResponseDto) => ({
           ...set,
           previousWeight: set.weight,
           previousReps: set.reps || set.repsMin,
@@ -757,22 +734,13 @@ export default function RoutineDetailScreen() {
         restSeconds: re.restSeconds,
         weightUnit: re.weightUnit || "kg",
         repsType: re.repsType || "reps",
-        supersetWith: re.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
+        supersetWith: re.supersetWith || undefined,
       };
 
       return exercise;
     });
 
-    return (
-      mapped ||
-      data.exercises?.map((ex: any) => ({
-        ...ex,
-        weightUnit: ex.weightUnit || "kg",
-        repsType: ex.repsType || "reps",
-        supersetWith: ex.supersetWith || null, // 🔥 MAPEAR SUPERSERIES
-      })) ||
-      []
-    );
+    return mapped || [];
   };
 
   const buildRoutinePayload = () => {

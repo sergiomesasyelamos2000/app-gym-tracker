@@ -31,9 +31,10 @@ import {
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useNavigation } from "@react-navigation/native";
 import { Crown } from "lucide-react-native";
+import { AppTheme, BaseNavigation } from "../types";
 
 // Typing indicator component with animated dots
-const TypingIndicator = ({ theme }: { theme: any }) => {
+const TypingIndicator = ({ theme }: { theme: AppTheme }) => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
@@ -119,7 +120,7 @@ const TypingIndicator = ({ theme }: { theme: any }) => {
 };
 
 // Empty state component
-const EmptyState = ({ theme }: { theme: any }) => (
+const EmptyState = ({ theme }: { theme: AppTheme }) => (
   <View style={styles.emptyStateContainer}>
     <Ionicons
       name="nutrition-outline"
@@ -173,7 +174,7 @@ export default function NutritionScreen() {
   const setCurrentUser = useChatStore((state) => state.setCurrentUser);
 
   const { theme, isDark } = useTheme();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
 
   // Hook para límite de uso de IA
   const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } = useAIUsageLimit();
@@ -322,11 +323,13 @@ export default function NutritionScreen() {
         }, user.id);
 
         const formData = new FormData();
-        formData.append("file", {
+        // FormData.append expects Blob | File | string, but React Native uses a custom type
+        const fileBlob: { uri: string; name: string; type: string } = {
           uri: photo.uri,
           name: "photo.jpg",
           type: "image/jpeg",
-        } as any);
+        };
+        formData.append("file", fileBlob as unknown as Blob);
 
         setLoadingMessage(true);
         sendPhoto(formData, user.id).finally(() => {

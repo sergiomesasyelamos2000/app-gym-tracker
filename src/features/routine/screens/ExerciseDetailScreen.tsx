@@ -13,6 +13,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
+  ImageStyle,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
@@ -20,6 +22,7 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { AppTheme, ExerciseSet, SessionExercise, SessionData } from "../../../types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IS_SMALL_DEVICE = SCREEN_WIDTH < 375;
@@ -35,28 +38,26 @@ interface ExerciseHistoryItem {
   date: string;
   routineName: string;
   routineId: string;
-  sets: any[];
+  sets: ExerciseSet[];
   completedSets: number;
   totalWeight: number;
   totalReps: number;
   volume: number;
   maxWeight: number;
   totalTime: number;
-  sessionData: any;
+  sessionData: SessionData;
+}
+
+interface ExerciseImageProps {
+  exercise: ExerciseRequestDto & { giftUrl?: string; imageUrl?: string };
+  style: ImageStyle;
+  theme: AppTheme;
 }
 
 // ============================================================================
 // UTILIDADES DE IMAGEN
 // ============================================================================
-const ExerciseImage = ({
-  exercise,
-  style,
-  theme,
-}: {
-  exercise: any;
-  style: any;
-  theme: any;
-}) => {
+const ExerciseImage = ({ exercise, style, theme }: ExerciseImageProps) => {
   // Use giftUrl if available (animated GIF)
   if (exercise.giftUrl) {
     return (
@@ -151,41 +152,41 @@ const calculatePersonalBestProgress = (
 // PROCESAMIENTO DE DATOS
 // ============================================================================
 const processExerciseFromSession = (
-  session: any,
+  session: SessionData,
   exerciseId: string
 ): ExerciseHistoryItem | null => {
   const exerciseEntry = session.exercises?.find(
-    (e: any) => e.exerciseId === exerciseId
+    (e: SessionExercise) => e.exerciseId === exerciseId
   );
 
   if (!exerciseEntry) return null;
 
   const sets = exerciseEntry.sets || [];
-  const completedSets = sets.filter((s: any) => s.completed).length;
+  const completedSets = sets.filter((s: ExerciseSet) => s.completed).length;
   const totalWeight = sets.reduce(
-    (sum: number, s: any) => sum + (s.weight || 0),
+    (sum: number, s: ExerciseSet) => sum + (s.weight || 0),
     0
   );
   const totalReps = sets.reduce(
-    (sum: number, s: any) => sum + (s.reps || 0),
+    (sum: number, s: ExerciseSet) => sum + (s.reps || 0),
     0
   );
   const maxWeight = sets
-    .filter((s: any) => s.completed && s.weight > 0)
-    .reduce((max: number, s: any) => Math.max(max, s.weight), 0);
+    .filter((s: ExerciseSet) => s.completed && s.weight > 0)
+    .reduce((max: number, s: ExerciseSet) => Math.max(max, s.weight), 0);
 
   return {
     id: session.id,
-    date: session.createdAt,
-    routineName: session.routine?.title || "Entrenamiento sin título",
-    routineId: session.routine?.id,
+    date: session.startTime.toString(),
+    routineName: (session as any).routine?.title || "Entrenamiento sin título",
+    routineId: session.routineId,
     sets,
     completedSets,
     totalWeight,
     totalReps,
     volume: totalWeight * totalReps,
     maxWeight,
-    totalTime: session.totalTime,
+    totalTime: session.duration || 0,
     sessionData: session,
   };
 };
@@ -201,7 +202,7 @@ const formatNumber = (num: number) => {
 // ============================================================================
 // COMPONENTES
 // ============================================================================
-const LoadingView = ({ theme }: { theme: any }) => {
+const LoadingView = ({ theme }: { theme: AppTheme }) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -213,7 +214,7 @@ const LoadingView = ({ theme }: { theme: any }) => {
   );
 };
 
-const EmptyStateView = ({ theme }: { theme: any }) => {
+const EmptyStateView = ({ theme }: { theme: AppTheme }) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.emptyState}>
@@ -230,7 +231,7 @@ const EmptyStateView = ({ theme }: { theme: any }) => {
 interface HeaderProps {
   exercise: ExerciseRequestDto;
   fadeAnim: Animated.Value;
-  theme: any;
+  theme: AppTheme;
 }
 
 const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
@@ -262,7 +263,7 @@ interface QuickStatsProps {
   currentWeight: number;
   totalSessions: number;
   maxWeight: number;
-  theme: any;
+  theme: AppTheme;
 }
 
 const QuickStats = ({
@@ -319,7 +320,7 @@ interface ProgressCardProps {
   title: string;
   value: number;
   icon: string;
-  theme: any;
+  theme: AppTheme;
 }
 
 const ProgressCard = ({ title, value, icon, theme }: ProgressCardProps) => {
@@ -361,7 +362,7 @@ interface ProgressSectionProps {
   totalProgress: number;
   monthlyProgress: number;
   personalBestProgress: number;
-  theme: any;
+  theme: AppTheme;
 }
 
 const ProgressSection = ({
@@ -404,8 +405,8 @@ const ProgressSection = ({
 interface HistoryCardProps {
   item: ExerciseHistoryItem;
   fadeAnim: Animated.Value;
-  onNavigateToRoutine: (routineId: string, routine: any) => void;
-  theme: any;
+  onNavigateToRoutine: (routineId: string, routine: SessionData) => void;
+  theme: AppTheme;
 }
 
 const HistoryCard = ({
@@ -419,10 +420,10 @@ const HistoryCard = ({
     item.maxWeight ===
     Math.max(
       ...item.sessionData.exercises
-        .filter((e: any) => e.exerciseId === item.sessionData.exercises[0].id)
-        .map((e: any) =>
+        .filter((e: SessionExercise) => e.exerciseId === item.sessionData.exercises[0].id)
+        .map((e: SessionExercise) =>
           Math.max(
-            ...e.sets.filter((s: any) => s.completed).map((s: any) => s.weight)
+            ...e.sets.filter((s: ExerciseSet) => s.completed).map((s: ExerciseSet) => s.weight)
           )
         )
     );
@@ -522,7 +523,7 @@ const HistoryCard = ({
             Series realizadas ({item.sets.length}):
           </Text>
           <View style={styles.setsList}>
-            {item.sets.map((set: any, i: number) => (
+            {item.sets.map((set: ExerciseSet, i: number) => (
               <View
                 key={i}
                 style={[styles.setItem, set.completed && styles.completedSet]}
@@ -566,7 +567,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
       const sessionsData = await findAllRoutineSessions();
 
       const exerciseHistory = sessionsData
-        .map((session: any) => processExerciseFromSession(session, exercise.id))
+        .map((session: SessionData) => processExerciseFromSession(session, exercise.id))
         .filter((item): item is ExerciseHistoryItem => item !== null)
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -613,7 +614,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 
   // Navegación
   const handleNavigateToRoutine = useCallback(
-    (routineId: string, routine: any) => {
+    (routineId: string, routine: SessionData) => {
       navigation.navigate("RoutineDetail", { routineId, routine });
     },
     [navigation]
@@ -727,7 +728,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 // ============================================================================
 // ESTILOS
 // ============================================================================
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

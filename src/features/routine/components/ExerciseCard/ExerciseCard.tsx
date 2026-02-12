@@ -13,6 +13,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
+import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
 import { detectRecord } from "../../../../services/recordsService";
 import { useRecordsStore } from "../../../../store/useRecordsStore";
 import { CelebrationAnimation } from "../CelebrationAnimation";
@@ -44,7 +45,7 @@ interface Props {
   supersetWith?: string;
   supersetExerciseName?: string;
   showOptions?: boolean;
-  previousSessions?: any[]; // For record detection
+  previousSessions?: RoutineSessionEntity[];
 }
 
 const ExerciseCard = ({

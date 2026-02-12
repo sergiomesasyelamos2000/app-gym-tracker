@@ -1,5 +1,6 @@
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { Alert } from 'react-native';
+import { BaseNavigation } from '../types/common';
 
 /**
  * Check if user can create a new routine
@@ -9,7 +10,7 @@ import { Alert } from 'react-native';
  */
 export function canCreateRoutine(
   currentCount: number,
-  navigation?: any
+  navigation?: BaseNavigation
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
@@ -50,7 +51,7 @@ export function canCreateRoutine(
  */
 export function canCreateCustomProduct(
   currentCount: number,
-  navigation?: any
+  navigation?: BaseNavigation
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
@@ -91,7 +92,7 @@ export function canCreateCustomProduct(
  */
 export function canCreateCustomMeal(
   currentCount: number,
-  navigation?: any
+  navigation?: BaseNavigation
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
@@ -129,7 +130,7 @@ export function canCreateCustomMeal(
  * @param navigation Navigation object to show paywall
  * @returns true if user can use, false otherwise
  */
-export function canUseAI(navigation?: any): boolean {
+export function canUseAI(navigation?: BaseNavigation): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
   if (!features) return true;
@@ -162,7 +163,7 @@ export function canUseAI(navigation?: any): boolean {
  * @param navigation Navigation object to show paywall
  * @returns true if user can access, false otherwise
  */
-export function canAccessAdvancedStats(navigation?: any): boolean {
+export function canAccessAdvancedStats(navigation?: BaseNavigation): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
   if (!features) return true;
@@ -195,7 +196,7 @@ export function canAccessAdvancedStats(navigation?: any): boolean {
  * @param navigation Navigation object to show paywall
  * @returns true if user can export, false otherwise
  */
-export function canExportData(navigation?: any): boolean {
+export function canExportData(navigation?: BaseNavigation): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
   if (!features) return true;

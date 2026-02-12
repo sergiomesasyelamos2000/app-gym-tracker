@@ -3,9 +3,9 @@ import { apiFetch } from "../../../api/client";
 import {
   RoutineRequestDto,
   RoutineResponseDto,
-  RoutineEntity,
-  RoutineSessionEntity,
 } from "@entity-data-models/index";
+import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import type { CaughtError } from "../../../types";
 
 const ROUTINES_CACHE_KEY = "@routines_cache";
 
@@ -30,7 +30,7 @@ export async function findAllRoutines(): Promise<RoutineResponseDto[]> {
     console.log(`[RoutineService] Cached ${routines.length} routines`);
 
     return routines;
-  } catch (error: any) {
+  } catch (error: CaughtError) {
     // If network fails, load from cache
     console.log("[RoutineService] API failed, loading routines from cache");
 
@@ -63,7 +63,7 @@ export async function getRoutineById(id: string): Promise<RoutineResponseDto> {
     console.log(`[RoutineService] Cached routine ${id} with ${routine.routineExercises?.length || 0} exercises`);
 
     return routine;
-  } catch (error: any) {
+  } catch (error: CaughtError) {
     // If network fails, try to get from cache
     console.log(`[RoutineService] API failed for routine ${id}, loading from cache`);
 
@@ -232,7 +232,7 @@ export async function findAllRoutineSessions(): Promise<
     console.log(`[RoutineService] Cached ${sessions.length} sessions`);
 
     return sessions;
-  } catch (error: any) {
+  } catch (error: CaughtError) {
     // If network fails, load from cache
     console.log("[RoutineService] API failed, loading sessions from cache");
 
@@ -268,7 +268,7 @@ export async function findRoutineSessions(
     console.log(`[RoutineService] Cached ${sessions.length} sessions for routine ${id}`);
 
     return sessions;
-  } catch (error: any) {
+  } catch (error: CaughtError) {
     // If network fails, try cache
     console.log(`[RoutineService] API failed, loading sessions for routine ${id} from cache`);
 
@@ -290,9 +290,26 @@ export async function findRoutineSessions(
   }
 }
 
-export async function getGlobalStats(): Promise<any> {
-  // TODO: Define strict type for global stats
-  return await apiFetch("routines/stats/global", {
+export interface GlobalStats {
+  totalRoutines: number;
+  totalSessions: number;
+  totalVolume: number;
+  totalDuration: number;
+  averageSessionDuration?: number;
+  mostUsedExercises?: Array<{
+    exerciseId: string;
+    exerciseName: string;
+    count: number;
+  }>;
+  weeklyProgress?: Array<{
+    week: string;
+    sessions: number;
+    volume: number;
+  }>;
+}
+
+export async function getGlobalStats(): Promise<GlobalStats> {
+  return await apiFetch<GlobalStats>("routines/stats/global", {
     method: "GET",
   });
 }

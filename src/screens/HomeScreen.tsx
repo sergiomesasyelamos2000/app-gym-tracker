@@ -16,11 +16,13 @@ import {
   Animated,
   FlatList,
   Image,
+  ImageStyle,
   Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -35,12 +37,48 @@ import {
 } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { useResponsive } from "../hooks/useResponsive";
-import { ExerciseRequestDto } from "../models";
 import { useAuthStore } from "../store/useAuthStore";
 import CachedExerciseImage from "../components/CachedExerciseImage";
 
+// Types for session exercises
+interface SessionExercise {
+  exerciseId: string;
+  name: string;
+  imageUrl?: string;
+  giftUrl?: string;
+  sets: {
+    weight: number;
+    reps: number;
+    completed: boolean;
+    isRecord?: boolean;
+  }[];
+  totalReps: number;
+}
+
+// Type for session with calculated totals
+interface SessionWithTotals {
+  id: string;
+  routine?: {
+    id: string;
+    title: string;
+  };
+  exercises?: SessionExercise[];
+  totalTime: number;
+  totalWeight: number;
+  completedSets: number;
+  totalReps?: number;
+  createdAt: Date | string;
+}
+
+// Type for global stats
+interface GlobalStats {
+  totalTime: number;
+  totalWeight: number;
+  completedSets: number;
+}
+
 // Componente para mostrar la imagen del ejercicio con manejo de errores
-const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
+const ExerciseImage = ({ exercise, style }: { exercise: SessionExercise; style: StyleProp<ImageStyle> }) => {
   // Use giftUrl if available (animated GIF), otherwise use imageUrl with caching
   if (exercise.giftUrl) {
     return (
@@ -64,7 +102,7 @@ const ExerciseImage = ({ exercise, style }: { exercise: any; style: any }) => {
 type BottomTabsParamList = {
   Inicio: undefined;
   Login: undefined;
-  Entreno: undefined | { screen?: keyof WorkoutStackParamList; params?: any };
+  Entreno: undefined | { screen?: keyof WorkoutStackParamList; params?: Record<string, unknown> };
   Nutrición: undefined;
   Macros: undefined;
 };
@@ -75,8 +113,8 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 export default function HomeScreen() {
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [sessions, setSessions] = useState<SessionWithTotals[]>([]);
+  const [stats, setStats] = useState<GlobalStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [motivationalQuote, setMotivationalQuote] = useState<string>("");
@@ -172,18 +210,18 @@ export default function HomeScreen() {
         findAllRoutineSessions(),
       ]);
 
-      const sessionsWithTotals = sessionsData.map((session) => {
+      const sessionsWithTotals = sessionsData.map((session): SessionWithTotals => {
         const totalWeight = session.exercises?.reduce(
-          (sum: number, e: any) =>
+          (sum: number, e: SessionExercise) =>
             sum +
             e.sets.reduce(
-              (acc: number, s: any) => acc + (s.weight || 0) * (s.reps || 0),
+              (acc: number, s) => acc + (s.weight || 0) * (s.reps || 0),
               0,
             ),
           0,
         );
         const totalReps = session.exercises?.reduce(
-          (sum: number, e: any) => sum + e.totalReps,
+          (sum: number, e: SessionExercise) => sum + e.totalReps,
           0,
         );
 
@@ -242,7 +280,7 @@ export default function HomeScreen() {
 
   // Renderizar SessionCard como componente separado para mejor performance
   const renderSessionCard = useCallback(
-    ({ item: session, index }: { item: any; index: number }) => {
+    ({ item: session, index }: { item: SessionWithTotals; index: number }) => {
       const cardWidth =
         responsive.sessionColumns === 2
           ? (responsive.width - 60) / 2
@@ -312,9 +350,9 @@ export default function HomeScreen() {
             {/* Récords en la sesión */}
             {(() => {
               const totalRecords =
-                session.exercises?.reduce((acc: number, ex: any) => {
+                session.exercises?.reduce((acc: number, ex: SessionExercise) => {
                   return (
-                    acc + (ex.sets?.filter((s: any) => s.isRecord).length || 0)
+                    acc + (ex.sets?.filter((s) => s.isRecord).length || 0)
                   );
                 }, 0) || 0;
 
@@ -337,7 +375,7 @@ export default function HomeScreen() {
             })()}
           </View>
 
-          {session.exercises?.length > 0 && (
+          {(session.exercises?.length ?? 0) > 0 && (
             <View
               style={[
                 styles.exercisesSection,
@@ -351,8 +389,8 @@ export default function HomeScreen() {
               </Text>
               <View style={styles.exercisesList}>
                 {session.exercises
-                  .slice(0, responsive.isTablet ? 3 : 4)
-                  .map((exercise: any) => (
+                  ?.slice(0, responsive.isTablet ? 3 : 4)
+                  .map((exercise: SessionExercise) => (
                     <View key={exercise.exerciseId} style={styles.exerciseItem}>
                       <ExerciseImage
                         exercise={exercise}
@@ -376,7 +414,7 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   ))}
-                {session.exercises.length > (responsive.isTablet ? 3 : 4) && (
+                {(session.exercises?.length ?? 0) > (responsive.isTablet ? 3 : 4) && (
                   <View style={styles.moreExercises}>
                     <Text
                       style={[
@@ -385,7 +423,7 @@ export default function HomeScreen() {
                       ]}
                     >
                       +
-                      {session.exercises.length - (responsive.isTablet ? 3 : 4)}{" "}
+                      {(session.exercises?.length ?? 0) - (responsive.isTablet ? 3 : 4)}{" "}
                       más
                     </Text>
                   </View>

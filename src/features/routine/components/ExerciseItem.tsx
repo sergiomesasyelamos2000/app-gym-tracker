@@ -5,6 +5,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../models";
+import { AppTheme } from "../../../types";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -56,7 +57,7 @@ export default function ExerciseItem({
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     exerciseItem: {
       flexDirection: "row",

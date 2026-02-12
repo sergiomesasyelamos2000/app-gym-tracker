@@ -22,7 +22,14 @@ interface CelebrationProps {
 
 const PARTICLE_COUNT = 30;
 
-const Particle = ({ delay, angle, speed, color }: any) => {
+interface ParticleProps {
+  delay: number;
+  angle: number;
+  speed?: number;
+  color: string;
+}
+
+const Particle = ({ delay, angle, speed, color }: ParticleProps) => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);

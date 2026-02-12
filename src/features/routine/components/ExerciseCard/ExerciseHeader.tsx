@@ -14,6 +14,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { ExerciseRequestDto } from "../../../../models";
+import { AppTheme, BaseNavigation } from "../../../../types";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -40,7 +41,7 @@ const ExerciseHeader = ({
   showOptions = false,
   hasSuperset = false,
 }: Props) => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<BaseNavigation>();
   const { theme } = useTheme();
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [isSupersetModalVisible, setSupersetModalVisible] = useState(false);
@@ -303,7 +304,7 @@ const ExerciseHeader = ({
   );
 };
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     header: {
       flexDirection: "row",

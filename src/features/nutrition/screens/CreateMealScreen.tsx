@@ -26,6 +26,7 @@ import {
   MealProduct,
   Product,
 } from "../../../models";
+import { AppTheme } from "../../../types";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -712,7 +713,7 @@ export default function CreateMealScreen() {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,

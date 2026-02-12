@@ -46,6 +46,7 @@ import {
 import ReusableCameraView from "../../common/components/ReusableCameraView";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
+import { CaughtError } from "../../../types";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -1459,7 +1460,7 @@ export default function ProductListScreen() {
           ]
         );
       }
-    } catch (error: any) {
+    } catch (error: CaughtError) {
       console.error("Error escaneando código:", error);
 
       // Si hay error, asumir que no existe y ofrecer crearlo
