@@ -20,7 +20,16 @@
       "Bash(curl -s http://localhost:3000/api)",
       "Bash(npm run migration:show)",
       "Bash(npm run)",
-      "Bash(npm run migration:run)"
+      "Bash(npm run migration:run)",
+      "Bash(npm start -- --clear)",
+      "Bash(kill 11080)",
+      "Bash(lsof -ti:8081)",
+      "Bash(xargs kill -9)",
+      "Bash(npm --version)",
+      "Bash(npm start)",
+      "Bash(lsof -i:8081)",
+      "Bash(curl -s http://localhost:8081/status)",
+      "Bash(grep -l \"class-validator\\\\|class-transformer\" /Users/smyelamos/Desktop/gym_app/api-gym-tracker/libs/entity-data-models/src/dtos/*.ts)"
     ],
     "deny": [],
     "ask": []

@@ -6,7 +6,7 @@
     "emitDecoratorMetadata": true,
     "paths": {
       "@entity-data-models/*": [
-        "../api-gym-tracker/libs/entity-data-models/src/*"
+        "../api-gym-tracker/libs/entity-data-models/src/dtos/*"
       ]
     },
     "types": ["jest"]
