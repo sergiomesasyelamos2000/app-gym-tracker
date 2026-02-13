@@ -6,6 +6,9 @@
  */
 
 import {
+  ForgotPasswordRequestDto,
+  ForgotPasswordResponseDto,
+  ResetPasswordRequestDto,
   UpdateUserProfileDto,
   UserResponseDto,
 } from "@entity-data-models/auth.dto";
@@ -76,6 +79,30 @@ export async function refreshAccessToken(
   return await apiFetch<AuthResponse>("auth/refresh", {
     method: "POST",
     body: JSON.stringify({ refreshToken }),
+  });
+}
+
+/**
+ * Request password reset token
+ */
+export async function forgotPassword(
+  payload: ForgotPasswordRequestDto
+): Promise<ForgotPasswordResponseDto> {
+  return await apiFetch<ForgotPasswordResponseDto>("auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Reset password with token
+ */
+export async function resetPassword(
+  payload: ResetPasswordRequestDto
+): Promise<{ message: string }> {
+  return await apiFetch<{ message: string }>("auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 

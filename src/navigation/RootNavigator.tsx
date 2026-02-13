@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import AuthScreen from "../features/login/screens/AuthScreen";
+import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
 import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
@@ -69,7 +70,14 @@ export const RootNavigator = () => {
           />
         </>
       ) : (
-        <Stack.Screen name="Auth" component={AuthScreen} />
+        <>
+          <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{ animation: "slide_from_right" }}
+          />
+        </>
       )}
     </Stack.Navigator>
   );

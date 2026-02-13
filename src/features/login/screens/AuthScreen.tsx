@@ -7,10 +7,8 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,14 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { googleAuth, login, register } from "../services/authService";
 import { CaughtError, getErrorMessage } from "../../../types";
 
 WebBrowser.maybeCompleteAuthSession();
-
-const { width } = Dimensions.get("window");
 type AuthMode = "login" | "register";
 
 interface GoogleAuthentication {
@@ -41,10 +38,12 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [nameFocused, setNameFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -108,6 +107,17 @@ export default function AuthScreen() {
     }
   }, [response]);
 
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const isStrongPassword = (value: string) =>
+    value.length >= 8 &&
+    value.length <= 72 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value);
+
   const handleGoogleAuthSuccess = async (
     authentication: GoogleAuthentication,
   ) => {
@@ -143,17 +153,45 @@ export default function AuthScreen() {
   };
 
   const handleEmailAuth = async () => {
-    if (!email || !password || (mode === "register" && !name)) {
+    if (!email || !password || (mode === "register" && (!name || !confirmPassword))) {
       Alert.alert("Error", "Completa todos los campos");
       return;
+    }
+
+    if (!isValidEmail(email)) {
+      Alert.alert("Email inválido", "Introduce un correo electrónico válido.");
+      return;
+    }
+
+    if (mode === "register") {
+      if (name.trim().length < 2 || name.trim().length > 80) {
+        Alert.alert(
+          "Nombre inválido",
+          "El nombre debe tener entre 2 y 80 caracteres."
+        );
+        return;
+      }
+
+      if (!isStrongPassword(password)) {
+        Alert.alert(
+          "Contraseña insegura",
+          "Debe tener 8-72 caracteres, mayúscula, minúscula, número y símbolo."
+        );
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        Alert.alert("Error", "Las contraseñas no coinciden.");
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
       const authResponse =
         mode === "login"
-          ? await login({ email, password })
-          : await register({ email, password, name });
+          ? await login({ email: email.trim(), password })
+          : await register({ email: email.trim(), password, name: name.trim() });
 
       setAuth(authResponse.user, authResponse.tokens);
       Alert.alert(
@@ -184,7 +222,14 @@ export default function AuthScreen() {
     setMode(mode === "login" ? "register" : "login");
     setEmail("");
     setPassword("");
+    setConfirmPassword("");
     setName("");
+  };
+
+  const handleNavigateForgotPassword = () => {
+    (navigation as any).navigate("ForgotPassword", {
+      email: email.trim() || undefined,
+    });
   };
 
   return (
@@ -349,6 +394,47 @@ export default function AuthScreen() {
                     onBlur={() => setPasswordFocused(false)}
                   />
                 </View>
+
+                {mode === "register" && (
+                  <>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={[
+                          styles.modernInput,
+                          {
+                            backgroundColor: theme.card,
+                            color: theme.text,
+                            borderColor: confirmPasswordFocused
+                              ? theme.primary
+                              : "transparent",
+                          },
+                        ]}
+                        placeholder="Confirmar contraseña"
+                        placeholderTextColor={theme.textTertiary}
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry
+                        onFocus={() => setConfirmPasswordFocused(true)}
+                        onBlur={() => setConfirmPasswordFocused(false)}
+                      />
+                    </View>
+                    <Text style={[styles.passwordHint, { color: theme.textSecondary }]}>
+                      8-72 caracteres, con mayúscula, minúscula, número y símbolo.
+                    </Text>
+                  </>
+                )}
+
+                {mode === "login" && (
+                  <TouchableOpacity
+                    onPress={handleNavigateForgotPassword}
+                    style={styles.forgotPasswordLink}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
+                      ¿Olvidaste tu contraseña?
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={[
@@ -541,6 +627,20 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     gap: 8,
+  },
+  passwordHint: {
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  forgotPasswordLink: {
+    alignSelf: "flex-end",
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  forgotPasswordText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   modernInput: {
     borderRadius: 16,
