@@ -73,6 +73,17 @@ interface SessionWithTotals {
 
 // GlobalStats is now imported from routineService
 
+const toSafeNumber = (value: unknown): number => {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({
   exercise,
@@ -214,12 +225,15 @@ export default function HomeScreen() {
 
       const sessionsWithTotals = sessionsData.map(
         (session): SessionWithTotals => {
-          const totalWeight =
+          const calculatedWeight =
             session.exercises?.reduce(
               (sum: number, e) =>
                 sum +
-                e.sets.reduce(
-                  (acc: number, s) => acc + (s.weight || 0) * (s.reps || 0),
+                (e.sets || []).reduce(
+                  (acc: number, s) =>
+                    acc +
+                    toSafeNumber((s as { weight?: unknown }).weight) *
+                      toSafeNumber((s as { reps?: unknown }).reps),
                   0
                 ),
               0
@@ -227,22 +241,57 @@ export default function HomeScreen() {
 
           const totalReps =
             session.exercises?.reduce((sum: number, e) => {
-              const exerciseTotalReps = e.sets.reduce(
-                (acc: number, s) => acc + (s.reps || 0),
+              const exerciseTotalReps = (e.sets || []).reduce(
+                (acc: number, s) =>
+                  acc + toSafeNumber((s as { reps?: unknown }).reps),
                 0
               );
               return sum + exerciseTotalReps;
             }, 0) || 0;
 
+          const sessionTotalWeight = toSafeNumber(
+            (session as { totalWeight?: unknown }).totalWeight
+          );
+          const sessionTotalTime = toSafeNumber(
+            (session as { totalTime?: unknown }).totalTime
+          );
+          const sessionCompletedSets = toSafeNumber(
+            (session as { completedSets?: unknown }).completedSets
+          );
+
           return {
             ...session,
-            totalWeight,
+            totalTime: sessionTotalTime,
+            totalWeight: sessionTotalWeight || calculatedWeight,
+            completedSets: sessionCompletedSets,
             totalReps,
+            createdAt:
+              (session as { createdAt?: Date | string }).createdAt ||
+              new Date().toISOString(),
           };
         }
       );
 
-      setStats(globalStats);
+      const fallbackDuration = sessionsWithTotals.reduce(
+        (sum, session) => sum + toSafeNumber(session.totalTime),
+        0
+      );
+      const fallbackVolume = sessionsWithTotals.reduce(
+        (sum, session) => sum + toSafeNumber(session.totalWeight),
+        0
+      );
+      const fallbackSessions = sessionsWithTotals.length;
+
+      const resolvedStats: GlobalStats = {
+        ...globalStats,
+        totalDuration:
+          toSafeNumber(globalStats.totalDuration) || fallbackDuration,
+        totalVolume: toSafeNumber(globalStats.totalVolume) || fallbackVolume,
+        totalSessions:
+          toSafeNumber(globalStats.totalSessions) || fallbackSessions,
+      };
+
+      setStats(resolvedStats);
       setSessions(sessionsWithTotals);
     } catch (error) {
       console.error("Error fetching data", error);

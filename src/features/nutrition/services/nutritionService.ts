@@ -17,6 +17,13 @@ import {
 } from "@entity-data-models/index";
 import { useAuthStore } from "../../../store/useAuthStore";
 
+export interface AIUsageResponseDto {
+  isPremium: boolean;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+}
+
 /**
  * Get current user ID from auth store
  * @throws Error if user is not authenticated
@@ -74,6 +81,12 @@ export async function postPhoto(
   return apiFetch<RecognizeFoodResponseDto[]>("nutrition/photo", {
     method: "POST",
     body: formData,
+  });
+}
+
+export async function getAIUsage(userId: string): Promise<AIUsageResponseDto> {
+  return apiFetch<AIUsageResponseDto>(`nutrition/usage/${userId}`, {
+    method: "GET",
   });
 }
 

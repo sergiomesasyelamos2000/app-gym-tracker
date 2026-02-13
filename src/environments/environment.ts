@@ -4,7 +4,7 @@ const isDev = process.env.NODE_ENV === "development";
 // - Si usas emulador Android: usa "10.0.2.2:3000"
 // - Si usas emulador iOS o dispositivo físico en la misma red: usa tu IP local (ej: "192.168.1.X:3000")
 // - Si usas Expo Go en dispositivo físico: usa tu IP local
-const LOCAL_IP = "192.168.1.138"; // ⚠️ IMPORTANTE: Para dispositivo físico DEBES usar tu IP WiFi, NO localhost
+const LOCAL_IP = "192.168.1.136"; // ⚠️ IMPORTANTE: Para dispositivo físico DEBES usar tu IP WiFi, NO localhost
 
 export const ENV = {
   API_URL: isDev

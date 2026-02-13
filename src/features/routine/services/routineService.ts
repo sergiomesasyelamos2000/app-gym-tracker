@@ -308,12 +308,49 @@ export interface GlobalStats {
   }>;
 }
 
+type RawGlobalStatsResponse = Partial<GlobalStats> & {
+  totalTime?: unknown;
+  totalWeight?: unknown;
+  completedSets?: unknown;
+};
+
+const toSafeNumber = (value: unknown): number => {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeGlobalStats = (raw: RawGlobalStatsResponse): GlobalStats => ({
+  totalRoutines: toSafeNumber(raw.totalRoutines),
+  totalSessions: toSafeNumber(raw.totalSessions),
+  totalVolume: toSafeNumber(raw.totalVolume ?? raw.totalWeight),
+  totalDuration: toSafeNumber(raw.totalDuration ?? raw.totalTime),
+  averageSessionDuration:
+    raw.averageSessionDuration === undefined
+      ? undefined
+      : toSafeNumber(raw.averageSessionDuration),
+  mostUsedExercises: Array.isArray(raw.mostUsedExercises)
+    ? raw.mostUsedExercises
+    : undefined,
+  weeklyProgress: Array.isArray(raw.weeklyProgress) ? raw.weeklyProgress : undefined,
+});
+
 export async function getGlobalStats(): Promise<GlobalStats> {
   try {
     // Try to fetch from API
-    return await apiFetch<GlobalStats>("routines/stats/global", {
-      method: "GET",
-    });
+    const response = await apiFetch<RawGlobalStatsResponse>(
+      "routines/stats/global",
+      {
+        method: "GET",
+      }
+    );
+
+    return normalizeGlobalStats(response);
   } catch (error: CaughtError) {
     // If API fails, calculate from local sessions
     const sessions = await findAllRoutineSessions();
@@ -321,8 +358,11 @@ export async function getGlobalStats(): Promise<GlobalStats> {
     const stats: GlobalStats = {
       totalRoutines: 0, // Would need to fetch routines separately
       totalSessions: sessions.length,
-      totalVolume: sessions.reduce((sum, s) => sum + (s.totalWeight || 0), 0),
-      totalDuration: sessions.reduce((sum, s) => sum + (s.totalTime || 0), 0),
+      totalVolume: sessions.reduce(
+        (sum, s) => sum + toSafeNumber(s.totalWeight),
+        0
+      ),
+      totalDuration: sessions.reduce((sum, s) => sum + toSafeNumber(s.totalTime), 0),
     };
 
     return stats;

@@ -216,7 +216,7 @@ export default function NutritionScreen() {
     if (!canUseAI()) {
       Alert.alert(
         "Límite Alcanzado",
-        `Has alcanzado el límite de ${dailyLimit} consultas diarias en el plan gratuito. Actualiza a Premium para consultas ilimitadas.`,
+        `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para consultas ilimitadas.`,
         [
           {
             text: "Actualizar a Premium",
@@ -248,7 +248,7 @@ export default function NutritionScreen() {
       if (!allowed) {
         Alert.alert(
           "Límite Alcanzado",
-          `Has alcanzado el límite de ${dailyLimit} consultas diarias. El límite se restablecerá mañana.`
+          `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito.`
         );
         return;
       }
@@ -266,7 +266,7 @@ export default function NutritionScreen() {
     if (!canUseAI()) {
       Alert.alert(
         "Límite Alcanzado",
-        `Has alcanzado el límite de ${dailyLimit} consultas diarias en el plan gratuito. Actualiza a Premium para análisis ilimitados.`,
+        `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para análisis ilimitados.`,
         [
           {
             text: "Actualizar a Premium",
@@ -311,7 +311,7 @@ export default function NutritionScreen() {
         if (!allowed) {
           Alert.alert(
             "Límite Alcanzado",
-            `Has alcanzado el límite de ${dailyLimit} consultas diarias. El límite se restablecerá mañana.`
+            `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito.`
           );
           return;
         }
@@ -430,8 +430,8 @@ export default function NutritionScreen() {
                   ]}
                 >
                   {remainingCalls > 0
-                    ? `${remainingCalls} de ${dailyLimit} consultas restantes hoy`
-                    : "Límite diario alcanzado"}
+                    ? `${remainingCalls} de ${dailyLimit} consultas disponibles`
+                    : "Límite de consultas alcanzado"}
                 </Text>
               </View>
               <View style={styles.usageBannerRight}>

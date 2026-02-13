@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { getAIUsage } from '../features/nutrition/services/nutritionService';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 const AI_USAGE_KEY_PREFIX = 'ai_usage_limit'; // Prefijo base
-const FREE_TIER_DAILY_LIMIT = 10; // Límite diario para usuarios gratuitos
+const FREE_TIER_TOTAL_LIMIT = 10; // Límite total para usuarios gratuitos
 
 interface AIUsageData {
   count: number;
-  lastResetDate: string;
 }
 
 // Helper para obtener la clave específica del usuario
@@ -30,7 +30,7 @@ export function useAIUsageLimit() {
       setRemainingCalls(null);
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, isPremium]);
 
   const loadUsageData = async () => {
     if (!userId) {
@@ -39,37 +39,44 @@ export function useAIUsageLimit() {
     }
 
     try {
+      // Source of truth from backend
+      const backendUsage = await getAIUsage(userId);
+      if (backendUsage.isPremium || isPremium) {
+        setRemainingCalls(null);
+        return;
+      }
+
+      if (backendUsage.remaining !== null) {
+        setRemainingCalls(Math.max(0, backendUsage.remaining));
+
+        const usedFromBackend = Math.max(
+          0,
+          FREE_TIER_TOTAL_LIMIT - backendUsage.remaining
+        );
+        await AsyncStorage.setItem(
+          getAIUsageKey(userId),
+          JSON.stringify({ count: usedFromBackend })
+        );
+        return;
+      }
+    } catch (error) {
+      console.warn('Could not sync AI usage from backend, using local cache');
+    }
+
+    try {
       const data = await AsyncStorage.getItem(getAIUsageKey(userId));
       if (data) {
         const usageData: AIUsageData = JSON.parse(data);
-        const today = new Date().toDateString();
-
-        // Resetear si es un nuevo día
-        if (usageData.lastResetDate !== today) {
-          await resetUsage();
-        } else {
-          setRemainingCalls(FREE_TIER_DAILY_LIMIT - usageData.count);
-        }
+        setRemainingCalls(Math.max(0, FREE_TIER_TOTAL_LIMIT - usageData.count));
       } else {
-        setRemainingCalls(FREE_TIER_DAILY_LIMIT);
+        setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
       }
     } catch (error) {
       console.error('Error loading AI usage data:', error);
-      setRemainingCalls(FREE_TIER_DAILY_LIMIT);
+      setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetUsage = async () => {
-    if (!userId) return;
-
-    const usageData: AIUsageData = {
-      count: 0,
-      lastResetDate: new Date().toDateString(),
-    };
-    await AsyncStorage.setItem(getAIUsageKey(userId), JSON.stringify(usageData));
-    setRemainingCalls(FREE_TIER_DAILY_LIMIT);
   };
 
   const incrementUsage = async (): Promise<boolean> => {
@@ -84,30 +91,24 @@ export function useAIUsageLimit() {
       return false;
     }
 
+    if (remainingCalls !== null && remainingCalls <= 0) {
+      return false;
+    }
+
     try {
       const data = await AsyncStorage.getItem(getAIUsageKey(userId));
       let usageData: AIUsageData;
 
       if (data) {
         usageData = JSON.parse(data);
-        const today = new Date().toDateString();
-
-        // Resetear si es un nuevo día
-        if (usageData.lastResetDate !== today) {
-          usageData = {
-            count: 0,
-            lastResetDate: today,
-          };
-        }
       } else {
         usageData = {
           count: 0,
-          lastResetDate: new Date().toDateString(),
         };
       }
 
       // Verificar límite
-      if (usageData.count >= FREE_TIER_DAILY_LIMIT) {
+      if (usageData.count >= FREE_TIER_TOTAL_LIMIT) {
         setRemainingCalls(0);
         return false;
       }
@@ -115,7 +116,7 @@ export function useAIUsageLimit() {
       // Incrementar contador
       usageData.count += 1;
       await AsyncStorage.setItem(getAIUsageKey(userId), JSON.stringify(usageData));
-      setRemainingCalls(FREE_TIER_DAILY_LIMIT - usageData.count);
+      setRemainingCalls(Math.max(0, FREE_TIER_TOTAL_LIMIT - usageData.count));
       return true;
     } catch (error) {
       console.error('Error incrementing AI usage:', error);
@@ -134,6 +135,6 @@ export function useAIUsageLimit() {
     incrementUsage,
     loading,
     isPremium,
-    dailyLimit: FREE_TIER_DAILY_LIMIT,
+    dailyLimit: FREE_TIER_TOTAL_LIMIT,
   };
 }

@@ -231,10 +231,13 @@ export default function WorkoutScreen() {
         ]}
         refreshControl={
           <RefreshControl
+            key="workout-refresh-purple"
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            tintColor="#6C3BAA"
+            titleColor="#6C3BAA"
+            colors={["#6C3BAA"]}
+            progressBackgroundColor="#FFFFFF"
           />
         }
       >
