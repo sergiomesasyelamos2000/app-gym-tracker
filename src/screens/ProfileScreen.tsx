@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import {
   Bell,
   Calendar,
@@ -18,6 +20,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  TextInput,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -28,7 +32,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
-import { logout as logoutService } from "../features/login/services/authService";
+import {
+  logout as logoutService,
+  updateUserProfile as updateUserProfileService,
+} from "../features/login/services/authService";
 import { SubscriptionPlan } from "../models/subscription.model";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
@@ -38,8 +45,16 @@ import { useSubscriptionStore } from "../store/useSubscriptionStore";
 export default function ProfileScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
+  const [editedPicture, setEditedPicture] = useState<string | undefined>(
+    undefined
+  );
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const isProfileComplete = useNutritionStore(
     (state) => state.isProfileComplete
@@ -88,6 +103,95 @@ export default function ProfileScreen() {
 
   const handleThemeChange = async (value: boolean) => {
     await setThemeMode(value ? "dark" : "light");
+  };
+
+  const openEditProfileModal = () => {
+    if (!user) return;
+    setEditedName(user.name || "");
+    setEditedEmail(user.email || "");
+    setEditedPicture(user.picture);
+    setIsEditModalVisible(true);
+  };
+
+  const closeEditProfileModal = () => {
+    if (isSavingProfile) return;
+    setIsEditModalVisible(false);
+  };
+
+  const handlePickProfileImage = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos necesarios",
+          "Necesitamos permisos para acceder a tus fotos."
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        const uri = result.assets[0].uri;
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: "base64",
+        });
+        setEditedPicture(`data:image/jpeg;base64,${base64}`);
+      }
+    } catch (error) {
+      console.error("Error selecting profile image:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen.");
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+
+    const trimmedName = editedName.trim();
+    const trimmedEmail = editedEmail.trim().toLowerCase();
+
+    if (!trimmedName) {
+      Alert.alert("Nombre requerido", "El nombre no puede estar vacío.");
+      return;
+    }
+
+    if (!trimmedEmail) {
+      Alert.alert("Email requerido", "El email no puede estar vacío.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      Alert.alert("Email inválido", "Introduce un correo electrónico válido.");
+      return;
+    }
+
+    try {
+      setIsSavingProfile(true);
+      const updatedUser = await updateUserProfileService(user.id, {
+        name: trimmedName,
+        email: trimmedEmail,
+        picture: editedPicture,
+      });
+
+      updateUser(updatedUser);
+      setIsEditModalVisible(false);
+      Alert.alert("Perfil actualizado", "Tus datos se han guardado correctamente.");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar el perfil. Inténtalo de nuevo."
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleSubscription = () => {
@@ -241,6 +345,18 @@ export default function ProfileScreen() {
           <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
             {user.email}
           </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.editProfileButton,
+              { backgroundColor: theme.primary + "20", borderColor: theme.primary },
+            ]}
+            onPress={openEditProfileModal}
+          >
+            <Text style={[styles.editProfileButtonText, { color: theme.primary }]}>
+              Editar perfil
+            </Text>
+          </TouchableOpacity>
 
           {user.createdAt && (
             <View style={styles.joinedContainer}>
@@ -642,6 +758,118 @@ export default function ProfileScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={isEditModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditProfileModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Editar perfil
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalAvatarContainer}
+              onPress={handlePickProfileImage}
+            >
+              {editedPicture ? (
+                <Image
+                  source={{ uri: editedPicture }}
+                  style={[styles.modalAvatar, { borderColor: theme.primary }]}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.modalAvatarPlaceholder,
+                    { backgroundColor: theme.primary },
+                  ]}
+                >
+                  <User color="#FFFFFF" size={28} />
+                </View>
+              )}
+              <Text
+                style={[styles.modalAvatarHint, { color: theme.textSecondary }]}
+              >
+                Cambiar foto
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalField}>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+                Nombre
+              </Text>
+              <TextInput
+                value={editedName}
+                onChangeText={setEditedName}
+                placeholder="Tu nombre"
+                placeholderTextColor={theme.textTertiary}
+                style={[
+                  styles.modalInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.border,
+                    backgroundColor: theme.backgroundSecondary,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.modalField}>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+                Email
+              </Text>
+              <TextInput
+                value={editedEmail}
+                onChangeText={setEditedEmail}
+                placeholder="tu@email.com"
+                placeholderTextColor={theme.textTertiary}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={[
+                  styles.modalInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.border,
+                    backgroundColor: theme.backgroundSecondary,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.backgroundSecondary, borderColor: theme.border },
+                ]}
+                onPress={closeEditProfileModal}
+                disabled={isSavingProfile}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.textSecondary }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                onPress={handleSaveProfile}
+                disabled={isSavingProfile}
+              >
+                {isSavingProfile ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                    Guardar
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -705,6 +933,17 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 16,
     marginBottom: 12,
+  },
+  editProfileButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  editProfileButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   joinedContainer: {
     flexDirection: "row",
@@ -828,5 +1067,76 @@ const styles = StyleSheet.create({
   appInfoText: {
     fontSize: 12,
     marginBottom: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+  modalAvatarContainer: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalAvatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 2,
+    marginBottom: 8,
+  },
+  modalAvatarPlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalAvatarHint: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  modalField: {
+    marginBottom: 14,
+  },
+  modalLabel: {
+    fontSize: 13,
+    marginBottom: 6,
+    fontWeight: "500",
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
