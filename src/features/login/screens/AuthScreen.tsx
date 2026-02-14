@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -499,22 +500,23 @@ export default function AuthScreen() {
                 <TouchableOpacity
                   style={[
                     styles.googleButton,
-                    {
-                      backgroundColor: theme.card,
-                      borderColor: theme.border,
-                    },
+                    (isLoading || !request) && styles.googleButtonDisabled,
                   ]}
                   onPress={() => promptAsync()}
                   disabled={isLoading || !request}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Iniciar sesión con Google"
                 >
-                  <View style={styles.googleLogo}>
-                    <Text style={styles.googleG}>G</Text>
+                  <View style={styles.googleIconWrap}>
+                    <Image
+                      source={require("../../../../assets/google-logo.png")}
+                      style={styles.googleLogoImage}
+                      resizeMode="contain"
+                    />
                   </View>
-                  <Text
-                    style={[styles.googleButtonText, { color: theme.text }]}
-                  >
-                    Google
+                  <Text style={styles.googleButtonText}>
+                    Iniciar sesión con Google
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -714,28 +716,48 @@ const styles = StyleSheet.create({
   googleButton: {
     borderRadius: 16,
     paddingVertical: 16,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    borderWidth: 2,
+    borderWidth: 1,
+    borderColor: "#DADCE0",
+    backgroundColor: "#FFFFFF",
+    minHeight: 56,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  googleLogo: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#4285F4",
+  googleButtonDisabled: {
+    opacity: 0.6,
+  },
+  googleIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6E6E6",
     justifyContent: "center",
     alignItems: "center",
   },
-  googleG: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "bold",
+  googleLogoImage: {
+    width: 18,
+    height: 18,
   },
   googleButtonText: {
     fontSize: 16,
     fontWeight: "700",
+    color: "#1F1F1F",
   },
   toggleContainer: {
     flexDirection: "row",
