@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -7,10 +8,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { TimerPickerModal } from "react-native-timer-picker";
+import { Picker } from "@react-native-picker/picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../../contexts/ThemeContext";
-import { formatTime, parseRestTime } from "./helpers";
+import { formatTime, parseTime } from "./helpers";
 
 interface Props {
   restTime: string;
@@ -25,7 +26,12 @@ const ExerciseRestPicker = ({
 }: Props) => {
   const { theme } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
-  const { width, height } = useWindowDimensions();
+  const [tempMinutes, setTempMinutes] = useState(0);
+  const [tempSeconds, setTempSeconds] = useState(0);
+  const [activeUnit, setActiveUnit] = useState<"minutes" | "seconds">(
+    "minutes"
+  );
+  const { width } = useWindowDimensions();
 
   // Determinar si es una pantalla pequeña
   const isSmallScreen = width < 375;
@@ -41,27 +47,28 @@ const ExerciseRestPicker = ({
     marginBottom: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
   };
 
-  // Estilos del modal adaptados al tamaño de pantalla
-  const modalFontSizes = {
-    title: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
-    label: isSmallScreen ? 11 : isMediumScreen ? 12 : 14,
-    button: isSmallScreen ? 13 : isMediumScreen ? 14 : 16,
-    pickerItem: isSmallScreen ? 20 : isMediumScreen ? 24 : 28,
-  };
-
   const modalPadding = isSmallScreen ? 16 : isMediumScreen ? 20 : 24;
   const modalWidth = isLargeScreen ? width * 0.5 : width * 0.85;
 
-  const handleTimeConfirm = (pickedDuration: {
-    hours: number;
-    minutes: number;
-    seconds: number;
-    days: number;
-  }) => {
-    const newTime = formatTime(pickedDuration);
+  const openPicker = () => {
+    const { minutes, seconds } = parseTime(restTime);
+    setTempMinutes(Math.max(0, Math.min(59, minutes)));
+    setTempSeconds(Math.max(0, Math.min(59, seconds)));
+    setActiveUnit("minutes");
+    setShowPicker(true);
+  };
+
+  const handleTimeConfirm = () => {
+    const newTime = formatTime({
+      minutes: tempMinutes,
+      seconds: tempSeconds,
+    });
     setRestTime(newTime);
     setShowPicker(false);
   };
+
+  const minuteValues = Array.from({ length: 60 }, (_, i) => i);
+  const secondValues = Array.from({ length: 60 }, (_, i) => i);
 
   return (
     <>
@@ -77,7 +84,7 @@ const ExerciseRestPicker = ({
             opacity: readonly ? 0.6 : 1,
           },
         ]}
-        onPress={() => !readonly && setShowPicker(true)}
+        onPress={() => !readonly && openPicker()}
         activeOpacity={0.7}
         disabled={readonly}
       >
@@ -124,100 +131,176 @@ const ExerciseRestPicker = ({
         )}
       </TouchableOpacity>
 
-      <TimerPickerModal
+      <Modal
         visible={showPicker}
-        setIsVisible={setShowPicker}
-        hideHours
-        minuteLabel="min"
-        initialValue={parseRestTime(restTime)}
-        secondLabel="seg"
-        onConfirm={handleTimeConfirm}
-        modalTitle="Tiempo de descanso"
-        onCancel={() => setShowPicker(false)}
-        closeOnOverlayPress
-        use12HourPicker={false}
-        cancelButtonText="Cancelar"
-        confirmButtonText="Confirmar"
-        styles={{
-          theme: "light",
-          backgroundColor: theme.card,
-          modalTitle: {
-            fontSize: modalFontSizes.title,
-            fontWeight: "700",
-            color: theme.text,
-            marginBottom: isSmallScreen ? 16 : 20,
-            marginTop: isSmallScreen ? 8 : 12,
-            textAlign: "center",
-            letterSpacing: 0.3,
-          },
-          pickerLabel: {
-            fontSize: modalFontSizes.label,
-            marginTop: 4,
-            color: theme.textSecondary,
-            fontWeight: "600",
-            textTransform: "lowercase",
-          },
-          pickerItem: {
-            fontSize: modalFontSizes.pickerItem,
-            fontWeight: "600",
-            color: theme.text,
-          },
-          cancelButton: {
-            fontSize: modalFontSizes.button,
-            paddingVertical: isSmallScreen ? 10 : 12,
-            paddingHorizontal: isSmallScreen ? 16 : 20,
-            backgroundColor: theme.backgroundSecondary,
-            color: theme.textSecondary,
-            fontWeight: "600",
-            borderRadius: 10,
-            borderWidth: 0,
-            borderColor: "transparent",
-            overflow: "hidden",
-          },
-          confirmButton: {
-            fontSize: modalFontSizes.button,
-            paddingVertical: isSmallScreen ? 10 : 12,
-            paddingHorizontal: isSmallScreen ? 16 : 20,
-            backgroundColor: theme.primary,
-            color: "#FFFFFF",
-            fontWeight: "700",
-            borderRadius: 10,
-            borderWidth: 0,
-            borderColor: "transparent",
-            overflow: "hidden",
-          },
-          buttonContainer: {
-            marginTop: isSmallScreen ? 20 : 25,
-            marginBottom: isSmallScreen ? 8 : 12,
-            flexDirection: "row",
-            justifyContent: "space-between",
-            gap: 12,
-            paddingHorizontal: modalPadding,
-          },
-          pickerContainer: {
-            marginVertical: isSmallScreen ? 12 : 16,
-            paddingHorizontal: modalPadding,
-          },
-          contentContainer: {
-            padding: modalPadding,
-            backgroundColor: theme.card,
-            borderRadius: 16,
-            maxWidth: modalWidth,
-            width: "100%",
-            ...Platform.select({
-              ios: {
-                shadowColor: theme.shadowColor,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: theme.card,
+                width: modalWidth,
+                padding: modalPadding,
               },
-              android: {
-                elevation: 8,
-              },
-            }),
-          },
-        }}
-      />
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Tiempo de descanso
+            </Text>
+
+            <View style={styles.unitsHeader}>
+              <TouchableOpacity
+                onPress={() => setActiveUnit("minutes")}
+                style={[
+                  styles.unitChip,
+                  {
+                    backgroundColor:
+                      activeUnit === "minutes"
+                        ? theme.primary + "20"
+                        : theme.backgroundSecondary,
+                    borderColor:
+                      activeUnit === "minutes" ? theme.primary : theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.unitChipText,
+                    {
+                      color:
+                        activeUnit === "minutes" ? theme.primary : theme.text,
+                    },
+                  ]}
+                >
+                  Min
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setActiveUnit("seconds")}
+                style={[
+                  styles.unitChip,
+                  {
+                    backgroundColor:
+                      activeUnit === "seconds"
+                        ? theme.primary + "20"
+                        : theme.backgroundSecondary,
+                    borderColor:
+                      activeUnit === "seconds" ? theme.primary : theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.unitChipText,
+                    {
+                      color:
+                        activeUnit === "seconds" ? theme.primary : theme.text,
+                    },
+                  ]}
+                >
+                  Seg
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.pickersRow}>
+              <View
+                style={[
+                  styles.singlePickerContainer,
+                  {
+                    borderColor:
+                      activeUnit === "minutes" ? theme.primary : theme.border,
+                    backgroundColor: theme.backgroundSecondary,
+                  },
+                ]}
+              >
+                <Picker
+                  selectedValue={tempMinutes}
+                  onValueChange={(value) => {
+                    setActiveUnit("minutes");
+                    setTempMinutes(Number(value));
+                  }}
+                  style={styles.picker}
+                  itemStyle={{ color: theme.text }}
+                >
+                  {minuteValues.map((value) => (
+                    <Picker.Item
+                      key={`m-${value}`}
+                      label={`${value.toString().padStart(2, "0")} min`}
+                      value={value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+
+              <View
+                style={[
+                  styles.singlePickerContainer,
+                  {
+                    borderColor:
+                      activeUnit === "seconds" ? theme.primary : theme.border,
+                    backgroundColor: theme.backgroundSecondary,
+                  },
+                ]}
+              >
+                <Picker
+                  selectedValue={tempSeconds}
+                  onValueChange={(value) => {
+                    setActiveUnit("seconds");
+                    setTempSeconds(Number(value));
+                  }}
+                  style={styles.picker}
+                  itemStyle={{ color: theme.text }}
+                >
+                  {secondValues.map((value) => (
+                    <Picker.Item
+                      key={`s-${value}`}
+                      label={`${value.toString().padStart(2, "0")} seg`}
+                      value={value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                  },
+                ]}
+                onPress={() => setShowPicker(false)}
+              >
+                <Text
+                  style={[styles.modalButtonText, { color: theme.textSecondary }]}
+                >
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.primary, borderColor: theme.primary },
+                ]}
+                onPress={handleTimeConfirm}
+              >
+                <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                  Confirmar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 };
@@ -259,6 +342,78 @@ const styles = StyleSheet.create({
   },
   chevronIcon: {
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    borderRadius: 16,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  unitsHeader: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  unitChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  unitChipText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pickersRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  singlePickerContainer: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  picker: {
+    width: "100%",
+    height: 180,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
 
