@@ -787,6 +787,13 @@ export default function RoutineDetailScreen() {
       exercises: exercisesState.map((exercise) => ({
         exerciseId: exercise.id,
         name: exercise.name,
+        exerciseName: exercise.name,
+        imageUrl: exercise.imageUrl,
+        giftUrl:
+          (exercise as ExerciseRequestDto & { giftUrl?: string; gifUrl?: string })
+            .giftUrl ||
+          (exercise as ExerciseRequestDto & { giftUrl?: string; gifUrl?: string })
+            .gifUrl,
         sets: (sets[exercise.id] || []).map((s) => {
           const isRecord = sessionRecords.some(
             (r) =>

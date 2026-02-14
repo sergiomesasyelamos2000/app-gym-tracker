@@ -56,6 +56,31 @@ interface SessionExercise {
   totalReps?: number; // Optional, calculated on the fly
 }
 
+type RawSessionExercise = {
+  exerciseId?: string;
+  id?: string;
+  name?: string;
+  exerciseName?: string;
+  imageUrl?: string;
+  giftUrl?: string;
+  gifUrl?: string;
+  image?: string;
+  exercise?: {
+    id?: string;
+    name?: string;
+    imageUrl?: string;
+    giftUrl?: string;
+    gifUrl?: string;
+    image?: string;
+  };
+  sets?: {
+    weight?: number;
+    reps?: number;
+    completed?: boolean;
+    isRecord?: boolean;
+  }[];
+};
+
 // Type for session with calculated totals
 interface SessionWithTotals {
   id: string;
@@ -82,6 +107,44 @@ const toSafeNumber = (value: unknown): number => {
         : NaN;
 
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeSessionExercise = (
+  exercise: RawSessionExercise,
+  index: number
+): SessionExercise => {
+  const imageUrl =
+    exercise.imageUrl ||
+    exercise.exercise?.imageUrl ||
+    exercise.image ||
+    exercise.exercise?.image;
+
+  const giftUrl =
+    exercise.giftUrl ||
+    exercise.gifUrl ||
+    exercise.exercise?.giftUrl ||
+    exercise.exercise?.gifUrl;
+
+  return {
+    exerciseId:
+      exercise.exerciseId ||
+      exercise.id ||
+      exercise.exercise?.id ||
+      `exercise-${index}`,
+    name:
+      exercise.name ||
+      exercise.exerciseName ||
+      exercise.exercise?.name ||
+      "Ejercicio",
+    imageUrl,
+    giftUrl,
+    sets: (exercise.sets || []).map((set) => ({
+      weight: toSafeNumber(set.weight),
+      reps: toSafeNumber(set.reps),
+      completed: Boolean(set.completed),
+      isRecord: Boolean(set.isRecord),
+    })),
+  };
 };
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
@@ -225,8 +288,12 @@ export default function HomeScreen() {
 
       const sessionsWithTotals = sessionsData.map(
         (session): SessionWithTotals => {
+          const normalizedExercises: SessionExercise[] = (
+            (session.exercises as RawSessionExercise[] | undefined) || []
+          ).map((exercise, index) => normalizeSessionExercise(exercise, index));
+
           const calculatedWeight =
-            session.exercises?.reduce(
+            normalizedExercises.reduce(
               (sum: number, e) =>
                 sum +
                 (e.sets || []).reduce(
@@ -240,7 +307,7 @@ export default function HomeScreen() {
             ) || 0;
 
           const totalReps =
-            session.exercises?.reduce((sum: number, e) => {
+            normalizedExercises.reduce((sum: number, e) => {
               const exerciseTotalReps = (e.sets || []).reduce(
                 (acc: number, s) =>
                   acc + toSafeNumber((s as { reps?: unknown }).reps),
@@ -261,6 +328,7 @@ export default function HomeScreen() {
 
           return {
             ...session,
+            exercises: normalizedExercises,
             totalTime: sessionTotalTime,
             totalWeight: sessionTotalWeight || calculatedWeight,
             completedSets: sessionCompletedSets,
