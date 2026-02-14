@@ -111,6 +111,8 @@ export async function apiFetch<T = unknown>(
   options: RequestInit = {},
   isRetry: boolean = false
 ): Promise<T> {
+  const authStore = useAuthStore.getState();
+  const hadAccessToken = !!authStore.accessToken;
   const authHeaders = getAuthHeaders();
   const tokenPreview = authHeaders.Authorization?.substring(0, 30) + "...";
 
@@ -148,6 +150,21 @@ export async function apiFetch<T = unknown>(
 
     // ✅ Handle 401 Unauthorized with automatic token refresh
     if (response.status === 401) {
+      // Public auth endpoints should never trigger token refresh logic
+      const publicAuthEndpoints = [
+        "auth/login",
+        "auth/register",
+        "auth/google/login",
+        "auth/google/callback",
+        "auth/forgot-password",
+        "auth/reset-password",
+        "auth/refresh",
+      ];
+
+      const isPublicAuthEndpoint = publicAuthEndpoints.some(
+        (path) => endpoint === path || endpoint.startsWith(`${path}?`)
+      );
+
       // List of endpoints that may return 401 for missing resources (not auth errors)
       const resourceNotFoundEndpoints = [
         "nutrition/user-profile",
@@ -160,7 +177,7 @@ export async function apiFetch<T = unknown>(
       );
 
       // If it's not a resource-not-found endpoint and we haven't retried yet
-      if (!isResourceNotFound && !isRetry) {
+      if (!isPublicAuthEndpoint && !isResourceNotFound && !isRetry) {
         // Attempt to refresh the token
         const refreshSuccess = await attemptTokenRefresh();
 
@@ -176,12 +193,11 @@ export async function apiFetch<T = unknown>(
       // 1. It's a resource-not-found 401 (don't logout)
       // 2. Token refresh failed (logout)
       // 3. This is already a retry (logout to avoid infinite loop)
-      if (!isResourceNotFound) {
+      if (!isPublicAuthEndpoint && !isResourceNotFound && hadAccessToken) {
         console.warn(
           "[ApiClient] Token refresh failed. Clearing auth. Endpoint:",
           endpoint
         );
-        const authStore = useAuthStore.getState();
         authStore.clearAuth();
       }
     }

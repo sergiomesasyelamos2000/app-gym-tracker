@@ -1,5 +1,4 @@
 import { useNavigation } from "@react-navigation/native";
-import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from "react";
@@ -18,8 +17,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { ENV } from "../../../environments/environment";
 import { useAuthStore } from "../../../store/useAuthStore";
-import { googleAuth, login, register } from "../services/authService";
+import { googleLogin, login, register } from "../services/authService";
 import { CaughtError, getErrorMessage } from "../../../types";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -55,13 +55,9 @@ export default function AuthScreen() {
   const navigation = useNavigation();
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId:
-      "1019156813901-996dkn9dvnedm2bb7k2huapr3lsb98rt.apps.googleusercontent.com",
-    webClientId:
-      "1019156813901-qsa5kq5sv3gvf20p76bnu074h2l3us7u.apps.googleusercontent.com",
-    redirectUri: AuthSession.makeRedirectUri({
-      scheme: "app",
-    }),
+    iosClientId: ENV.GOOGLE_CLIENT_ID_IOS,
+    webClientId: ENV.GOOGLE_CLIENT_ID_WEB,
+    scopes: ["openid", "profile", "email"],
   });
 
   useEffect(() => {
@@ -97,7 +93,7 @@ export default function AuthScreen() {
           duration: 1500,
           useNativeDriver: true,
         }),
-      ]),
+      ])
     ).start();
   }, []);
 
@@ -119,27 +115,23 @@ export default function AuthScreen() {
     /[^A-Za-z0-9]/.test(value);
 
   const handleGoogleAuthSuccess = async (
-    authentication: GoogleAuthentication,
+    authentication: GoogleAuthentication
   ) => {
     setIsLoading(true);
     try {
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/userinfo/v2/me",
-        {
-          headers: { Authorization: `Bearer ${authentication.accessToken}` },
-        },
-      );
-      const userInfo = await userInfoResponse.json();
+      if (!ENV.GOOGLE_CLIENT_ID_IOS || !ENV.GOOGLE_CLIENT_ID_WEB) {
+        throw new Error(
+          "Falta configurar EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS/WEB en la app."
+        );
+      }
 
-      const authResponse = await googleAuth({
-        accessToken: authentication.accessToken!,
-        userInfo: {
-          id: userInfo.id,
-          email: userInfo.email,
-          name: userInfo.name,
-          picture: userInfo.picture,
-        },
-      });
+      if (!authentication?.idToken) {
+        throw new Error(
+          "No se obtuvo idToken de Google. Revisa la configuración OAuth para iOS Dev Build."
+        );
+      }
+
+      const authResponse = await googleLogin(authentication.idToken);
 
       setAuth(authResponse.user, authResponse.tokens);
       Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
@@ -153,7 +145,11 @@ export default function AuthScreen() {
   };
 
   const handleEmailAuth = async () => {
-    if (!email || !password || (mode === "register" && (!name || !confirmPassword))) {
+    if (
+      !email ||
+      !password ||
+      (mode === "register" && (!name || !confirmPassword))
+    ) {
       Alert.alert("Error", "Completa todos los campos");
       return;
     }
@@ -191,15 +187,22 @@ export default function AuthScreen() {
       const authResponse =
         mode === "login"
           ? await login({ email: email.trim(), password })
-          : await register({ email: email.trim(), password, name: name.trim() });
+          : await register({
+              email: email.trim(),
+              password,
+              name: name.trim(),
+            });
 
       setAuth(authResponse.user, authResponse.tokens);
       Alert.alert(
         mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
-        `Bienvenido ${authResponse.user.name}`,
+        `Bienvenido ${authResponse.user.name}`
       );
     } catch (error: CaughtError) {
-      Alert.alert("Error", getErrorMessage(error) || "Error en la autenticación");
+      Alert.alert(
+        "Error",
+        getErrorMessage(error) || "Error en la autenticación"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -418,8 +421,14 @@ export default function AuthScreen() {
                         onBlur={() => setConfirmPasswordFocused(false)}
                       />
                     </View>
-                    <Text style={[styles.passwordHint, { color: theme.textSecondary }]}>
-                      8-72 caracteres, con mayúscula, minúscula, número y símbolo.
+                    <Text
+                      style={[
+                        styles.passwordHint,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      8-72 caracteres, con mayúscula, minúscula, número y
+                      símbolo.
                     </Text>
                   </>
                 )}
@@ -430,7 +439,12 @@ export default function AuthScreen() {
                     style={styles.forgotPasswordLink}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>
+                    <Text
+                      style={[
+                        styles.forgotPasswordText,
+                        { color: theme.primary },
+                      ]}
+                    >
                       ¿Olvidaste tu contraseña?
                     </Text>
                   </TouchableOpacity>

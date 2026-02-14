@@ -10,6 +10,8 @@ export const ENV = {
   API_URL: isDev
     ? `http://${LOCAL_IP}:3000/api`
     : "https://your-prod-api.com/api",
+  GOOGLE_CLIENT_ID_IOS: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || "",
+  GOOGLE_CLIENT_ID_WEB: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || "",
   STRIPE_PUBLIC_KEY:
     "pk_test_51SzZYIFd2itPBFXK8rC7AfyOFA9n3oa9aVD0ZyzOZ20JXnXjm02TCqVbW5ENXHeXNIsivaXMbNVlzJdwrVkk7QBZ00bEjByCbE",
 };

@@ -57,6 +57,16 @@ export async function googleAuth(
 }
 
 /**
+ * Authenticate with Google ID token (recommended for mobile)
+ */
+export async function googleLogin(idToken: string): Promise<AuthResponse> {
+  return await apiFetch<AuthResponse>("auth/google/login", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
+  });
+}
+
+/**
  * Logout (invalidate tokens on server)
  */
 export async function logout(): Promise<void> {
