@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  Easing,
   Platform,
   StyleSheet,
   Text,
@@ -9,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
 interface CustomToastProps {
   text1: string;
@@ -29,24 +31,40 @@ const CustomToast = ({
 }: CustomToastProps) => {
   const animatedProgress = useRef(new Animated.Value(progress)).current;
   const { width } = useWindowDimensions();
+  const safeProgress = Math.max(0, Math.min(1, progress));
+  const ringRadius = 27;
+  const ringStroke = 6;
+  const ringCircumference = 2 * Math.PI * ringRadius;
 
   useEffect(() => {
-    // Animate progress bar smoothly
+    if (process.env.NODE_ENV === "test") {
+      animatedProgress.setValue(safeProgress);
+      return;
+    }
+
     Animated.timing(animatedProgress, {
-      toValue: progress,
-      duration: 300,
+      toValue: safeProgress,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [progress]);
+  }, [safeProgress, animatedProgress]);
 
   const interpolatedWidth = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
+  const interpolatedRingOffset = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [ringCircumference, 0],
+  });
+
+  const progressTint =
+    safeProgress > 0.5 ? "#6D5CFF" : safeProgress > 0.2 ? "#8F7BFF" : "#FF6B6B";
+
   const handleAddTime = async () => {
     if (onAddTime) {
-      // Haptic feedback
       if (Platform.OS === "ios") {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
@@ -58,7 +76,6 @@ const CustomToast = ({
 
   const handleSubtractTime = async () => {
     if (onSubtractTime) {
-      // Haptic feedback
       if (Platform.OS === "ios") {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
@@ -70,7 +87,6 @@ const CustomToast = ({
 
   const handleCancel = async () => {
     if (onCancel) {
-      // Haptic feedback for cancel
       if (Platform.OS === "ios") {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Warning
@@ -83,57 +99,92 @@ const CustomToast = ({
   };
 
   return (
-    <View style={[styles.toastContainer, { width: width * 0.92 }]}>
-      <View style={styles.contentRow}>
-        {progress > 0 && (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleSubtractTime}
-            accessibilityLabel="-15 segundos"
-            activeOpacity={0.7}
-          >
-            <Text style={styles.actionButtonText}>−15s</Text>
-          </TouchableOpacity>
-        )}
+    <View style={[styles.toastContainer, { width: width * 0.93 }]}>
+      <View style={styles.topRow}>
+        <View style={styles.timerSection}>
+          <View style={styles.ringWrapper}>
+            <Svg
+              width={(ringRadius + ringStroke) * 2}
+              height={(ringRadius + ringStroke) * 2}
+            >
+              <Circle
+                cx={ringRadius + ringStroke}
+                cy={ringRadius + ringStroke}
+                r={ringRadius}
+                stroke="rgba(255,255,255,0.15)"
+                strokeWidth={ringStroke}
+                fill="transparent"
+              />
+              <AnimatedCircle
+                cx={ringRadius + ringStroke}
+                cy={ringRadius + ringStroke}
+                r={ringRadius}
+                stroke={progressTint}
+                strokeWidth={ringStroke}
+                strokeLinecap="round"
+                fill="transparent"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={interpolatedRingOffset}
+                transform={`rotate(-90 ${ringRadius + ringStroke} ${ringRadius + ringStroke})`}
+              />
+            </Svg>
+            <Text style={styles.timerText}>{text1}</Text>
+          </View>
 
-        <View style={styles.textContainer}>
-          <Text numberOfLines={1} style={styles.toastText}>
-            {text1}
-          </Text>
-          {text2 && (
-            <Text numberOfLines={1} style={styles.toastSubtext}>
-              {text2}
+          <View style={styles.textContainer}>
+            <Text numberOfLines={1} style={styles.toastTitle}>
+              Descanso
             </Text>
-          )}
+            {text2 ? (
+              <Text numberOfLines={1} style={styles.toastSubtext}>
+                {text2}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
-        {progress > 0 && (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleAddTime}
-            accessibilityLabel="+15 segundos"
-            activeOpacity={0.7}
-          >
-            <Text style={styles.actionButtonText}>+15s</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.controls}>
+          {safeProgress > 0 && (
+            <View style={styles.timeActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleSubtractTime}
+                accessibilityLabel="-15 segundos"
+                activeOpacity={0.8}
+              >
+                <Text style={styles.actionButtonText}>−15s</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleAddTime}
+                accessibilityLabel="+15 segundos"
+                activeOpacity={0.8}
+              >
+                <Text style={styles.actionButtonText}>+15s</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {onCancel && (
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancel}
-            accessibilityLabel="Cancelar"
-            activeOpacity={0.8}
-          >
-            <Text style={styles.cancelButtonText}>X</Text>
-          </TouchableOpacity>
-        )}
+          {onCancel && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              accessibilityLabel="Cancelar"
+              activeOpacity={0.85}
+            >
+              <Text style={styles.cancelButtonText}>X</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {progress > 0 && (
+      {safeProgress > 0 && (
         <View style={styles.progressBarContainer}>
           <Animated.View
-            style={[styles.progressBar, { width: interpolatedWidth }]}
+            style={[
+              styles.progressBar,
+              { width: interpolatedWidth, backgroundColor: progressTint },
+            ]}
           />
         </View>
       )}
@@ -141,86 +192,114 @@ const CustomToast = ({
   );
 };
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 const styles = StyleSheet.create({
   toastContainer: {
-    backgroundColor: "#7C3AED",
-    borderRadius: 14,
-    padding: 16,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#181B27",
+    borderRadius: 18,
+    padding: 14,
     alignSelf: "center",
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#2A2F43",
+    elevation: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 14,
   },
-  contentRow: {
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    width: "100%",
+  },
+  timerSection: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    width: "100%",
+    flex: 1,
+    gap: 12,
+  },
+  ringWrapper: {
+    width: 66,
+    height: 66,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timerText: {
+    position: "absolute",
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   textContainer: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 8,
+    paddingTop: 8,
   },
-  toastText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 4,
+  toastTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 2,
   },
   toastSubtext: {
-    color: "rgba(255, 255, 255, 0.9)",
-    fontSize: 14,
+    color: "#AAB1C8",
+    fontSize: 13,
     fontWeight: "500",
-    textAlign: "center",
+  },
+  controls: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  timeActions: {
+    flexDirection: "row",
+    gap: 8,
   },
   actionButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
-    paddingVertical: 8,
+    backgroundColor: "#262B3E",
+    borderRadius: 12,
+    paddingVertical: 7,
     paddingHorizontal: 12,
-    minWidth: 60,
+    minWidth: 58,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#353C56",
   },
   actionButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+    color: "#EFF2FF",
+    fontWeight: "700",
+    fontSize: 13,
   },
   cancelButton: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    width: 36,
-    height: 36,
+    backgroundColor: "#2A3047",
+    borderRadius: 11,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: "#3B4565",
   },
   cancelButtonText: {
-    color: "#7C3AED",
-    fontWeight: "bold",
-    fontSize: 16,
+    color: "#D9E0F7",
+    fontWeight: "700",
+    fontSize: 13,
   },
   progressBarContainer: {
     width: "100%",
-    height: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: "#2A3047",
+    borderRadius: 999,
     marginTop: 12,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 4,
+    borderRadius: 999,
   },
 });
 
