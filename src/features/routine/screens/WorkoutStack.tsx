@@ -19,19 +19,20 @@ export type WorkoutStackParamList = {
     start?: boolean;
   };
   ExerciseList: {
-    onFinishSelection?: (exercises: ExerciseRequestDto[]) => void;
     routineId?: string;
     singleSelection?: boolean;
+    mode?: "createRoutine" | "replaceExercise" | "addToRoutine";
+    replaceExerciseId?: string;
   };
   RoutineEdit: {
     id: string;
     title?: string;
     exercises?: ExerciseRequestDto[];
-    onUpdate?: (newTitle: string) => void;
+    replaceExerciseId?: string;
+    replacementExercise?: ExerciseRequestDto;
+    addExercises?: ExerciseRequestDto[];
   };
-  CreateExercise: {
-    onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
-  };
+  CreateExercise: undefined;
   ExerciseDetail: {
     exercise: ExerciseRequestDto;
   };

@@ -1,7 +1,6 @@
 import {
   NavigationProp,
   useNavigation,
-  useRoute,
 } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -36,6 +35,7 @@ import {
   fetchMuscles,
 } from "../../../services/exerciseService";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { useExerciseSelectionStore } from "../../../store/useExerciseSelectionStore";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 interface DropdownOption {
@@ -44,17 +44,13 @@ interface DropdownOption {
   image?: string; // Base64 de imagen o emoji
 }
 
-interface CreateExerciseRouteProps {
-  onExerciseCreated?: (exercise: ExerciseRequestDto) => void;
-}
-
 export default function CreateExerciseScreen() {
   const { theme, isDark } = useTheme();
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
-  const route = useRoute();
-  const { onExerciseCreated } =
-    (route.params as CreateExerciseRouteProps) || {};
+  const setPendingCreatedExercise = useExerciseSelectionStore(
+    (state) => state.setPendingCreatedExercise
+  );
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -234,9 +230,7 @@ export default function CreateExerciseScreen() {
         imageBase64,
       });
 
-      if (onExerciseCreated) {
-        onExerciseCreated(createdExercise);
-      }
+      setPendingCreatedExercise(createdExercise as ExerciseRequestDto);
 
       navigation.goBack();
     } catch (error: CaughtError) {

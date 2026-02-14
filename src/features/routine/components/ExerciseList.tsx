@@ -1,10 +1,11 @@
 import {
   NavigationProp,
   RouteProp,
+  useFocusEffect,
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +25,7 @@ import {
 } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
+import { useExerciseSelectionStore } from "../../../store/useExerciseSelectionStore";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
@@ -33,8 +35,9 @@ export default function ExerciseList() {
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
   const {
-    onFinishSelection,
     routineId,
+    mode = "createRoutine",
+    replaceExerciseId,
     singleSelection = false,
   } = route.params || {};
 
@@ -48,15 +51,24 @@ export default function ExerciseList() {
   const [exercises, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const handleExerciseCreated = (newExercise: ExerciseRequestDto) => {
-    // Agrega el nuevo ejercicio a la lista de seleccionados automáticamente
-    setSelectedExercises((prev) => [...prev, newExercise]);
-  };
+  const consumePendingCreatedExercise = useExerciseSelectionStore(
+    (state) => state.consumePendingCreatedExercise
+  );
+  const setSelectionContext = useExerciseSelectionStore(
+    (state) => state.setSelectionContext
+  );
+  const clearSelectionContext = useExerciseSelectionStore(
+    (state) => state.clearSelectionContext
+  );
 
   const navigateToCreateExercise = () => {
-    navigation.navigate("CreateExercise", {
-      onExerciseCreated: handleExerciseCreated,
+    setSelectionContext({
+      mode,
+      routineId,
+      replaceExerciseId,
+      singleSelection,
     });
+    navigation.navigate("CreateExercise");
   };
 
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +98,25 @@ export default function ExerciseList() {
     loadExercises();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      const createdExercise = consumePendingCreatedExercise();
+      if (!createdExercise) return;
+
+      setExercises((prev) =>
+        prev.some((item) => item.id === createdExercise.id)
+          ? prev
+          : [createdExercise, ...prev]
+      );
+
+      setSelectedExercises((prev) =>
+        prev.some((item) => item.id === createdExercise.id)
+          ? prev
+          : [...prev, createdExercise]
+      );
+    }, [consumePendingCreatedExercise])
+  );
+
   const filteredExercises = exercises.filter((exercise) =>
     exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -103,17 +134,33 @@ export default function ExerciseList() {
   };
 
   const handleConfirm = () => {
-    if (!onFinishSelection) return;
+    if (selectedExercises.length === 0) return;
 
-    onFinishSelection(selectedExercises);
-
-    if (routineId) {
-      // Editando rutina existente: solo regresamos a la pantalla anterior
-      navigation.goBack();
-    } else {
-      // Creando nueva rutina: vamos a la pantalla de detalle con los ejercicios seleccionados
-      navigation.navigate("RoutineDetail", { exercises: selectedExercises });
+    if (mode === "replaceExercise" && routineId && replaceExerciseId) {
+      navigation.navigate("RoutineEdit", {
+        id: routineId,
+        replaceExerciseId,
+        replacementExercise: selectedExercises[0],
+      });
+      clearSelectionContext();
+      return;
     }
+
+    if (mode === "addToRoutine" && routineId) {
+      navigation.navigate("RoutineEdit", {
+        id: routineId,
+        addExercises: selectedExercises,
+      });
+      clearSelectionContext();
+      return;
+    }
+
+    // createRoutine
+    navigation.navigate("RoutineDetail", {
+      exercises: selectedExercises,
+      start: false,
+    });
+    clearSelectionContext();
   };
 
   return (

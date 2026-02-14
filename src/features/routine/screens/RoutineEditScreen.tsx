@@ -1,4 +1,4 @@
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
@@ -35,11 +35,11 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
-  const route = useRoute();
+  const route = useRoute<RouteProp<WorkoutStackParamList, "RoutineEdit">>();
   const navigation =
     useNavigation<NativeStackNavigationProp<WorkoutStackParamList>>();
-  const { id, title, exercises, onUpdate } =
-    route.params as WorkoutStackParamList["RoutineEdit"];
+  const { id, title, exercises, replaceExerciseId, replacementExercise, addExercises } =
+    route.params;
   const [editTitle, setEditTitle] = React.useState(title);
 
   const styles = React.useMemo(
@@ -142,6 +142,69 @@ export default function RoutineEditScreen() {
     setSupersets(initialSupersets);
   }, [title, exercises]);
 
+  useEffect(() => {
+    if (!replaceExerciseId || !replacementExercise) return;
+
+    setExercises((prev) =>
+      prev.map((ex) =>
+        ex.id === replaceExerciseId
+          ? {
+              ...replacementExercise,
+              sets: sets[replaceExerciseId] || [],
+              notes: ex.notes,
+              restSeconds: ex.restSeconds,
+              weightUnit: ex.weightUnit,
+              repsType: ex.repsType,
+            }
+          : ex
+      )
+    );
+
+    setSets((prev) => {
+      const newSets = { ...prev };
+      newSets[replacementExercise.id] = prev[replaceExerciseId] || [];
+      delete newSets[replaceExerciseId];
+      return newSets;
+    });
+
+    if (supersets[replaceExerciseId]) {
+      setSupersets((prev) => {
+        const newSupersets = { ...prev };
+        const partnerExerciseId = prev[replaceExerciseId];
+
+        newSupersets[replacementExercise.id] = partnerExerciseId;
+
+        if (
+          partnerExerciseId &&
+          newSupersets[partnerExerciseId] === replaceExerciseId
+        ) {
+          newSupersets[partnerExerciseId] = replacementExercise.id;
+        }
+
+        delete newSupersets[replaceExerciseId];
+        return newSupersets;
+      });
+    }
+
+    navigation.setParams({
+      replaceExerciseId: undefined,
+      replacementExercise: undefined,
+    });
+  }, [replaceExerciseId, replacementExercise, navigation, sets, supersets]);
+
+  useEffect(() => {
+    if (!addExercises || addExercises.length === 0) return;
+
+    setExercises((prev) => {
+      const newExercises = addExercises.filter(
+        (ex) => !prev.some((p) => p.id === ex.id)
+      );
+      return [...prev, ...newExercises];
+    });
+
+    navigation.setParams({ addExercises: undefined });
+  }, [addExercises, navigation]);
+
   const handleUpdate = async () => {
     try {
       const routineToUpdate = {
@@ -235,52 +298,8 @@ export default function RoutineEditScreen() {
     navigation.navigate("ExerciseList", {
       routineId: id,
       singleSelection: true,
-      onFinishSelection: (selectedExercises: ExerciseRequestDto[]) => {
-        if (selectedExercises.length > 0) {
-          const newExercise = selectedExercises[0];
-
-          setExercises((prev) =>
-            prev.map((ex) =>
-              ex.id === exerciseId
-                ? {
-                    ...newExercise,
-                    sets: sets[exerciseId] || [],
-                    notes: ex.notes,
-                    restSeconds: ex.restSeconds,
-                    weightUnit: ex.weightUnit,
-                    repsType: ex.repsType,
-                  }
-                : ex
-            )
-          );
-
-          setSets((prev) => {
-            const newSets = { ...prev };
-            newSets[newExercise.id] = prev[exerciseId] || [];
-            delete newSets[exerciseId];
-            return newSets;
-          });
-
-          if (supersets[exerciseId]) {
-            setSupersets((prev) => {
-              const newSupersets = { ...prev };
-              const partnerExerciseId = prev[exerciseId];
-
-              newSupersets[newExercise.id] = partnerExerciseId;
-
-              if (
-                partnerExerciseId &&
-                newSupersets[partnerExerciseId] === exerciseId
-              ) {
-                newSupersets[partnerExerciseId] = newExercise.id;
-              }
-
-              delete newSupersets[exerciseId];
-              return newSupersets;
-            });
-          }
-        }
-      },
+      mode: "replaceExercise",
+      replaceExerciseId: exerciseId,
     });
   };
 
@@ -551,16 +570,7 @@ export default function RoutineEditScreen() {
               onPress={() => {
                 navigation.navigate("ExerciseList", {
                   routineId: id,
-                  onFinishSelection: (
-                    selectedExercises: ExerciseRequestDto[]
-                  ) => {
-                    setExercises((prev) => {
-                      const newExercises = selectedExercises.filter(
-                        (ex) => !prev.some((p) => p.id === ex.id)
-                      );
-                      return [...prev, ...newExercises];
-                    });
-                  },
+                  mode: "addToRoutine",
                 });
               }}
             >

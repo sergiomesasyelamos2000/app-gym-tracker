@@ -203,17 +203,7 @@ export default function WorkoutScreen() {
             // Verificar límite de rutinas antes de permitir crear
             if (canCreateRoutine(routines.length)) {
               navigation.navigate("ExerciseList", {
-                onFinishSelection: (
-                  selectedExercises: ExerciseRequestDto[]
-                ) => {
-                  // Navigate to RoutineDetail with selected exercises to create new routine
-                  navigation.navigate("RoutineDetail", {
-                    routine: undefined,
-                    routineId: undefined,
-                    exercises: selectedExercises,
-                    start: false,
-                  });
-                },
+                mode: "createRoutine",
               });
             }
           }}

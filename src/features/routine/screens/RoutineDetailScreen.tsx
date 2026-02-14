@@ -618,7 +618,6 @@ export default function RoutineDetailScreen() {
       id: routineData?.id ?? "",
       title: routineData?.title || "",
       exercises: exercisesForEdit,
-      onUpdate: (newTitle: string) => setRoutineTitle(newTitle),
     });
   };
 
