@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlanCard } from '../components/PlanCard';
 import { useSubscription } from '../hooks/useSubscription';
+import { useTheme } from '../../../contexts/ThemeContext';
 import {
   SubscriptionPlan,
   PLAN_METADATA,
@@ -20,7 +21,8 @@ import { CaughtError, getErrorMessage, BaseNavigation } from '../../../types';
 
 export function PlansScreen() {
   const navigation = useNavigation<BaseNavigation>();
-  const { subscription, isPremium } = useSubscription();
+  const { subscription } = useSubscription();
+  const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(false);
 
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
@@ -61,7 +63,7 @@ export function PlansScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -69,8 +71,8 @@ export function PlansScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Elige tu Plan</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: theme.text }]}>Elige tu Plan</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Desbloquea todas las funciones con Premium y lleva tu entrenamiento al siguiente nivel
           </Text>
         </View>
@@ -78,8 +80,8 @@ export function PlansScreen() {
         {/* Current Plan Info */}
         {subscription && (
           <View style={styles.currentPlanContainer}>
-            <Text style={styles.currentPlanLabel}>Plan Actual:</Text>
-            <Text style={styles.currentPlanText}>
+            <Text style={[styles.currentPlanLabel, { color: theme.textSecondary }]}>Plan Actual:</Text>
+            <Text style={[styles.currentPlanText, { color: theme.success }]}>
               {PLAN_METADATA[subscription.plan].name}
             </Text>
           </View>
@@ -98,18 +100,25 @@ export function PlansScreen() {
 
         {/* Loading Overlay */}
         {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Creando sesión de pago...</Text>
+          <View
+            style={[
+              styles.loadingOverlay,
+              { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+            ]}
+          >
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+              Creando sesión de pago...
+            </Text>
           </View>
         )}
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
+          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
             Todos los planes incluyen garantía de devolución de 7 días
           </Text>
-          <Text style={styles.footerSubtext}>
+          <Text style={[styles.footerSubtext, { color: theme.textTertiary }]}>
             Cancela cuando quieras • Pago seguro con Stripe
           </Text>
         </View>

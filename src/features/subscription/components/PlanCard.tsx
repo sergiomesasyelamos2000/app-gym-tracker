@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { PlanMetadata, SubscriptionPlan } from '../../../models/subscription.model';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface PlanCardProps {
   plan: PlanMetadata;
@@ -11,6 +12,8 @@ interface PlanCardProps {
 }
 
 export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardProps) {
+  const { theme, isDark } = useTheme();
+
   const handlePress = () => {
     if (!disabled && !isCurrentPlan) {
       onSelect(plan.id);
@@ -23,8 +26,14 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
     <TouchableOpacity
       style={[
         styles.card,
+        { backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadowColor },
         plan.isPopular && styles.popularCard,
+        plan.isPopular && { borderColor: theme.primary },
         isCurrentPlan && styles.currentCard,
+        isCurrentPlan && {
+          borderColor: theme.success,
+          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4',
+        },
         disabled && styles.disabledCard,
       ]}
       onPress={handlePress}
@@ -33,31 +42,35 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
     >
       {/* Popular badge */}
       {plan.isPopular && (
-        <View style={styles.badge}>
+        <View style={[styles.badge, { backgroundColor: theme.primary }]}>
           <Text style={styles.badgeText}>Más Popular</Text>
         </View>
       )}
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.planName}>{plan.name}</Text>
-        <Text style={styles.description}>{plan.description}</Text>
+        <Text style={[styles.planName, { color: theme.text }]}>{plan.name}</Text>
+        <Text style={[styles.description, { color: theme.textSecondary }]}>{plan.description}</Text>
       </View>
 
       {/* Price */}
       <View style={styles.priceContainer}>
-        <Text style={styles.price}>{plan.price.toFixed(2)}</Text>
-        <Text style={styles.currency}>€</Text>
+        <Text style={[styles.price, { color: theme.text }]}>{plan.price.toFixed(2)}</Text>
+        <Text style={[styles.currency, { color: theme.text }]}>€</Text>
         {plan.interval && plan.interval !== 'lifetime' && (
-          <Text style={styles.interval}>/{plan.interval === 'month' ? 'mes' : plan.interval === 'year' ? 'año' : plan.interval}</Text>
+          <Text style={[styles.interval, { color: theme.textSecondary }]}>
+            /{plan.interval === 'month' ? 'mes' : plan.interval === 'year' ? 'año' : plan.interval}
+          </Text>
         )}
-        {plan.interval === 'lifetime' && <Text style={styles.interval}> pago único</Text>}
+        {plan.interval === 'lifetime' && (
+          <Text style={[styles.interval, { color: theme.textSecondary }]}> pago único</Text>
+        )}
       </View>
 
       {/* Savings */}
       {plan.savings && (
         <View style={styles.savingsContainer}>
-          <Text style={styles.savings}>{plan.savings}</Text>
+          <Text style={[styles.savings, { color: theme.success }]}>{plan.savings}</Text>
         </View>
       )}
 
@@ -65,8 +78,8 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
       <View style={styles.features}>
         {plan.features.map((feature, index) => (
           <View key={index} style={styles.featureRow}>
-            <Check size={16} color="#10b981" style={styles.checkIcon} />
-            <Text style={styles.featureText}>{feature}</Text>
+            <Check size={16} color={theme.success} style={styles.checkIcon} />
+            <Text style={[styles.featureText, { color: theme.textSecondary }]}>{feature}</Text>
           </View>
         ))}
       </View>
@@ -75,9 +88,13 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
       <TouchableOpacity
         style={[
           styles.button,
+          { backgroundColor: theme.primary },
           isFree && styles.buttonSecondary,
+          isFree && { backgroundColor: theme.backgroundSecondary },
           isCurrentPlan && styles.buttonDisabled,
+          isCurrentPlan && { backgroundColor: theme.border },
           disabled && styles.buttonDisabled,
+          disabled && { backgroundColor: theme.border },
         ]}
         onPress={handlePress}
         disabled={disabled || isCurrentPlan}
@@ -85,8 +102,11 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
         <Text
           style={[
             styles.buttonText,
+            { color: '#ffffff' },
             isFree && styles.buttonTextSecondary,
+            isFree && { color: theme.text },
             isCurrentPlan && styles.buttonTextDisabled,
+            isCurrentPlan && { color: theme.textTertiary },
           ]}
         >
           {isCurrentPlan ? 'Plan Actual' : isFree ? 'Continuar con Gratuito' : 'Seleccionar Plan'}

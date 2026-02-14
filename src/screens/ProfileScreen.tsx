@@ -762,7 +762,7 @@ export default function ProfileScreen() {
       <Modal
         visible={isEditModalVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeEditProfileModal}
       >
         <View style={styles.modalBackdrop}>
