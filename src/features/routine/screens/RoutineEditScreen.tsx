@@ -16,13 +16,13 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import CachedExerciseImage from "../../../components/CachedExerciseImage";
-import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import {
+import type {
   ExerciseRequestDto,
   RoutineExerciseResponseDto,
   SetRequestDto,
-} from "../../../models";
+} from "@sergiomesasyelamos2000/shared";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import {
   CaughtError,

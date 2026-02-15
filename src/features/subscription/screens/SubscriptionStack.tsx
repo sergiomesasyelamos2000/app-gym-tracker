@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
 import { PlansScreen } from './PlansScreen';
 import { CheckoutScreen } from './CheckoutScreen';
 import { StatusScreen } from './StatusScreen';
@@ -9,7 +10,7 @@ export type SubscriptionStackParamList = {
   CheckoutScreen: {
     sessionId: string;
     checkoutUrl: string;
-    planId: string;
+    planId: SubscriptionPlan;
   };
   StatusScreen: {
     success?: boolean;

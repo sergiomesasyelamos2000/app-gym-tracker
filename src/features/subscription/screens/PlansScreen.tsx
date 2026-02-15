@@ -15,9 +15,10 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import {
   SubscriptionPlan,
   PLAN_METADATA,
-} from '../../../models/subscription.model';
+} from '@sergiomesasyelamos2000/shared';
 import { createCheckoutSession } from '../services/subscriptionService';
-import { CaughtError, getErrorMessage, BaseNavigation } from '../../../types';
+import { getErrorMessage } from '../../../types';
+import type { BaseNavigation, CaughtError } from '../../../types';
 
 export function PlansScreen() {
   const navigation = useNavigation<BaseNavigation>();

@@ -1,20 +1,20 @@
 import * as FileSystem from "expo-file-system";
 import { apiFetch } from "../../../api/client";
 import {
-  CustomMeal,
-  CustomProduct,
-  DailyNutritionSummary,
-  FavoriteProduct,
-  FoodEntry,
-  MacroGoals,
-  Product,
-  ShoppingListItem,
-} from "../../../models/nutrition.model";
-import { UserNutritionProfileResponseDto } from "../../../models/user-nutrition-profile.model";
-import {
+  ChatMessageDto,
   ChatResponseDto,
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
+  DailyNutritionSummary,
+  FavoriteProductResponseDto as FavoriteProduct,
+  FoodEntryResponseDto as FoodEntry,
+  MappedProduct as Product,
+  ShoppingListItem,
+  UserMacroGoals as MacroGoals,
   RecognizeFoodResponseDto,
-} from "@entity-data-models/index";
+  UpdateUserNutritionProfileDto,
+  UserNutritionProfileResponseDto,
+} from "@sergiomesasyelamos2000/shared";
 import { useAuthStore } from "../../../store/useAuthStore";
 
 export interface AIUsageResponseDto {
@@ -62,7 +62,7 @@ export async function convertImageToBase64(
 // AI Chat
 export async function postText(
   text: string,
-  history?: Array<{ role: string; content: string }>,
+  history?: ChatMessageDto[],
   userId?: string,
 ): Promise<ChatResponseDto> {
   // We need to map the history to match proper types if needed,
@@ -194,7 +194,7 @@ export async function createUserProfile(
 }
 
 export async function updateUserProfile(
-  updates: Partial<UserNutritionProfileResponseDto>,
+  updates: UpdateUserNutritionProfileDto,
   userId?: string,
 ): Promise<UserNutritionProfileResponseDto> {
   const id = userId || getCurrentUserId();

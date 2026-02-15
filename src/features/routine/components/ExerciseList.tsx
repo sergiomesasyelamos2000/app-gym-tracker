@@ -17,8 +17,8 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto } from "../../../models";
 import {
   fetchExercises,
   isUsingCache,

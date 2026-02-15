@@ -19,13 +19,14 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type {
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
+  CreateCustomMealDto,
+  MealProductDto as MealProduct,
+  MappedProduct as Product,
+} from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import {
-  CustomMeal,
-  CustomProduct,
-  MealProduct,
-  Product,
-} from "../../../models";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -43,6 +44,72 @@ interface FrontendMealProduct extends MealProduct {
   baseCarbs: number;
   baseFat: number;
 }
+
+type SelectableMealItem = Product | CustomProduct | CustomMeal | MealProduct;
+
+const toFrontendMealProduct = (
+  product: SelectableMealItem
+): FrontendMealProduct => {
+  if ("productCode" in product) {
+    const safeQuantity = product.quantity > 0 ? product.quantity : 1;
+    const productWithOptionalMeta = product as MealProduct & {
+      id?: string;
+      productImage?: string;
+    };
+    return {
+      ...product,
+      id: productWithOptionalMeta.id,
+      productImage: productWithOptionalMeta.productImage,
+      baseCalories: product.calories / safeQuantity,
+      baseProtein: product.protein / safeQuantity,
+      baseCarbs: product.carbs / safeQuantity,
+      baseFat: product.fat / safeQuantity,
+    };
+  }
+
+  if ("totalCalories" in product) {
+    return {
+      id: product.id,
+      productCode: product.id,
+      productName: product.name,
+      productImage: product.image || undefined,
+      quantity: 1,
+      unit: "porción",
+      calories: product.totalCalories,
+      protein: product.totalProtein,
+      carbs: product.totalCarbs,
+      fat: product.totalFat,
+      baseCalories: product.totalCalories,
+      baseProtein: product.totalProtein,
+      baseCarbs: product.totalCarbs,
+      baseFat: product.totalFat,
+    };
+  }
+
+  const isCustom = "caloriesPer100" in product;
+  const baseCalories = isCustom ? product.caloriesPer100 : product.calories;
+  const baseProtein = isCustom ? product.proteinPer100 : product.protein;
+  const baseCarbs = isCustom ? product.carbsPer100 : product.carbohydrates;
+  const baseFat = isCustom ? product.fatPer100 : product.fat;
+
+  return {
+    id: isCustom ? product.id : product.code,
+    isCustom,
+    productCode: isCustom ? product.id : product.code,
+    productName: product.name,
+    productImage: product.image || undefined,
+    quantity: 100,
+    unit: "g",
+    calories: baseCalories,
+    protein: baseProtein,
+    carbs: baseCarbs,
+    fat: baseFat,
+    baseCalories: baseCalories / 100,
+    baseProtein: baseProtein / 100,
+    baseCarbs: baseCarbs / 100,
+    baseFat: baseFat / 100,
+  };
+};
 
 export default function CreateMealScreen() {
   const { theme } = useTheme();
@@ -63,7 +130,7 @@ export default function CreateMealScreen() {
   // Escuchar cuando se selecciona un producto desde ProductDetailScreen
   useEffect(() => {
     if (route.params?.selectedProduct) {
-      const product = route.params.selectedProduct;
+      const product = toFrontendMealProduct(route.params.selectedProduct);
 
       const existingProductIndex = products.findIndex(
         (p) => p.productCode === product.productCode
@@ -73,27 +140,15 @@ export default function CreateMealScreen() {
         setProducts((prev) =>
           prev.map((p, index) =>
             index === existingProductIndex
-              ? ({
+              ? {
                   ...p,
                   quantity: p.quantity + product.quantity,
-                } as FrontendMealProduct)
+                }
               : p
           )
         );
       } else {
-        // Need to convert selectedProduct to FrontendMealProduct if it isn't one.
-        // Assuming selectedProduct has base props or we calculate them.
-        // Actually selectedProduct logic seems incomplete in previous code reuse.
-        // Let's assume for now we don't handle selectedProduct here or it's handled differently.
-        // But to satisfy TS:
-        // Note: The previous logic line 72 `setProducts((prev) => [...prev, product]);` implies `product` matched the type.
-        // If `product` comes from params, it might be just `MealProduct`.
-        // We probably need to map it properly like in the other useEffect.
-        // For now, let's just cast to fix the immediate error, assuming data integrity.
-        setProducts((prev) => [
-          ...prev,
-          product as unknown as FrontendMealProduct,
-        ]);
+        setProducts((prev) => [...prev, product]);
       }
 
       navigation.setParams({ selectedProduct: undefined });
@@ -107,59 +162,8 @@ export default function CreateMealScreen() {
         | CustomProduct
         | CustomMeal
       )[];
-
-      const newMealProducts: FrontendMealProduct[] = selectedProducts.map(
-        (product) => {
-          if ("totalCalories" in product) {
-            return {
-              id: product.id,
-              productCode: product.id,
-              productName: product.name,
-              productImage: product.image || undefined,
-              quantity: 1,
-              unit: "porción",
-              calories: product.totalCalories,
-              protein: product.totalProtein,
-              carbs: product.totalCarbs,
-              fat: product.totalFat,
-              baseCalories: product.totalCalories,
-              baseProtein: product.totalProtein,
-              baseCarbs: product.totalCarbs,
-              baseFat: product.totalFat,
-            };
-          } else {
-            const isCustom = "caloriesPer100" in product;
-            const baseCalories = isCustom
-              ? product.caloriesPer100
-              : product.calories;
-            const baseProtein = isCustom
-              ? product.proteinPer100
-              : product.protein;
-            const baseCarbs = isCustom
-              ? product.carbsPer100
-              : product.carbohydrates;
-            const baseFat = isCustom ? product.fatPer100 : product.fat;
-
-            return {
-              id: isCustom ? product.id : product.code,
-              isCustom,
-              productCode: isCustom ? product.id : product.code,
-              productName: product.name,
-              productImage: product.image || undefined,
-              quantity: 100,
-              unit: "g",
-              calories: baseCalories,
-              protein: baseProtein,
-              carbs: baseCarbs,
-              fat: baseFat,
-              baseCalories: baseCalories / 100,
-              baseProtein: baseProtein / 100,
-              baseCarbs: baseCarbs / 100,
-              baseFat: baseFat / 100,
-            };
-          }
-        }
-      );
+      const newMealProducts: FrontendMealProduct[] =
+        selectedProducts.map(toFrontendMealProduct);
 
       setProducts((prev) => {
         // Use currentProducts if passed (restoring state), otherwise use previous state
@@ -348,17 +352,27 @@ export default function CreateMealScreen() {
     setLoading(true);
 
     try {
-      const productsWithIds = products.map((product, index) => ({
-        ...product,
-        id: product.id || `temp-${Date.now()}-${index}`,
+      const mealProducts: MealProduct[] = products.map((product) => ({
+        productCode: product.productCode,
+        productName: product.productName,
+        quantity: product.quantity,
+        unit: product.unit,
+        calories: product.calories,
+        protein: product.protein,
+        carbs: product.carbs,
+        fat: product.fat,
+        sugar: product.sugar,
+        fiber: product.fiber,
+        sodium: product.sodium,
+        isCustom: product.isCustom,
       }));
 
-      const mealData = {
+      const mealData: CreateCustomMealDto = {
         userId: userProfile.userId,
         name: name.trim(),
-        description: description.trim(),
+        description: description.trim() || undefined,
         image: imageUri || undefined, // Solo pasar el URI, el servicio lo convierte
-        products: productsWithIds,
+        products: mealProducts,
       };
 
       await nutritionService.createCustomMeal(mealData);

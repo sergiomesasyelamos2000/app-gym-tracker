@@ -19,8 +19,8 @@ import {
   Swipeable,
 } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
-import { SetRequestDto } from "../../../../models";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
 import ExerciseSetRow from "./ExerciseSetRow";
 import { COLUMN_FLEX } from "./columnConstants";

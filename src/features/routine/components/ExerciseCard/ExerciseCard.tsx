@@ -10,10 +10,10 @@ import { Button, Card } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type { ExerciseRequestDto, SetRequestDto } from "@sergiomesasyelamos2000/shared";
 
 import { useTheme } from "../../../../contexts/ThemeContext";
-import { ExerciseRequestDto, SetRequestDto } from "../../../../models";
-import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import { detectRecord } from "../../../../services/recordsService";
 import { useRecordsStore } from "../../../../store/useRecordsStore";
 import { CelebrationAnimation } from "../CelebrationAnimation";
@@ -73,7 +73,16 @@ const ExerciseCard = ({
   previousSessions = [],
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
-  const [notes, setNotes] = useState<ExerciseNote[]>(exercise.notes || []);
+  const [notes, setNotes] = useState<ExerciseNote[]>(
+    (exercise.notes || []).map((note, index) => ({
+      id: note.id ?? `note_${exercise.id}_${index}`,
+      text: note.text,
+      createdAt:
+        typeof note.createdAt === "string"
+          ? note.createdAt
+          : new Date().toISOString(),
+    }))
+  );
   const [restTime, setRestTime] = useState(() => {
     if (exercise.restSeconds) {
       const seconds = parseInt(exercise.restSeconds, 10);

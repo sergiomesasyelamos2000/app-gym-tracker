@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { ExerciseRequestDto, SetRequestDto } from "../models";
+import type {
+  ExerciseRequestDto,
+  SetRequestDto,
+} from "@sergiomesasyelamos2000/shared";
 
 export interface WorkoutInProgress {
   routineId: string;

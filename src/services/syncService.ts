@@ -1,16 +1,16 @@
 import NetInfo from "@react-native-community/netinfo";
 import { apiFetch } from "../api/client";
 import { useSyncStore } from "../store/useSyncStore";
-import { CaughtError, getErrorMessage } from "../types";
+import { getErrorMessage } from "../types";
+import type { CaughtError } from "../types";
 import {
-  EntityType,
-  QueueItem,
   cleanupFailedOperations,
   getPendingCount,
   getPendingOperations,
   incrementAttempts,
   removeQueueItem,
 } from "./offlineQueueService";
+import type { EntityType, QueueItem } from "./offlineQueueService";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const SYNC_BATCH_SIZE = 20;

@@ -10,7 +10,7 @@ import {
   Gender,
   ActivityLevel,
   WeightGoal,
-} from "../../models/nutrition.model";
+} from "@sergiomesasyelamos2000/shared";
 
 describe("MacroCalculator Logic", () => {
   const baseAnthropometrics: UserAnthropometrics = {

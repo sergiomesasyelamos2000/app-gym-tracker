@@ -1,7 +1,10 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
+import type {
+  ExerciseRequestDto,
+  RoutineResponseDto,
+} from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto, RoutineResponseDto } from "../../../models";
 import ExerciseListScreen from "../components/ExerciseList";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";

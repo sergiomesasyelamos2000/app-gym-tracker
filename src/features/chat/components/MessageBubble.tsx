@@ -2,16 +2,10 @@ import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { useTheme } from "../../../contexts/ThemeContext";
+import type { Message } from "../../../store/useChatStore";
 import { isExportableContent } from "../../../utils/exportUtils";
 import { withOpacity } from "../../../utils/themeStyles";
 import { ExportButton } from "./ExportButton";
-
-export type Message = {
-  id: number;
-  text: string;
-  sender: "user" | "bot";
-  imageUri?: string;
-};
 
 type Props = {
   message: Message;

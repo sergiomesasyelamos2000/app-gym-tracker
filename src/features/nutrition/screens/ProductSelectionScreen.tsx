@@ -24,11 +24,11 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
-  CustomMeal,
-  CustomProduct,
-  FavoriteProduct,
-  Product,
-} from "../../../models/nutrition.model";
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
+  FavoriteProductResponseDto as FavoriteProduct,
+  MappedProduct as Product,
+} from "@sergiomesasyelamos2000/shared";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";

@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../api/client';
-import {
+import type {
   Subscription,
   SubscriptionStatusResponse,
   CreateCheckoutSessionRequest,
@@ -8,7 +8,7 @@ import {
   CancelSubscriptionRequest,
   CustomerPortalResponse,
   SubscriptionPlan,
-} from '../../../models/subscription.model';
+} from '@sergiomesasyelamos2000/shared';
 
 /**
  * Get current user subscription status

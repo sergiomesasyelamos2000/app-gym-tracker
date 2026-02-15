@@ -23,6 +23,7 @@
     "@react-navigation/native": "^7.1.19",
     "@react-navigation/native-stack": "^7.3.14",
     "@reduxjs/toolkit": "^2.8.2",
+    "@sergiomesasyelamos2000/shared": "1.1.1",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.10",
     "expo": "~54.0.33",

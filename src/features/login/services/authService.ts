@@ -6,27 +6,29 @@
  */
 
 import {
+  AuthResponseDto,
   ForgotPasswordRequestDto,
   ForgotPasswordResponseDto,
+  GoogleAuthRequestDto,
+  GoogleLoginRequestDto,
+  LoginRequestDto,
+  LogoutResponseDto,
+  RefreshTokenRequestDto,
+  RegisterRequestDto,
   ResetPasswordRequestDto,
+  ResetPasswordResponseDto,
   UpdateUserProfileDto,
   UserResponseDto,
-} from "@entity-data-models/auth.dto";
+} from "@sergiomesasyelamos2000/shared";
 import { apiFetch } from "../../../api/client";
-import {
-  AuthResponse,
-  GoogleAuthRequestDto,
-  LoginRequestDto,
-  RegisterRequestDto,
-} from "../../../models";
 
 /**
  * Login with email and password
  */
 export async function login(
   credentials: LoginRequestDto
-): Promise<AuthResponse> {
-  return await apiFetch<AuthResponse>("auth/login", {
+): Promise<AuthResponseDto> {
+  return await apiFetch<AuthResponseDto>("auth/login", {
     method: "POST",
     body: JSON.stringify(credentials),
   });
@@ -37,8 +39,8 @@ export async function login(
  */
 export async function register(
   userData: RegisterRequestDto
-): Promise<AuthResponse> {
-  return await apiFetch<AuthResponse>("auth/register", {
+): Promise<AuthResponseDto> {
+  return await apiFetch<AuthResponseDto>("auth/register", {
     method: "POST",
     body: JSON.stringify(userData),
   });
@@ -49,8 +51,8 @@ export async function register(
  */
 export async function googleAuth(
   googleData: GoogleAuthRequestDto
-): Promise<AuthResponse> {
-  return await apiFetch<AuthResponse>("auth/google/callback", {
+): Promise<AuthResponseDto> {
+  return await apiFetch<AuthResponseDto>("auth/google/callback", {
     method: "POST",
     body: JSON.stringify(googleData),
   });
@@ -59,24 +61,28 @@ export async function googleAuth(
 /**
  * Authenticate with Google ID token (recommended for mobile)
  */
-export async function googleLogin(idToken: string): Promise<AuthResponse> {
-  return await apiFetch<AuthResponse>("auth/google/login", {
+export async function googleLogin(
+  idToken: string
+): Promise<AuthResponseDto> {
+  const payload: GoogleLoginRequestDto = { idToken };
+  return await apiFetch<AuthResponseDto>("auth/google/login", {
     method: "POST",
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify(payload),
   });
 }
 
 /**
  * Logout (invalidate tokens on server)
  */
-export async function logout(): Promise<void> {
+export async function logout(): Promise<LogoutResponseDto> {
   try {
-    await apiFetch<void>("auth/logout", {
+    return await apiFetch<LogoutResponseDto>("auth/logout", {
       method: "POST",
     });
   } catch (error) {
     // Even if server logout fails, we clear local state
     console.warn("Logout request failed, clearing local state anyway:", error);
+    return { message: "Logout local fallback" };
   }
 }
 
@@ -85,10 +91,11 @@ export async function logout(): Promise<void> {
  */
 export async function refreshAccessToken(
   refreshToken: string
-): Promise<AuthResponse> {
-  return await apiFetch<AuthResponse>("auth/refresh", {
+): Promise<AuthResponseDto> {
+  const payload: RefreshTokenRequestDto = { refreshToken };
+  return await apiFetch<AuthResponseDto>("auth/refresh", {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -109,8 +116,8 @@ export async function forgotPassword(
  */
 export async function resetPassword(
   payload: ResetPasswordRequestDto
-): Promise<{ message: string }> {
-  return await apiFetch<{ message: string }>("auth/reset-password", {
+): Promise<ResetPasswordResponseDto> {
+  return await apiFetch<ResetPasswordResponseDto>("auth/reset-password", {
     method: "POST",
     body: JSON.stringify(payload),
   });

@@ -1,12 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import {
-  Subscription,
-  SubscriptionFeatures,
-  SubscriptionStatusResponse,
-  SubscriptionPlan,
-} from '../models/subscription.model';
+import { SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
+import type { Subscription, SubscriptionFeatures, SubscriptionStatusResponse } from '@sergiomesasyelamos2000/shared';
 
 interface SubscriptionState {
   // State

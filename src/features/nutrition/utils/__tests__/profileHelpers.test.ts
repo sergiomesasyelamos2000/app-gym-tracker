@@ -1,4 +1,4 @@
-import { WeightUnit } from "@entity-data-models/shared-types";
+import { WeightUnit } from "@sergiomesasyelamos2000/shared";
 import { normalizeProfileDTO, ProfileInput } from "../profileHelpers";
 
 describe("normalizeProfileDTO", () => {

@@ -8,7 +8,7 @@ import {
   MealProductDto,
   UpdateCustomProductDto,
   UpdateFoodEntryDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import uuid from "react-native-uuid";
 import { execQuery, getDatabase } from "../../database/sqliteClient";
 import { enqueueOperation } from "../offlineQueueService";

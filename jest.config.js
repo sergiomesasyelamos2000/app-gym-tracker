@@ -13,7 +13,6 @@ module.exports = {
     "expo/src/winter/runtime.native.ts": "<rootDir>/src/__mocks__/empty.js",
     "expo/src/winter/installGlobal.ts": "<rootDir>/src/__mocks__/empty.js",
     "expo/src/winter/installGlobal": "<rootDir>/src/__mocks__/empty.js",
-    "^@entity-data-models/(.*)$": "<rootDir>/src/mocks/entityDataModelsMock.ts",
   },
   collectCoverage: false,
   collectCoverageFrom: [

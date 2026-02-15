@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { SetRequestDto } from "../../../../models";
+import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 
 interface UseSetRowLogicProps {
   item: SetRequestDto;

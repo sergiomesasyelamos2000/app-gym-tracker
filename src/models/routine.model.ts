@@ -1,5 +1,5 @@
-export {
+export type {
   RoutineRequestDto,
   RoutineResponseDto,
   RoutineExerciseResponseDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";

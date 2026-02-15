@@ -31,12 +31,12 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import CachedExerciseImage from "../components/CachedExerciseImage";
 import { useTheme } from "../contexts/ThemeContext";
-import { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
+import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
-  GlobalStats,
   findAllRoutineSessions,
   getGlobalStats,
 } from "../features/routine/services/routineService";
+import type { GlobalStats } from "../features/routine/services/routineService";
 import { formatTime } from "../features/routine/utils/routineHelpers";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";

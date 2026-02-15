@@ -14,16 +14,16 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
 import {
   ActivityLevel,
+  CreateUserNutritionProfileDto,
   Gender,
-  HeightUnit,
   UserAnthropometrics,
   UserGoals,
   WeightGoal,
   WeightUnit,
-} from "../../../models/nutrition.model";
+} from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import {
@@ -170,14 +170,14 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
 
       const macroGoals = calculateMacroGoals(anthropometrics, goals);
 
-      const profile = {
+      const profile: CreateUserNutritionProfileDto = {
         userId,
         anthropometrics,
         goals,
         macroGoals,
         preferences: {
           weightUnit: WeightUnit.KG,
-          heightUnit: "cm" as HeightUnit,
+          heightUnit: "cm",
         },
       };
 

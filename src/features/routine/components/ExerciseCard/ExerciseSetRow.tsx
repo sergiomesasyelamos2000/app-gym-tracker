@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
-import { SetRequestDto } from "../../../../models";
 import { getCompletedRowStyle } from "../../../../utils/themeStyles";
 import { COLUMN_FLEX } from "./columnConstants";
 import { useSetRowLogic } from "./useSetRowLogic";

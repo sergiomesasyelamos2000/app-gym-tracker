@@ -102,6 +102,8 @@ export default function RecordCelebration({
 
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, [visible, record]);
 
   const handleDismiss = () => {

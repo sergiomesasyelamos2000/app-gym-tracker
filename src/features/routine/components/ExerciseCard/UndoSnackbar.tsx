@@ -58,6 +58,7 @@ const UndoSnackbar = ({ visible, message, onUndo, onDismiss }: Props) => {
           useNativeDriver: true,
         }),
       ]).start();
+      return undefined;
     }
   }, [visible]);
 

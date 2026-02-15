@@ -1,4 +1,4 @@
-import { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -19,7 +19,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto } from "../../../models";
+import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { ExerciseSet, SessionData, SessionExercise } from "../../../types";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";

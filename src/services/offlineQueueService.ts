@@ -6,7 +6,7 @@ import type {
   RoutineSessionRequestDto,
   UpdateCustomProductDto,
   UpdateFoodEntryDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import { execQuery, execRun, getDatabase } from "../database/sqliteClient";
 
 export type EntityType =

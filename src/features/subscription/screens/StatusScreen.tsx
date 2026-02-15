@@ -9,7 +9,7 @@ import {
   Linking,
   ActivityIndicator,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Crown,
@@ -29,17 +29,20 @@ import {
 import {
   SubscriptionPlan,
   PLAN_METADATA,
-} from "../../../models/subscription.model";
-import { CaughtError, getErrorMessage, BaseNavigation } from "../../../types";
+} from '@sergiomesasyelamos2000/shared';
+import { getErrorMessage } from "../../../types";
+import type { BaseNavigation, CaughtError } from "../../../types";
+import type { SubscriptionStackParamList } from "./SubscriptionStack";
 
-interface StatusScreenParams {
-  success?: boolean;
-}
+type StatusScreenRouteProp = RouteProp<
+  SubscriptionStackParamList,
+  "StatusScreen"
+>;
 
 export function StatusScreen() {
   const navigation = useNavigation<BaseNavigation>();
-  const route = useRoute();
-  const { success } = (route.params as StatusScreenParams) || {};
+  const route = useRoute<StatusScreenRouteProp>();
+  const { success } = route.params || {};
 
   const {
     subscription,

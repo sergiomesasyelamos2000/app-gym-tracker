@@ -2,7 +2,7 @@ import type {
   RoutineRequestDto,
   RoutineResponseDto,
   RoutineSessionEntity,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import {

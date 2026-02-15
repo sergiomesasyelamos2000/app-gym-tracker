@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { PlanMetadata, SubscriptionPlan } from '../../../models/subscription.model';
+import type { PlanMetadata, SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface PlanCardProps {
@@ -20,7 +20,7 @@ export function PlanCard({ plan, onSelect, isCurrentPlan, disabled }: PlanCardPr
     }
   };
 
-  const isFree = plan.id === SubscriptionPlan.FREE;
+  const isFree = plan.id === 'free';
 
   return (
     <TouchableOpacity

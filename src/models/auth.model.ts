@@ -1,27 +1,12 @@
-/**
- * Authentication Models
- *
- * Defines types for user authentication, login/register flows,
- * and token management.
- */
-
-import {
+export type {
   AuthResponseDto as AuthResponse,
   LoginRequestDto,
   RegisterRequestDto,
   GoogleAuthRequestDto,
   AuthTokensDto as AuthTokens,
-} from "@entity-data-models/index";
-import { UserContext } from "@entity-data-models/index";
-
-export {
-  AuthResponse,
-  LoginRequestDto,
-  RegisterRequestDto,
-  GoogleAuthRequestDto,
-  AuthTokens,
   UserContext,
-};
+} from "@sergiomesasyelamos2000/shared";
+import type { UserContext } from "@sergiomesasyelamos2000/shared";
 
 export interface AuthState {
   user: UserContext | null;

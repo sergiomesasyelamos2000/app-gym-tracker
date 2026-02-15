@@ -15,13 +15,15 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
-import {
-  FoodEntry,
+import type {
+  CreateFoodEntryDto,
+  FoodEntryResponseDto,
   FoodUnit,
+  MappedProduct,
   MealType,
-  Product,
-} from "../../../models/nutrition.model";
+  UpdateFoodEntryDto,
+} from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
@@ -30,9 +32,10 @@ const { width } = Dimensions.get("window");
 
 // Local unit type for component state (converts to FoodUnit for API calls)
 type LocalFoodUnit = "g" | "ml" | "portion";
+type FoodEntry = FoodEntryResponseDto;
 
 // Extended Product type with servingUnit (CustomProduct has it, MappedProduct doesn't)
-type ProductWithServingUnit = Product & {
+type ProductWithServingUnit = MappedProduct & {
   servingUnit?: string;
 };
 
@@ -290,13 +293,14 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
     setAddingToCart(true);
     try {
+      const apiUnit: FoodUnit = unit === "g" ? "gram" : unit;
       await nutritionService.addToShoppingList({
         userId: userProfile.userId,
         productCode: producto.code,
         productName: producto.name,
         productImage: producto.image ?? undefined,
         quantity: parseFloat(quantity) || 100,
-        unit: (unit === "g" ? "gram" : unit) as FoodUnit,
+        unit: apiUnit,
         updatedAt: new Date(), // ✅ Agregar updatedAt
       });
       Alert.alert("¡Añadido!", "Producto agregado a la lista de compras");
@@ -336,12 +340,13 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       const nutrients = calculateNutrients;
       const today = new Date().toISOString().split("T")[0];
       const finalMealType = mealType || meal;
+      const apiUnit: FoodUnit = unit === "g" ? "gram" : unit;
 
       if (fromDiary && entryId) {
-        const updatedEntry: Partial<FoodEntry> = {
+        const updatedEntry: UpdateFoodEntryDto = {
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: (unit === "g" ? "gram" : unit) as FoodUnit,
+          unit: apiUnit,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,
@@ -358,7 +363,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           },
         ]);
       } else {
-        const entry: Omit<FoodEntry, "id" | "createdAt"> = {
+        const entry: CreateFoodEntryDto = {
           userId: userProfile.userId,
           productCode: producto.code,
           productName: producto.name,
@@ -366,7 +371,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           date: today,
           mealType: finalMealType,
           quantity: parseFloat(quantity),
-          unit: (unit === "g" ? "gram" : unit) as FoodUnit,
+          unit: apiUnit,
           calories: nutrients.calories,
           protein: nutrients.protein,
           carbs: nutrients.carbs,

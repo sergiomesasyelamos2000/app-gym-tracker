@@ -21,8 +21,12 @@ import {
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type {
+  FoodEntryResponseDto,
+  MealType,
+  UserMacroGoals,
+} from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { FoodEntry, MealType } from "../../../models/nutrition.model";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -106,6 +110,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { NutritionStackParamList } from "./NutritionStack";
 
 type Props = NativeStackScreenProps<NutritionStackParamList, "MacrosScreen">;
+type FoodEntry = FoodEntryResponseDto;
 
 export default function MacrosScreen({ navigation }: Props) {
   const { theme, isDark } = useTheme();
@@ -675,7 +680,7 @@ export default function MacrosScreen({ navigation }: Props) {
   }
 
   // ✅ Usar valores por defecto si no hay perfil
-  const goals = userProfile?.macroGoals || {
+  const goals: UserMacroGoals = userProfile?.macroGoals || {
     dailyCalories: 2000,
     protein: 150,
     carbs: 200,

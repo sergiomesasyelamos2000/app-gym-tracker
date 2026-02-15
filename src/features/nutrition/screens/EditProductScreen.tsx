@@ -19,8 +19,11 @@ import {
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type {
+  FoodUnit,
+  UpdateCustomProductDto,
+} from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
-import { FoodUnit } from "../../../models/nutrition.model";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
@@ -51,7 +54,7 @@ const UNITS_CONFIG: {
 }[] = [
   {
     label: "Gramos",
-    value: "g" as FoodUnit,
+    value: "g",
     icon: "scale-outline",
     color: "#10B981",
   },
@@ -63,11 +66,17 @@ const UNITS_CONFIG: {
   },
   {
     label: "Porción",
-    value: "portion" as FoodUnit,
+    value: "portion",
     icon: "restaurant-outline",
     color: "#F59E0B",
   },
 ];
+
+const normalizeFoodUnit = (value?: string): FoodUnit => {
+  if (value === "gram") return "g";
+  if (value === "g" || value === "ml" || value === "portion") return value;
+  return "g";
+};
 
 export default function EditProductScreen() {
   const { theme } = useTheme();
@@ -90,9 +99,7 @@ export default function EditProductScreen() {
     product?.servingSize ? String(product.servingSize) : "",
   );
   const [servingUnit, setServingUnit] = useState<FoodUnit>(
-    (product?.servingUnit === "gram"
-      ? ("g" as FoodUnit)
-      : (product?.servingUnit as FoodUnit)) || ("g" as FoodUnit),
+    normalizeFoodUnit(product?.servingUnit),
   );
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -212,7 +219,7 @@ export default function EditProductScreen() {
     setLoading(true);
 
     try {
-      const updateData = {
+      const updateData: UpdateCustomProductDto = {
         name: name.trim(),
         description: description.trim() || undefined,
         brand: brand.trim() || undefined,

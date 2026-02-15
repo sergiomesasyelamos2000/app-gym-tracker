@@ -1,8 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { FoodEntry } from "../models/nutrition.model";
-import { UserNutritionProfileResponseDto } from "../models/user-nutrition-profile.model";
+import type {
+  FoodEntryResponseDto as FoodEntry,
+  UserNutritionProfileResponseDto,
+} from "@sergiomesasyelamos2000/shared";
 
 interface NutritionState {
   // State

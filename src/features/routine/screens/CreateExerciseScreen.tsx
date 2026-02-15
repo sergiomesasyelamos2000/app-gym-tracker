@@ -26,8 +26,8 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto } from "../../../models";
 import {
   createExercise,
   fetchEquipment,
@@ -230,7 +230,7 @@ export default function CreateExerciseScreen() {
         imageBase64,
       });
 
-      setPendingCreatedExercise(createdExercise as ExerciseRequestDto);
+      setPendingCreatedExercise(createdExercise);
 
       navigation.goBack();
     } catch (error: CaughtError) {

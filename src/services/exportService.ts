@@ -7,10 +7,10 @@ import {
   findAllRoutineSessions,
 } from "../features/routine/services/routineService";
 import type {
+  DailyNutritionSummary,
   RoutineResponseDto,
   RoutineSessionEntity,
-} from "@entity-data-models/index";
-import { DailyNutritionSummary } from "../models/nutrition.model";
+} from "@sergiomesasyelamos2000/shared";
 
 export type ExportFormat = "json" | "csv";
 export type DataType = "workouts" | "nutrition" | "all";

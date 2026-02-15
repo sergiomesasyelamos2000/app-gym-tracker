@@ -1,9 +1,11 @@
 import {
+  ExerciseRequestDto,
   RoutineExerciseResponseDto,
   RoutineResponseDto,
   RoutineSessionEntity,
+  SetRequestDto,
   SetResponseDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import {
   NavigationProp,
   RouteProp,
@@ -24,7 +26,6 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto, SetRequestDto } from "../../../models";
 import { notificationService } from "../../../services/notificationService";
 import {
   saveRoutineOffline,

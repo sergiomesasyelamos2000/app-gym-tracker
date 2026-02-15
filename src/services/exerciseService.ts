@@ -1,13 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../api/client";
-import {
+import type {
   CreateExerciseDto,
   EquipmentDto,
   ExerciseRequestDto,
   ExerciseTypeDto,
   MuscleDto,
-} from "../models/index.js";
-import { CaughtError } from "../types";
+} from "@sergiomesasyelamos2000/shared";
+import type { CaughtError } from "../types";
 
 const CACHE_KEYS = {
   EXERCISES: "@exercises_cache",

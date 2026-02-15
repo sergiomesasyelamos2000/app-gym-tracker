@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Crown, X, Check } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
-import { BaseNavigation } from "../../../types";
+import type { BaseNavigation } from "../../../types";
 
 interface PaywallScreenProps {
   visible: boolean;

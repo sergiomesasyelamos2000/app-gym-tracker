@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ExerciseRequestDto } from "../models";
+import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 
 export type ExerciseSelectionMode = "createRoutine" | "replaceExercise" | "addToRoutine";
 

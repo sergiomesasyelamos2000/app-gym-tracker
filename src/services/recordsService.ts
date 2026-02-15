@@ -1,5 +1,5 @@
-import { SetRequestDto } from "@entity-data-models/index";
-import type { RoutineSessionEntity } from "@entity-data-models/index";
+import { SetRequestDto } from "@sergiomesasyelamos2000/shared";
+import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 
 export interface RecordData {
   id: string;

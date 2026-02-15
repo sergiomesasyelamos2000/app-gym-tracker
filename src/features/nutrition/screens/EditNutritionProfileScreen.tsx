@@ -15,14 +15,15 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useTheme } from "../../../contexts/ThemeContext";
-import {
+import type {
   ActivityLevel,
   Gender,
+  UpdateUserNutritionProfileDto,
   UserAnthropometrics,
   UserGoals,
   WeightGoal,
-} from "../../../models/nutrition.model";
+} from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import {
@@ -199,7 +200,7 @@ export default function EditNutritionProfileScreen({
       // Recalcular macros basados en los nuevos datos
       const macroGoals = calculateMacroGoals(anthropometrics, goals);
 
-      const updates = {
+      const updates: UpdateUserNutritionProfileDto = {
         anthropometrics,
         goals,
         macroGoals,

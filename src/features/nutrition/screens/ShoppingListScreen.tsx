@@ -13,18 +13,13 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import type { ShoppingListItemResponseDto } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 
-interface ShoppingListItem {
-  id: string;
-  productCode: string;
-  productName: string;
-  productImage?: string;
-  purchased: boolean;
-}
+type ShoppingListItem = ShoppingListItemResponseDto;
 
 export default function ShoppingListScreen() {
   const { theme } = useTheme();

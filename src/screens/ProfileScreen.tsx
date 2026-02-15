@@ -15,7 +15,7 @@ import {
   Utensils,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import { BaseNavigation } from "../types/common";
+import type { BaseNavigation } from "../types/common";
 import {
   ActivityIndicator,
   Alert,
@@ -36,7 +36,7 @@ import {
   logout as logoutService,
   updateUserProfile as updateUserProfileService,
 } from "../features/login/services/authService";
-import { SubscriptionPlan } from "../models/subscription.model";
+import { SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { useNutritionStore } from "../store/useNutritionStore";

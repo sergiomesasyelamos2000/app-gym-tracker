@@ -8,23 +8,24 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { verifyPayment } from '../services/subscriptionService';
 import { useSubscriptionStore } from '../../../store/useSubscriptionStore';
-import { CaughtError, getErrorMessage, BaseNavigation } from '../../../types';
+import type { SubscriptionStatusResponse } from '@sergiomesasyelamos2000/shared';
+import type { BaseNavigation, CaughtError } from '../../../types';
+import type { SubscriptionStackParamList } from './SubscriptionStack';
 
-interface CheckoutScreenParams {
-  sessionId: string;
-  checkoutUrl: string;
-  planId: string;
-}
+type CheckoutScreenRouteProp = RouteProp<
+  SubscriptionStackParamList,
+  'CheckoutScreen'
+>;
 
 export function CheckoutScreen() {
   const navigation = useNavigation<BaseNavigation>();
-  const route = useRoute();
-  const params = route.params as CheckoutScreenParams;
+  const route = useRoute<CheckoutScreenRouteProp>();
+  const params = route.params;
   const webViewRef = useRef<WebView>(null);
 
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ export function CheckoutScreen() {
         const subscription = await verifyPayment(sessionId);
 
         // Update store
-        const statusResponse = {
+        const statusResponse: SubscriptionStatusResponse = {
           subscription,
           features: {
             maxRoutines: null,

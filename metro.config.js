@@ -9,14 +9,9 @@ if (!Array.prototype.toReversed) {
   };
 }
 
-// Define workspace root and shared libs path
+// Define workspace root
 const workspaceRoot = path.resolve(__dirname, "..");
 const projectRoot = __dirname;
-// Only include DTOs, not entities (which have TypeORM/NestJS dependencies)
-const sharedLibsDir = path.resolve(
-  workspaceRoot,
-  "api-gym-tracker/libs/entity-data-models/src/dtos",
-);
 
 // Get default config
 const config = getDefaultConfig(projectRoot);
@@ -29,7 +24,6 @@ config.resolver = {
   ...config.resolver,
   extraNodeModules: {
     ...config.resolver.extraNodeModules,
-    "@entity-data-models": sharedLibsDir,
     // Mock class-validator and class-transformer for React Native
     "class-validator": path.resolve(projectRoot, "src/mocks/empty-module.js"),
     "class-transformer": path.resolve(projectRoot, "src/mocks/empty-module.js"),

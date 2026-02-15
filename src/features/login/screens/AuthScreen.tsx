@@ -85,13 +85,13 @@ export default function AuthScreen() {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1500,
+          toValue: 1.05,
+          duration: 2000,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1500,
+          duration: 2000,
           useNativeDriver: true,
         }),
       ])
@@ -286,19 +286,15 @@ export default function AuthScreen() {
                   style={[
                     styles.logoContainer,
                     {
-                      backgroundColor: `${theme.primary}20`,
                       transform: [{ scale: pulseAnim }],
                     },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.logoInner,
-                      { backgroundColor: theme.primary },
-                    ]}
-                  >
-                    <Text style={styles.logoText}>FT</Text>
-                  </View>
+                  <Image
+                    source={require("../../../../assets/icon.png")}
+                    style={styles.appLogo}
+                    resizeMode="contain"
+                  />
                 </Animated.View>
 
                 <View style={styles.titleContainer}>
@@ -306,7 +302,7 @@ export default function AuthScreen() {
                     {mode === "login" ? "Bienvenido" : "Únete a"}
                   </Text>
                   <Text style={[styles.brandTitle, { color: theme.primary }]}>
-                    FuelTrace
+                    Vyntra
                   </Text>
                 </View>
 
@@ -592,24 +588,14 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
     justifyContent: "center",
     alignItems: "center",
   },
-  logoInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: {
-    color: "#FFF",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: -0.5,
+  appLogo: {
+    width: 100,
+    height: 100,
   },
   titleContainer: {
     alignItems: "center",

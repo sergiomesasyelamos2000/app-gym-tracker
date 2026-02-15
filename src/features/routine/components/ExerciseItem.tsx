@@ -2,9 +2,9 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { ExerciseRequestDto } from "../../../models";
 
 interface Props {
   item: ExerciseRequestDto;

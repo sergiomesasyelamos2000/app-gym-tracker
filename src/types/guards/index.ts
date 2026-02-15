@@ -3,7 +3,7 @@
  * Funciones para verificar tipos en runtime de forma type-safe
  */
 
-import { Product } from "../../models";
+import type { MappedProduct as Product } from "@sergiomesasyelamos2000/shared";
 import { ApiError, ApiResponse, ApiResult } from "../global";
 
 // ============= Guards Básicos =============

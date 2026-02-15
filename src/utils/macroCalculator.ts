@@ -2,10 +2,10 @@ import {
   ActivityLevel,
   Gender,
   WeightGoal,
-  MacroGoals,
   UserAnthropometrics,
   UserGoals,
-} from "../models/nutrition.model";
+  UserMacroGoals as MacroGoals,
+} from "@sergiomesasyelamos2000/shared";
 
 // Activity level multipliers for TDEE calculation
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {

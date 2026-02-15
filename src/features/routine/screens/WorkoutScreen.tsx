@@ -14,10 +14,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import {
-  ExerciseRequestDto,
-  RoutineResponseDto,
-} from "../../../models/index.js";
+import type { RoutineResponseDto } from "@sergiomesasyelamos2000/shared";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 import { MaterialIcons } from "@expo/vector-icons";
@@ -43,7 +40,7 @@ export default function WorkoutScreen() {
   const { width } = useWindowDimensions();
   const { theme, isDark } = useTheme();
 
-  const [routines, setRoutines] = useState<any[]>([]);
+  const [routines, setRoutines] = useState<RoutineResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoutine, setSelectedRoutine] =
     useState<RoutineResponseDto | null>(null);

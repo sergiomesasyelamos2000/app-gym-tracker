@@ -1,8 +1,8 @@
-import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import {
   RoutineRequestDto,
   RoutineResponseDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   saveRoutine as apiSaveRoutine,
@@ -118,6 +118,10 @@ export async function updateRoutineOffline(
   const localRoutine: RoutineResponseDto = {
     ...routine,
     id,
+    createdAt:
+      "createdAt" in routine && routine.createdAt
+        ? routine.createdAt
+        : new Date(),
     updatedAt: new Date(),
     totalSets:
       routine.exercises?.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0) ||

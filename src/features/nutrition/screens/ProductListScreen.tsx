@@ -32,12 +32,12 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
-  CustomMeal,
-  CustomProduct,
-  FavoriteProduct,
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
+  FavoriteProductResponseDto as FavoriteProduct,
   MealType,
-  Product,
-} from "../../../models/nutrition.model";
+  MappedProduct as Product,
+} from "@sergiomesasyelamos2000/shared";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { CaughtError } from "../../../types";
 import {

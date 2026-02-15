@@ -19,8 +19,12 @@ import {
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type {
+  CreateCustomProductDto,
+  FoodUnit,
+  MealType,
+} from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
-import { FoodUnit, MealType } from "../../../models/nutrition.model";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -43,7 +47,7 @@ const UNITS_CONFIG: {
 }[] = [
   {
     label: "Gramos",
-    value: "g" as FoodUnit,
+    value: "g",
     icon: "scale-outline",
     color: "#10B981",
   },
@@ -55,7 +59,7 @@ const UNITS_CONFIG: {
   },
   {
     label: "Porción",
-    value: "portion" as FoodUnit,
+    value: "portion",
     icon: "restaurant-outline",
     color: "#F59E0B",
   },
@@ -82,7 +86,7 @@ export default function CreateProductScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [barcode, setBarcode] = useState("");
   const [servingSize, setServingSize] = useState("");
-  const [servingUnit, setServingUnit] = useState<FoodUnit>("g" as FoodUnit);
+  const [servingUnit, setServingUnit] = useState<FoodUnit>("g");
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Inicializar barcode si viene de los parámetros de navegación
@@ -207,7 +211,7 @@ export default function CreateProductScreen() {
     setLoading(true);
 
     try {
-      const productData = {
+      const productData: CreateCustomProductDto = {
         userId: userProfile.userId,
         name: name.trim(),
         description: description.trim() || undefined,

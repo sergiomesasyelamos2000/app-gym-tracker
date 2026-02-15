@@ -1,5 +1,5 @@
 import uuid from "react-native-uuid";
-import { SetRequestDto } from "../../../models";
+import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 
 export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
   if (sets.length > 0) {

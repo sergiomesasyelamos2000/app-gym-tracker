@@ -1,14 +1,14 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
-import { useTheme } from "../../../contexts/ThemeContext";
-import {
-  CustomMeal,
-  CustomProduct,
-  MealProduct,
-  MealType,
-  Product,
+import type {
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
   FoodUnit,
-} from "../../../models/nutrition.model";
+  MealProductDto as MealProduct,
+  MealType,
+  MappedProduct as Product,
+} from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
 import CreateMealScreen from "./CreateMealScreen";
 import CreateProductScreen from "./CreateProductScreen";
 import EditMealScreen from "./EditMealScreen";

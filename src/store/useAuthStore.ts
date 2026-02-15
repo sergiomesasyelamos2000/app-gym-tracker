@@ -1,8 +1,8 @@
-import { UserResponseDto } from "@entity-data-models/auth.dto";
+import { UserResponseDto } from "@sergiomesasyelamos2000/shared";
+import type { AuthTokensDto as AuthTokens } from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { AuthTokens } from "../models";
 
 interface AuthState {
   // State

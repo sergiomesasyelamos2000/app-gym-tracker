@@ -3,7 +3,7 @@
  * Provee conversiones type-safe entre diferentes sistemas de unidades
  */
 
-import { FoodUnit, WeightUnit, HeightUnit } from '@entity-data-models/index';
+import { FoodUnit, WeightUnit, HeightUnit } from '@sergiomesasyelamos2000/shared';
 
 // ============= Unidades Locales =============
 
@@ -36,11 +36,15 @@ const FOOD_UNIT_MAPPING: Record<LocalFoodUnit, FoodUnit> = {
 /**
  * Mapeo inverso de unidades de API a locales
  */
-const FOOD_UNIT_REVERSE_MAPPING: Record<FoodUnit, LocalFoodUnit> = {
+const FOOD_UNIT_REVERSE_MAPPING: Partial<Record<FoodUnit, LocalFoodUnit>> = {
   gram: 'g',
   ml: 'ml',
   portion: 'portion',
   custom: 'portion', // Fallback para custom
+  g: 'g',
+  kg: 'g',
+  l: 'ml',
+  unit: 'portion',
 } as const;
 
 /**
@@ -54,7 +58,7 @@ export function localToApiFoodUnit(unit: LocalFoodUnit): FoodUnit {
  * Convierte unidad de API a unidad local
  */
 export function apiToLocalFoodUnit(unit: FoodUnit): LocalFoodUnit {
-  return FOOD_UNIT_REVERSE_MAPPING[unit];
+  return FOOD_UNIT_REVERSE_MAPPING[unit] ?? 'portion';
 }
 
 /**

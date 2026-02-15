@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ChatMessageDto } from "@sergiomesasyelamos2000/shared";
 import {
   postPhoto,
   postText,
@@ -122,8 +123,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const userData = userChats[userId] || getInitialUserData();
 
     // Construir historial de mensajes del usuario actual
-    const history = userData.messages.map((msg) => ({
-      role: msg.sender === 'user' ? 'user' : 'bot',
+    const history: ChatMessageDto[] = userData.messages.map((msg) => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
       content: msg.text,
     }));
 

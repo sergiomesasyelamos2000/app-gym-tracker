@@ -1,7 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
-import type { RoutineRequestDto } from "../models";
+import type {
+  RoutineRequestDto,
+  RoutineSessionEntity,
+} from "@sergiomesasyelamos2000/shared";
 
 const SYNC_QUEUE_KEY = "@sync_queue";
 const PENDING_ROUTINES_KEY = "@pending_routines";

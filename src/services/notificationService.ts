@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
-import { AppState, AppStateStatus, Linking, Platform } from "react-native";
+import { AppState, Linking, Platform } from "react-native";
+import type { AppStateStatus } from "react-native";
 
 // Track app state globally
 let currentAppState: AppStateStatus = AppState.currentState;

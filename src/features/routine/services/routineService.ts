@@ -1,8 +1,8 @@
-import type { RoutineSessionEntity } from "@entity-data-models/frontend-types";
+import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import {
   RoutineRequestDto,
   RoutineResponseDto,
-} from "@entity-data-models/index";
+} from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../../../api/client";
 import type { CaughtError } from "../../../types";

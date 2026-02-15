@@ -31,6 +31,8 @@ export const BottomTabs = () => {
               return <BarChart3 color={color} size={size} />;
             case "Perfil":
               return <User color={color} size={size} />;
+            default:
+              return null;
           }
         },
         tabBarActiveTintColor: theme.tabBarActive,

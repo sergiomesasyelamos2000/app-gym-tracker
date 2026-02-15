@@ -19,13 +19,14 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type {
+  CustomMealResponseDto as CustomMeal,
+  CustomProductResponseDto as CustomProduct,
+  MealProductDto as MealProduct,
+  MappedProduct as Product,
+  UpdateCustomMealDto,
+} from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
-import {
-  CustomMeal,
-  CustomProduct,
-  MealProduct,
-  Product,
-} from "../../../models";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
@@ -46,6 +47,72 @@ interface FrontendMealProduct extends MealProduct {
   baseCarbs?: number;
   baseFat?: number;
 }
+
+type SelectableMealItem = Product | CustomProduct | CustomMeal | MealProduct;
+
+const toFrontendMealProduct = (
+  product: SelectableMealItem,
+): FrontendMealProduct => {
+  if ("productCode" in product) {
+    const safeQuantity = product.quantity > 0 ? product.quantity : 1;
+    const productWithOptionalMeta = product as MealProduct & {
+      id?: string;
+      productImage?: string;
+    };
+    return {
+      ...product,
+      id: productWithOptionalMeta.id,
+      productImage: productWithOptionalMeta.productImage,
+      baseCalories: product.calories / safeQuantity,
+      baseProtein: product.protein / safeQuantity,
+      baseCarbs: product.carbs / safeQuantity,
+      baseFat: product.fat / safeQuantity,
+    };
+  }
+
+  if ("totalCalories" in product) {
+    return {
+      id: product.id,
+      productCode: product.id,
+      productName: product.name,
+      productImage: product.image || undefined,
+      quantity: 1,
+      unit: "porción",
+      calories: product.totalCalories,
+      protein: product.totalProtein,
+      carbs: product.totalCarbs,
+      fat: product.totalFat,
+      baseCalories: product.totalCalories,
+      baseProtein: product.totalProtein,
+      baseCarbs: product.totalCarbs,
+      baseFat: product.totalFat,
+    };
+  }
+
+  const isCustom = "caloriesPer100" in product;
+  const baseCalories = isCustom ? product.caloriesPer100 : product.calories;
+  const baseProtein = isCustom ? product.proteinPer100 : product.protein;
+  const baseCarbs = isCustom ? product.carbsPer100 : product.carbohydrates;
+  const baseFat = isCustom ? product.fatPer100 : product.fat;
+
+  return {
+    id: isCustom ? product.id : product.code,
+    isCustom,
+    productCode: isCustom ? product.id : product.code,
+    productName: product.name,
+    productImage: product.image || undefined,
+    quantity: 100,
+    unit: "g",
+    calories: baseCalories,
+    protein: baseProtein,
+    carbs: baseCarbs,
+    fat: baseFat,
+    baseCalories: baseCalories / 100,
+    baseProtein: baseProtein / 100,
+    baseCarbs: baseCarbs / 100,
+    baseFat: baseFat / 100,
+  };
+};
 
 export default function EditMealScreen() {
   const { theme } = useTheme();
@@ -81,52 +148,8 @@ export default function EditMealScreen() {
         | CustomMeal
       )[];
 
-      const newMealProducts: FrontendMealProduct[] = selectedProducts.map(
-        (product) => {
-          // Si es una comida personalizada (CustomMeal)
-          if ("totalCalories" in product) {
-            return {
-              id: product.id,
-              productCode: product.id,
-              productName: product.name,
-              productImage: product.image || undefined,
-              quantity: 1,
-              unit: "porción",
-              calories: product.totalCalories,
-              protein: product.totalProtein,
-              carbs: product.totalCarbs,
-              fat: product.totalFat,
-            };
-          } else {
-            // Es un Product o CustomProduct
-            const isCustom = "caloriesPer100" in product;
-            const baseCalories = isCustom
-              ? product.caloriesPer100
-              : product.calories;
-            const baseProtein = isCustom
-              ? product.proteinPer100
-              : product.protein;
-            const baseCarbs = isCustom
-              ? product.carbsPer100
-              : product.carbohydrates;
-            const baseFat = isCustom ? product.fatPer100 : product.fat;
-
-            return {
-              id: isCustom ? product.id : product.code,
-              isCustom,
-              productCode: isCustom ? product.id : product.code,
-              productName: product.name,
-              productImage: product.image || undefined,
-              quantity: 100,
-              unit: "g",
-              calories: baseCalories,
-              protein: baseProtein,
-              carbs: baseCarbs,
-              fat: baseFat,
-            };
-          }
-        },
-      );
+      const newMealProducts: FrontendMealProduct[] =
+        selectedProducts.map(toFrontendMealProduct);
 
       // Combinar con productos existentes, evitando duplicados
       setProducts((prev) => {
@@ -281,23 +304,26 @@ export default function EditMealScreen() {
     setLoading(true);
 
     try {
-      const updateData = {
+      const mealProducts: MealProduct[] = products.map((p) => ({
+        productCode: p.productCode,
+        productName: p.productName,
+        quantity: p.quantity,
+        unit: p.unit,
+        calories: p.calories,
+        protein: p.protein,
+        carbs: p.carbs,
+        fat: p.fat,
+        sugar: p.sugar,
+        fiber: p.fiber,
+        sodium: p.sodium,
+        isCustom: p.isCustom,
+      }));
+
+      const updateData: UpdateCustomMealDto = {
         name: name.trim(),
         description: description.trim() || undefined,
         image: imageUri || undefined,
-        products: products.map((p) => ({
-          id: p.id || `temp-${Date.now()}-${Math.random()}`,
-          isCustom: p.isCustom,
-          productCode: p.productCode,
-          productName: p.productName,
-          productImage: p.productImage,
-          quantity: p.quantity,
-          unit: p.unit,
-          calories: p.calories,
-          protein: p.protein,
-          carbs: p.carbs,
-          fat: p.fat,
-        })),
+        products: mealProducts,
       };
 
       await nutritionService.updateCustomMeal(meal.id, updateData);

@@ -26,12 +26,12 @@ import ImageModal from "../features/common/components/ImageModal";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
 import {
-  Message,
   selectLoading,
   useChatStore,
   useMessages,
 } from "../store/useChatStore";
-import { BaseNavigation } from "../types";
+import type { Message } from "../store/useChatStore";
+import type { BaseNavigation } from "../types";
 
 // Typing indicator component with animated dots
 const TypingIndicator = ({ theme }: { theme: Theme }) => {
