@@ -306,7 +306,7 @@ export default function AuthScreen() {
                     {mode === "login" ? "Bienvenido" : "Únete a"}
                   </Text>
                   <Text style={[styles.brandTitle, { color: theme.primary }]}>
-                    FitTrack
+                    FuelTrace
                   </Text>
                 </View>
 
@@ -314,7 +314,7 @@ export default function AuthScreen() {
                   style={[styles.description, { color: theme.textSecondary }]}
                 >
                   {mode === "login"
-                    ? "Continúa tu journey fitness"
+                    ? "Continúa tu progreso fitness"
                     : "Empieza tu transformación hoy"}
                 </Text>
               </View>
@@ -500,6 +500,7 @@ export default function AuthScreen() {
                 <TouchableOpacity
                   style={[
                     styles.googleButton,
+                    isDark && styles.googleButtonDark,
                     (isLoading || !request) && styles.googleButtonDisabled,
                   ]}
                   onPress={() => promptAsync()}
@@ -515,7 +516,12 @@ export default function AuthScreen() {
                       resizeMode="contain"
                     />
                   </View>
-                  <Text style={styles.googleButtonText}>
+                  <Text
+                    style={[
+                      styles.googleButtonText,
+                      isDark && styles.googleButtonTextDark,
+                    ]}
+                  >
                     Iniciar sesión con Google
                   </Text>
                 </TouchableOpacity>
@@ -740,6 +746,10 @@ const styles = StyleSheet.create({
   googleButtonDisabled: {
     opacity: 0.6,
   },
+  googleButtonDark: {
+    backgroundColor: "#111827",
+    borderColor: "#374151",
+  },
   googleIconWrap: {
     width: 28,
     height: 28,
@@ -758,6 +768,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#1F1F1F",
+  },
+  googleButtonTextDark: {
+    color: "#F3F4F6",
   },
   toggleContainer: {
     flexDirection: "row",
