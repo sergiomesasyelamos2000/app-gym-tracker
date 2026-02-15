@@ -43,3 +43,11 @@ NUL
 .env.test.local
 .env.production.local
 .env.local
+
+# iOS / Android native build artifacts (keep ios/ and android/ versioned)
+ios/Pods/
+ios/build/
+android/.gradle/
+android/app/build/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
