@@ -5,11 +5,17 @@ const isDev = process.env.NODE_ENV === "development";
 // - Si usas emulador iOS o dispositivo físico en la misma red: usa tu IP local (ej: "192.168.1.X:3000")
 // - Si usas Expo Go en dispositivo físico: usa tu IP local
 const LOCAL_IP = "192.168.1.136"; // ⚠️ IMPORTANTE: Para dispositivo físico DEBES usar tu IP WiFi, NO localhost
+const API_URL_FROM_ENV = process.env.EXPO_PUBLIC_API_URL;
+const LOCAL_API_URL = `http://${LOCAL_IP}:3000/api`;
+const FALLBACK_PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
+const RESOLVED_API_URL =
+  API_URL_FROM_ENV ||
+  (isDev ? LOCAL_API_URL : FALLBACK_PROD_API_URL);
+
+const getAssetBaseUrl = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");
 
 export const ENV = {
-  API_URL: isDev
-    ? `http://${LOCAL_IP}:3000/api`
-    : "https://your-prod-api.com/api",
+  API_URL: RESOLVED_API_URL,
   GOOGLE_CLIENT_ID_IOS: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || "",
   GOOGLE_CLIENT_ID_WEB: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || "",
   STRIPE_PUBLIC_KEY:
@@ -17,5 +23,5 @@ export const ENV = {
 };
 
 export const ENV_ASSETS = {
-  API_URL: isDev ? `http://${LOCAL_IP}:3000` : "https://your-prod-api.com",
+  API_URL: getAssetBaseUrl(RESOLVED_API_URL),
 };
