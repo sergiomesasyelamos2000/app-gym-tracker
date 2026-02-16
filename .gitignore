@@ -45,6 +45,7 @@ NUL
 .env.local
 
 # iOS / Android native build artifacts (keep ios/ and android/ versioned)
+ios/
 ios/Pods/
 ios/build/
 android/.gradle/

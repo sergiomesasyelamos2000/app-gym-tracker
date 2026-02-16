@@ -1694,7 +1694,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-webview (13.13.5):
+  - react-native-webview (13.16.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2427,7 +2427,7 @@ PODS:
 DEPENDENCIES:
   - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
-  - EXImageLoader (from `../node_modules/expo-image-manipulator/node_modules/expo-image-loader/ios`)
+  - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
   - EXJSONUtils (from `../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../node_modules/expo-manifests/ios`)
   - EXNotifications (from `../node_modules/expo-notifications/ios`)
@@ -2548,7 +2548,7 @@ EXTERNAL SOURCES:
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
   EXImageLoader:
-    :path: "../node_modules/expo-image-manipulator/node_modules/expo-image-loader/ios"
+    :path: "../node_modules/expo-image-loader/ios"
   EXJSONUtils:
     :path: "../node_modules/expo-json-utils/ios"
   EXManifests:
@@ -2829,7 +2829,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: f852c868bf5175e46165c7e4db48a204a95c3800
   react-native-pager-view: c8817c1d9f4643417e68f0b846c51214b2252eea
   react-native-safe-area-context: 37e680fc4cace3c0030ee46e8987d24f5d3bdab2
-  react-native-webview: 43ba7cf6bde2cd35a32a7d576469c20168f4da46
+  react-native-webview: 3e303e80cadb5f17118c8c1502aa398e9287e415
   React-NativeModulesApple: 8969913947d5b576de4ed371a939455a8daf28aa
   React-oscompat: ce47230ed20185e91de62d8c6d139ae61763d09c
   React-perflogger: 02b010e665772c7dcb859d85d44c1bfc5ac7c0e4

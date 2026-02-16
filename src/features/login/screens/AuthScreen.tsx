@@ -48,9 +48,7 @@ export default function AuthScreen() {
   const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const navigation = useNavigation();
@@ -65,37 +63,16 @@ export default function AuthScreen() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         useNativeDriver: true,
       }),
       Animated.spring(slideAnim, {
         toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
+        friction: 9,
+        tension: 50,
         useNativeDriver: true,
       }),
     ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
   }, []);
 
   useEffect(() => {
@@ -238,25 +215,21 @@ export default function AuthScreen() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
-      {/* Gradient Background Effect */}
-      <View style={styles.gradientContainer}>
-        <Animated.View
+      {/* Decorative Gradient Background */}
+      <View style={styles.decorativeBackground}>
+        <View
           style={[
-            styles.gradientCircle,
+            styles.gradientBlob1,
             {
               backgroundColor: theme.primary,
-              opacity: 0.15,
-              transform: [{ scale: scaleAnim }],
             },
           ]}
         />
-        <Animated.View
+        <View
           style={[
-            styles.gradientCircle2,
+            styles.gradientBlob2,
             {
               backgroundColor: theme.primary,
-              opacity: 0.1,
-              transform: [{ scale: scaleAnim }],
             },
           ]}
         />
@@ -269,78 +242,81 @@ export default function AuthScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <SafeAreaView style={{ flex: 1 }}>
+          <SafeAreaView style={styles.safeArea}>
             <Animated.View
               style={[
                 styles.contentContainer,
                 {
                   opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+                  transform: [{ translateY: slideAnim }],
                 },
               ]}
             >
-              {/* Logo & Header */}
-              <View style={styles.headerSection}>
-                <Animated.View
-                  style={[
-                    styles.logoContainer,
-                    {
-                      transform: [{ scale: pulseAnim }],
-                    },
-                  ]}
-                >
-                  <Image
-                    source={require("../../../../assets/icon.png")}
-                    style={styles.appLogo}
-                    resizeMode="contain"
+              {/* Modern Header */}
+              <View style={styles.header}>
+                <View style={styles.brandContainer}>
+                  <View
+                    style={[
+                      styles.brandAccent,
+                      { backgroundColor: theme.primary },
+                    ]}
                   />
-                </Animated.View>
-
-                <View style={styles.titleContainer}>
-                  <Text style={[styles.mainTitle, { color: theme.text }]}>
-                    {mode === "login" ? "Bienvenido" : "Únete a"}
-                  </Text>
-                  <Text style={[styles.brandTitle, { color: theme.primary }]}>
-                    Vyntra
+                  <Text style={[styles.brandName, { color: theme.text }]}>
+                    EvoFit
                   </Text>
                 </View>
 
-                <Text
-                  style={[styles.description, { color: theme.textSecondary }]}
-                >
-                  {mode === "login"
-                    ? "Continúa tu progreso fitness"
-                    : "Empieza tu transformación hoy"}
-                </Text>
+                <View style={styles.headerTextContainer}>
+                  <Text style={[styles.welcomeText, { color: theme.text }]}>
+                    {mode === "login"
+                      ? "Bienvenido de vuelta"
+                      : "Crea tu cuenta"}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.subtitleText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {mode === "login"
+                      ? "Continúa tu progreso fitness"
+                      : "Empieza tu transformación hoy"}
+                  </Text>
+                </View>
               </View>
 
-              {/* Form Card */}
+              {/* Form Container */}
               <View
                 style={[
-                  styles.formCard,
+                  styles.formContainer,
                   {
                     backgroundColor: isDark
-                      ? "rgba(255,255,255,0.05)"
-                      : "rgba(255,255,255,0.9)",
-                    borderColor: theme.border,
+                      ? "rgba(255,255,255,0.04)"
+                      : "#FFFFFF",
                   },
                 ]}
               >
                 {mode === "register" && (
-                  <View style={styles.inputWrapper}>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.text }]}>
+                      Nombre completo
+                    </Text>
                     <TextInput
                       style={[
-                        styles.modernInput,
+                        styles.input,
                         {
-                          backgroundColor: theme.card,
+                          backgroundColor: isDark
+                            ? "rgba(255,255,255,0.06)"
+                            : "#F9FAFB",
                           color: theme.text,
                           borderColor: nameFocused
                             ? theme.primary
                             : "transparent",
                         },
                       ]}
-                      placeholder="Nombre completo"
+                      placeholder="Tu nombre"
                       placeholderTextColor={theme.textTertiary}
                       value={name}
                       onChangeText={setName}
@@ -350,19 +326,24 @@ export default function AuthScreen() {
                   </View>
                 )}
 
-                <View style={styles.inputWrapper}>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Email
+                  </Text>
                   <TextInput
                     style={[
-                      styles.modernInput,
+                      styles.input,
                       {
-                        backgroundColor: theme.card,
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.06)"
+                          : "#F9FAFB",
                         color: theme.text,
                         borderColor: emailFocused
                           ? theme.primary
                           : "transparent",
                       },
                     ]}
-                    placeholder="Email"
+                    placeholder="tu@email.com"
                     placeholderTextColor={theme.textTertiary}
                     value={email}
                     onChangeText={setEmail}
@@ -373,19 +354,24 @@ export default function AuthScreen() {
                   />
                 </View>
 
-                <View style={styles.inputWrapper}>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Contraseña
+                  </Text>
                   <TextInput
                     style={[
-                      styles.modernInput,
+                      styles.input,
                       {
-                        backgroundColor: theme.card,
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.06)"
+                          : "#F9FAFB",
                         color: theme.text,
                         borderColor: passwordFocused
                           ? theme.primary
                           : "transparent",
                       },
                     ]}
-                    placeholder="Contraseña"
+                    placeholder="••••••••"
                     placeholderTextColor={theme.textTertiary}
                     value={password}
                     onChangeText={setPassword}
@@ -393,23 +379,44 @@ export default function AuthScreen() {
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
                   />
+                  {mode === "login" && (
+                    <TouchableOpacity
+                      onPress={handleNavigateForgotPassword}
+                      activeOpacity={0.7}
+                      style={styles.forgotPasswordContainer}
+                    >
+                      <Text
+                        style={[
+                          styles.forgotPassword,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {mode === "register" && (
                   <>
-                    <View style={styles.inputWrapper}>
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.text }]}>
+                        Confirmar contraseña
+                      </Text>
                       <TextInput
                         style={[
-                          styles.modernInput,
+                          styles.input,
                           {
-                            backgroundColor: theme.card,
+                            backgroundColor: isDark
+                              ? "rgba(255,255,255,0.06)"
+                              : "#F9FAFB",
                             color: theme.text,
                             borderColor: confirmPasswordFocused
                               ? theme.primary
                               : "transparent",
                           },
                         ]}
-                        placeholder="Confirmar contraseña"
+                        placeholder="••••••••"
                         placeholderTextColor={theme.textTertiary}
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
@@ -420,31 +427,14 @@ export default function AuthScreen() {
                     </View>
                     <Text
                       style={[
-                        styles.passwordHint,
+                        styles.passwordRequirements,
                         { color: theme.textSecondary },
                       ]}
                     >
-                      8-72 caracteres, con mayúscula, minúscula, número y
-                      símbolo.
+                      Mínimo 8 caracteres con mayúscula, minúscula, número y
+                      símbolo
                     </Text>
                   </>
-                )}
-
-                {mode === "login" && (
-                  <TouchableOpacity
-                    onPress={handleNavigateForgotPassword}
-                    style={styles.forgotPasswordLink}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.forgotPasswordText,
-                        { color: theme.primary },
-                      ]}
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </Text>
-                  </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
@@ -457,22 +447,19 @@ export default function AuthScreen() {
                   ]}
                   onPress={handleEmailAuth}
                   disabled={isLoading}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color="#FFF" />
+                    <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
-                    <>
-                      <Text style={styles.primaryButtonText}>
-                        {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
-                      </Text>
-                      <Text style={styles.buttonArrow}>→</Text>
-                    </>
+                    <Text style={styles.primaryButtonText}>
+                      {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                    </Text>
                   )}
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={styles.dividerContainer}>
+                <View style={styles.divider}>
                   <View
                     style={[
                       styles.dividerLine,
@@ -496,50 +483,51 @@ export default function AuthScreen() {
                 <TouchableOpacity
                   style={[
                     styles.googleButton,
-                    isDark && styles.googleButtonDark,
-                    (isLoading || !request) && styles.googleButtonDisabled,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(255,255,255,0.06)"
+                        : "#FFFFFF",
+                      borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E7EB",
+                    },
+                    (isLoading || !request) && styles.disabledButton,
                   ]}
                   onPress={() => promptAsync()}
                   disabled={isLoading || !request}
                   activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Iniciar sesión con Google"
                 >
-                  <View style={styles.googleIconWrap}>
+                  <View style={styles.googleIconContainer}>
                     <Image
                       source={require("../../../../assets/google-logo.png")}
-                      style={styles.googleLogoImage}
+                      style={styles.googleIcon}
                       resizeMode="contain"
                     />
                   </View>
                   <Text
                     style={[
                       styles.googleButtonText,
-                      isDark && styles.googleButtonTextDark,
+                      { color: isDark ? "#F9FAFB" : "#1F2937" },
                     ]}
                   >
-                    Iniciar sesión con Google
+                    Continuar con Google
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Toggle Mode */}
-              <TouchableOpacity
-                onPress={toggleMode}
-                style={styles.toggleContainer}
-                activeOpacity={0.7}
-              >
+              {/* Footer Toggle */}
+              <View style={styles.footer}>
                 <Text
-                  style={[styles.toggleText, { color: theme.textSecondary }]}
+                  style={[styles.footerText, { color: theme.textSecondary }]}
                 >
                   {mode === "login"
                     ? "¿No tienes cuenta?"
                     : "¿Ya tienes cuenta?"}
                 </Text>
-                <Text style={[styles.toggleAction, { color: theme.primary }]}>
-                  {mode === "login" ? "Regístrate" : "Inicia sesión"}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={toggleMode} activeOpacity={0.7}>
+                  <Text style={[styles.footerLink, { color: theme.primary }]}>
+                    {mode === "login" ? "Regístrate" : "Inicia sesión"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           </SafeAreaView>
         </ScrollView>
@@ -552,225 +540,210 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  gradientContainer: {
+  decorativeBackground: {
     position: "absolute",
     width: "100%",
     height: "100%",
+    overflow: "hidden",
   },
-  gradientCircle: {
+  gradientBlob1: {
+    position: "absolute",
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    opacity: 0.08,
+    top: -150,
+    right: -100,
+    transform: [{ rotate: "45deg" }],
+  },
+  gradientBlob2: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    top: -100,
-    right: -100,
-  },
-  gradientCircle2: {
-    position: "absolute",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    bottom: -50,
+    opacity: 0.06,
+    bottom: -100,
     left: -80,
+    transform: [{ rotate: "-30deg" }],
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  safeArea: {
+    flex: 1,
   },
   contentContainer: {
     flex: 1,
     justifyContent: "center",
-    gap: 32,
+    paddingVertical: 40,
+    gap: 40,
   },
-  headerSection: {
-    alignItems: "center",
-    gap: 20,
+  header: {
+    gap: 24,
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  appLogo: {
-    width: 100,
-    height: 100,
-  },
-  titleContainer: {
-    alignItems: "center",
-    gap: 4,
-  },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: "600",
-    letterSpacing: -0.5,
-  },
-  brandTitle: {
-    fontSize: 40,
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    opacity: 0.8,
-  },
-  formCard: {
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  inputWrapper: {
-    gap: 8,
-  },
-  passwordHint: {
-    fontSize: 12,
-    marginTop: -4,
-    marginBottom: 4,
-  },
-  forgotPasswordLink: {
-    alignSelf: "flex-end",
-    marginTop: -4,
-    marginBottom: 4,
-  },
-  forgotPasswordText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  modernInput: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    borderWidth: 2,
-    fontWeight: "500",
-  },
-  primaryButton: {
-    borderRadius: 16,
-    paddingVertical: 18,
+  brandContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 12,
+  },
+  brandAccent: {
+    width: 4,
+    height: 32,
+    borderRadius: 2,
+  },
+  brandName: {
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -1,
+  },
+  headerTextContainer: {
     gap: 8,
-    marginTop: 8,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+  },
+  subtitleText: {
+    fontSize: 16,
+    fontWeight: "400",
+    lineHeight: 22,
+  },
+  formContainer: {
+    borderRadius: 20,
+    padding: 24,
+    gap: 20,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  forgotPasswordContainer: {
+    alignSelf: "flex-end",
+    marginTop: 4,
+  },
+  forgotPassword: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  input: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 2,
+    fontWeight: "500",
+  },
+  passwordRequirements: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: -8,
+    marginLeft: 4,
+  },
+  primaryButton: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
         shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 4,
       },
     }),
   },
   primaryButtonText: {
-    color: "#FFF",
-    fontSize: 17,
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
-  buttonArrow: {
-    color: "#FFF",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  dividerContainer: {
+  divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 8,
-    gap: 12,
+    gap: 16,
+    marginVertical: 4,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    opacity: 0.3,
   },
   dividerText: {
     fontSize: 13,
-    fontWeight: "600",
-    opacity: 0.6,
+    fontWeight: "500",
   },
   googleButton: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    borderWidth: 1,
-    borderColor: "#DADCE0",
-    backgroundColor: "#FFFFFF",
-    minHeight: 56,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 2,
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
       },
       android: {
         elevation: 1,
       },
     }),
   },
-  googleButtonDisabled: {
-    opacity: 0.6,
+  disabledButton: {
+    opacity: 0.5,
   },
-  googleButtonDark: {
-    backgroundColor: "#111827",
-    borderColor: "#374151",
-  },
-  googleIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
+  googleIconContainer: {
+    width: 24,
+    height: 24,
     justifyContent: "center",
     alignItems: "center",
   },
-  googleLogoImage: {
-    width: 18,
-    height: 18,
+  googleIcon: {
+    width: 20,
+    height: 20,
   },
   googleButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F1F1F",
+    fontSize: 15,
+    fontWeight: "600",
   },
-  googleButtonTextDark: {
-    color: "#F3F4F6",
-  },
-  toggleContainer: {
+  footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    paddingVertical: 8,
+    paddingTop: 8,
   },
-  toggleText: {
+  footerText: {
     fontSize: 15,
     fontWeight: "500",
   },
-  toggleAction: {
+  footerLink: {
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
   },
 });

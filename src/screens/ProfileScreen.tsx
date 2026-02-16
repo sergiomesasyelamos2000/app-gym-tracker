@@ -36,7 +36,7 @@ import {
   logout as logoutService,
   updateUserProfile as updateUserProfileService,
 } from "../features/login/services/authService";
-import { SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
+import { SubscriptionPlan } from "@sergiomesasyelamos2000/shared";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { useNutritionStore } from "../store/useNutritionStore";
@@ -182,7 +182,10 @@ export default function ProfileScreen() {
 
       updateUser(updatedUser);
       setIsEditModalVisible(false);
-      Alert.alert("Perfil actualizado", "Tus datos se han guardado correctamente.");
+      Alert.alert(
+        "Perfil actualizado",
+        "Tus datos se han guardado correctamente."
+      );
     } catch (error) {
       console.error("Error updating profile:", error);
       Alert.alert(
@@ -349,11 +352,16 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[
               styles.editProfileButton,
-              { backgroundColor: theme.primary + "20", borderColor: theme.primary },
+              {
+                backgroundColor: theme.primary + "20",
+                borderColor: theme.primary,
+              },
             ]}
             onPress={openEditProfileModal}
           >
-            <Text style={[styles.editProfileButtonText, { color: theme.primary }]}>
+            <Text
+              style={[styles.editProfileButtonText, { color: theme.primary }]}
+            >
               Editar perfil
             </Text>
           </TouchableOpacity>
@@ -751,7 +759,7 @@ export default function ProfileScreen() {
         {/* App Info */}
         <View style={styles.appInfo}>
           <Text style={[styles.appInfoText, { color: theme.textTertiary }]}>
-            FitTrack v1.0.0
+            EvoFit v1.0.0
           </Text>
           <Text style={[styles.appInfoText, { color: theme.textTertiary }]}>
             Tu compañero de entrenamiento personal
@@ -843,12 +851,20 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalButton,
-                  { backgroundColor: theme.backgroundSecondary, borderColor: theme.border },
+                  {
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                  },
                 ]}
                 onPress={closeEditProfileModal}
                 disabled={isSavingProfile}
               >
-                <Text style={[styles.modalButtonText, { color: theme.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   Cancelar
                 </Text>
               </TouchableOpacity>
