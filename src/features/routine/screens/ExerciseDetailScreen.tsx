@@ -1,6 +1,6 @@
 import { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -22,6 +22,14 @@ import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { ExerciseSet, SessionData, SessionExercise } from "../../../types";
+import {
+  ExerciseProgressDataPoint,
+  RoutineSession,
+  aggregateByDate,
+  calculateProgressStats,
+  filterByPeriod,
+  getExerciseProgressData,
+} from "../../../utils/statsHelpers";
 import { findAllRoutineSessions } from "../services/routineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
@@ -30,6 +38,16 @@ const IS_SMALL_DEVICE = SCREEN_WIDTH < 375;
 const IS_VERY_SMALL_DEVICE = SCREEN_WIDTH < 350;
 
 type Props = NativeStackScreenProps<WorkoutStackParamList, "ExerciseDetail">;
+type AnalysisPeriod = 7 | 30 | 90 | 0;
+
+const ANALYSIS_PERIODS: AnalysisPeriod[] = [7, 30, 90, 0];
+
+const ANALYSIS_PERIOD_LABELS: Record<AnalysisPeriod, string> = {
+  7: "7d",
+  30: "30d",
+  90: "90d",
+  0: "Todo",
+};
 
 // ============================================================================
 // TIPOS Y INTERFACES
@@ -72,81 +90,6 @@ const ExerciseImage = ({ exercise, style, theme }: ExerciseImageProps) => {
 
   // Use cached image for regular exercise images
   return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
-};
-
-// ============================================================================
-// CÁLCULOS DE PROGRESO
-// ============================================================================
-const getValidHistory = (history: ExerciseHistoryItem[]) => {
-  return history
-    .filter((item) => item.maxWeight > 0)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-};
-
-const calculateProgressBetweenSessions = (
-  firstSession: ExerciseHistoryItem,
-  lastSession: ExerciseHistoryItem
-): number => {
-  if (firstSession.maxWeight === 0 && lastSession.maxWeight > 0) {
-    return 100;
-  }
-
-  if (firstSession.maxWeight === 0) {
-    return 0;
-  }
-
-  const progress =
-    ((lastSession.maxWeight - firstSession.maxWeight) /
-      firstSession.maxWeight) *
-    100;
-
-  return Math.round(progress);
-};
-
-const calculateTotalProgress = (history: ExerciseHistoryItem[]): number => {
-  const validHistory = getValidHistory(history);
-  if (validHistory.length < 2) return 0;
-
-  const oldestSession = validHistory[0];
-  const newestSession = validHistory[validHistory.length - 1];
-
-  return calculateProgressBetweenSessions(oldestSession, newestSession);
-};
-
-const calculateMonthlyProgress = (history: ExerciseHistoryItem[]): number => {
-  const validHistory = getValidHistory(history);
-  if (validHistory.length < 2) return 0;
-
-  const oneMonthAgo = new Date();
-  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-  const recentSessions = validHistory.filter(
-    (session) => new Date(session.date) >= oneMonthAgo
-  );
-
-  if (recentSessions.length < 2) return 0;
-
-  const firstRecent = recentSessions[0];
-  const lastRecent = recentSessions[recentSessions.length - 1];
-
-  return calculateProgressBetweenSessions(firstRecent, lastRecent);
-};
-
-const calculatePersonalBestProgress = (
-  history: ExerciseHistoryItem[]
-): number => {
-  if (history.length === 0) return 0;
-
-  const sorted = [...history].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-
-  const personalBest = Math.max(...sorted.map((item) => item.maxWeight));
-  const latest = sorted[sorted.length - 1].maxWeight;
-
-  if (personalBest === 0) return 0;
-
-  return Math.round((latest / personalBest) * 100);
 };
 
 // ============================================================================
@@ -194,6 +137,71 @@ const formatNumber = (num: number) => {
   }
   return num.toString();
 };
+
+const startOfDay = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const formatDelta = (value: number | null, unit = "%") => {
+  if (value === null || Number.isNaN(value)) return "Sin base de comparación";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(1)}${unit}`;
+};
+
+const getDelta = (current: number, previous: number): number | null => {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+};
+
+const getSeriesPerWeek = (data: ExerciseProgressDataPoint[]): number => {
+  if (data.length === 0) return 0;
+  if (data.length === 1) return 1;
+
+  const first = startOfDay(new Date(data[0].date));
+  const last = startOfDay(new Date(data[data.length - 1].date));
+  const days = Math.max(
+    1,
+    Math.floor((last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  );
+  return data.length / (days / 7);
+};
+
+const getCurrentStreak = (data: ExerciseProgressDataPoint[]): number => {
+  if (data.length === 0) return 0;
+
+  const sorted = [...data].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  let streak = 1;
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = startOfDay(new Date(sorted[i - 1].date));
+    const current = startOfDay(new Date(sorted[i].date));
+    const diffDays = Math.round(
+      (prev.getTime() - current.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays === 1) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+};
+
+const getWindowData = (
+  data: ExerciseProgressDataPoint[],
+  start: Date,
+  end: Date
+) =>
+  data.filter((point) => {
+    const date = startOfDay(new Date(point.date));
+    return date >= start && date <= end;
+  });
 
 // ============================================================================
 // COMPONENTES
@@ -312,88 +320,210 @@ const QuickStats = ({
   );
 };
 
-interface ProgressCardProps {
+interface AnalysisMetricCardProps {
   title: string;
-  value: number;
-  icon: string;
+  value: string;
+  subtitle: string;
+  actualLabel: string;
+  averageLabel: string;
+  comparisonLabel?: string;
   theme: Theme;
 }
 
-const ProgressCard = ({ title, value, icon, theme }: ProgressCardProps) => {
+const AnalysisMetricCard = ({
+  title,
+  value,
+  subtitle,
+  actualLabel,
+  averageLabel,
+  comparisonLabel,
+  theme,
+}: AnalysisMetricCardProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
-  const isPositive = value >= 0;
-  const color = isPositive ? theme.success : theme.error;
-
   return (
-    <View style={styles.progressCard}>
-      <View style={styles.progressCardHeader}>
-        <Text style={styles.progressIcon}>{icon}</Text>
-        <Text style={styles.progressTitle} numberOfLines={2}>
-          {title}
-        </Text>
-      </View>
-      <Text style={[styles.progressValue, { color }]} numberOfLines={1}>
-        {value > 0 ? "+" : ""}
-        {value}%
-      </Text>
-      <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${Math.min(Math.max(Math.abs(value), 0), 100)}%`,
-              backgroundColor: color,
-            },
-          ]}
-        />
-      </View>
-      <Text style={styles.progressDescription}>
-        {isPositive ? "Mejora" : "Por debajo"}
-      </Text>
+    <View style={styles.analysisCard}>
+      <Text style={styles.analysisCardTitle}>{title}</Text>
+      <Text style={styles.analysisCardValue}>{value}</Text>
+      <Text style={styles.analysisCardSubtitle}>{subtitle}</Text>
+      <Text style={styles.analysisCardMeta}>{actualLabel}</Text>
+      <Text style={styles.analysisCardMeta}>{averageLabel}</Text>
+      {comparisonLabel ? (
+        <Text style={styles.analysisCardDelta}>{comparisonLabel}</Text>
+      ) : null}
     </View>
   );
 };
 
 interface ProgressSectionProps {
-  totalProgress: number;
-  monthlyProgress: number;
-  personalBestProgress: number;
   theme: Theme;
+  period: AnalysisPeriod;
+  onChangePeriod: (period: AnalysisPeriod) => void;
+  hasAnyData: boolean;
+  hasPeriodData: boolean;
+  currentData: ExerciseProgressDataPoint[];
+  previousData: ExerciseProgressDataPoint[];
 }
 
 const ProgressSection = ({
-  totalProgress,
-  monthlyProgress,
-  personalBestProgress,
   theme,
+  period,
+  onChangePeriod,
+  hasAnyData,
+  hasPeriodData,
+  currentData,
+  previousData,
 }: ProgressSectionProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+
+  if (!hasAnyData) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Análisis de Progreso</Text>
+          <Text style={styles.sectionSubtitle}>
+            Necesitas al menos 2 sesiones para ver tendencia y comparativas.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const currentStats =
+    currentData.length > 0 ? calculateProgressStats(currentData) : null;
+  const previousStats =
+    previousData.length > 0 ? calculateProgressStats(previousData) : null;
+
+  const weightDelta =
+    currentStats && previousStats
+      ? getDelta(currentStats.bestWeight, previousStats.bestWeight)
+      : null;
+  const volumeDelta =
+    currentStats && previousStats
+      ? getDelta(currentStats.totalVolume, previousStats.totalVolume)
+      : null;
+  const oneRmDelta =
+    currentStats && previousStats
+      ? getDelta(currentStats.best1RM, previousStats.best1RM)
+      : null;
+
+  const consistency = getSeriesPerWeek(currentData);
+  const streak = getCurrentStreak(currentData);
+
+  const trendLabel =
+    currentStats?.trend === "up"
+      ? "Tendencia: subiendo"
+      : currentStats?.trend === "down"
+      ? "Tendencia: bajando"
+      : "Tendencia: estable";
+
+  const periodText =
+    period === 0
+      ? "Comparación: últimos 30 días vs 30 días previos"
+      : `Comparación: últimos ${period} días vs periodo anterior`;
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Análisis de Progreso</Text>
-        <Text style={styles.sectionSubtitle}>Tu evolución en el tiempo</Text>
+        <Text style={styles.sectionSubtitle}>Métricas consistentes con Gráficas</Text>
       </View>
-      <View style={styles.progressSection}>
-        <ProgressCard
-          title="Progreso Total"
-          value={totalProgress}
-          icon="📈"
-          theme={theme}
-        />
-        <ProgressCard
-          title="Último Mes"
-          value={monthlyProgress}
-          icon="📅"
-          theme={theme}
-        />
-        <ProgressCard
-          title="vs Récord"
-          value={personalBestProgress}
-          icon="🎯"
-          theme={theme}
-        />
-      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodChips}
+      >
+        {ANALYSIS_PERIODS.map((item) => (
+          <TouchableOpacity
+            key={item}
+            style={[
+              styles.periodChip,
+              item === period && styles.periodChipActive,
+            ]}
+            onPress={() => onChangePeriod(item)}
+          >
+            <Text
+              style={[
+                styles.periodChipText,
+                item === period && styles.periodChipTextActive,
+              ]}
+            >
+              {ANALYSIS_PERIOD_LABELS[item]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {!hasPeriodData ? (
+        <View style={styles.analysisEmptyBox}>
+          <Text style={styles.analysisEmptyTitle}>Sin datos en este período</Text>
+          <Text style={styles.analysisEmptyText}>
+            Prueba con otro rango o pulsa en Gráficas para ver el histórico completo.
+          </Text>
+          <TouchableOpacity
+            style={styles.analysisEmptyAction}
+            onPress={() => onChangePeriod(0)}
+          >
+            <Text style={styles.analysisEmptyActionText}>Ver todo</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.analysisMetaText}>{periodText}</Text>
+          <Text style={styles.analysisMetaText}>{trendLabel}</Text>
+          <Text style={styles.analysisMetaText}>
+            Consistencia: {consistency.toFixed(1)} sesiones/semana | Racha: {streak} días
+          </Text>
+
+          <View style={styles.analysisGrid}>
+            <AnalysisMetricCard
+              title="Peso máximo (kg)"
+              value={`${currentStats?.bestWeight ?? 0} kg`}
+              subtitle="Mejor marca del período"
+              actualLabel={`Actual: ${
+                currentData[currentData.length - 1]?.maxWeight ?? 0
+              } kg`}
+              averageLabel={`Promedio: ${currentStats?.averageWeight ?? 0} kg`}
+              comparisonLabel={`Comparación: ${formatDelta(
+                weightDelta
+              )} vs período anterior`}
+              theme={theme}
+            />
+            <AnalysisMetricCard
+              title="1RM estimado (kg)"
+              value={`${currentStats?.best1RM ?? 0} kg`}
+              subtitle="Estimación de fuerza máxima"
+              actualLabel={`Actual: ${
+                Math.round(
+                  (currentData[currentData.length - 1]?.estimated1RM ?? 0) * 10
+                ) / 10
+              } kg`}
+              averageLabel={`Promedio: ${currentStats?.average1RM ?? 0} kg`}
+              comparisonLabel={`Comparación: ${formatDelta(
+                oneRmDelta
+              )} vs período anterior`}
+              theme={theme}
+            />
+            <AnalysisMetricCard
+              title="Volumen total (kg)"
+              value={`${Math.round(currentStats?.totalVolume ?? 0)} kg`}
+              subtitle={`${currentStats?.totalSessions ?? 0} sesiones en el período`}
+              actualLabel={`Actual: ${
+                Math.round(currentData[currentData.length - 1]?.totalVolume ?? 0)
+              } kg`}
+              averageLabel={`Promedio: ${
+                currentStats && currentStats.totalSessions > 0
+                  ? Math.round(currentStats.totalVolume / currentStats.totalSessions)
+                  : 0
+              } kg/sesión`}
+              comparisonLabel={`Comparación: ${formatDelta(
+                volumeDelta
+              )} vs período anterior`}
+              theme={theme}
+            />
+          </View>
+        </>
+      )}
     </View>
   );
 };
@@ -558,14 +688,17 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   // Estado
   const [fadeAnim] = useState(new Animated.Value(0));
   const [history, setHistory] = useState<ExerciseHistoryItem[]>([]);
+  const [allSessions, setAllSessions] = useState<RoutineSessionEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
 
   // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
     try {
       setLoading(true);
       const sessionsData = await findAllRoutineSessions();
+      setAllSessions(sessionsData as RoutineSessionEntity[]);
 
       const exerciseHistory = sessionsData
         .map(
@@ -603,19 +736,53 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   }, [fetchExerciseHistory]);
 
   // Cálculos derivados
-  const stats = {
-    totalSessions: history.length,
-    maxWeight:
-      history.length > 0 ? Math.max(...history.map((i) => i.maxWeight)) : 0,
-    currentWeight: history.length > 0 ? history[0].maxWeight : 0,
-    totalVolume: history.reduce((s, i) => s + i.volume, 0),
-  };
+  const stats = useMemo(
+    () => ({
+      totalSessions: history.length,
+      maxWeight:
+        history.length > 0 ? Math.max(...history.map((i) => i.maxWeight)) : 0,
+      currentWeight: history.length > 0 ? history[0].maxWeight : 0,
+      totalVolume: history.reduce((s, i) => s + i.volume, 0),
+    }),
+    [history]
+  );
 
-  const progress = {
-    total: calculateTotalProgress(history),
-    monthly: calculateMonthlyProgress(history),
-    personalBest: calculatePersonalBestProgress(history),
-  };
+  const normalizedSessions = useMemo<RoutineSession[]>(
+    () =>
+      allSessions.map((session) => ({
+        ...session,
+        createdAt:
+          session.createdAt instanceof Date
+            ? session.createdAt.toISOString()
+            : String(session.createdAt),
+      })),
+    [allSessions]
+  );
+
+  const allProgressData = useMemo(() => {
+    const rawData = getExerciseProgressData(exercise.id, normalizedSessions);
+    return aggregateByDate(rawData);
+  }, [exercise.id, normalizedSessions]);
+
+  const currentPeriodData = useMemo(
+    () => filterByPeriod(allProgressData, analysisPeriod),
+    [allProgressData, analysisPeriod]
+  );
+
+  const previousPeriodData = useMemo(() => {
+    const days = analysisPeriod === 0 ? 30 : analysisPeriod;
+    const today = startOfDay(new Date());
+    const currentStart = new Date(today);
+    currentStart.setDate(currentStart.getDate() - (days - 1));
+
+    const previousEnd = new Date(currentStart);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+
+    const previousStart = new Date(previousEnd);
+    previousStart.setDate(previousStart.getDate() - (days - 1));
+
+    return getWindowData(allProgressData, previousStart, previousEnd);
+  }, [allProgressData, analysisPeriod]);
 
   // Navegación
   const handleNavigateToRoutine = useCallback(
@@ -698,14 +865,15 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
           </TouchableOpacity>
         </View>
 
-        {history.length > 0 && (
-          <ProgressSection
-            totalProgress={progress.total}
-            monthlyProgress={progress.monthly}
-            personalBestProgress={progress.personalBest}
-            theme={theme}
-          />
-        )}
+        <ProgressSection
+          theme={theme}
+          period={analysisPeriod}
+          onChangePeriod={setAnalysisPeriod}
+          hasAnyData={allProgressData.length > 0}
+          hasPeriodData={currentPeriodData.length > 0}
+          currentData={currentPeriodData}
+          previousData={previousPeriodData}
+        />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -920,6 +1088,114 @@ const createStyles = (theme: Theme) =>
         : RFValue(14),
       color: theme.textSecondary,
       fontWeight: "500",
+    },
+    periodChips: {
+      flexDirection: "row",
+      gap: 8,
+      paddingBottom: 8,
+      marginBottom: 10,
+    },
+    periodChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    periodChipActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    periodChipText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+      fontSize: RFValue(12),
+    },
+    periodChipTextActive: {
+      color: "#fff",
+    },
+    analysisMetaText: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+      marginBottom: 4,
+      fontWeight: "500",
+    },
+    analysisGrid: {
+      marginTop: 10,
+      gap: 10,
+    },
+    analysisCard: {
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: IS_SMALL_DEVICE ? 12 : 14,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    analysisCardTitle: {
+      color: theme.textSecondary,
+      fontSize: RFValue(12),
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    analysisCardValue: {
+      color: theme.text,
+      fontSize: RFValue(20),
+      fontWeight: "800",
+      marginBottom: 2,
+    },
+    analysisCardSubtitle: {
+      color: theme.textSecondary,
+      fontSize: RFValue(12),
+      marginBottom: 6,
+    },
+    analysisCardMeta: {
+      color: theme.textSecondary,
+      fontSize: RFValue(12),
+      marginBottom: 2,
+    },
+    analysisCardDelta: {
+      color: theme.primary,
+      fontSize: RFValue(12),
+      fontWeight: "700",
+      marginTop: 6,
+    },
+    analysisEmptyBox: {
+      marginTop: 8,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+    },
+    analysisEmptyTitle: {
+      color: theme.text,
+      fontSize: RFValue(14),
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    analysisEmptyText: {
+      color: theme.textSecondary,
+      fontSize: RFValue(12),
+      lineHeight: 18,
+    },
+    analysisEmptyAction: {
+      marginTop: 10,
+      alignSelf: "flex-start",
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    analysisEmptyActionText: {
+      color: "#fff",
+      fontWeight: "700",
+      fontSize: RFValue(12),
     },
     progressSection: {
       flexDirection: "row",
