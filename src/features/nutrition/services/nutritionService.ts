@@ -78,10 +78,22 @@ export async function postText(
 export async function postPhoto(
   formData: FormData,
 ): Promise<RecognizeFoodResponseDto[]> {
-  return apiFetch<RecognizeFoodResponseDto[]>("nutrition/photo", {
+  const response = await apiFetch<
+    RecognizeFoodResponseDto[] | { items: RecognizeFoodResponseDto[] | RecognizeFoodResponseDto }
+  >("nutrition/photo", {
     method: "POST",
     body: formData,
   });
+
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (response && "items" in response) {
+    return Array.isArray(response.items) ? response.items : [response.items];
+  }
+
+  return [];
 }
 
 export async function getAIUsage(userId: string): Promise<AIUsageResponseDto> {

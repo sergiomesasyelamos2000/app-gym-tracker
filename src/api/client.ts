@@ -23,6 +23,22 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
+function hasContentTypeHeader(headers: HeadersInit | undefined): boolean {
+  if (!headers) return false;
+
+  if (headers instanceof Headers) {
+    return headers.has("Content-Type") || headers.has("content-type");
+  }
+
+  if (Array.isArray(headers)) {
+    return headers.some(([key]) => key.toLowerCase() === "content-type");
+  }
+
+  return Object.keys(headers).some(
+    (key) => key.toLowerCase() === "content-type"
+  );
+}
+
 /**
  * Refresh the access token using the refresh token
  * Prevents multiple simultaneous refresh attempts using a shared promise
@@ -122,12 +138,24 @@ export async function apiFetch<T = unknown>(
     );
   }
 
+  const isFormDataBody =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+  const customHeaders = options.headers;
+  const shouldSetJsonContentType =
+    !isFormDataBody && !hasContentTypeHeader(customHeaders);
+  const baseHeaders: Record<string, string> = {
+    "ngrok-skip-browser-warning": "true",
+    ...authHeaders,
+  };
+
+  if (shouldSetJsonContentType) {
+    baseHeaders["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(`${BASE_URL}/${endpoint}`, {
     headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-      ...authHeaders, // Inject authentication token
-      ...(options.headers || {}),
+      ...baseHeaders,
+      ...(customHeaders || {}),
     },
     ...options,
   });

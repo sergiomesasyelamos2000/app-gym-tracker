@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,12 @@ import type { ExerciseRequestDto, SetRequestDto } from "@sergiomesasyelamos2000/
 
 import { useTheme } from "../../../../contexts/ThemeContext";
 import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
-import { detectRecord } from "../../../../services/recordsService";
+import {
+  RecordData,
+  calculate1RM,
+  calculateVolume,
+  getBestMetrics,
+} from "../../../../services/recordsService";
 import { useRecordsStore } from "../../../../store/useRecordsStore";
 import { CelebrationAnimation } from "../CelebrationAnimation";
 import ExerciseHeader from "./ExerciseHeader";
@@ -22,6 +27,83 @@ import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
+
+const normalizeSetIds = (
+  inputSets: SetRequestDto[],
+  exerciseId: string
+): SetRequestDto[] => {
+  return inputSets.map((set, index) => ({
+    ...set,
+    id:
+      typeof set.id === "string" && set.id.trim().length > 0
+        ? set.id
+        : `${exerciseId}_set_${index + 1}`,
+  }));
+};
+
+const detectRecordWithPrecomputedMetrics = (
+  exerciseId: string,
+  exerciseName: string,
+  newSet: SetRequestDto,
+  bestMetrics: { best1RM: number; bestWeight: number; bestVolume: number }
+): RecordData | null => {
+  const weight = newSet.weight ?? 0;
+  const reps = newSet.reps ?? 0;
+
+  if (weight === 0 || reps === 0) {
+    return null;
+  }
+
+  const current1RM = calculate1RM(weight, reps);
+  const currentVolume = calculateVolume(weight, reps);
+
+  if (current1RM > bestMetrics.best1RM) {
+    return {
+      id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
+      exerciseId,
+      exerciseName,
+      type: "1RM",
+      value: current1RM,
+      previousValue: bestMetrics.best1RM,
+      improvement: current1RM - bestMetrics.best1RM,
+      date: new Date(),
+      setData: { weight, reps },
+    };
+  }
+
+  if (weight > bestMetrics.bestWeight) {
+    return {
+      id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
+      exerciseId,
+      exerciseName,
+      type: "maxWeight",
+      value: weight,
+      previousValue: bestMetrics.bestWeight,
+      improvement: weight - bestMetrics.bestWeight,
+      date: new Date(),
+      setData: { weight, reps },
+    };
+  }
+
+  if (currentVolume > bestMetrics.bestVolume) {
+    return {
+      id: `record-${Date.now()}-${Math.random()}`,
+      setId: newSet.id,
+      exerciseId,
+      exerciseName,
+      type: "maxVolume",
+      value: currentVolume,
+      previousValue: bestMetrics.bestVolume,
+      improvement: currentVolume - bestMetrics.bestVolume,
+      date: new Date(),
+      setData: { weight, reps },
+    };
+  }
+
+  return null;
+};
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -72,7 +154,9 @@ const ExerciseCard = ({
   showOptions = false,
   previousSessions = [],
 }: Props) => {
-  const [sets, setSets] = useState<SetRequestDto[]>(initialSets);
+  const [sets, setSets] = useState<SetRequestDto[]>(() =>
+    normalizeSetIds(initialSets, exercise.id)
+  );
   const [notes, setNotes] = useState<ExerciseNote[]>(
     (exercise.notes || []).map((note, index) => ({
       id: note.id ?? `note_${exercise.id}_${index}`,
@@ -96,6 +180,7 @@ const ExerciseCard = ({
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationTrigger, setCelebrationTrigger] = useState(0);
 
   // Undo deletion state
   const [pendingDelete, setPendingDelete] = useState<{
@@ -110,6 +195,14 @@ const ExerciseCard = ({
   const addOrUpdateRecord = useRecordsStore((state) => state.addOrUpdateRecord);
   const removeRecordBySetId = useRecordsStore(
     (state) => state.removeRecordBySetId
+  );
+
+  const bestMetrics = useMemo(
+    () =>
+      previousSessions.length > 0
+        ? getBestMetrics(exercise.id, previousSessions)
+        : { best1RM: 0, bestWeight: 0, bestVolume: 0 },
+    [exercise.id, previousSessions]
   );
 
   const { width } = useWindowDimensions();
@@ -221,20 +314,20 @@ const ExerciseCard = ({
     field: keyof SetRequestDto,
     value: number | boolean
   ) => {
-    // 1. Calculate the new state first
-    const currentSets = sets;
-    const setIndex = currentSets.findIndex((s) => s.id === id);
-    if (setIndex === -1) return;
+    const currentSet = sets.find((s) => s.id === id);
+    if (!currentSet) return;
+    const updatedSet = { ...currentSet, [field]: value } as SetRequestDto;
 
-    const currentSet = currentSets[setIndex];
-    const updatedSet = { ...currentSet, [field]: value };
+    // Use functional update to avoid stale state overwrites when multiple updates
+    // arrive in quick succession (e.g. checking one set and editing another).
+    setSets((prevSets) => {
+      const setIndex = prevSets.findIndex((s) => s.id === id);
+      if (setIndex === -1) return prevSets;
 
-    // Create new array with update
-    const newSets = [...currentSets];
-    newSets[setIndex] = updatedSet;
-
-    // 2. Update local state
-    setSets(newSets);
+      const newSets = [...prevSets];
+      newSets[setIndex] = updatedSet;
+      return newSets;
+    });
 
     // 3. Handle Side Effects (Record Detection & Rest Timer)
     // We used to do this inside setSets updater, which is bad for side effects (can run multiple times)
@@ -253,11 +346,11 @@ const ExerciseCard = ({
         }
 
         // Check for record
-        const record = detectRecord(
+        const record = detectRecordWithPrecomputedMetrics(
           exercise.id,
           exercise.name,
           updatedSet,
-          previousSessions
+          bestMetrics
         );
 
         if (record) {
@@ -268,6 +361,7 @@ const ExerciseCard = ({
             // Trigger celebration only if it wasn't already completed (fresh completion)
             if (field === "completed" && value === true) {
               setShowCelebration(true);
+              setCelebrationTrigger((prev) => prev + 1);
             }
           } else {
             // Even if typ is same, value might changed (e.g. 100kg -> 105kg), update store
@@ -329,7 +423,10 @@ const ExerciseCard = ({
     >
       <CelebrationAnimation
         visible={showCelebration}
-        onFinish={() => setShowCelebration(false)}
+        triggerKey={celebrationTrigger}
+        onFinish={() => {
+          setShowCelebration(false);
+        }}
       />
 
       <TouchableOpacity

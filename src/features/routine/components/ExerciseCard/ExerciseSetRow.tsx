@@ -68,19 +68,19 @@ const ExerciseSetRow = ({
 
   // Animación al completar set
   const handleToggleWithAnimation = useCallback(() => {
-    // Haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Lighter haptic for snappier feedback.
+    void Haptics.selectionAsync();
 
     // Animación de escala
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.05,
-        duration: 100,
+        duration: 70,
         useNativeDriver: false,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 100,
+        duration: 70,
         useNativeDriver: false,
       }),
     ]).start();

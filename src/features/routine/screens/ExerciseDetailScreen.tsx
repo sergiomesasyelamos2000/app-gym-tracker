@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
@@ -677,16 +678,22 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
                 <View style={styles.progressButtonIconContainer}>
                   <Text style={styles.progressButtonIcon}>📊</Text>
                 </View>
-                <View>
+                <View style={styles.progressButtonTextContainer}>
                   <Text style={styles.progressButtonTitle}>
                     Gráficas de Progreso
                   </Text>
-                  <Text style={styles.progressButtonSubtitle}>
+                  <Text style={styles.progressButtonSubtitle} numberOfLines={2}>
                     Análisis detallado de tu evolución
                   </Text>
                 </View>
               </View>
-              <Text style={styles.progressButtonArrow}>→</Text>
+              <View style={styles.progressButtonArrowContainer}>
+                <Icon
+                  name="chevron-right"
+                  size={IS_SMALL_DEVICE ? 24 : 26}
+                  color={theme.primary}
+                />
+              </View>
             </View>
           </TouchableOpacity>
         </View>
@@ -1295,6 +1302,7 @@ const createStyles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       flex: 1,
+      minWidth: 0,
     },
     progressButtonIconContainer: {
       width: IS_SMALL_DEVICE ? 44 : 48,
@@ -1304,6 +1312,7 @@ const createStyles = (theme: Theme) =>
       justifyContent: "center",
       alignItems: "center",
       marginRight: IS_SMALL_DEVICE ? 12 : 14,
+      flexShrink: 0,
     },
     progressButtonIcon: {
       fontSize: IS_VERY_SMALL_DEVICE
@@ -1311,6 +1320,11 @@ const createStyles = (theme: Theme) =>
         : IS_SMALL_DEVICE
         ? RFValue(22)
         : RFValue(24),
+    },
+    progressButtonTextContainer: {
+      flex: 1,
+      minWidth: 0,
+      paddingRight: 8,
     },
     progressButtonTitle: {
       fontSize: IS_VERY_SMALL_DEVICE
@@ -1331,15 +1345,12 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
       fontWeight: "500",
     },
-    progressButtonArrow: {
-      fontSize: IS_VERY_SMALL_DEVICE
-        ? RFValue(18)
-        : IS_SMALL_DEVICE
-        ? RFValue(20)
-        : RFValue(22),
-      color: theme.primary,
-      fontWeight: "bold",
+    progressButtonArrowContainer: {
       marginLeft: 8,
+      width: IS_SMALL_DEVICE ? 24 : 28,
+      alignItems: "flex-end",
+      justifyContent: "center",
+      flexShrink: 0,
     },
     bottomSpacer: {
       height: 20,

@@ -31,6 +31,10 @@ import {
 } from "../../../types";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import { getRoutineById } from "../services/routineService";
+import {
+  normalizeExerciseImage,
+  normalizeExercisesImage,
+} from "../utils/normalizeExerciseImage";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 export default function RoutineEditScreen() {
@@ -47,7 +51,7 @@ export default function RoutineEditScreen() {
     [theme, isDark]
   );
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>(
-    exercises || []
+    normalizeExercisesImage(exercises || [])
   );
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
     () => {
@@ -75,15 +79,17 @@ export default function RoutineEditScreen() {
           const exercises: ExerciseRequestDto[] = Array.isArray(
             data.routineExercises
           )
-            ? data.routineExercises.map((re: RoutineExerciseResponseDto) => ({
-                ...re.exercise,
-                sets: re.sets || [],
-                notes: re.notes,
-                restSeconds: re.restSeconds,
-                weightUnit: re.weightUnit || "kg", // Quitar re.exercise.weightUnit ya que no existe
-                repsType: re.repsType || "reps", // Quitar re.exercise.repsType ya que no existe
-                supersetWith: re.supersetWith ?? undefined, // Convertir null a undefined
-              }))
+            ? normalizeExercisesImage(
+                data.routineExercises.map((re: RoutineExerciseResponseDto) => ({
+                  ...re.exercise,
+                  sets: re.sets || [],
+                  notes: re.notes,
+                  restSeconds: re.restSeconds,
+                  weightUnit: re.weightUnit || "kg", // Quitar re.exercise.weightUnit ya que no existe
+                  repsType: re.repsType || "reps", // Quitar re.exercise.repsType ya que no existe
+                  supersetWith: re.supersetWith ?? undefined, // Convertir null a undefined
+                }))
+              )
             : [];
 
           setEditTitle(data.title || "");
@@ -119,13 +125,22 @@ export default function RoutineEditScreen() {
   }, [id]);
 
   useEffect(() => {
-    setEditTitle(title);
+    if (typeof title === "string") {
+      setEditTitle(title);
+    }
+
+    if (!exercises) {
+      return;
+    }
+
     setExercises(
-      (exercises || []).map((ex) => ({
-        ...ex,
-        weightUnit: ex.weightUnit || "kg",
-        repsType: ex.repsType || "reps",
-      }))
+      normalizeExercisesImage(
+        exercises.map((ex) => ({
+          ...ex,
+          weightUnit: ex.weightUnit || "kg",
+          repsType: ex.repsType || "reps",
+        }))
+      )
     );
 
     const initial: { [exerciseId: string]: SetRequestDto[] } = {};
@@ -149,7 +164,7 @@ export default function RoutineEditScreen() {
       prev.map((ex) =>
         ex.id === replaceExerciseId
           ? {
-              ...replacementExercise,
+              ...normalizeExerciseImage(replacementExercise),
               sets: sets[replaceExerciseId] || [],
               notes: ex.notes,
               restSeconds: ex.restSeconds,
@@ -196,7 +211,9 @@ export default function RoutineEditScreen() {
     if (!addExercises || addExercises.length === 0) return;
 
     setExercises((prev) => {
-      const newExercises = addExercises.filter(
+      const normalizedAddExercises = normalizeExercisesImage(addExercises);
+
+      const newExercises = normalizedAddExercises.filter(
         (ex) => !prev.some((p) => p.id === ex.id)
       );
       return [...prev, ...newExercises];

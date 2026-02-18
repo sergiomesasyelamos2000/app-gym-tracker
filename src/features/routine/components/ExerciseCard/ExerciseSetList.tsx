@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -42,6 +42,67 @@ interface Props {
   recordSetTypes?: { [id: string]: "1RM" | "maxWeight" | "maxVolume" };
 }
 
+interface SetListItemProps {
+  item: SetRequestDto;
+  readonly: boolean;
+  repsType: "reps" | "range";
+  started: boolean;
+  previousMark?: string;
+  recordType?: "1RM" | "maxWeight" | "maxVolume";
+  onUpdate: (
+    id: string,
+    field: keyof SetRequestDto,
+    value: number | boolean
+  ) => void;
+  onSwipeableWillOpen: () => void;
+  renderRightActions: (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>,
+    itemId: string
+  ) => React.ReactNode;
+}
+
+const SetListItem = memo(
+  ({
+    item,
+    readonly,
+    repsType,
+    started,
+    previousMark,
+    recordType,
+    onUpdate,
+    onSwipeableWillOpen,
+    renderRightActions,
+  }: SetListItemProps) => {
+    return (
+      <Swipeable
+        renderRightActions={(progress, dragX) =>
+          !readonly ? renderRightActions(progress, dragX, item.id) : null
+        }
+        overshootRight={false}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+      >
+        <ExerciseSetRow
+          item={item}
+          onUpdate={onUpdate}
+          repsType={repsType}
+          readonly={readonly}
+          previousMark={previousMark}
+          started={started}
+          recordType={recordType}
+        />
+      </Swipeable>
+    );
+  },
+  (prev, next) =>
+    prev.item === next.item &&
+    prev.readonly === next.readonly &&
+    prev.repsType === next.repsType &&
+    prev.started === next.started &&
+    prev.previousMark === next.previousMark &&
+    prev.recordType === next.recordType
+);
+
 const ExerciseSetList = ({
   sets,
   onUpdate,
@@ -63,11 +124,28 @@ const ExerciseSetList = ({
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
-  const isMediumScreen = width < 420;
 
-  const renderRightActions = (
+  const onUpdateRef = useRef(onUpdate);
+  const onDeleteRef = useRef(onDelete);
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
+  useEffect(() => {
+    onDeleteRef.current = onDelete;
+  }, [onDelete]);
+
+  const handleUpdate = useCallback(
+    (id: string, field: keyof SetRequestDto, value: number | boolean) => {
+      onUpdateRef.current(id, field, value);
+    },
+    []
+  );
+
+  const renderRightActions = useCallback((
     progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>,
+    _dragX: Animated.AnimatedInterpolation<number>,
     itemId: string
   ) => {
     const scale = progress.interpolate({
@@ -85,7 +163,7 @@ const ExerciseSetList = ({
     return (
       <View style={styles.actionsContainer}>
         <TouchableOpacity
-          onPress={() => onDelete(itemId)}
+          onPress={() => onDeleteRef.current(itemId)}
           activeOpacity={0.7}
           style={[
             styles.deleteButton,
@@ -108,7 +186,65 @@ const ExerciseSetList = ({
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [theme.error]);
+
+  const handleSwipeableWillOpen = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const getPreviousMark = useCallback(
+    (item: SetRequestDto): string | undefined => {
+      if (!started) return undefined;
+
+      if (
+        "previousWeight" in item &&
+        "previousReps" in item &&
+        item.previousWeight &&
+        item.previousReps
+      ) {
+        return `${item.previousWeight || 0} ${weightUnit} x ${
+          item.previousReps || 0
+        }`;
+      }
+
+      return "-";
+    },
+    [started, weightUnit]
+  );
+
+  const keyExtractor = useCallback(
+    (item: SetRequestDto, index: number) =>
+      typeof item.id === "string" && item.id.trim().length > 0
+        ? item.id
+        : `set-${item.order ?? index}-${index}`,
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: SetRequestDto }) => (
+      <SetListItem
+        item={item}
+        readonly={readonly}
+        repsType={repsType}
+        started={started}
+        previousMark={getPreviousMark(item)}
+        recordType={recordSetTypes[item.id]}
+        onUpdate={handleUpdate}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
+        renderRightActions={renderRightActions}
+      />
+    ),
+    [
+      getPreviousMark,
+      handleUpdate,
+      handleSwipeableWillOpen,
+      readonly,
+      recordSetTypes,
+      renderRightActions,
+      repsType,
+      started,
+    ]
+  );
 
   const openModal = () => {
     Animated.parallel([
@@ -490,36 +626,12 @@ const ExerciseSetList = ({
       <GestureHandlerRootView>
         <FlatList
           data={sets}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Swipeable
-              renderRightActions={(progress, dragX) =>
-                !readonly ? renderRightActions(progress, dragX, item.id) : null
-              }
-              overshootRight={false}
-              onSwipeableWillOpen={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
-              <ExerciseSetRow
-                item={item}
-                onUpdate={onUpdate}
-                repsType={repsType}
-                readonly={readonly}
-                previousMark={
-                  started && 'previousWeight' in item && 'previousReps' in item && item.previousWeight && item.previousReps
-                    ? `${item.previousWeight || 0} ${weightUnit} x ${
-                        item.previousReps || 0
-                      }`
-                    : started
-                    ? "-"
-                    : undefined
-                }
-                started={started}
-                recordType={recordSetTypes[item.id]}
-              />
-            </Swipeable>
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={true}
         />
       </GestureHandlerRootView>
 

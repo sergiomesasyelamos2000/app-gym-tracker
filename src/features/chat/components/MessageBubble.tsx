@@ -1,6 +1,7 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
+import type { RecognizeFoodResponseDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
 import type { Message } from "../../../store/useChatStore";
 import { isExportableContent } from "../../../utils/exportUtils";
@@ -10,12 +11,18 @@ import { ExportButton } from "./ExportButton";
 type Props = {
   message: Message;
   onImagePress?: (uri: string) => void;
+  onAddRecognizedFood?: (food: RecognizeFoodResponseDto) => void;
 };
 
-const MessageBubbleComponent: React.FC<Props> = ({ message, onImagePress }) => {
+const MessageBubbleComponent: React.FC<Props> = ({
+  message,
+  onImagePress,
+  onAddRecognizedFood,
+}) => {
   const { theme } = useTheme();
   const isUser = message.sender === "user";
   const isBot = message.sender === "bot";
+  const isFoodAnalysis = message.type === "food-analysis";
 
   const renderContent = () => {
     if (message.imageUri) {
@@ -38,6 +45,48 @@ const MessageBubbleComponent: React.FC<Props> = ({ message, onImagePress }) => {
     }
 
     if (isBot) {
+      if (isFoodAnalysis) {
+        const items = message.foodAnalysisItems || [];
+        return (
+          <View style={styles.foodAnalysisWrapper}>
+            <Text style={[styles.messageText, { color: theme.text }]}>
+              {message.text}
+            </Text>
+            {items.map((item, index) => (
+              <View
+                key={`${item.name}-${index}`}
+                style={[
+                  styles.foodCard,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.foodName, { color: theme.text }]}>
+                  {item.name}
+                </Text>
+                <Text style={[styles.foodMeta, { color: theme.textSecondary }]}>
+                  {Math.round(item.calories || 0)} kcal · P{" "}
+                  {Math.round(item.proteins || 0)}g · C{" "}
+                  {Math.round(item.carbs || 0)}g · G{" "}
+                  {Math.round(item.fats || 0)}g
+                </Text>
+                <Text style={[styles.foodMeta, { color: theme.textSecondary }]}>
+                  Porción estimada: {Math.round(item.servingSize || 0)} g
+                </Text>
+                <TouchableOpacity
+                  style={[styles.addButton, { backgroundColor: theme.primary }]}
+                  onPress={() => onAddRecognizedFood?.(item)}
+                >
+                  <Text style={styles.addButtonText}>Agregar al diario</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        );
+      }
+
       return (
         <Markdown
           style={{
@@ -207,7 +256,7 @@ const MessageBubbleComponent: React.FC<Props> = ({ message, onImagePress }) => {
     >
       {renderContent()}
 
-      {isBot && isExportableContent(message.text) && (
+      {isBot && !isFoodAnalysis && isExportableContent(message.text) && (
         <ExportButton content={message.text} title="Plan de Nutrición" />
       )}
     </View>
@@ -260,6 +309,34 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
     fontStyle: "italic",
+  },
+  foodAnalysisWrapper: {
+    gap: 10,
+  },
+  foodCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  foodName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  foodMeta: {
+    fontSize: 12,
+  },
+  addButton: {
+    marginTop: 6,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 12,
   },
 });
 

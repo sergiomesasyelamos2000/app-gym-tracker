@@ -18,9 +18,10 @@ const { width, height } = Dimensions.get("window");
 interface CelebrationProps {
   visible: boolean;
   onFinish?: () => void;
+  triggerKey?: number;
 }
 
-const PARTICLE_COUNT = 30;
+const PARTICLE_COUNT = 20;
 
 interface ParticleProps {
   delay: number;
@@ -47,12 +48,12 @@ const Particle = ({ delay, angle, speed, color }: ParticleProps) => {
 
     // Move outward based on angle
     const rad = (angle * Math.PI) / 180;
-    const distance = 100 + Math.random() * 100;
+    const distance = 70 + Math.random() * 70;
 
     translateX.value = withDelay(
       delay,
       withTiming(Math.cos(rad) * distance, {
-        duration: 1000,
+        duration: 620,
         easing: Easing.out(Easing.ease),
       }),
     );
@@ -60,13 +61,13 @@ const Particle = ({ delay, angle, speed, color }: ParticleProps) => {
     translateY.value = withDelay(
       delay,
       withTiming(Math.sin(rad) * distance, {
-        duration: 1000,
+        duration: 620,
         easing: Easing.out(Easing.ease),
       }),
     );
 
     // Fade out
-    opacity.value = withDelay(delay + 500, withTiming(0, { duration: 500 }));
+    opacity.value = withDelay(delay + 250, withTiming(0, { duration: 360 }));
   }, []);
 
   const style = useAnimatedStyle(() => {
@@ -90,6 +91,7 @@ const Particle = ({ delay, angle, speed, color }: ParticleProps) => {
 export const CelebrationAnimation = ({
   visible,
   onFinish,
+  triggerKey = 0,
 }: CelebrationProps) => {
   const trophyScale = useSharedValue(0);
   const trophyOpacity = useSharedValue(0);
@@ -102,10 +104,10 @@ export const CelebrationAnimation = ({
 
       trophyOpacity.value = withTiming(1, { duration: 300 });
       trophyScale.value = withSequence(
-        withSpring(1.5, { damping: 10 }),
+        withSpring(1.28, { damping: 11 }),
         withDelay(
-          1000,
-          withTiming(0, { duration: 300 }, (finished) => {
+          260,
+          withTiming(0, { duration: 130 }, (finished) => {
             if (finished && onFinish) {
               runOnJS(onFinish)();
             }
@@ -113,7 +115,7 @@ export const CelebrationAnimation = ({
         ),
       );
     }
-  }, [visible]);
+  }, [visible, triggerKey]);
 
   const trophyStyle = useAnimatedStyle(() => {
     return {
@@ -132,7 +134,7 @@ export const CelebrationAnimation = ({
       pointerEvents="none"
     >
       <Animated.View style={[styles.trophyContainer, trophyStyle]}>
-        <Trophy size={80} color="#FFD700" fill="#FFD700" />
+        <Trophy size={64} color="#FFD700" fill="#FFD700" />
         {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
           <Particle
             key={i}
@@ -151,11 +153,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999, // Ensure it's on top
-    backgroundColor: "rgba(0,0,0,0.3)", // Dim background slightly
+    backgroundColor: "transparent",
   },
   trophyContainer: {
     alignItems: "center",
     justifyContent: "center",
+    transform: [{ translateY: -20 }],
   },
   particle: {
     position: "absolute",

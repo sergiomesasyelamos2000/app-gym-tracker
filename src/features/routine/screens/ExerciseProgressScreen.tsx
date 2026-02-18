@@ -5,6 +5,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,6 +20,7 @@ import {
 import { LineChart } from "react-native-chart-kit";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
+  ExerciseProgressDataPoint,
   ProgressStats,
   RoutineSession,
   aggregateByDate,
@@ -42,6 +44,40 @@ const PERIOD_LABELS: Record<Period, string> = {
   0: "Todo",
 };
 
+const CHART_LABEL_LIMIT = 6;
+
+const startOfLocalDay = (date: Date): Date => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const formatRangeDate = (dateText: string): string => {
+  const date = new Date(dateText);
+  return `${String(date.getDate()).padStart(2, "0")}/${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}/${date.getFullYear()}`;
+};
+
+const formatPercent = (value: number): string =>
+  `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+
+const calculateDeltaPercent = (current: number, previous: number): number | null => {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+};
+
+const getDataForWindow = (
+  data: ExerciseProgressDataPoint[],
+  startDate: Date,
+  endDate: Date
+): ExerciseProgressDataPoint[] => {
+  return data.filter((point) => {
+    const date = startOfLocalDay(new Date(point.date));
+    return date >= startDate && date <= endDate;
+  });
+};
+
 export default function ExerciseProgressScreen({ route, navigation }: Props) {
   const { exercise } = route.params;
   const { theme } = useTheme();
@@ -63,16 +99,13 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     try {
       setLoading(true);
       const allSessions = await findAllRoutineSessions();
-      // Convertir RoutineSessionEntity[] a RoutineSession[]
-      const convertedSessions: RoutineSession[] = allSessions.map(
-        (session) => ({
-          ...session,
-          createdAt:
-            session.createdAt instanceof Date
-              ? session.createdAt.toISOString()
-              : session.createdAt,
-        })
-      );
+      const convertedSessions: RoutineSession[] = allSessions.map((session) => ({
+        ...session,
+        createdAt:
+          session.createdAt instanceof Date
+            ? session.createdAt.toISOString()
+            : session.createdAt,
+      }));
       setSessions(convertedSessions);
     } catch (error) {
       console.error("Error loading sessions:", error);
@@ -81,15 +114,68 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     }
   };
 
-  // Procesar datos según el período seleccionado
-  const progressData = React.useMemo(() => {
+  const allProgressData = React.useMemo(() => {
     const rawData = getExerciseProgressData(exercise.id, sessions);
-    const aggregated = aggregateByDate(rawData);
-    const filtered = filterByPeriod(aggregated, selectedPeriod);
-    return filtered;
-  }, [exercise.id, sessions, selectedPeriod]);
+    return aggregateByDate(rawData);
+  }, [exercise.id, sessions]);
 
-  // Calcular estadísticas
+  const progressData = React.useMemo(
+    () => filterByPeriod(allProgressData, selectedPeriod),
+    [allProgressData, selectedPeriod]
+  );
+
+  const periodRangeLabel = React.useMemo(() => {
+    if (progressData.length === 0) return null;
+    const first = progressData[0];
+    const last = progressData[progressData.length - 1];
+    return `Mostrando del ${formatRangeDate(first.date)} al ${formatRangeDate(
+      last.date
+    )}`;
+  }, [progressData]);
+
+  const deltaData = React.useMemo(() => {
+    const daysForDelta = selectedPeriod === 0 ? 30 : selectedPeriod;
+    const today = startOfLocalDay(new Date());
+
+    const currentStart = new Date(today);
+    currentStart.setDate(currentStart.getDate() - (daysForDelta - 1));
+
+    const previousEnd = new Date(currentStart);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+
+    const previousStart = new Date(previousEnd);
+    previousStart.setDate(previousStart.getDate() - (daysForDelta - 1));
+
+    const currentWindowData = getDataForWindow(allProgressData, currentStart, today);
+    const previousWindowData = getDataForWindow(
+      allProgressData,
+      previousStart,
+      previousEnd
+    );
+
+    if (currentWindowData.length === 0 || previousWindowData.length === 0) {
+      return null;
+    }
+
+    const currentStats = calculateProgressStats(currentWindowData);
+    const previousStats = calculateProgressStats(previousWindowData);
+
+    return {
+      comparisonLabel:
+        selectedPeriod === 0
+          ? "Últimos 30 días vs 30 días previos"
+          : `Últimos ${selectedPeriod} días vs periodo anterior`,
+      weightDelta: calculateDeltaPercent(
+        currentStats.bestWeight,
+        previousStats.bestWeight
+      ),
+      volumeDelta: calculateDeltaPercent(
+        currentStats.totalVolume,
+        previousStats.totalVolume
+      ),
+    };
+  }, [allProgressData, selectedPeriod]);
+
   useEffect(() => {
     if (progressData.length > 0) {
       setStats(calculateProgressStats(progressData));
@@ -98,20 +184,24 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     }
   }, [progressData]);
 
-  // Preparar datos para las gráficas
   const chartData = React.useMemo(() => {
     if (progressData.length === 0) {
       return null;
     }
 
-    const labels = progressData.map((point) => {
+    const rawLabels = progressData.map((point) => {
       const date = new Date(point.date);
       return `${date.getDate()}/${date.getMonth() + 1}`;
     });
 
+    const labelStep = Math.max(1, Math.ceil(rawLabels.length / CHART_LABEL_LIMIT));
+    const labels = rawLabels.map((label, index) =>
+      index % labelStep === 0 || index === rawLabels.length - 1 ? label : ""
+    );
+
     const maxWeights = progressData.map((point) => point.maxWeight);
     const estimated1RMs = progressData.map((point) => point.estimated1RM);
-    const volumes = progressData.map((point) => point.totalVolume / 1000); // Convertir a toneladas
+    const volumes = progressData.map((point) => point.totalVolume / 1000);
 
     return {
       labels,
@@ -122,26 +212,35 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   }, [progressData]);
 
   const renderPeriodSelector = () => (
-    <View style={styles.periodSelector}>
-      {([7, 30, 90, 0] as Period[]).map((period) => (
-        <TouchableOpacity
-          key={period}
-          style={[
-            styles.periodButton,
-            selectedPeriod === period && styles.periodButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod(period)}
-        >
-          <Text
+    <View style={styles.periodSelectorContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodSelector}
+      >
+        {([7, 30, 90, 0] as Period[]).map((period) => (
+          <TouchableOpacity
+            key={period}
             style={[
-              styles.periodButtonText,
-              selectedPeriod === period && styles.periodButtonTextActive,
+              styles.periodButton,
+              selectedPeriod === period && styles.periodButtonActive,
             ]}
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setSelectedPeriod(period);
+            }}
           >
-            {PERIOD_LABELS[period]}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text
+              style={[
+                styles.periodButtonText,
+                selectedPeriod === period && styles.periodButtonTextActive,
+              ]}
+            >
+              {PERIOD_LABELS[period]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 
@@ -176,6 +275,18 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     }
   };
 
+  const renderDeltaValue = (value: number | null) => {
+    if (value === null) return "N/D";
+    return formatPercent(value);
+  };
+
+  const renderDeltaColor = (value: number | null) => {
+    if (value === null) return theme.text;
+    if (value > 0) return "#16a34a";
+    if (value < 0) return "#dc2626";
+    return theme.text;
+  };
+
   const renderStatsOverview = () => {
     if (!stats) return null;
 
@@ -198,6 +309,37 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
             `${stats.totalSessions} sesiones`
           )}
         </View>
+
+        {deltaData && (
+          <View style={styles.deltaCard}>
+            <Text style={styles.deltaTitle}>Comparativa</Text>
+            <Text style={styles.deltaSubtitle}>{deltaData.comparisonLabel}</Text>
+
+            <View style={styles.deltaRow}>
+              <Text style={styles.deltaLabel}>Peso máximo</Text>
+              <Text
+                style={[
+                  styles.deltaValue,
+                  { color: renderDeltaColor(deltaData.weightDelta) },
+                ]}
+              >
+                {renderDeltaValue(deltaData.weightDelta)}
+              </Text>
+            </View>
+
+            <View style={styles.deltaRow}>
+              <Text style={styles.deltaLabel}>Volumen total</Text>
+              <Text
+                style={[
+                  styles.deltaValue,
+                  { color: renderDeltaColor(deltaData.volumeDelta) },
+                ]}
+              >
+                {renderDeltaValue(deltaData.volumeDelta)}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -274,16 +416,39 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   }
 
   if (progressData.length === 0) {
+    const hasHistoricalData = allProgressData.length > 0;
+
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <BarChart3 size={64} color={theme.textSecondary} />
-          <Text style={styles.emptyTitle}>Sin Datos de Progreso</Text>
-          <Text style={styles.emptyText}>
-            Completa entrenamientos con este ejercicio para ver tu progreso
-            aquí.
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderPeriodSelector()}
+
+          <View style={styles.emptyContainer}>
+            <BarChart3 size={64} color={theme.textSecondary} />
+            <Text style={styles.emptyTitle}>
+              {hasHistoricalData
+                ? "Sin datos en este período"
+                : "Sin Datos de Progreso"}
+            </Text>
+            <Text style={styles.emptyText}>
+              {hasHistoricalData
+                ? "No hay entrenamientos de este ejercicio en el rango seleccionado."
+                : "Completa entrenamientos con este ejercicio para ver tu progreso aquí."}
+            </Text>
+
+            {hasHistoricalData && selectedPeriod !== 0 && (
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={() => setSelectedPeriod(0)}
+              >
+                <Text style={styles.viewAllButtonText}>Ver todo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -295,6 +460,7 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {renderPeriodSelector()}
+        {periodRangeLabel && <Text style={styles.rangeText}>{periodRangeLabel}</Text>}
         {renderStatsOverview()}
 
         {chartData && (
@@ -338,7 +504,6 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   );
 }
 
-// Utilidad para convertir hex a rgb
 function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return "0, 0, 0";
@@ -369,10 +534,13 @@ const createStyles = (theme: Theme) =>
       fontSize: 16,
     },
     emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
       alignItems: "center",
-      padding: 40,
+      paddingVertical: 48,
+      paddingHorizontal: 24,
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     emptyTitle: {
       fontSize: 20,
@@ -380,6 +548,7 @@ const createStyles = (theme: Theme) =>
       color: theme.text,
       marginTop: 20,
       marginBottom: 8,
+      textAlign: "center",
     },
     emptyText: {
       fontSize: 16,
@@ -387,22 +556,39 @@ const createStyles = (theme: Theme) =>
       textAlign: "center",
       lineHeight: 24,
     },
+    viewAllButton: {
+      marginTop: 16,
+      backgroundColor: theme.primary,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    viewAllButtonText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    periodSelectorContainer: {
+      marginBottom: 12,
+    },
     periodSelector: {
       flexDirection: "row",
-      backgroundColor: theme.card,
-      borderRadius: 12,
-      padding: 4,
-      marginBottom: 20,
+      gap: 8,
+      paddingRight: 4,
     },
     periodButton: {
-      flex: 1,
+      minWidth: 84,
       paddingVertical: 10,
-      paddingHorizontal: 12,
-      borderRadius: 8,
+      paddingHorizontal: 14,
+      borderRadius: 999,
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
     },
     periodButtonActive: {
       backgroundColor: theme.primary,
+      borderColor: theme.primary,
     },
     periodButtonText: {
       fontSize: 14,
@@ -411,6 +597,12 @@ const createStyles = (theme: Theme) =>
     },
     periodButtonTextActive: {
       color: "#ffffff",
+    },
+    rangeText: {
+      marginBottom: 14,
+      color: theme.textSecondary,
+      fontSize: 13,
+      fontWeight: "500",
     },
     statsOverview: {
       marginBottom: 20,
@@ -452,6 +644,39 @@ const createStyles = (theme: Theme) =>
     statsCardSubtitle: {
       fontSize: 12,
       color: theme.textSecondary,
+    },
+    deltaCard: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginTop: 4,
+    },
+    deltaTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 2,
+    },
+    deltaSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 10,
+    },
+    deltaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    deltaLabel: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    deltaValue: {
+      fontSize: 13,
+      fontWeight: "700",
     },
     chartContainer: {
       marginBottom: 24,

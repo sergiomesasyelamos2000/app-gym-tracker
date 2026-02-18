@@ -49,6 +49,10 @@ import {
   getRoutineById,
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
+import {
+  normalizeExerciseImage,
+  normalizeExercisesImage,
+} from "../utils/normalizeExerciseImage";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
@@ -207,10 +211,11 @@ export default function RoutineDetailScreen() {
       return;
     }
 
-    setExercises(initialExercises);
+    const normalizedInitialExercises = normalizeExercisesImage(initialExercises);
+    setExercises(normalizedInitialExercises);
 
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
-    initialExercises.forEach((exercise) => {
+    normalizedInitialExercises.forEach((exercise) => {
       initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
         ...set,
         completed: false,
@@ -721,7 +726,7 @@ export default function RoutineDetailScreen() {
   ): ExerciseRequestDto[] => {
     const mapped = data.routineExercises?.map(
       (re: RoutineExerciseResponseDto) => {
-        const exercise: ExerciseRequestDto = {
+        const exercise: ExerciseRequestDto = normalizeExerciseImage({
           ...re.exercise,
           sets: re.sets.map((set: SetResponseDto) => ({
             ...set,
@@ -733,7 +738,7 @@ export default function RoutineDetailScreen() {
           weightUnit: re.weightUnit || "kg",
           repsType: re.repsType || "reps",
           supersetWith: re.supersetWith || undefined,
-        };
+        });
 
         return exercise;
       }

@@ -9,6 +9,19 @@ import type {
 } from "@sergiomesasyelamos2000/shared";
 import type { CaughtError } from "../types";
 
+type ExerciseSearchFilters = {
+  name?: string;
+  equipment?: string;
+  muscle?: string;
+};
+
+type SearchableExercise = ExerciseRequestDto & {
+  equipments?: string[];
+  targetMuscles?: string[];
+  secondaryMuscles?: string[];
+  bodyParts?: string[];
+};
+
 const CACHE_KEYS = {
   EXERCISES: "@exercises_cache",
   EQUIPMENT: "@equipment_cache",
@@ -91,20 +104,61 @@ export const isUsingCache = async (): Promise<boolean> => {
 };
 
 export const searchExercises = async (
-  query: string
+  filters: ExerciseSearchFilters
 ): Promise<ExerciseRequestDto[]> => {
+  const name = filters.name?.trim() || "";
+  const equipment = filters.equipment?.trim() || "";
+  const muscle = filters.muscle?.trim() || "";
+
+  const params = new URLSearchParams();
+  if (name) params.append("name", name);
+  if (equipment) params.append("equipment", equipment);
+  if (muscle) params.append("muscle", muscle);
+
   try {
-    return await apiFetch<ExerciseRequestDto[]>(
-      `exercises/search?name=${encodeURIComponent(query)}`
-    );
+    const endpoint = params.toString()
+      ? `exercises/search?${params.toString()}`
+      : "exercises/search";
+
+    const data = await apiFetch<ExerciseRequestDto[]>(endpoint);
+    await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
+    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
+    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    return data;
   } catch (error) {
     // Fallback to local filtering if offline
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
     if (cached) {
-      const exercises: ExerciseRequestDto[] = JSON.parse(cached);
-      return exercises.filter((ex) =>
-        ex.name.toLowerCase().includes(query.toLowerCase())
-      );
+      const exercises: SearchableExercise[] = JSON.parse(cached);
+      const lowerName = name.toLowerCase();
+      const lowerEquipment = equipment.toLowerCase();
+      const lowerMuscle = muscle.toLowerCase();
+
+      await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
+
+      return exercises.filter((ex) => {
+        const matchesName =
+          !lowerName || ex.name.toLowerCase().includes(lowerName);
+        const exerciseEquipments = ex.equipments || [];
+        const exerciseMuscles = [
+          ...(ex.targetMuscles || []),
+          ...(ex.bodyParts || []),
+        ];
+        const matchesEquipment =
+          !lowerEquipment ||
+          exerciseEquipments.some((item) => {
+            const token = item.toLowerCase().trim();
+            return token === lowerEquipment || token.startsWith(`${lowerEquipment} `);
+          });
+        const matchesMuscle =
+          !lowerMuscle ||
+          exerciseMuscles.some((item) => {
+            const token = item.toLowerCase().trim();
+            return token === lowerMuscle || token.startsWith(`${lowerMuscle} `);
+          });
+
+        return matchesName && matchesEquipment && matchesMuscle;
+      });
     }
     throw error;
   }

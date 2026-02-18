@@ -469,6 +469,13 @@ export default function MacrosScreen({ navigation }: Props) {
 
   const handleNavigateToDetail = async (entry: FoodEntry) => {
     if (isSelectionMode) return;
+    if ((entry.productCode || "").startsWith("ai-")) {
+      Alert.alert(
+        "Entrada de IA",
+        "Este alimento fue añadido desde análisis de foto y no tiene ficha de producto para abrir detalle."
+      );
+      return;
+    }
 
     setLoadingProduct(true);
     try {

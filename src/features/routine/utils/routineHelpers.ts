@@ -5,6 +5,10 @@ export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
   if (sets.length > 0) {
     return sets.map((set, index) => ({
       ...set,
+      id:
+        typeof set.id === "string" && set.id.trim().length > 0
+          ? set.id
+          : (uuid.v4() as string),
       order: index + 1,
       completed: false, // 🔄 Asegurar que no estén completadas
     }));

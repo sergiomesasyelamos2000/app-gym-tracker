@@ -4,11 +4,18 @@ import * as ImagePicker from "expo-image-picker";
 import { Crown } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  MealType,
+  RecognizeFoodResponseDto,
+  FoodEntryResponseDto as FoodEntry,
+} from "@sergiomesasyelamos2000/shared";
+import {
+  ActivityIndicator,
   Alert,
   Animated,
   FlatList,
   KeyboardAvoidingView,
   ListRenderItem,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -16,6 +23,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -25,6 +33,8 @@ import { MessageBubble } from "../features/chat/components/MessageBubble";
 import ImageModal from "../features/common/components/ImageModal";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
+import { useNutritionStore } from "../store/useNutritionStore";
+import { addFoodEntry as addFoodEntryToDiary } from "../features/nutrition/services/nutritionService";
 import {
   selectLoading,
   useChatStore,
@@ -161,6 +171,13 @@ export default function NutritionScreen() {
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showAddFoodModal, setShowAddFoodModal] = useState(false);
+  const [pendingFood, setPendingFood] = useState<RecognizeFoodResponseDto | null>(
+    null
+  );
+  const [pendingMealType, setPendingMealType] = useState<MealType>("lunch");
+  const [pendingGrams, setPendingGrams] = useState("");
+  const [savingRecognizedFood, setSavingRecognizedFood] = useState(false);
 
   // Selectores de Zustand
   const messages = useMessages(); // Hook personalizado sin loop
@@ -172,6 +189,7 @@ export default function NutritionScreen() {
   const sendMessage = useChatStore((state) => state.sendMessage);
   const sendPhoto = useChatStore((state) => state.sendPhoto);
   const setCurrentUser = useChatStore((state) => state.setCurrentUser);
+  const addLocalFoodEntry = useNutritionStore((state) => state.addFoodEntry);
 
   const { theme, isDark } = useTheme();
   const navigation = useNavigation<BaseNavigation>();
@@ -351,6 +369,99 @@ export default function NutritionScreen() {
     setModalVisible(true);
   }, []);
 
+  const getTodayDateString = () => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    return local.toISOString().split("T")[0];
+  };
+
+  const normalizeNameForCode = (name: string) =>
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  const saveRecognizedFoodToDiary = async (
+    food: RecognizeFoodResponseDto,
+    mealType: MealType,
+    grams: number
+  ) => {
+    if (!user?.id) {
+      Alert.alert("Error", "Debes iniciar sesión");
+      return;
+    }
+
+    const productCodeBase = normalizeNameForCode(food.name || "alimento");
+    const productCode = `ai-${productCodeBase || "food"}-${Date.now()}`;
+
+    const baseServingSize = Number(food.servingSize || 0);
+    const safeBaseServing = baseServingSize > 0 ? baseServingSize : grams;
+    const ratio =
+      safeBaseServing > 0 && grams > 0 ? grams / safeBaseServing : 1;
+
+    const payload = {
+      userId: user.id,
+      productCode,
+      productName: food.name || "Alimento detectado",
+      date: getTodayDateString(),
+      mealType,
+      quantity: Math.max(1, Math.round(grams)),
+      unit: "gram" as const,
+      calories: Math.max(0, Math.round(Number(food.calories || 0) * ratio)),
+      protein: Math.max(0, Number(food.proteins || 0) * ratio),
+      carbs: Math.max(0, Number(food.carbs || 0) * ratio),
+      fat: Math.max(0, Number(food.fats || 0) * ratio),
+    };
+
+    try {
+      const saved = await addFoodEntryToDiary(payload);
+      addLocalFoodEntry(saved as FoodEntry);
+      Alert.alert("Añadido", `${payload.productName} guardado en el diario`, [
+        {
+          text: "Ver en Macros",
+          onPress: () => navigation.navigate("Macros"),
+        },
+        { text: "OK" },
+      ]);
+    } catch (error) {
+      console.error("Error saving recognized food:", error);
+      Alert.alert("Error", "No se pudo guardar el alimento en el diario");
+    }
+  };
+
+  const closeAddFoodModal = () => {
+    setShowAddFoodModal(false);
+    setPendingFood(null);
+    setPendingGrams("");
+    setPendingMealType("lunch");
+  };
+
+  const handleConfirmAddRecognizedFood = async () => {
+    if (!pendingFood) return;
+    const parsed = Number(pendingGrams.replace(",", "."));
+    const defaultGrams = Math.round(Number(pendingFood.servingSize || 100));
+    const safeGrams =
+      Number.isFinite(parsed) && parsed > 0 ? parsed : Math.max(1, defaultGrams);
+
+    try {
+      setSavingRecognizedFood(true);
+      await saveRecognizedFoodToDiary(pendingFood, pendingMealType, safeGrams);
+      closeAddFoodModal();
+    } finally {
+      setSavingRecognizedFood(false);
+    }
+  };
+
+  const handleAddRecognizedFood = (food: RecognizeFoodResponseDto) => {
+    const suggestedGrams = Math.round(Number(food.servingSize || 100));
+    setPendingFood(food);
+    setPendingMealType("lunch");
+    setPendingGrams(String(Math.max(1, suggestedGrams)));
+    setShowAddFoodModal(true);
+  };
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isAtBottom =
@@ -366,9 +477,13 @@ export default function NutritionScreen() {
 
   const renderMessage: ListRenderItem<Message> = useCallback(
     ({ item }) => (
-      <MessageBubble message={item} onImagePress={handleImagePress} />
+      <MessageBubble
+        message={item}
+        onImagePress={handleImagePress}
+        onAddRecognizedFood={handleAddRecognizedFood}
+      />
     ),
-    [handleImagePress]
+    [handleImagePress, handleAddRecognizedFood]
   );
 
   const renderEmptyComponent = useCallback(
@@ -501,6 +616,114 @@ export default function NutritionScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
+      <Modal
+        visible={showAddFoodModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddFoodModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Añadir al diario
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              {pendingFood?.name || "Alimento"}
+            </Text>
+
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+              Comida
+            </Text>
+            <View style={styles.mealTypesRow}>
+              {(
+                [
+                  { key: "breakfast", label: "Desayuno" },
+                  { key: "lunch", label: "Comida" },
+                  { key: "dinner", label: "Cena" },
+                  { key: "snack", label: "Snack" },
+                ] as Array<{ key: MealType; label: string }>
+              ).map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[
+                    styles.mealChip,
+                    {
+                      borderColor:
+                        pendingMealType === item.key ? theme.primary : theme.border,
+                      backgroundColor:
+                        pendingMealType === item.key
+                          ? `${theme.primary}20`
+                          : theme.backgroundSecondary,
+                    },
+                  ]}
+                  onPress={() => setPendingMealType(item.key)}
+                >
+                  <Text
+                    style={{
+                      color:
+                        pendingMealType === item.key ? theme.primary : theme.text,
+                      fontWeight: "600",
+                      fontSize: 12,
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+              Cantidad (gramos)
+            </Text>
+            <TextInput
+              value={pendingGrams}
+              onChangeText={setPendingGrams}
+              keyboardType="numeric"
+              placeholder="Ej: 180"
+              placeholderTextColor={theme.textTertiary}
+              style={[
+                styles.gramsInput,
+                {
+                  color: theme.text,
+                  borderColor: theme.border,
+                  backgroundColor: theme.backgroundSecondary,
+                },
+              ]}
+            />
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalSecondaryButton,
+                  { borderColor: theme.border },
+                ]}
+                onPress={closeAddFoodModal}
+                disabled={savingRecognizedFood}
+              >
+                <Text style={[styles.modalSecondaryButtonText, { color: theme.text }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalPrimaryButton,
+                  { backgroundColor: theme.primary },
+                ]}
+                onPress={handleConfirmAddRecognizedFood}
+                disabled={savingRecognizedFood}
+              >
+                {savingRecognizedFood ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalPrimaryButtonText}>Guardar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -676,5 +899,74 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    borderRadius: 14,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  modalLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  mealTypesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  mealChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  gramsInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 16,
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalPrimaryButton: {},
+  modalSecondaryButton: {
+    borderWidth: 1,
+    backgroundColor: "transparent",
+  },
+  modalPrimaryButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  modalSecondaryButtonText: {
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

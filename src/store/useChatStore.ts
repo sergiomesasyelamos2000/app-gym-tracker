@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { ChatMessageDto } from "@sergiomesasyelamos2000/shared";
+import type {
+  ChatMessageDto,
+  RecognizeFoodResponseDto,
+} from "@sergiomesasyelamos2000/shared";
 import {
   postPhoto,
   postText,
@@ -11,6 +14,8 @@ export interface Message {
   text: string;
   sender: 'user' | 'bot';
   imageUri?: string;
+  type?: "default" | "food-analysis";
+  foodAnalysisItems?: RecognizeFoodResponseDto[];
 }
 
 interface UserChatData {
@@ -194,8 +199,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ loading: false });
 
       let formatted = 'No se pudo reconocer ningún alimento.';
+      let analysisItems: RecognizeFoodResponseDto[] | undefined = undefined;
 
       if (data && data.length > 0) {
+        analysisItems = data;
         formatted = data
           .map((item) => {
             return `🍴 Alimento reconocido: ${item.name}\n📊 Información nutricional:\n- Calorías: ${item.calories || 0} kcal\n- Proteínas: ${item.proteins || 0} g\n- Carbohidratos: ${item.carbs || 0} g\n- Grasas: ${item.fats || 0} g\n- Tamaño de porción: ${item.servingSize || 0} g`;
@@ -216,6 +223,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 id: newNextId,
                 text: formatted,
                 sender: 'bot',
+                type: "food-analysis",
+                foodAnalysisItems: analysisItems,
               },
             ],
             nextId: newNextId + 1,

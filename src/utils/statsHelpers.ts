@@ -54,6 +54,29 @@ export interface RoutineSession {
   exercises: ExerciseInSession[];
 }
 
+function toLocalDateKey(value: string | Date): string {
+  const parsed = value instanceof Date ? value : new Date(value);
+
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  if (typeof value === "string" && value.includes("T")) {
+    return value.split("T")[0];
+  }
+
+  return typeof value === "string" ? value : "";
+}
+
+function startOfLocalDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
 /**
  * Extrae los datos de progreso de un ejercicio específico desde el historial de sesiones
  *
@@ -118,7 +141,7 @@ export function aggregateByDate(
   const grouped = new Map<string, ExerciseProgressDataPoint[]>();
 
   data.forEach((point) => {
-    const dateKey = point.date.split("T")[0]; // Extraer solo la fecha
+    const dateKey = toLocalDateKey(point.date);
     if (!grouped.has(dateKey)) {
       grouped.set(dateKey, []);
     }
@@ -135,7 +158,8 @@ export function aggregateByDate(
     const estimated1RM = Math.max(...points.map((p) => p.estimated1RM));
 
     aggregated.push({
-      date: dateKey + "T00:00:00.000Z",
+      // Sin sufijo Z para evitar desplazamientos UTC en el filtrado por día local.
+      date: `${dateKey}T00:00:00`,
       maxWeight,
       totalReps,
       totalSets,
@@ -162,10 +186,17 @@ export function filterByPeriod(
 ): ExerciseProgressDataPoint[] {
   if (days === 0) return data;
 
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
+  // Ventana por días calendario locales, incluyendo el día de hoy.
+  const todayStart = startOfLocalDay(new Date());
+  const cutoffDate = new Date(todayStart);
+  cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
 
-  return data.filter((point) => new Date(point.date) >= cutoffDate);
+  return data.filter((point) => {
+    const pointDate = startOfLocalDay(
+      new Date(`${toLocalDateKey(point.date)}T00:00:00`)
+    );
+    return pointDate >= cutoffDate && pointDate <= todayStart;
+  });
 }
 
 /**

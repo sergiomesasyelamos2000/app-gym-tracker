@@ -1,16 +1,11 @@
-const isDev = process.env.NODE_ENV === "development";
-
-// Para desarrollo local:
-// - Si usas emulador Android: usa "10.0.2.2:3000"
-// - Si usas emulador iOS o dispositivo físico en la misma red: usa tu IP local (ej: "192.168.1.X:3000")
-// - Si usas Expo Go en dispositivo físico: usa tu IP local
-const LOCAL_IP = "192.168.1.136"; // ⚠️ IMPORTANTE: Para dispositivo físico DEBES usar tu IP WiFi, NO localhost
-const API_URL_FROM_ENV = process.env.EXPO_PUBLIC_API_URL;
+const LOCAL_IP = "192.168.1.138";
 const LOCAL_API_URL = `http://${LOCAL_IP}:3000/api`;
-const FALLBACK_PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
+const PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
+
+// Si defines EXPO_PUBLIC_API_URL, tiene prioridad.
+// Si no, en dev usa local y en producción usa remoto.
 const RESOLVED_API_URL =
-  API_URL_FROM_ENV ||
-  (isDev ? LOCAL_API_URL : FALLBACK_PROD_API_URL);
+  process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? LOCAL_API_URL : PROD_API_URL);
 
 const getAssetBaseUrl = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");
 
