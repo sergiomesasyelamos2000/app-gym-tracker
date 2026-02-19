@@ -204,15 +204,15 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
   toastContainer: {
-    backgroundColor: isDark ? "#181B27" : `${theme.primary}12`,
+    backgroundColor: isDark ? "#181B27" : theme.card,
     borderRadius: 18,
     padding: 14,
     alignSelf: "center",
     borderWidth: 1,
-    borderColor: isDark ? "#2A2F43" : `${theme.primary}55`,
+    borderColor: isDark ? "#2A2F43" : `${theme.primary}44`,
     elevation: 10,
     shadowColor: "#000",
-    shadowOpacity: isDark ? 0.35 : 0.12,
+    shadowOpacity: isDark ? 0.35 : 0.14,
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 14,
   },
@@ -235,7 +235,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 33,
-    backgroundColor: isDark ? "transparent" : `${theme.primary}14`,
+    backgroundColor: isDark ? "rgba(255,255,255,0.04)" : `${theme.primary}1F`,
   },
   timerText: {
     position: "absolute",
@@ -269,7 +269,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     gap: 8,
   },
   actionButton: {
-    backgroundColor: isDark ? "#262B3E" : `${theme.primary}18`,
+    backgroundColor: isDark ? "#262B3E" : `${theme.primary}24`,
     borderRadius: 12,
     paddingVertical: 7,
     paddingHorizontal: 12,
@@ -285,7 +285,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     fontSize: 13,
   },
   cancelButton: {
-    backgroundColor: isDark ? "#2A3047" : `${theme.primary}14`,
+    backgroundColor: isDark ? "#2A3047" : `${theme.primary}22`,
     borderRadius: 11,
     width: 32,
     height: 32,
@@ -302,7 +302,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
   progressBarContainer: {
     width: "100%",
     height: 6,
-    backgroundColor: isDark ? "#2A3047" : theme.divider,
+    backgroundColor: isDark ? "#2A3047" : `${theme.primary}20`,
     borderRadius: 999,
     marginTop: 12,
     overflow: "hidden",

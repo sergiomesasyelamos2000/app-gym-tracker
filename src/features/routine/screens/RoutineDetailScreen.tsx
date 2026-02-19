@@ -98,6 +98,8 @@ export default function RoutineDetailScreen() {
   >(null);
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const restTimerEndTimeRef = useRef<number | null>(null);
+  const workoutStartTimeRef = useRef<number | null>(null);
+  const durationRef = useRef(0);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [previousSessions, setPreviousSessions] = useState<
@@ -136,18 +138,43 @@ export default function RoutineDetailScreen() {
     [allSets]
   );
 
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
+  const getWorkoutStartTime = useCallback(() => {
+    if (workoutStartTimeRef.current) {
+      return workoutStartTimeRef.current;
+    }
+
+    if (workoutInProgress?.startedAt) {
+      workoutStartTimeRef.current = workoutInProgress.startedAt;
+      return workoutInProgress.startedAt;
+    }
+
+    const inferredStartTime = Date.now() - durationRef.current * 1000;
+    workoutStartTimeRef.current = inferredStartTime;
+    return inferredStartTime;
+  }, [workoutInProgress?.startedAt]);
+
+  const syncDurationFromStartTime = useCallback(() => {
+    const startTime = getWorkoutStartTime();
+    const nextDuration = Math.max(
+      0,
+      Math.floor((Date.now() - startTime) / 1000)
+    );
+    setDuration(nextDuration);
+  }, [getWorkoutStartTime]);
+
   // Calculate records achieved in this session
   const allRecords = useRecordsStore((state) => state.records);
   const sessionRecordsCount = useMemo(() => {
     if (!started) return 0;
 
-    // If we have a workout in progress, use its start time, otherwise use current time minus duration
-    const startTime = workoutInProgress?.startedAt
-      ? new Date(workoutInProgress.startedAt)
-      : new Date(Date.now() - duration * 1000);
+    const startTime = new Date(getWorkoutStartTime());
 
     return allRecords.filter((r) => new Date(r.date) >= startTime).length;
-  }, [allRecords, started, workoutInProgress?.startedAt, duration]);
+  }, [allRecords, started, getWorkoutStartTime]);
 
   useEffect(() => {
     const hasInitialRoutine = Boolean(routine);
@@ -217,6 +244,7 @@ export default function RoutineDetailScreen() {
     setExercises(workoutInProgress.exercises);
     setSets(workoutInProgress.sets);
     setDuration(workoutInProgress.duration);
+    workoutStartTimeRef.current = workoutInProgress.startedAt;
     setStarted(true);
     setHasInitializedFromStore(true);
 
@@ -312,9 +340,10 @@ export default function RoutineDetailScreen() {
 
   useEffect(() => {
     if (!started || showShortWorkoutModal) return;
-    const interval = setInterval(() => setDuration((prev) => prev + 1), 1000);
+    syncDurationFromStartTime();
+    const interval = setInterval(syncDurationFromStartTime, 1000);
     return () => clearInterval(interval);
-  }, [started, showShortWorkoutModal]);
+  }, [started, showShortWorkoutModal, syncDurationFromStartTime]);
 
   useEffect(() => {
     if (!started) return;
@@ -430,6 +459,10 @@ export default function RoutineDetailScreen() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
+        if (started) {
+          syncDurationFromStartTime();
+        }
+
         const endTime = restTimerEndTimeRef.current;
         if (endTime) {
           const now = Date.now();
@@ -467,7 +500,7 @@ export default function RoutineDetailScreen() {
         });
       }
     };
-  }, [navigation, theme]);
+  }, [navigation, theme, started, syncDurationFromStartTime]);
 
   const handleStartRoutine = () => {
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
@@ -483,6 +516,10 @@ export default function RoutineDetailScreen() {
 
     setSets(initialSets);
 
+    const startedAt = Date.now();
+    workoutStartTimeRef.current = startedAt;
+    setDuration(0);
+
     setWorkoutInProgress({
       routineId: routineData?.id || (routineId ?? (uuid.v4() as string)),
       routineTitle: routineTitle || routineData?.title || "Rutina",
@@ -494,7 +531,7 @@ export default function RoutineDetailScreen() {
         sets: initialSets[ex.id] || [],
       })),
       sets: initialSets,
-      startedAt: Date.now(),
+      startedAt,
     });
 
     setStarted(true);
@@ -544,6 +581,7 @@ export default function RoutineDetailScreen() {
 
       // Only clear workout after successful save
       clearWorkoutInProgress();
+      workoutStartTimeRef.current = null;
       navigation.setParams({ start: undefined, routineId: undefined });
 
       resetSetsCompletionStatus();
@@ -590,6 +628,7 @@ export default function RoutineDetailScreen() {
     setShowShortWorkoutModal(false);
     setStarted(false);
     clearWorkoutInProgress();
+    workoutStartTimeRef.current = null;
     setHasInitializedFromStore(false);
     if (countdownRef.current) clearInterval(countdownRef.current);
     setShowRestToast(false);
@@ -799,9 +838,7 @@ export default function RoutineDetailScreen() {
 
   const buildSessionPayload = () => {
     const allRecords = useRecordsStore.getState().records;
-    const startTime = workoutInProgress?.startedAt
-      ? new Date(workoutInProgress.startedAt)
-      : new Date(Date.now() - duration * 1000);
+    const startTime = new Date(getWorkoutStartTime());
 
     const sessionRecords = allRecords.filter(
       (r) => new Date(r.date) >= startTime

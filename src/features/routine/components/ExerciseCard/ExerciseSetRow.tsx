@@ -135,7 +135,7 @@ const ExerciseSetRow = ({
   const backgroundColor = flashAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [
-      item.completed ? (isDark ? "#1E293B" : "#F1F5F9") : "transparent", // Default background
+      item.completed ? (isDark ? "#14532D" : "#DCFCE7") : "transparent", // Stronger green for completed rows
       "#FFD70040", // Gold with opacity for flash
     ],
   });
