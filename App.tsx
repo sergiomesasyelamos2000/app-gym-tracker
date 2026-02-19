@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import React, { useEffect } from "react";
-import { LogBox, StatusBar } from "react-native";
+import { LogBox, Platform, StatusBar, TextInput } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
@@ -18,6 +18,9 @@ import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { useNotificationSettingsStore } from "./src/store/useNotificationSettingsStore";
 import CustomToast from "./src/ui/CustomToast";
 import { SyncProvider } from "./src/components/SyncProvider";
+import KeyboardDismissButton, {
+  GLOBAL_KEYBOARD_ACCESSORY_ID,
+} from "./src/components/KeyboardDismissButton";
 
 LogBox.ignoreLogs([
   "expo-notifications: Android Push notifications",
@@ -39,6 +42,21 @@ const toastConfig = {
 
 function AppContent() {
   const { isDark } = useTheme();
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    const TextInputAny = TextInput as unknown as {
+      defaultProps?: Record<string, unknown>;
+    };
+
+    TextInputAny.defaultProps = {
+      ...TextInputAny.defaultProps,
+      inputAccessoryViewID:
+        (TextInputAny.defaultProps?.inputAccessoryViewID as string | undefined) ??
+        GLOBAL_KEYBOARD_ACCESSORY_ID,
+    };
+  }, []);
 
   // Initialize notification listeners
   useEffect(() => {
@@ -92,6 +110,7 @@ function AppContent() {
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         <RootNavigator />
       </NavigationContainer>
+      <KeyboardDismissButton />
       <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );

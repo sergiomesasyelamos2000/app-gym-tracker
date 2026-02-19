@@ -3,6 +3,7 @@ import { TrendingUp, Trophy, Zap } from "lucide-react-native";
 import React, { memo, useCallback, useRef } from "react";
 import {
   Animated,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { GLOBAL_KEYBOARD_ACCESSORY_ID } from "../../../../components/KeyboardDismissButton";
 import { getCompletedRowStyle } from "../../../../utils/themeStyles";
 import { COLUMN_FLEX } from "./columnConstants";
 import { useSetRowLogic } from "./useSetRowLogic";
@@ -45,6 +47,10 @@ const ExerciseSetRow = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+  const inputAccessoryProps =
+    Platform.OS === "ios"
+      ? { inputAccessoryViewID: GLOBAL_KEYBOARD_ACCESSORY_ID }
+      : {};
 
   // Usar el custom hook para la lógica
   const {
@@ -217,6 +223,7 @@ const ExerciseSetRow = ({
         }}
       >
         <TextInput
+          {...inputAccessoryProps}
           style={[
             styles.input,
             {
@@ -253,6 +260,7 @@ const ExerciseSetRow = ({
           }}
         >
           <TextInput
+            {...inputAccessoryProps}
             style={[
               styles.input,
               {
@@ -298,6 +306,7 @@ const ExerciseSetRow = ({
             ]}
           >
             <TextInput
+              {...inputAccessoryProps}
               style={[
                 styles.rangeInput,
                 {
@@ -328,6 +337,7 @@ const ExerciseSetRow = ({
               -
             </Text>
             <TextInput
+              {...inputAccessoryProps}
               style={[
                 styles.rangeInput,
                 {
@@ -358,6 +368,7 @@ const ExerciseSetRow = ({
           }}
         >
           <TextInput
+            {...inputAccessoryProps}
             style={[
               styles.input,
               {
