@@ -32,6 +32,32 @@ const CACHE_KEYS = {
 
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+async function refreshExercisesCacheInBackground(): Promise<void> {
+  try {
+    const freshData = await apiFetch<ExerciseRequestDto[]>("exercises");
+    await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(freshData));
+    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
+    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+  } catch {
+    // Best-effort refresh, ignore failures.
+  }
+}
+
+async function getLastSyncTimestamp(): Promise<number | null> {
+  const value = await AsyncStorage.getItem(CACHE_KEYS.LAST_SYNC);
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function shouldRevalidate(
+  maxAgeMs: number = CACHE_EXPIRY_MS
+): Promise<boolean> {
+  const lastSync = await getLastSyncTimestamp();
+  if (!lastSync) return true;
+  return Date.now() - lastSync > maxAgeMs;
+}
+
 /**
  * Check if cache is still valid
  */
@@ -54,11 +80,20 @@ async function isCacheValid(key: string): Promise<boolean> {
  * 3. If offline, use cached data
  */
 export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
+  const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
+  if (cached) {
+    const cachedExercises = JSON.parse(cached) as ExerciseRequestDto[];
+    // Cache-first strategy: this is not necessarily offline mode.
+    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    if (await shouldRevalidate()) {
+      void refreshExercisesCacheInBackground();
+    }
+    return cachedExercises;
+  }
+
   try {
-    // Try to fetch from backend first
     const data = await apiFetch<ExerciseRequestDto[]>("exercises");
 
-    // Save to cache for offline use
     await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
     await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
     await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
@@ -86,6 +121,37 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
     throw new Error(
       "No se pudieron cargar los ejercicios. Por favor, conecta a internet al menos una vez."
     );
+  }
+};
+
+/**
+ * Warm-up catalog data after login/app boot:
+ * refreshes exercises + filters and leaves everything cached.
+ */
+export const prefetchExerciseCatalog = async (
+  options?: { force?: boolean }
+): Promise<void> => {
+  try {
+    const force = options?.force === true;
+    if (!force && !(await shouldRevalidate())) {
+      return;
+    }
+
+    const [exercises, equipment, muscles] = await Promise.all([
+      apiFetch<ExerciseRequestDto[]>("exercises"),
+      apiFetch<EquipmentDto[]>("exercises/equipment/all"),
+      apiFetch<MuscleDto[]>("exercises/muscles/all"),
+    ]);
+
+    await Promise.all([
+      AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(exercises)),
+      AsyncStorage.setItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(equipment)),
+      AsyncStorage.setItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
+      AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString()),
+      AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false"),
+    ]);
+  } catch {
+    // Best-effort prefetch. Existing cache continues to be used.
   }
 };
 
@@ -121,9 +187,6 @@ export const searchExercises = async (
       : "exercises/search";
 
     const data = await apiFetch<ExerciseRequestDto[]>(endpoint);
-    await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
-    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
-    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
     return data;
   } catch (error) {
     // Fallback to local filtering if offline

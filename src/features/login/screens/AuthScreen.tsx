@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ENV } from "../../../environments/environment";
+import { prefetchExerciseCatalog } from "../../../services/exerciseService";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { googleLogin, login, register } from "../services/authService";
 import { CaughtError, getErrorMessage } from "../../../types";
@@ -112,6 +113,7 @@ export default function AuthScreen() {
       const authResponse = await googleLogin(authentication.idToken);
 
       setAuth(authResponse.user, authResponse.tokens);
+      void prefetchExerciseCatalog({ force: true });
       Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
     } catch (error) {
       const errorMessage =
@@ -172,6 +174,7 @@ export default function AuthScreen() {
             });
 
       setAuth(authResponse.user, authResponse.tokens);
+      void prefetchExerciseCatalog({ force: true });
       Alert.alert(
         mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
         `Bienvenido ${authResponse.user.name}`

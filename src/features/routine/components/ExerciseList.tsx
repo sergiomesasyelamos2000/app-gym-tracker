@@ -30,7 +30,6 @@ import {
   fetchMuscles,
   fetchExercises,
   isUsingCache,
-  searchExercises,
 } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
@@ -75,7 +74,7 @@ export default function ExerciseList() {
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseRequestDto[]
   >([]);
-  const [exercises, setExercises] = useState<ExerciseListItem[]>([]);
+  const [allExercises, setAllExercises] = useState<ExerciseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,8 +97,9 @@ export default function ExerciseList() {
     [muscleOptions, selectedMuscleId]
   );
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const hasActiveFilters = Boolean(
-    searchQuery.trim() || selectedEquipmentId || selectedMuscleId
+    normalizedQuery || selectedEquipmentId || selectedMuscleId
   );
   const hasSelectionFilters = Boolean(selectedEquipmentId || selectedMuscleId);
   const selectionFiltersCount =
@@ -133,16 +133,8 @@ export default function ExerciseList() {
       setLoading(true);
       setError(null);
       setIsOfflineMode(false);
-
-      const name = searchQuery.trim();
-      const equipment = selectedEquipmentName || "";
-      const muscle = selectedMuscleName || "";
-
-      const data = hasActiveFilters
-        ? await searchExercises({ name, equipment, muscle })
-        : await fetchExercises();
-
-      setExercises(normalizeExercisesImage(data as ExerciseListItem[]));
+      const data = await fetchExercises();
+      setAllExercises(normalizeExercisesImage(data as ExerciseListItem[]));
 
       const fromCache = await isUsingCache();
       setIsOfflineMode(fromCache);
@@ -153,17 +145,14 @@ export default function ExerciseList() {
     } finally {
       setLoading(false);
     }
-  }, [hasActiveFilters, searchQuery, selectedEquipmentName, selectedMuscleName]);
+  }, []);
 
   useEffect(() => {
     loadFilterOptions();
   }, [loadFilterOptions]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadExercises();
-    }, 300);
-    return () => clearTimeout(timeoutId);
+    loadExercises();
   }, [loadExercises]);
 
   useFocusEffect(
@@ -173,7 +162,7 @@ export default function ExerciseList() {
 
       const normalizedCreatedExercise = normalizeExerciseImage(createdExercise);
 
-      setExercises((prev) =>
+      setAllExercises((prev) =>
         prev.some((item) => item.id === createdExercise.id)
           ? prev
           : [normalizedCreatedExercise as ExerciseListItem, ...prev]
@@ -186,6 +175,36 @@ export default function ExerciseList() {
       );
     }, [consumePendingCreatedExercise])
   );
+
+  const filteredExercises = useMemo(() => {
+    if (!allExercises.length) return [];
+
+    return allExercises.filter((exercise) => {
+      const matchesName =
+        !normalizedQuery ||
+        exercise.name.toLowerCase().includes(normalizedQuery);
+
+      const matchesEquipment =
+        !selectedEquipmentName ||
+        (exercise.equipments || []).some((value) => {
+          const token = value.toLowerCase().trim();
+          const expected = selectedEquipmentName.toLowerCase();
+          return token === expected || token.startsWith(`${expected} `);
+        });
+
+      const matchesMuscle =
+        !selectedMuscleName ||
+        [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
+          (value) => {
+            const token = value.toLowerCase().trim();
+            const expected = selectedMuscleName.toLowerCase();
+            return token === expected || token.startsWith(`${expected} `);
+          }
+        );
+
+      return matchesName && matchesEquipment && matchesMuscle;
+    });
+  }, [allExercises, normalizedQuery, selectedEquipmentName, selectedMuscleName]);
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
     const normalizedExercise = normalizeExerciseImage(exercise);
@@ -278,7 +297,7 @@ export default function ExerciseList() {
         </View>
       ) : (
         <View style={styles.container}>
-          {isOfflineMode && exercises.length > 0 && (
+          {isOfflineMode && filteredExercises.length > 0 && (
             <View style={styles.offlineBanner}>
               <Text style={styles.offlineBannerText}>
                 Modo sin conexion - Mostrando ejercicios guardados
@@ -460,7 +479,7 @@ export default function ExerciseList() {
 
           <View style={styles.listContainer}>
             <FlatList
-              data={exercises}
+              data={filteredExercises}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <ExerciseItem

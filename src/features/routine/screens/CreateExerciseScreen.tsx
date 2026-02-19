@@ -201,8 +201,13 @@ export default function CreateExerciseScreen() {
       return false;
     }
 
+    if (!equipmentId) {
+      Alert.alert("Error", "Por favor selecciona un equipamiento");
+      return false;
+    }
+
     if (!primaryMuscleId) {
-      Alert.alert("Error", "Por favor ingresa un nombre para el ejercicio");
+      Alert.alert("Error", "Por favor selecciona un músculo principal");
       return false;
     }
 
@@ -226,7 +231,7 @@ export default function CreateExerciseScreen() {
         equipment: equipmentId,
         primaryMuscle: primaryMuscleId,
         otherMuscles: otherMuscleIds,
-        type: typeId,
+        ...(typeId ? { type: typeId } : {}),
         imageBase64,
       });
 
@@ -429,7 +434,8 @@ export default function CreateExerciseScreen() {
     </Modal>
   );
 
-  const isSaveDisabled = !name.trim() || !primaryMuscleId || isLoading;
+  const isSaveDisabled =
+    !name.trim() || !equipmentId || !primaryMuscleId || isLoading;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -518,7 +524,7 @@ export default function CreateExerciseScreen() {
 
           {/* EQUIPAMIENTO */}
           <View style={styles.section}>
-            <Text style={styles.inputLabel}>Equipamiento</Text>
+            <Text style={styles.inputLabel}>Equipamiento *</Text>
             <TouchableOpacity
               style={styles.selector}
               onPress={() => setShowEquipmentModal(true)}
@@ -656,7 +662,7 @@ export default function CreateExerciseScreen() {
 
         {renderSelectionModal(
           showEquipmentModal,
-          "Equipamiento",
+          "Equipamiento *",
           equipmentOptions,
           equipmentId,
           setEquipmentId,

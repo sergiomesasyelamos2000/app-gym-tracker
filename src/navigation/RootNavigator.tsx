@@ -7,11 +7,12 @@
  */
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
 import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
+import { prefetchExerciseCatalog } from "../services/exerciseService";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { BottomTabs } from "./BottomTabs";
@@ -25,6 +26,7 @@ export const RootNavigator = () => {
     (state) => state.setSubscription
   );
   const [isInitializing, setIsInitializing] = useState(true);
+  const hasWarmedUpCatalogRef = useRef(false);
 
   // Check if auth state is loaded from AsyncStorage
   useEffect(() => {
@@ -43,6 +45,16 @@ export const RootNavigator = () => {
     if (isAuthenticated && !isInitializing) {
       // Subscription will be loaded by useSubscription hook in components
     }
+  }, [isAuthenticated, isInitializing]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isInitializing) {
+      hasWarmedUpCatalogRef.current = false;
+      return;
+    }
+    if (hasWarmedUpCatalogRef.current) return;
+    hasWarmedUpCatalogRef.current = true;
+    void prefetchExerciseCatalog({ force: true });
   }, [isAuthenticated, isInitializing]);
 
   // Show loading screen while checking auth state
