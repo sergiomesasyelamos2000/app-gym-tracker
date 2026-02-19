@@ -48,6 +48,35 @@ type ExerciseListItem = ExerciseRequestDto & {
   bodyParts?: string[];
 };
 
+const SEARCH_STOP_WORDS = new Set([
+  "de",
+  "del",
+  "la",
+  "el",
+  "los",
+  "las",
+  "con",
+  "y",
+  "en",
+  "para",
+  "a",
+  "al",
+]);
+
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const tokenizeSearch = (value: string) =>
+  normalizeSearchText(value)
+    .split(" ")
+    .filter((token) => token.length > 0 && !SEARCH_STOP_WORDS.has(token));
+
 export default function ExerciseList() {
   const { theme } = useTheme();
   const route = useRoute<ExerciseListRouteProp>();
@@ -97,7 +126,8 @@ export default function ExerciseList() {
     [muscleOptions, selectedMuscleId]
   );
 
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(searchQuery);
+  const queryTokens = useMemo(() => tokenizeSearch(searchQuery), [searchQuery]);
   const hasActiveFilters = Boolean(
     normalizedQuery || selectedEquipmentId || selectedMuscleId
   );
@@ -179,32 +209,86 @@ export default function ExerciseList() {
   const filteredExercises = useMemo(() => {
     if (!allExercises.length) return [];
 
-    return allExercises.filter((exercise) => {
-      const matchesName =
-        !normalizedQuery ||
-        exercise.name.toLowerCase().includes(normalizedQuery);
+    const scored = allExercises
+      .map((exercise) => {
+        const normalizedName = normalizeSearchText(exercise.name);
+        const nameTokens = tokenizeSearch(exercise.name);
 
-      const matchesEquipment =
-        !selectedEquipmentName ||
-        (exercise.equipments || []).some((value) => {
-          const token = value.toLowerCase().trim();
-          const expected = selectedEquipmentName.toLowerCase();
-          return token === expected || token.startsWith(`${expected} `);
-        });
+        let nameScore = 0;
+        if (!normalizedQuery) {
+          nameScore = 1;
+        } else if (normalizedName.includes(normalizedQuery)) {
+          nameScore = 100;
+        } else if (queryTokens.length > 0) {
+          const tokenScore = queryTokens.reduce((total, queryToken) => {
+            const bestTokenMatch = nameTokens.reduce((best, token) => {
+              if (token === queryToken) return Math.max(best, 25);
+              if (token.startsWith(queryToken)) return Math.max(best, 18);
+              if (token.includes(queryToken) || queryToken.includes(token)) {
+                return Math.max(best, 12);
+              }
+              return best;
+            }, 0);
+            return total + bestTokenMatch;
+          }, 0);
 
-      const matchesMuscle =
-        !selectedMuscleName ||
-        [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
-          (value) => {
-            const token = value.toLowerCase().trim();
-            const expected = selectedMuscleName.toLowerCase();
-            return token === expected || token.startsWith(`${expected} `);
+          const matchedTokenCount = queryTokens.filter((queryToken) =>
+            nameTokens.some(
+              (token) =>
+                token === queryToken ||
+                token.startsWith(queryToken) ||
+                token.includes(queryToken) ||
+                queryToken.includes(token)
+            )
+          ).length;
+
+          if (matchedTokenCount > 0) {
+            nameScore = tokenScore + matchedTokenCount * 10;
           }
-        );
+        }
 
-      return matchesName && matchesEquipment && matchesMuscle;
-    });
-  }, [allExercises, normalizedQuery, selectedEquipmentName, selectedMuscleName]);
+        return { exercise, nameScore };
+      })
+      .filter(({ nameScore }) => nameScore > 0);
+
+    return scored
+      .map(({ exercise, nameScore }) => {
+        const matchesName = nameScore > 0;
+
+        const matchesEquipment =
+          !selectedEquipmentName ||
+          (exercise.equipments || []).some((value) => {
+            const token = normalizeSearchText(value);
+            const expected = normalizeSearchText(selectedEquipmentName);
+            return token === expected || token.startsWith(`${expected} `);
+          });
+
+        const matchesMuscle =
+          !selectedMuscleName ||
+          [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
+            (value) => {
+              const token = normalizeSearchText(value);
+              const expected = normalizeSearchText(selectedMuscleName);
+              return token === expected || token.startsWith(`${expected} `);
+            }
+          );
+
+        return {
+          exercise,
+          nameScore,
+          visible: matchesName && matchesEquipment && matchesMuscle,
+        };
+      })
+      .filter((item) => item.visible)
+      .sort((a, b) => b.nameScore - a.nameScore)
+      .map((item) => item.exercise);
+  }, [
+    allExercises,
+    normalizedQuery,
+    queryTokens,
+    selectedEquipmentName,
+    selectedMuscleName,
+  ]);
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
     const normalizedExercise = normalizeExerciseImage(exercise);
