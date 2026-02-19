@@ -1,6 +1,6 @@
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   SafeAreaView,
@@ -35,6 +35,7 @@ import {
   normalizeExerciseImage,
   normalizeExercisesImage,
 } from "../utils/normalizeExerciseImage";
+import { initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
@@ -85,12 +86,51 @@ export default function RoutineEditScreen() {
   const [tempExercisesOrder, setTempExercisesOrder] = useState<
     ExerciseRequestDto[]
   >([]);
+  const hydratedFromParamsRef = useRef(false);
+  const hasLocalEditsRef = useRef(false);
+  const activeFetchRequestRef = useRef(0);
+  const hasBaseRoutineLoadedRef = useRef(false);
+  const pendingAddExercisesRef = useRef<ExerciseRequestDto[]>([]);
+
+  const applyAddedExercises = useCallback((incoming: ExerciseRequestDto[]) => {
+    if (!incoming.length) return;
+
+    hasLocalEditsRef.current = true;
+
+    setExercises((prev) => {
+      const newExercises = incoming.filter(
+        (ex) => !prev.some((p) => p.id === ex.id)
+      );
+      return [...prev, ...newExercises];
+    });
+
+    setSets((prev) => {
+      const next = { ...prev };
+      incoming.forEach((exercise) => {
+        if (!next[exercise.id]) {
+          next[exercise.id] = initializeSets(exercise.sets || []);
+        }
+      });
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const fetchRoutine = async () => {
       if (id) {
+        const requestId = Date.now();
+        activeFetchRequestRef.current = requestId;
+
         try {
           const data = await getRoutineById(id);
+
+          // Ignore stale/late responses or responses that arrive after local edits.
+          if (
+            activeFetchRequestRef.current !== requestId ||
+            hasLocalEditsRef.current
+          ) {
+            return;
+          }
 
           const exercises: ExerciseRequestDto[] = Array.isArray(
             data.routineExercises
@@ -126,6 +166,12 @@ export default function RoutineEditScreen() {
 
           setSets(initialSets);
           setSupersets(initialSupersets);
+          hasBaseRoutineLoadedRef.current = true;
+
+          if (pendingAddExercisesRef.current.length > 0) {
+            applyAddedExercises(pendingAddExercisesRef.current);
+            pendingAddExercisesRef.current = [];
+          }
         } catch (error: CaughtError) {
           console.error("[RoutineEdit] Failed to load routine:", error);
           const message = getErrorMessage(error);
@@ -141,11 +187,18 @@ export default function RoutineEditScreen() {
   }, [id]);
 
   useEffect(() => {
+    // Hydrate from route params only once to avoid wiping local edits
+    // when returning from ExerciseList with add/replace params.
+    if (hydratedFromParamsRef.current) {
+      return;
+    }
+
     if (typeof title === "string") {
       setEditTitle(title);
     }
 
-    if (!exercises) {
+    if (!exercises || exercises.length === 0) {
+      hydratedFromParamsRef.current = true;
       return;
     }
 
@@ -162,7 +215,7 @@ export default function RoutineEditScreen() {
     const initial: { [exerciseId: string]: SetRequestDto[] } = {};
     const initialSupersets: { [key: string]: string } = {};
 
-    (exercises || []).forEach((exercise) => {
+    exercises.forEach((exercise) => {
       initial[exercise.id] = sortSetsByOrder(exercise.sets || []);
       if (exercise.supersetWith) {
         initialSupersets[exercise.id] = exercise.supersetWith;
@@ -171,10 +224,18 @@ export default function RoutineEditScreen() {
 
     setSets(initial);
     setSupersets(initialSupersets);
-  }, [title, exercises]);
+    hydratedFromParamsRef.current = true;
+    hasBaseRoutineLoadedRef.current = true;
+
+    if (pendingAddExercisesRef.current.length > 0) {
+      applyAddedExercises(pendingAddExercisesRef.current);
+      pendingAddExercisesRef.current = [];
+    }
+  }, [title, exercises, applyAddedExercises]);
 
   useEffect(() => {
     if (!replaceExerciseId || !replacementExercise) return;
+    hasLocalEditsRef.current = true;
 
     setExercises((prev) =>
       prev.map((ex) =>
@@ -226,17 +287,23 @@ export default function RoutineEditScreen() {
   useEffect(() => {
     if (!addExercises || addExercises.length === 0) return;
 
-    setExercises((prev) => {
-      const normalizedAddExercises = normalizeExercisesImage(addExercises);
+    const normalizedAddExercises = normalizeExercisesImage(addExercises);
 
-      const newExercises = normalizedAddExercises.filter(
-        (ex) => !prev.some((p) => p.id === ex.id)
+    if (!hasBaseRoutineLoadedRef.current) {
+      const pendingById = new Map<string, ExerciseRequestDto>();
+      pendingAddExercisesRef.current.forEach((exercise) =>
+        pendingById.set(exercise.id, exercise)
       );
-      return [...prev, ...newExercises];
-    });
+      normalizedAddExercises.forEach((exercise) =>
+        pendingById.set(exercise.id, exercise)
+      );
+      pendingAddExercisesRef.current = Array.from(pendingById.values());
+    } else {
+      applyAddedExercises(normalizedAddExercises);
+    }
 
     navigation.setParams({ addExercises: undefined });
-  }, [addExercises, navigation]);
+  }, [addExercises, navigation, applyAddedExercises]);
 
   const handleUpdate = async () => {
     try {
@@ -298,6 +365,7 @@ export default function RoutineEditScreen() {
   };
 
   const handleReorderComplete = (data: ExerciseRequestDto[]) => {
+    hasLocalEditsRef.current = true;
     if (reorderFromButton) {
       setTempExercisesOrder(data);
     } else {
@@ -321,6 +389,7 @@ export default function RoutineEditScreen() {
   };
 
   const handleConfirmReorder = () => {
+    hasLocalEditsRef.current = true;
     setExercises(tempExercisesOrder);
     setReorderMode(false);
     setReorderFromButton(false);
@@ -350,6 +419,7 @@ export default function RoutineEditScreen() {
           text: "Eliminar",
           style: "destructive",
           onPress: () => {
+            hasLocalEditsRef.current = true;
             setExercises((prev) => prev.filter((ex) => ex.id !== exerciseId));
 
             setSets((prev) => {

@@ -146,6 +146,7 @@ export default function RoutineDetailScreen() {
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
   const MIN_WORKOUT_DURATION = 300; // 5 minutos
+  const targetRoutineId = routineData?.id ?? routineId;
 
   const {
     workoutInProgress,
@@ -154,6 +155,10 @@ export default function RoutineDetailScreen() {
     clearWorkoutInProgress,
     updateWorkoutProgress,
   } = useWorkoutInProgressStore();
+  const hasMatchingWorkoutInProgress =
+    !!workoutInProgress &&
+    !!targetRoutineId &&
+    workoutInProgress.routineId === targetRoutineId;
 
   const allSets = useMemo(() => Object.values(sets).flat(), [sets]);
   const volume = useMemo(() => calculateVolume(allSets), [allSets]);
@@ -264,6 +269,11 @@ export default function RoutineDetailScreen() {
       return;
     }
 
+    // Only hydrate from persisted workout if it belongs to the routine being opened.
+    if (targetRoutineId && workoutInProgress.routineId !== targetRoutineId) {
+      return;
+    }
+
     setRoutineTitle(workoutInProgress.routineTitle);
     setExercises(workoutInProgress.exercises);
     setSets(sortSetsMapByOrder(workoutInProgress.sets));
@@ -277,6 +287,7 @@ export default function RoutineDetailScreen() {
     workoutInProgress,
     route.params?.start,
     hasInitializedFromStore,
+    targetRoutineId,
     navigation,
   ]);
 
@@ -321,7 +332,7 @@ export default function RoutineDetailScreen() {
     if (
       !start ||
       !routineData ||
-      workoutInProgress ||
+      hasMatchingWorkoutInProgress ||
       hasInitializedFromStore
     ) {
       return;
@@ -357,8 +368,8 @@ export default function RoutineDetailScreen() {
   }, [
     start,
     routineData,
-    workoutInProgress,
     hasInitializedFromStore,
+    hasMatchingWorkoutInProgress,
     setWorkoutInProgress,
   ]);
 

@@ -33,6 +33,7 @@ export default function ExerciseItem({
         },
       ]}
       onPress={() => onSelect(item)}
+      activeOpacity={1}
     >
       <CachedExerciseImage
         imageUrl={item.imageUrl}
