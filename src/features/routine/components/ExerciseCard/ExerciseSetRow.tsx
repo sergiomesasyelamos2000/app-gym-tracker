@@ -139,6 +139,7 @@ const ExerciseSetRow = ({
       "#FFD70040", // Gold with opacity for flash
     ],
   });
+  const completedCheckColor = isDark ? "#4ADE80" : "#16A34A";
 
   return (
     <Animated.View
@@ -405,6 +406,7 @@ const ExerciseSetRow = ({
         >
           <TouchableOpacity
             onPress={handleToggleWithAnimation}
+            activeOpacity={1}
             accessibilityLabel={
               item.completed ? "Serie completada" : "Serie no completada"
             }
@@ -415,7 +417,7 @@ const ExerciseSetRow = ({
             <Icon
               name={item.completed ? "check-circle" : "radio-button-unchecked"}
               size={isSmallScreen ? 24 : 28}
-              color={item.completed ? theme.success : theme.textTertiary}
+              color={item.completed ? completedCheckColor : theme.textTertiary}
             />
           </TouchableOpacity>
         </View>

@@ -352,9 +352,7 @@ const ExerciseCard = ({
     field: keyof SetRequestDto,
     value: number | boolean
   ) => {
-    const currentSet = sets.find((s) => s.id === id);
-    if (!currentSet) return;
-    const updatedSet = { ...currentSet, [field]: value } as SetRequestDto;
+    const updatedSetRef: { current: SetRequestDto | null } = { current: null };
 
     // Use functional update to avoid stale state overwrites when multiple updates
     // arrive in quick succession (e.g. checking one set and editing another).
@@ -362,10 +360,19 @@ const ExerciseCard = ({
       const setIndex = prevSets.findIndex((s) => s.id === id);
       if (setIndex === -1) return prevSets;
 
+      const nextSet = {
+        ...prevSets[setIndex],
+        [field]: value,
+      } as SetRequestDto;
+
       const newSets = [...prevSets];
-      newSets[setIndex] = updatedSet;
+      newSets[setIndex] = nextSet;
+      updatedSetRef.current = nextSet;
       return newSets;
     });
+
+    const updatedSet = updatedSetRef.current;
+    if (!updatedSet) return;
 
     // 3. Handle Side Effects (Rest timer + record detection)
     // Start rest timer on every explicit completion, regardless of previous sessions.
