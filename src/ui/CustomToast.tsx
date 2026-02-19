@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { Theme, useTheme } from "../contexts/ThemeContext";
 
 interface CustomToastProps {
   text1: string;
@@ -29,6 +30,8 @@ const CustomToast = ({
   onAddTime,
   onSubtractTime,
 }: CustomToastProps) => {
+  const { theme, isDark } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const animatedProgress = useRef(new Animated.Value(progress)).current;
   const { width } = useWindowDimensions();
   const safeProgress = Math.max(0, Math.min(1, progress));
@@ -61,7 +64,11 @@ const CustomToast = ({
   });
 
   const progressTint =
-    safeProgress > 0.5 ? "#6D5CFF" : safeProgress > 0.2 ? "#8F7BFF" : "#FF6B6B";
+    safeProgress > 0.5
+      ? theme.primary
+      : safeProgress > 0.2
+        ? theme.warning
+        : theme.error;
 
   const handleAddTime = async () => {
     if (onAddTime) {
@@ -111,7 +118,7 @@ const CustomToast = ({
                 cx={ringRadius + ringStroke}
                 cy={ringRadius + ringStroke}
                 r={ringRadius}
-                stroke="rgba(255,255,255,0.15)"
+                stroke={isDark ? "rgba(255,255,255,0.15)" : "rgba(15,23,42,0.12)"}
                 strokeWidth={ringStroke}
                 fill="transparent"
               />
@@ -194,17 +201,18 @@ const CustomToast = ({
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme, isDark: boolean) =>
+  StyleSheet.create({
   toastContainer: {
-    backgroundColor: "#181B27",
+    backgroundColor: isDark ? "#181B27" : `${theme.primary}12`,
     borderRadius: 18,
     padding: 14,
     alignSelf: "center",
     borderWidth: 1,
-    borderColor: "#2A2F43",
+    borderColor: isDark ? "#2A2F43" : `${theme.primary}55`,
     elevation: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.35,
+    shadowOpacity: isDark ? 0.35 : 0.12,
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 14,
   },
@@ -226,10 +234,12 @@ const styles = StyleSheet.create({
     height: 66,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 33,
+    backgroundColor: isDark ? "transparent" : `${theme.primary}14`,
   },
   timerText: {
     position: "absolute",
-    color: "#FFFFFF",
+    color: theme.text,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -240,13 +250,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   toastTitle: {
-    color: "#FFFFFF",
+    color: theme.text,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 2,
   },
   toastSubtext: {
-    color: "#AAB1C8",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "500",
   },
@@ -259,7 +269,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    backgroundColor: "#262B3E",
+    backgroundColor: isDark ? "#262B3E" : `${theme.primary}18`,
     borderRadius: 12,
     paddingVertical: 7,
     paddingHorizontal: 12,
@@ -267,32 +277,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#353C56",
+    borderColor: isDark ? "#353C56" : `${theme.primary}55`,
   },
   actionButtonText: {
-    color: "#EFF2FF",
+    color: theme.text,
     fontWeight: "700",
     fontSize: 13,
   },
   cancelButton: {
-    backgroundColor: "#2A3047",
+    backgroundColor: isDark ? "#2A3047" : `${theme.primary}14`,
     borderRadius: 11,
     width: 32,
     height: 32,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#3B4565",
+    borderColor: isDark ? "#3B4565" : `${theme.primary}45`,
   },
   cancelButtonText: {
-    color: "#D9E0F7",
+    color: theme.textSecondary,
     fontWeight: "700",
     fontSize: 13,
   },
   progressBarContainer: {
     width: "100%",
     height: 6,
-    backgroundColor: "#2A3047",
+    backgroundColor: isDark ? "#2A3047" : theme.divider,
     borderRadius: 999,
     marginTop: 12,
     overflow: "hidden",

@@ -367,22 +367,22 @@ const ExerciseCard = ({
       return newSets;
     });
 
-    // 3. Handle Side Effects (Record Detection & Rest Timer)
-    // We used to do this inside setSets updater, which is bad for side effects (can run multiple times)
+    // 3. Handle Side Effects (Rest timer + record detection)
+    // Start rest timer on every explicit completion, regardless of previous sessions.
+    if (started && field === "completed" && value === true && onStartRestTimer) {
+      const { minutes, seconds } = parseTime(restTime);
+      const totalSeconds = minutes * 60 + seconds;
+      if (totalSeconds > 0) {
+        onStartRestTimer(totalSeconds, exercise.name);
+      }
+    }
+
+    // Record detection requires previous sessions as baseline.
     if (started && previousSessions.length > 0) {
       if (
         (field === "completed" && value === true) || // Just marked completed
         (updatedSet.completed && field !== "completed") // Already completed, modifying values
       ) {
-        // Start rest timer if explicitly toggling completion
-        if (field === "completed" && value === true && onStartRestTimer) {
-          const { minutes, seconds } = parseTime(restTime);
-          const totalSeconds = minutes * 60 + seconds;
-          if (totalSeconds > 0) {
-            onStartRestTimer(totalSeconds, exercise.name);
-          }
-        }
-
         // Check for record
         const record = detectRecordWithPrecomputedMetrics(
           exercise.id,
