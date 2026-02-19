@@ -19,7 +19,7 @@
     },
     "scheme": "app",
     "notification": {
-      "icon": "./assets/notification-icon.png"
+      "icon": "./assets/icon.png"
     },
     "ios": {
       "supportsTablet": true,

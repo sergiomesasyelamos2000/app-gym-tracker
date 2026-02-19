@@ -276,7 +276,11 @@ const ExerciseSetRow = ({
             ]}
             keyboardType="numeric"
             value={localReps}
-            placeholder={previousMark?.split("x")[1]?.trim() || "0"}
+            placeholder={
+              repsType === "range"
+                ? `${item.repsMin && item.repsMin > 0 ? item.repsMin : item.reps && item.reps > 0 ? item.reps : 0}-${item.repsMax && item.repsMax > 0 ? item.repsMax : item.reps && item.reps > 0 ? item.reps : 0}`
+                : previousMark?.split("x")[1]?.trim() || "0"
+            }
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
             editable={!readonly}
@@ -320,7 +324,15 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMin}
-              placeholder="0"
+              placeholder={
+                started
+                  ? item.repsMin && item.repsMin > 0
+                    ? item.repsMin.toString()
+                    : item.reps && item.reps > 0
+                      ? item.reps.toString()
+                    : "0"
+                  : "0"
+              }
               placeholderTextColor={theme.textTertiary}
               onChangeText={handleRepsMinChange}
               editable={!readonly}
@@ -351,7 +363,15 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMax}
-              placeholder="0"
+              placeholder={
+                started
+                  ? item.repsMax && item.repsMax > 0
+                    ? item.repsMax.toString()
+                    : item.reps && item.reps > 0
+                      ? item.reps.toString()
+                    : "0"
+                  : "0"
+              }
               placeholderTextColor={theme.textTertiary}
               onChangeText={handleRepsMaxChange}
               editable={!readonly}
