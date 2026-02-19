@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -28,6 +28,7 @@ import {
   deleteRoutine,
   duplicateRoutine,
   findAllRoutines,
+  getRoutineById,
 } from "../services/routineService";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
@@ -41,6 +42,9 @@ export default function WorkoutScreen() {
   const { theme, isDark } = useTheme();
 
   const [routines, setRoutines] = useState<RoutineResponseDto[]>([]);
+  const [routineDetailsById, setRoutineDetailsById] = useState<
+    Record<string, RoutineResponseDto>
+  >({});
   const [loading, setLoading] = useState(true);
   const [selectedRoutine, setSelectedRoutine] =
     useState<RoutineResponseDto | null>(null);
@@ -54,6 +58,7 @@ export default function WorkoutScreen() {
       }))
     );
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
+  const prefetchedRoutineIdsRef = useRef<Set<string>>(new Set());
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -102,6 +107,25 @@ export default function WorkoutScreen() {
     setShowWorkoutBanner(false);
   };
 
+  const prefetchRoutineDetails = useCallback((items: RoutineResponseDto[]) => {
+    items.slice(0, 8).forEach((item) => {
+      if (prefetchedRoutineIdsRef.current.has(item.id)) return;
+      prefetchedRoutineIdsRef.current.add(item.id);
+
+      getRoutineById(item.id)
+        .then((fullRoutine) => {
+          setRoutineDetailsById((prev) => {
+            if (prev[item.id]) return prev;
+            return { ...prev, [item.id]: fullRoutine };
+          });
+        })
+        .catch(() => {
+          // Ignore prefetch errors; detail screen will handle fallback fetch.
+          prefetchedRoutineIdsRef.current.delete(item.id);
+        });
+    });
+  }, []);
+
   // Función para cargar y ordenar rutinas
   const fetchRoutines = useCallback(async () => {
     try {
@@ -122,13 +146,14 @@ export default function WorkoutScreen() {
       });
 
       setRoutines(sortedRoutines);
+      prefetchRoutineDetails(sortedRoutines);
     } catch (err) {
       console.error("Error fetching routines", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [prefetchRoutineDetails]);
 
   // Cargar rutinas cuando se enfoca la pantalla
   useFocusEffect(
@@ -275,6 +300,7 @@ export default function WorkoutScreen() {
                 onPress={() =>
                   navigation.navigate("RoutineDetail", {
                     routineId: routine.id,
+                    routine: routineDetailsById[routine.id] ?? routine,
                   })
                 }
               >
@@ -299,6 +325,7 @@ export default function WorkoutScreen() {
                 onPress={() =>
                   navigation.navigate("RoutineDetail", {
                     routineId: routine.id,
+                    routine: routineDetailsById[routine.id] ?? routine,
                     start: true,
                   })
                 }

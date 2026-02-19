@@ -12,7 +12,7 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -73,7 +73,7 @@ export default function RoutineDetailScreen() {
     (state) => state.restTimerNotificationsEnabled
   );
 
-  const [loading, setLoading] = useState(!!routine?.id);
+  const [loading, setLoading] = useState(Boolean(routineId && !routine));
   const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(
     routine || null
   );
@@ -150,10 +150,14 @@ export default function RoutineDetailScreen() {
   }, [allRecords, started, workoutInProgress?.startedAt, duration]);
 
   useEffect(() => {
+    const hasInitialRoutine = Boolean(routine);
+    const hasEmbeddedExercises = Array.isArray(
+      (routine as RoutineResponseDto | undefined)?.routineExercises
+    );
+
     if (routine) {
       setRoutineData(routine);
       setLoading(false);
-      return;
     }
 
     if (!routineId) {
@@ -161,30 +165,48 @@ export default function RoutineDetailScreen() {
       return;
     }
 
+    // If routine comes from list as summary (without routineExercises), hydrate full detail by id.
+    const shouldFetchById = !hasInitialRoutine || !hasEmbeddedExercises;
+    if (!shouldFetchById) {
+      return;
+    }
+
+    let isCancelled = false;
+    if (!hasInitialRoutine) {
+      setLoading(true);
+    }
+
     const fetchRoutine = async () => {
       try {
         const data = await getRoutineById(routineId);
-
-        setRoutineData(data);
+        if (!isCancelled) {
+          setRoutineData(data);
+        }
       } catch (err: CaughtError) {
         console.error("Error fetching routine by id", err);
 
-        // Show user-friendly error message
         Alert.alert(
           "Error",
           getErrorMessage(err) ||
             "No se pudo cargar la rutina. Verifica tu conexión."
         );
 
-        // Navigate back if routine cannot be loaded
-        navigation.goBack();
+        // Only go back if we do not have a local routine fallback.
+        if (!isCancelled && !hasInitialRoutine) {
+          navigation.goBack();
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchRoutine();
-  }, [routine, routineId]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [routine, routineId, navigation]);
 
   useEffect(() => {
     if (!workoutInProgress || !route.params?.start || hasInitializedFromStore) {
@@ -829,7 +851,8 @@ export default function RoutineDetailScreen() {
     setSets(resetSets);
   };
 
-  const renderExerciseCard = ({ item }: { item: ExerciseRequestDto }) => {
+  const renderExerciseCard = useCallback(
+    ({ item }: { item: ExerciseRequestDto }) => {
     // 🔥 Buscar el nombre del ejercicio con el que hace superserie
     const supersetExercise = item.supersetWith
       ? exercisesState.find((ex) => ex.id === item.supersetWith)
@@ -860,7 +883,17 @@ export default function RoutineDetailScreen() {
         previousSessions={previousSessions} // For record detection
       />
     );
-  };
+    },
+    [
+      exercisesState,
+      previousSessions,
+      readonly,
+      started,
+      sets,
+      handleStartRestTimer,
+      handleCancelRestTimer,
+    ]
+  );
 
   if (loading) {
     return (
@@ -894,7 +927,10 @@ export default function RoutineDetailScreen() {
       <FlatList
         data={exercisesState}
         keyExtractor={(item) => item.id}
-        onViewableItemsChanged={(info) => {}}
+        initialNumToRender={4}
+        maxToRenderPerBatch={5}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <RoutineHeader
             routineTitle={routineTitle}

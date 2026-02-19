@@ -49,8 +49,18 @@ export async function findAllRoutines(): Promise<RoutineResponseDto[]> {
 }
 
 export async function getRoutineById(id: string): Promise<RoutineResponseDto> {
+  // Cache-first for faster routine detail opening.
+  const routineFromIndividualCache = await getRoutineFromIndividualCache(id);
+  if (routineFromIndividualCache) {
+    return routineFromIndividualCache;
+  }
+
+  const routineFromLocalCache = await getRoutineFromLocalCache(id);
+  if (routineFromLocalCache) {
+    return routineFromLocalCache;
+  }
+
   try {
-    // Try to fetch from API
     const routine = await apiFetch<RoutineResponseDto>(`routines/${id}`, {
       method: "GET",
     });
@@ -60,20 +70,6 @@ export async function getRoutineById(id: string): Promise<RoutineResponseDto> {
 
     return routine;
   } catch (error: CaughtError) {
-    // If network fails, try to get from cache
-
-    // Try individual cache first (has full details including exercises)
-    const routineFromIndividualCache = await getRoutineFromIndividualCache(id);
-    if (routineFromIndividualCache) {
-      return routineFromIndividualCache;
-    }
-
-    // Try local cache for offline routines
-    const routineFromLocalCache = await getRoutineFromLocalCache(id);
-    if (routineFromLocalCache) {
-      return routineFromLocalCache;
-    }
-
     // Try main cache as last resort (might not have full details)
     const routineFromMainCache = await getRoutineFromMainCache(id);
     if (routineFromMainCache) {
