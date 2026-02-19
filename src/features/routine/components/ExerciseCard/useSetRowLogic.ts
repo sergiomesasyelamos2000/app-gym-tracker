@@ -22,16 +22,32 @@ export const useSetRowLogic = ({
 }: UseSetRowLogicProps) => {
   // Estados locales
   const [localWeight, setLocalWeight] = useState<string>(
-    started ? "" : item.weight?.toString() || "",
+    started
+      ? ""
+      : item.weight && item.weight > 0
+        ? item.weight.toString()
+        : "",
   );
   const [localReps, setLocalReps] = useState<string>(
-    started ? "" : item.reps?.toString() || "",
+    started
+      ? ""
+      : item.reps && item.reps > 0
+        ? item.reps.toString()
+        : "",
   );
   const [localRepsMin, setLocalRepsMin] = useState<string>(
-    started ? "" : item.repsMin?.toString() || "",
+    started
+      ? ""
+      : item.repsMin && item.repsMin > 0
+        ? item.repsMin.toString()
+        : "",
   );
   const [localRepsMax, setLocalRepsMax] = useState<string>(
-    started ? "" : item.repsMax?.toString() || "",
+    started
+      ? ""
+      : item.repsMax && item.repsMax > 0
+        ? item.repsMax.toString()
+        : "",
   );
 
   // Función para extraer valores del previousMark
@@ -87,10 +103,14 @@ export const useSetRowLogic = ({
   // Efecto para sincronizar en modo edición
   useEffect(() => {
     if (!started) {
-      setLocalWeight(item.weight?.toString() || "");
-      setLocalReps(item.reps?.toString() || "");
-      setLocalRepsMin(item.repsMin?.toString() || "");
-      setLocalRepsMax(item.repsMax?.toString() || "");
+      setLocalWeight(item.weight && item.weight > 0 ? item.weight.toString() : "");
+      setLocalReps(item.reps && item.reps > 0 ? item.reps.toString() : "");
+      setLocalRepsMin(
+        item.repsMin && item.repsMin > 0 ? item.repsMin.toString() : ""
+      );
+      setLocalRepsMax(
+        item.repsMax && item.repsMax > 0 ? item.repsMax.toString() : ""
+      );
     }
   }, [started, item.weight, item.reps, item.repsMin, item.repsMax]);
 

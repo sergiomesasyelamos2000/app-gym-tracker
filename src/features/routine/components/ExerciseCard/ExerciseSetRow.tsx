@@ -232,7 +232,7 @@ const ExerciseSetRow = ({
           keyboardType="numeric"
           value={localWeight}
           placeholder={
-            started ? previousMark?.split("kg")[0]?.trim() || "Kg" : "Kg"
+            started ? previousMark?.split("kg")[0]?.trim() || "0" : "0"
           }
           placeholderTextColor={theme.textTertiary}
           onChangeText={handleWeightChange}
@@ -267,7 +267,7 @@ const ExerciseSetRow = ({
             ]}
             keyboardType="numeric"
             value={localReps}
-            placeholder={previousMark?.split("x")[1]?.trim() || "Reps"}
+            placeholder={previousMark?.split("x")[1]?.trim() || "0"}
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
             editable={!readonly}
@@ -310,7 +310,7 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMin}
-              placeholder="8"
+              placeholder="0"
               placeholderTextColor={theme.textTertiary}
               onChangeText={handleRepsMinChange}
               editable={!readonly}
@@ -340,7 +340,7 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMax}
-              placeholder="10"
+              placeholder="0"
               placeholderTextColor={theme.textTertiary}
               onChangeText={handleRepsMaxChange}
               editable={!readonly}
@@ -372,7 +372,7 @@ const ExerciseSetRow = ({
             ]}
             keyboardType="numeric"
             value={localReps}
-            placeholder="Reps"
+            placeholder="0"
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
             editable={!readonly}
