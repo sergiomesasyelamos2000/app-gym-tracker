@@ -77,6 +77,15 @@ const tokenizeSearch = (value: string) =>
     .split(" ")
     .filter((token) => token.length > 0 && !SEARCH_STOP_WORDS.has(token));
 
+const matchesToken = (value: string, expected: string) => {
+  const normalizedValue = normalizeSearchText(value);
+  const normalizedExpected = normalizeSearchText(expected);
+  return (
+    normalizedValue === normalizedExpected ||
+    normalizedValue.startsWith(`${normalizedExpected} `)
+  );
+};
+
 export default function ExerciseList() {
   const { theme } = useTheme();
   const route = useRoute<ExerciseListRouteProp>();
@@ -91,11 +100,13 @@ export default function ExerciseList() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isOfflineMode, setIsOfflineMode] = useState(false);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState("");
-  const [selectedMuscleId, setSelectedMuscleId] = useState("");
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>(
+    []
+  );
+  const [selectedMuscleIds, setSelectedMuscleIds] = useState<string[]>([]);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [tempEquipmentId, setTempEquipmentId] = useState("");
-  const [tempMuscleId, setTempMuscleId] = useState("");
+  const [tempEquipmentIds, setTempEquipmentIds] = useState<string[]>([]);
+  const [tempMuscleIds, setTempMuscleIds] = useState<string[]>([]);
   const [equipmentOptions, setEquipmentOptions] = useState<EquipmentDto[]>([]);
   const [muscleOptions, setMuscleOptions] = useState<MuscleDto[]>([]);
 
@@ -117,23 +128,39 @@ export default function ExerciseList() {
     (state) => state.clearSelectionContext
   );
 
-  const selectedEquipmentName = useMemo(
-    () => equipmentOptions.find((item) => item.id === selectedEquipmentId)?.name,
-    [equipmentOptions, selectedEquipmentId]
+  const selectedEquipmentNames = useMemo(
+    () =>
+      equipmentOptions
+        .filter((item) => selectedEquipmentIds.includes(item.id))
+        .map((item) => item.name),
+    [equipmentOptions, selectedEquipmentIds]
   );
-  const selectedMuscleName = useMemo(
-    () => muscleOptions.find((item) => item.id === selectedMuscleId)?.name,
-    [muscleOptions, selectedMuscleId]
+  const selectedMuscleNames = useMemo(
+    () =>
+      muscleOptions
+        .filter((item) => selectedMuscleIds.includes(item.id))
+        .map((item) => item.name),
+    [muscleOptions, selectedMuscleIds]
+  );
+  const selectedEquipmentLabel = useMemo(
+    () => selectedEquipmentNames.join(", "),
+    [selectedEquipmentNames]
+  );
+  const selectedMuscleLabel = useMemo(
+    () => selectedMuscleNames.join(", "),
+    [selectedMuscleNames]
   );
 
   const normalizedQuery = normalizeSearchText(searchQuery);
   const queryTokens = useMemo(() => tokenizeSearch(searchQuery), [searchQuery]);
   const hasActiveFilters = Boolean(
-    normalizedQuery || selectedEquipmentId || selectedMuscleId
+    normalizedQuery || selectedEquipmentIds.length || selectedMuscleIds.length
   );
-  const hasSelectionFilters = Boolean(selectedEquipmentId || selectedMuscleId);
+  const hasSelectionFilters = Boolean(
+    selectedEquipmentIds.length || selectedMuscleIds.length
+  );
   const selectionFiltersCount =
-    Number(Boolean(selectedEquipmentId)) + Number(Boolean(selectedMuscleId));
+    selectedEquipmentIds.length + selectedMuscleIds.length;
 
   const navigateToCreateExercise = () => {
     setSelectionContext({
@@ -256,21 +283,19 @@ export default function ExerciseList() {
         const matchesName = nameScore > 0;
 
         const matchesEquipment =
-          !selectedEquipmentName ||
+          selectedEquipmentNames.length === 0 ||
           (exercise.equipments || []).some((value) => {
-            const token = normalizeSearchText(value);
-            const expected = normalizeSearchText(selectedEquipmentName);
-            return token === expected || token.startsWith(`${expected} `);
+            return selectedEquipmentNames.some((selectedEquipmentName) => {
+              return matchesToken(value, selectedEquipmentName);
+            });
           });
 
         const matchesMuscle =
-          !selectedMuscleName ||
-          [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
-            (value) => {
-              const token = normalizeSearchText(value);
-              const expected = normalizeSearchText(selectedMuscleName);
-              return token === expected || token.startsWith(`${expected} `);
-            }
+          selectedMuscleNames.length === 0 ||
+          selectedMuscleNames.every((selectedMuscleName) =>
+            [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
+              (value) => matchesToken(value, selectedMuscleName)
+            )
           );
 
         return {
@@ -286,8 +311,8 @@ export default function ExerciseList() {
     allExercises,
     normalizedQuery,
     queryTokens,
-    selectedEquipmentName,
-    selectedMuscleName,
+    selectedEquipmentNames,
+    selectedMuscleNames,
   ]);
 
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
@@ -335,13 +360,13 @@ export default function ExerciseList() {
 
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedEquipmentId("");
-    setSelectedMuscleId("");
+    setSelectedEquipmentIds([]);
+    setSelectedMuscleIds([]);
   };
 
   const openFiltersModal = () => {
-    setTempEquipmentId(selectedEquipmentId);
-    setTempMuscleId(selectedMuscleId);
+    setTempEquipmentIds(selectedEquipmentIds);
+    setTempMuscleIds(selectedMuscleIds);
     setShowFiltersModal(true);
   };
 
@@ -350,19 +375,31 @@ export default function ExerciseList() {
   };
 
   const applyFiltersModal = () => {
-    setSelectedEquipmentId(tempEquipmentId);
-    setSelectedMuscleId(tempMuscleId);
+    setSelectedEquipmentIds(tempEquipmentIds);
+    setSelectedMuscleIds(tempMuscleIds);
     setShowFiltersModal(false);
   };
 
   const clearSelectionFilters = () => {
-    setSelectedEquipmentId("");
-    setSelectedMuscleId("");
+    setSelectedEquipmentIds([]);
+    setSelectedMuscleIds([]);
   };
 
   const clearModalSelectionFilters = () => {
-    setTempEquipmentId("");
-    setTempMuscleId("");
+    setTempEquipmentIds([]);
+    setTempMuscleIds([]);
+  };
+
+  const toggleTempEquipment = (id: string) => {
+    setTempEquipmentIds((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    );
+  };
+
+  const toggleTempMuscle = (id: string) => {
+    setTempMuscleIds((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -416,17 +453,17 @@ export default function ExerciseList() {
 
           {hasSelectionFilters && (
             <View style={styles.activeFiltersRow}>
-              {selectedEquipmentName && (
+              {selectedEquipmentLabel.length > 0 && (
                 <View style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Equipo: {selectedEquipmentName}
+                    Equipo: {selectedEquipmentLabel}
                   </Text>
                 </View>
               )}
-              {selectedMuscleName && (
+              {selectedMuscleLabel.length > 0 && (
                 <View style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Musculo: {selectedMuscleName}
+                    Musculo: {selectedMuscleLabel}
                   </Text>
                 </View>
               )}
@@ -460,14 +497,15 @@ export default function ExerciseList() {
                   <TouchableOpacity
                     style={[
                       styles.filterChip,
-                      !tempEquipmentId && styles.filterChipActive,
+                      tempEquipmentIds.length === 0 && styles.filterChipActive,
                     ]}
-                    onPress={() => setTempEquipmentId("")}
+                    activeOpacity={1}
+                    onPress={() => setTempEquipmentIds([])}
                   >
                     <Text
                       style={[
                         styles.filterChipText,
-                        !tempEquipmentId && styles.filterChipTextActive,
+                        tempEquipmentIds.length === 0 && styles.filterChipTextActive,
                       ]}
                     >
                       Todos
@@ -478,14 +516,17 @@ export default function ExerciseList() {
                       key={item.id}
                       style={[
                         styles.filterChip,
-                        tempEquipmentId === item.id && styles.filterChipActive,
+                        tempEquipmentIds.includes(item.id) &&
+                          styles.filterChipActive,
                       ]}
-                      onPress={() => setTempEquipmentId(item.id)}
+                      activeOpacity={1}
+                      onPress={() => toggleTempEquipment(item.id)}
                     >
                       <Text
                         style={[
                           styles.filterChipText,
-                          tempEquipmentId === item.id && styles.filterChipTextActive,
+                          tempEquipmentIds.includes(item.id) &&
+                            styles.filterChipTextActive,
                         ]}
                       >
                         {item.name}
@@ -503,14 +544,15 @@ export default function ExerciseList() {
                   <TouchableOpacity
                     style={[
                       styles.filterChip,
-                      !tempMuscleId && styles.filterChipActive,
+                      tempMuscleIds.length === 0 && styles.filterChipActive,
                     ]}
-                    onPress={() => setTempMuscleId("")}
+                    activeOpacity={1}
+                    onPress={() => setTempMuscleIds([])}
                   >
                     <Text
                       style={[
                         styles.filterChipText,
-                        !tempMuscleId && styles.filterChipTextActive,
+                        tempMuscleIds.length === 0 && styles.filterChipTextActive,
                       ]}
                     >
                       Todos
@@ -521,14 +563,16 @@ export default function ExerciseList() {
                       key={item.id}
                       style={[
                         styles.filterChip,
-                        tempMuscleId === item.id && styles.filterChipActive,
+                        tempMuscleIds.includes(item.id) && styles.filterChipActive,
                       ]}
-                      onPress={() => setTempMuscleId(item.id)}
+                      activeOpacity={1}
+                      onPress={() => toggleTempMuscle(item.id)}
                     >
                       <Text
                         style={[
                           styles.filterChipText,
-                          tempMuscleId === item.id && styles.filterChipTextActive,
+                          tempMuscleIds.includes(item.id) &&
+                            styles.filterChipTextActive,
                         ]}
                       >
                         {item.name}
