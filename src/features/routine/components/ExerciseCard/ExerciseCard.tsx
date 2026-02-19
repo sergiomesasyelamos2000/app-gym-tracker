@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -209,6 +210,41 @@ const ExerciseCard = ({
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
   const { theme, isDark } = useTheme();
+  const addButtonPressAnim = useRef(new Animated.Value(0)).current;
+
+  const addButtonAnimatedStyle = useMemo(
+    () => ({
+      transform: [
+        {
+          scale: addButtonPressAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.97],
+          }),
+        },
+      ],
+      opacity: addButtonPressAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 0.9],
+      }),
+    }),
+    [addButtonPressAnim]
+  );
+
+  const handleAddButtonPressIn = () => {
+    Animated.timing(addButtonPressAnim, {
+      toValue: 1,
+      duration: 90,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleAddButtonPressOut = () => {
+    Animated.timing(addButtonPressAnim, {
+      toValue: 0,
+      duration: 110,
+      useNativeDriver: true,
+    }).start();
+  };
 
   useEffect(() => {
     onChangeSets?.(sets);
@@ -516,25 +552,30 @@ const ExerciseCard = ({
         />
 
         {!readonly && (
-          <Button
-            mode="contained"
-            onPress={addSet}
-            style={[
-              styles.addButton,
-              {
-                backgroundColor: theme.primary,
-                paddingVertical: isSmallScreen ? 4 : 8,
-                marginTop: isSmallScreen ? 12 : 20,
-              },
-            ]}
-            labelStyle={{
-              fontSize: RFValue(isSmallScreen ? 13 : 15),
-              fontWeight: "600",
-            }}
-            icon="plus"
-          >
-            Añadir Serie
-          </Button>
+          <Animated.View style={addButtonAnimatedStyle}>
+            <Button
+              mode="contained"
+              onPress={addSet}
+              onPressIn={handleAddButtonPressIn}
+              onPressOut={handleAddButtonPressOut}
+              rippleColor="transparent"
+              style={[
+                styles.addButton,
+                {
+                  backgroundColor: theme.primary,
+                  paddingVertical: isSmallScreen ? 4 : 8,
+                  marginTop: isSmallScreen ? 12 : 20,
+                },
+              ]}
+              labelStyle={{
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+                fontWeight: "600",
+              }}
+              icon="plus"
+            >
+              Añadir Serie
+            </Button>
+          </Animated.View>
         )}
       </TouchableOpacity>
     </Card>
