@@ -120,8 +120,15 @@ export const useSetRowLogic = ({
       if (field === "completed") {
         return value === "true";
       }
-      const numValue = Number(value);
-      return isNaN(numValue) ? 0 : numValue;
+      if (field === "weight") {
+        // Allow decimal input with dot or comma (e.g. 7.5 / 7,5)
+        const normalized = value.replace(",", ".").trim();
+        const numValue = Number.parseFloat(normalized);
+        return Number.isNaN(numValue) ? 0 : numValue;
+      }
+
+      const numValue = Number.parseInt(value, 10);
+      return Number.isNaN(numValue) ? 0 : numValue;
     },
     [],
   );

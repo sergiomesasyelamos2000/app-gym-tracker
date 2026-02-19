@@ -229,7 +229,7 @@ const ExerciseSetRow = ({
               minHeight: isSmallScreen ? 40 : 44,
             },
           ]}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
           value={localWeight}
           placeholder={
             started ? previousMark?.split("kg")[0]?.trim() || "0" : "0"
