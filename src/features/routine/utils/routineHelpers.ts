@@ -1,9 +1,27 @@
 import uuid from "react-native-uuid";
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 
+const normalizeAndSortSets = (sets: SetRequestDto[]): SetRequestDto[] => {
+  return [...sets]
+    .map((set, index) => ({
+      set,
+      index,
+      order:
+        typeof set.order === "number" && Number.isFinite(set.order)
+          ? set.order
+          : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => {
+      if (a.order === b.order) return a.index - b.index;
+      return a.order - b.order;
+    })
+    .map((entry) => entry.set);
+};
+
 export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
   if (sets.length > 0) {
-    return sets.map((set, index) => ({
+    const sortedSets = normalizeAndSortSets(sets);
+    return sortedSets.map((set, index) => ({
       ...set,
       id:
         typeof set.id === "string" && set.id.trim().length > 0

@@ -37,6 +37,22 @@ import {
 } from "../utils/normalizeExerciseImage";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
+const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
+  [...sets]
+    .map((set, index) => ({
+      set,
+      index,
+      order:
+        typeof set.order === "number" && Number.isFinite(set.order)
+          ? set.order
+          : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => {
+      if (a.order === b.order) return a.index - b.index;
+      return a.order - b.order;
+    })
+    .map((entry) => entry.set);
+
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
   const route = useRoute<RouteProp<WorkoutStackParamList, "RoutineEdit">>();
@@ -100,7 +116,7 @@ export default function RoutineEditScreen() {
 
           exercises.forEach((exercise) => {
             initialSets[exercise.id] = Array.isArray(exercise.sets)
-              ? exercise.sets
+              ? sortSetsByOrder(exercise.sets)
               : [];
 
             if (exercise.supersetWith) {
@@ -147,7 +163,7 @@ export default function RoutineEditScreen() {
     const initialSupersets: { [key: string]: string } = {};
 
     (exercises || []).forEach((exercise) => {
-      initial[exercise.id] = exercise.sets || [];
+      initial[exercise.id] = sortSetsByOrder(exercise.sets || []);
       if (exercise.supersetWith) {
         initialSupersets[exercise.id] = exercise.supersetWith;
       }
@@ -230,7 +246,7 @@ export default function RoutineEditScreen() {
         createdAt: new Date(), // Agregar createdAt requerido por RoutineRequestDto
         exercises: exercisesState.map((exercise, index) => ({
           ...exercise,
-          sets: sets[exercise.id] || [],
+          sets: sortSetsByOrder(sets[exercise.id] || []),
           weightUnit: exercise.weightUnit || "kg",
           repsType: exercise.repsType || "reps",
           order: index + 1,

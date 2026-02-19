@@ -33,7 +33,22 @@ const normalizeSetIds = (
   inputSets: SetRequestDto[],
   exerciseId: string
 ): SetRequestDto[] => {
-  return inputSets.map((set, index) => ({
+  const sortedSets = [...inputSets]
+    .map((set, index) => ({
+      set,
+      index,
+      order:
+        typeof set.order === "number" && Number.isFinite(set.order)
+          ? set.order
+          : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => {
+      if (a.order === b.order) return a.index - b.index;
+      return a.order - b.order;
+    })
+    .map((entry) => entry.set);
+
+  return sortedSets.map((set, index) => ({
     ...set,
     id:
       typeof set.id === "string" && set.id.trim().length > 0

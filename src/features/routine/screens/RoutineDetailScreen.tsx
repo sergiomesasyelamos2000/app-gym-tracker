@@ -57,6 +57,30 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 
+const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
+  [...sets]
+    .map((set, index) => ({
+      set,
+      index,
+      order:
+        typeof set.order === "number" && Number.isFinite(set.order)
+          ? set.order
+          : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => {
+      if (a.order === b.order) return a.index - b.index;
+      return a.order - b.order;
+    })
+    .map((entry) => entry.set);
+
+const sortSetsMapByOrder = (setsMap: { [exerciseId: string]: SetRequestDto[] }) =>
+  Object.fromEntries(
+    Object.entries(setsMap).map(([exerciseId, setList]) => [
+      exerciseId,
+      sortSetsByOrder(setList || []),
+    ])
+  );
+
 export default function RoutineDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RoutineDetailRouteProp>();
@@ -242,7 +266,7 @@ export default function RoutineDetailScreen() {
 
     setRoutineTitle(workoutInProgress.routineTitle);
     setExercises(workoutInProgress.exercises);
-    setSets(workoutInProgress.sets);
+    setSets(sortSetsMapByOrder(workoutInProgress.sets));
     setDuration(workoutInProgress.duration);
     workoutStartTimeRef.current = workoutInProgress.startedAt;
     setStarted(true);
@@ -789,7 +813,7 @@ export default function RoutineDetailScreen() {
       (re: RoutineExerciseResponseDto) => {
         const exercise: ExerciseRequestDto = normalizeExerciseImage({
           ...re.exercise,
-          sets: re.sets.map((set: SetResponseDto) => ({
+          sets: sortSetsByOrder(re.sets).map((set: SetResponseDto) => ({
             ...set,
             previousWeight: set.weight,
             previousReps: set.reps || set.repsMin,
