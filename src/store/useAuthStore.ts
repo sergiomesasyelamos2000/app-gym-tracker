@@ -62,8 +62,6 @@ export const useAuthStore = create<AuthState>()(
 
       // Clear authentication state
       clearAuth: () => {
-        console.warn("[AuthStore] Clearing auth state");
-        console.trace("[AuthStore] clearAuth called from:");
         set({
           user: null,
           accessToken: null,

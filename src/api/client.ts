@@ -1,4 +1,5 @@
 import { ENV } from "../environments/environment";
+import { Alert } from "react-native";
 import { useAuthStore } from "../store/useAuthStore";
 
 const BASE_URL = ENV.API_URL;
@@ -6,6 +7,8 @@ const BASE_URL = ENV.API_URL;
 // Track if a token refresh is in progress to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
+let isHandlingAuthFailure = false;
+let hasShownSessionExpiredAlert = false;
 
 /**
  * Get authentication headers
@@ -53,7 +56,6 @@ async function attemptTokenRefresh(): Promise<boolean> {
   const { refreshToken } = useAuthStore.getState();
 
   if (!refreshToken) {
-    console.error("[TokenRefresh] No refresh token available");
     return false;
   }
 
@@ -72,12 +74,7 @@ async function attemptTokenRefresh(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          "[TokenRefresh] Failed with status:",
-          response.status,
-          errorText
-        );
+        // Refresh failed (expired/revoked refresh token or invalid session)
         return false;
       }
 
@@ -85,13 +82,12 @@ async function attemptTokenRefresh(): Promise<boolean> {
 
       // Update tokens in store
       if (data.tokens) {
+        useAuthStore.getState().updateTokens(data.tokens);
         return true;
       }
 
-      console.error("Token refresh response missing tokens field");
       return false;
     } catch (error) {
-      console.error("[TokenRefresh] Exception:", error);
       return false;
     } finally {
       // Reset refreshing state
@@ -101,6 +97,36 @@ async function attemptTokenRefresh(): Promise<boolean> {
   })();
 
   return refreshPromise;
+}
+
+function notifySessionExpiredOnce() {
+  if (hasShownSessionExpiredAlert) return;
+
+  hasShownSessionExpiredAlert = true;
+  Alert.alert(
+    "Sesión expirada",
+    "Tu sesión ha caducado. Inicia sesión de nuevo para continuar."
+  );
+
+  setTimeout(() => {
+    hasShownSessionExpiredAlert = false;
+  }, 5000);
+}
+
+function handleAuthFailure(endpoint: string) {
+  if (isHandlingAuthFailure) return;
+  isHandlingAuthFailure = true;
+
+  try {
+    const authStore = useAuthStore.getState();
+    authStore.clearAuth();
+    notifySessionExpiredOnce();
+  } finally {
+    // Small delay to debounce multiple 401 responses in parallel
+    setTimeout(() => {
+      isHandlingAuthFailure = false;
+    }, 300);
+  }
 }
 
 export class ApiError extends Error {
@@ -212,8 +238,6 @@ export async function apiFetch<T = unknown>(
         if (refreshSuccess) {
           // Retry the original request with the new token
           return apiFetch<T>(endpoint, options, true);
-        } else {
-          console.error("[ApiClient] Token refresh failed");
         }
       }
 
@@ -222,11 +246,7 @@ export async function apiFetch<T = unknown>(
       // 2. Token refresh failed (logout)
       // 3. This is already a retry (logout to avoid infinite loop)
       if (!isPublicAuthEndpoint && !isResourceNotFound && hadAccessToken) {
-        console.warn(
-          "[ApiClient] Token refresh failed. Clearing auth. Endpoint:",
-          endpoint
-        );
-        authStore.clearAuth();
+        handleAuthFailure(endpoint);
       }
     }
 
