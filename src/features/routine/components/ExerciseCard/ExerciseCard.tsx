@@ -260,21 +260,23 @@ const ExerciseCard = ({
   }, [notes, restTime]);
 
   const addSet = () => {
+    const previousSet = sets.length > 0 ? sets[sets.length - 1] : null;
+
     const newSet: SetRequestDto =
       exercise.repsType === "range"
         ? ({
             id: uuid.v4() as string,
             order: sets.length + 1,
-            weight: 0,
-            repsMin: 0,
-            repsMax: 0,
+            weight: previousSet?.weight || 0,
+            repsMin: previousSet?.repsMin || 0,
+            repsMax: previousSet?.repsMax || 0,
             completed: false,
           } as SetRequestDto)
         : ({
             id: uuid.v4() as string,
             order: sets.length + 1,
-            weight: 0,
-            reps: 0,
+            weight: previousSet?.weight || 0,
+            reps: previousSet?.reps || 0,
             completed: false,
           } as SetRequestDto);
     setSets([...sets, newSet]);
@@ -552,30 +554,32 @@ const ExerciseCard = ({
         />
 
         {!readonly && (
-          <Animated.View style={addButtonAnimatedStyle}>
-            <Button
-              mode="contained"
-              onPress={addSet}
-              onPressIn={handleAddButtonPressIn}
-              onPressOut={handleAddButtonPressOut}
-              rippleColor="transparent"
-              style={[
-                styles.addButton,
-                {
-                  backgroundColor: theme.primary,
-                  paddingVertical: isSmallScreen ? 4 : 8,
-                  marginTop: isSmallScreen ? 12 : 20,
-                },
-              ]}
-              labelStyle={{
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-                fontWeight: "600",
-              }}
-              icon="plus"
-            >
-              Añadir Serie
-            </Button>
-          </Animated.View>
+          <View style={styles.setActionsContainer}>
+            <Animated.View style={addButtonAnimatedStyle}>
+              <Button
+                mode="contained"
+                onPress={addSet}
+                onPressIn={handleAddButtonPressIn}
+                onPressOut={handleAddButtonPressOut}
+                rippleColor="transparent"
+                style={[
+                  styles.addButton,
+                  {
+                    backgroundColor: theme.primary,
+                    paddingVertical: isSmallScreen ? 4 : 8,
+                    marginTop: isSmallScreen ? 10 : 12,
+                  },
+                ]}
+                labelStyle={{
+                  fontSize: RFValue(isSmallScreen ? 13 : 15),
+                  fontWeight: "600",
+                }}
+                icon="plus"
+              >
+                Añadir Serie
+              </Button>
+            </Animated.View>
+          </View>
         )}
       </TouchableOpacity>
     </Card>
@@ -597,6 +601,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 8,
     elevation: 2,
+  },
+  setActionsContainer: {
+    width: "100%",
   },
   supersetTag: {
     flexDirection: "row",
