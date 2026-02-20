@@ -51,7 +51,10 @@ import { NutritionStackParamList } from "./NutritionStack";
 const Tab = createMaterialTopTabNavigator();
 
 const { width } = Dimensions.get("window");
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 24;
+const SEARCH_PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 800;
+const MIN_SEARCH_CHARS = 2;
 
 // Función auxiliar para obtener el color según el Nutri-Score
 function getNutritionGradeColor(grade: string): string {
@@ -122,6 +125,12 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const hasLoadedRef = useRef(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeRequestControllerRef = useRef<AbortController | null>(null);
+  const lastTriggeredSearchRef = useRef("");
+  const prefetchedPageRef = useRef<{
+    page: number;
+    products: Product[];
+  } | null>(null);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
@@ -166,15 +175,25 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    if (searchText.trim().length > 0) {
+    const normalizedSearch = searchText.replace(/\s+/g, " ").trim();
+
+    if (normalizedSearch.length >= MIN_SEARCH_CHARS) {
       setIsSearching(true);
+      if (normalizedSearch === lastTriggeredSearchRef.current) {
+        return;
+      }
+
       searchTimeoutRef.current = setTimeout(() => {
-        searchProducts(searchText, 1, true);
-      }, 500);
+        searchProducts(normalizedSearch, 1, true);
+      }, SEARCH_DEBOUNCE_MS);
     } else {
+      activeRequestControllerRef.current?.abort();
       setIsSearching(false);
+      lastTriggeredSearchRef.current = "";
       if (dataCache.allProducts) {
         setProductos(dataCache.allProducts);
+        setHasMore(dataCache.allProducts.length === PAGE_SIZE);
+        setPage(1);
       } else {
         loadProducts(1, true);
       }
@@ -187,6 +206,15 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     };
   }, [searchText]);
 
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      activeRequestControllerRef.current?.abort();
+    };
+  }, []);
+
   const loadProducts = async (pageToLoad: number, initial = false) => {
     if (loadingMore && !initial) return;
     if (!hasMore && !initial) return;
@@ -194,7 +222,36 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     else setLoadingMore(true);
 
     try {
-      const data = await nutritionService.getProducts(pageToLoad, PAGE_SIZE);
+      if (initial) {
+        prefetchedPageRef.current = null;
+      }
+
+      if (
+        !initial &&
+        prefetchedPageRef.current &&
+        prefetchedPageRef.current.page === pageToLoad
+      ) {
+        const prefetchedProducts = prefetchedPageRef.current.products;
+        const newProducts = [...productos, ...prefetchedProducts];
+        setProductos(newProducts);
+        dataCache.allProducts = newProducts;
+        dataCache.lastUpdate.allProducts = Date.now();
+        setHasMore(prefetchedProducts.length === PAGE_SIZE);
+        setPage(pageToLoad);
+        prefetchedPageRef.current = null;
+        void prefetchProductsPage(pageToLoad + 1);
+        return;
+      }
+
+      const controller = new AbortController();
+      activeRequestControllerRef.current?.abort();
+      activeRequestControllerRef.current = controller;
+
+      const data = await nutritionService.getProducts(
+        pageToLoad,
+        PAGE_SIZE,
+        controller.signal
+      );
 
       if (!data || !data.products) {
         setHasMore(false);
@@ -207,6 +264,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
         dataCache.lastUpdate.allProducts = Date.now();
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
+        void prefetchProductsPage(pageToLoad + 1);
       } else {
         const newProducts = [...productos, ...data.products];
         setProductos(newProducts);
@@ -214,13 +272,33 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
         dataCache.lastUpdate.allProducts = Date.now();
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
+        void prefetchProductsPage(pageToLoad + 1);
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       console.error("Error cargando productos:", err);
       setHasMore(false);
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  };
+
+  const prefetchProductsPage = async (pageToPrefetch: number) => {
+    if (isSearching || pageToPrefetch < 2) return;
+    try {
+      const data = await nutritionService.getProducts(pageToPrefetch, PAGE_SIZE);
+      if (!data?.products?.length) {
+        return;
+      }
+      prefetchedPageRef.current = {
+        page: pageToPrefetch,
+        products: data.products,
+      };
+    } catch {
+      // Silent prefetch failure
     }
   };
 
@@ -235,10 +313,26 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     else setLoadingMore(true);
 
     try {
+      const normalizedQuery = query.replace(/\s+/g, " ").trim();
+      if (normalizedQuery.length < MIN_SEARCH_CHARS) {
+        setProductos([]);
+        setHasMore(false);
+        return;
+      }
+
+      if (initial) {
+        lastTriggeredSearchRef.current = normalizedQuery;
+      }
+
+      const controller = new AbortController();
+      activeRequestControllerRef.current?.abort();
+      activeRequestControllerRef.current = controller;
+
       const data = await nutritionService.searchProductsByName(
-        query,
+        normalizedQuery,
         pageToLoad,
-        20
+        SEARCH_PAGE_SIZE,
+        controller.signal
       );
 
       if (!data || !data.products) {
@@ -249,15 +343,18 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
 
       if (initial) {
         setProductos(data.products);
-        setHasMore(data.products.length === 20);
+        setHasMore(data.products.length === SEARCH_PAGE_SIZE);
         setPage(pageToLoad);
       } else {
         const newProducts = [...productos, ...data.products];
         setProductos(newProducts);
-        setHasMore(data.products.length === 20);
+        setHasMore(data.products.length === SEARCH_PAGE_SIZE);
         setPage(pageToLoad);
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       console.error("Error buscando productos:", err);
       setHasMore(false);
       setProductos([]);

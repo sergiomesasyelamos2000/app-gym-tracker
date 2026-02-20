@@ -114,11 +114,13 @@ export async function scanBarcode(code: string): Promise<Product> {
 export async function getProducts(
   page = 1,
   pageSize = 20,
+  signal?: AbortSignal,
 ): Promise<{ products: Product[]; total: number }> {
   return apiFetch<{ products: Product[]; total: number }>(
     `nutrition/products?page=${page}&pageSize=${pageSize}`,
     {
       method: "GET",
+      signal,
     },
   );
 }
@@ -128,6 +130,7 @@ export async function searchProductsByName(
   searchTerm: string,
   page = 1,
   pageSize = 20,
+  signal?: AbortSignal,
 ): Promise<{ products: Product[]; total: number }> {
   if (!searchTerm || searchTerm.trim().length === 0) {
     return { products: [], total: 0 };
@@ -139,6 +142,7 @@ export async function searchProductsByName(
     )}&page=${page}&pageSize=${pageSize}`,
     {
       method: "GET",
+      signal,
     },
   );
 }
