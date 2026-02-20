@@ -20,11 +20,14 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -84,6 +87,7 @@ type ProductListScreenProps = NativeStackScreenProps<
 
 interface TabProps {
   searchText: string;
+  selectedBrands: string[];
   navigation: ProductListScreenProps["navigation"];
   selectedMeal?: MealType;
   refreshFavorites?: boolean;
@@ -109,9 +113,31 @@ const dataCache = {
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
+const normalizeBrandFilter = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+
+const matchesBrandFilters = (
+  brandValue: string | null | undefined,
+  selectedBrands: string[]
+) => {
+  if (selectedBrands.length === 0) return true;
+  const normalizedBrandValue = normalizeBrandFilter(brandValue ?? "");
+  return selectedBrands.some((selected) =>
+    normalizedBrandValue.includes(normalizeBrandFilter(selected))
+  );
+};
+
 // Tab de Todos los Productos
 // Tab de Todos los Productos (VERSIÓN CORREGIDA)
-function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
+function AllProductsTab({
+  searchText,
+  selectedBrands,
+  navigation,
+  selectedMeal,
+}: TabProps) {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -119,6 +145,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const [productos, setProductos] = useState<Product[]>([]);
   const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isBootstrappingCatalog, setIsBootstrappingCatalog] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -131,9 +158,14 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
     page: number;
     products: Product[];
   } | null>(null);
+  const initialEmptyRetryDoneRef = useRef(false);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+  const selectedBrandsParam = useMemo(
+    () => (selectedBrands.length ? selectedBrands.join(",") : undefined),
+    [selectedBrands]
+  );
 
   // Cargar productos personalizados al inicio
   useEffect(() => {
@@ -190,7 +222,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       activeRequestControllerRef.current?.abort();
       setIsSearching(false);
       lastTriggeredSearchRef.current = "";
-      if (dataCache.allProducts) {
+      if (selectedBrands.length === 0 && dataCache.allProducts) {
         setProductos(dataCache.allProducts);
         setHasMore(dataCache.allProducts.length === PAGE_SIZE);
         setPage(1);
@@ -204,7 +236,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchText]);
+  }, [searchText, selectedBrands]);
 
   useEffect(() => {
     return () => {
@@ -250,6 +282,7 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       const data = await nutritionService.getProducts(
         pageToLoad,
         PAGE_SIZE,
+        selectedBrandsParam,
         controller.signal
       );
 
@@ -259,11 +292,20 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       }
 
       if (initial) {
+        if (data.products.length === 0 && !initialEmptyRetryDoneRef.current) {
+          initialEmptyRetryDoneRef.current = true;
+          setTimeout(() => {
+            void loadProducts(1, true);
+          }, 700);
+          return;
+        }
+
         setProductos(data.products);
         dataCache.allProducts = data.products;
         dataCache.lastUpdate.allProducts = Date.now();
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
+        setIsBootstrappingCatalog(false);
         void prefetchProductsPage(pageToLoad + 1);
       } else {
         const newProducts = [...productos, ...data.products];
@@ -280,6 +322,16 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       }
       console.error("Error cargando productos:", err);
       setHasMore(false);
+      if (initial && !initialEmptyRetryDoneRef.current) {
+        initialEmptyRetryDoneRef.current = true;
+        setTimeout(() => {
+          void loadProducts(1, true);
+        }, 900);
+        return;
+      }
+      if (initial) {
+        setIsBootstrappingCatalog(false);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -289,7 +341,11 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
   const prefetchProductsPage = async (pageToPrefetch: number) => {
     if (isSearching || pageToPrefetch < 2) return;
     try {
-      const data = await nutritionService.getProducts(pageToPrefetch, PAGE_SIZE);
+      const data = await nutritionService.getProducts(
+        pageToPrefetch,
+        PAGE_SIZE,
+        selectedBrandsParam
+      );
       if (!data?.products?.length) {
         return;
       }
@@ -332,6 +388,8 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
         normalizedQuery,
         pageToLoad,
         SEARCH_PAGE_SIZE,
+        selectedBrandsParam,
+        true,
         controller.signal
       );
 
@@ -421,10 +479,35 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
           cp.name.toLowerCase().includes(searchLower) ||
           (cp.brand && cp.brand.toLowerCase().includes(searchLower))
       )
+      .filter((cp) =>
+        matchesBrandFilters(cp.brand, selectedBrands)
+      )
       .map(customProductToProduct);
 
     // Combinar: productos personalizados primero, luego los del backend
-    return [...filteredCustom, ...productos];
+    // y eliminar duplicados por code (o name+brand si no hay code).
+    const filteredBackend = productos.filter((p) =>
+      matchesBrandFilters(p.brand, selectedBrands)
+    );
+    const combined = [...filteredCustom, ...filteredBackend];
+    const deduped = new Map<string, Product>();
+
+    for (const product of combined) {
+      const key =
+        product.code && product.code.trim().length > 0
+          ? `code:${product.code.trim()}`
+          : `name:${(product.name ?? "").trim().toLowerCase()}|brand:${(
+              product.brand ?? ""
+            )
+              .trim()
+              .toLowerCase()}`;
+
+      if (!deduped.has(key)) {
+        deduped.set(key, product);
+      }
+    }
+
+    return Array.from(deduped.values());
   };
 
   const allProducts = getCombinedProducts();
@@ -601,7 +684,13 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
       style={styles.container}
       data={allProducts}
       renderItem={renderItem}
-      keyExtractor={(item) => item.code}
+      keyExtractor={(item, index) =>
+        `product-${
+          item.code && item.code.trim().length > 0
+            ? item.code.trim()
+            : `${item.name ?? "unknown"}-${item.brand ?? ""}`
+        }-${index}`
+      }
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.4}
       showsVerticalScrollIndicator={false}
@@ -613,9 +702,15 @@ function AllProductsTab({ searchText, navigation, selectedMeal }: TabProps) {
             size={64}
             color={theme.textTertiary}
           />
-          <Text style={styles.emptyTitle}>No se encontraron productos</Text>
+          <Text style={styles.emptyTitle}>
+            {isBootstrappingCatalog && !searchText
+              ? "Preparando catálogo..."
+              : "No se encontraron productos"}
+          </Text>
           <Text style={styles.emptySubtitle}>
-            {searchText
+            {isBootstrappingCatalog && !searchText
+              ? "Cargando productos iniciales. Esto puede tardar unos segundos."
+              : searchText
               ? `No encontramos "${searchText}"`
               : "Intenta con otros términos de búsqueda"}
           </Text>
@@ -907,6 +1002,7 @@ function FavoritesTab({
 // Tab de Productos Personalizados
 function CustomProductsTab({
   searchText,
+  selectedBrands,
   navigation,
   route,
   selectedMeal,
@@ -1021,7 +1117,8 @@ function CustomProductsTab({
   };
 
   const filteredProducts = customProducts.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase())
+    p?.name?.toLowerCase().includes(searchText.toLowerCase()) &&
+    matchesBrandFilters(p.brand, selectedBrands)
   );
 
   const renderItem = ({ item }: { item: CustomProduct }) => (
@@ -1496,6 +1593,9 @@ export default function ProductListScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const [searchText, setSearchText] = useState("");
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [showBrandFiltersModal, setShowBrandFiltersModal] = useState(false);
+  const [brandSearchText, setBrandSearchText] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [initialTab, setInitialTab] = useState<string | undefined>(undefined);
   const [cameraKey, setCameraKey] = useState(0); // Key para forzar remontaje
@@ -1510,6 +1610,28 @@ export default function ProductListScreen() {
   const selectionMode = route.params?.selectionMode || false;
   const returnTo = route.params?.returnTo;
   const selectedMeal = route.params?.selectedMeal;
+  const brandFilters = [
+    "Hacendado",
+    "Mercadona",
+    "Carrefour",
+    "Lidl",
+    "DIA",
+    "Eroski",
+    "Alpro",
+    "Quaker",
+    "Nestlé",
+    "Danone",
+  ];
+
+  const clearBrandFilter = () => {
+    setSelectedBrands([]);
+    setBrandSearchText("");
+  };
+
+  const openBrandFiltersModal = () => {
+    setBrandSearchText(selectedBrands[0] ?? "");
+    setShowBrandFiltersModal(true);
+  };
 
   useEffect(() => {
     if (route.params?.screen) {
@@ -1629,7 +1751,7 @@ export default function ProductListScreen() {
             <Ionicons name="search" size={20} color={theme.textTertiary} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar alimento..."
+              placeholder="Buscar por nombre..."
               placeholderTextColor={theme.textTertiary}
               value={searchText}
               onChangeText={setSearchText}
@@ -1645,12 +1767,19 @@ export default function ProductListScreen() {
             )}
           </View>
           <TouchableOpacity
+            style={styles.filterButton}
+            onPress={openBrandFiltersModal}
+          >
+            <Ionicons name="funnel-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.scanButton}
             onPress={() => setShowCamera(true)}
           >
             <Ionicons name="barcode-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
+
 
         {/* Navegador de Tabs */}
         <Tab.Navigator
@@ -1696,6 +1825,7 @@ export default function ProductListScreen() {
             {() => (
               <AllProductsTab
                 searchText={searchText}
+                selectedBrands={selectedBrands}
                 navigation={navigation}
                 selectedMeal={selectedMeal}
               />
@@ -1717,6 +1847,7 @@ export default function ProductListScreen() {
             {() => (
               <FavoritesTab
                 searchText={searchText}
+                selectedBrands={selectedBrands}
                 navigation={navigation}
                 selectedMeal={selectedMeal}
               />
@@ -1734,6 +1865,7 @@ export default function ProductListScreen() {
             {() => (
               <CustomProductsTab
                 searchText={searchText}
+                selectedBrands={selectedBrands}
                 navigation={navigation}
                 selectedMeal={selectedMeal}
                 route={route}
@@ -1756,6 +1888,7 @@ export default function ProductListScreen() {
             {() => (
               <CustomMealsTab
                 searchText={searchText}
+                selectedBrands={selectedBrands}
                 navigation={navigation}
                 route={route}
               />
@@ -1763,6 +1896,133 @@ export default function ProductListScreen() {
           </Tab.Screen>
         </Tab.Navigator>
       </View>
+
+      <Modal
+        visible={showBrandFiltersModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowBrandFiltersModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowBrandFiltersModal(false)}>
+          <View style={styles.filtersModalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.filtersModalCard}>
+                <View style={styles.filtersModalHandle} />
+                <View style={styles.filtersModalHeader}>
+                  <Text style={styles.filtersModalTitle}>Filtrar por marca</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowBrandFiltersModal(false)}
+                  >
+                    <Ionicons name="close" size={22} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.filtersModalSubtitle}>
+                  {selectedBrands.length > 0
+                    ? `Marcas: ${selectedBrands.join(", ")}`
+                    : "Selecciona una o varias marcas"}
+                </Text>
+
+                <View style={styles.brandSearchBar}>
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={18}
+                    color={theme.textTertiary}
+                  />
+                  <TextInput
+                    style={styles.brandSearchInput}
+                    placeholder="Filtrar por marca (opcional)"
+                    placeholderTextColor={theme.textTertiary}
+                    value={brandSearchText}
+                    onChangeText={setBrandSearchText}
+                    returnKeyType="done"
+                    onSubmitEditing={() => {
+                      const value = brandSearchText.trim();
+                      if (!value) return;
+                      setSelectedBrands((prev) =>
+                        prev.some(
+                          (item) =>
+                            normalizeBrandFilter(item) ===
+                            normalizeBrandFilter(value)
+                        )
+                          ? prev
+                          : [...prev, value]
+                      );
+                      setBrandSearchText("");
+                    }}
+                  />
+                  {(brandSearchText.length > 0 || selectedBrands.length > 0) && (
+                    <TouchableOpacity onPress={clearBrandFilter}>
+                      <Ionicons
+                        name="close-circle"
+                        size={18}
+                        color={theme.textTertiary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.brandChipsScroll}
+                >
+                  <View style={styles.brandChipsWrap}>
+                    <TouchableOpacity
+                      style={[
+                        styles.brandChip,
+                        selectedBrands.length === 0 && styles.brandChipActive,
+                      ]}
+                      activeOpacity={1}
+                      onPress={clearBrandFilter}
+                    >
+                      <Text
+                        style={[
+                          styles.brandChipText,
+                          selectedBrands.length === 0 && styles.brandChipTextActive,
+                        ]}
+                      >
+                        Todas
+                      </Text>
+                    </TouchableOpacity>
+                  {brandFilters.map((brand) => {
+                    const isActive = selectedBrands.some(
+                      (value) =>
+                        normalizeBrandFilter(value) === normalizeBrandFilter(brand)
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={brand}
+                        style={[styles.brandChip, isActive && styles.brandChipActive]}
+                        activeOpacity={1}
+                        onPress={() => {
+                          setSelectedBrands((prev) =>
+                            isActive
+                              ? prev.filter(
+                                  (value) =>
+                                    normalizeBrandFilter(value) !==
+                                    normalizeBrandFilter(brand)
+                                )
+                              : [...prev, brand]
+                          );
+                        }}
+                      >
+                          <Text
+                            style={[
+                              styles.brandChipText,
+                              isActive && styles.brandChipTextActive,
+                            ]}
+                          >
+                            {brand}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1832,6 +2092,100 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       backgroundColor: theme.primary,
       justifyContent: "center",
       alignItems: "center",
+    },
+    filterButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: theme.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    filtersModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      justifyContent: "flex-end",
+    },
+    filtersModalCard: {
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 24,
+      height: "48%",
+      minHeight: 280,
+      maxHeight: 420,
+      borderTopWidth: 1,
+      borderColor: theme.border,
+      gap: 12,
+    },
+    filtersModalHandle: {
+      alignSelf: "center",
+      width: 42,
+      height: 5,
+      borderRadius: 999,
+      backgroundColor: theme.border,
+      marginBottom: 4,
+    },
+    filtersModalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    filtersModalTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "700",
+      color: theme.text,
+    },
+    filtersModalSubtitle: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+    },
+    brandSearchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 40,
+      gap: 8,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: theme.border,
+    },
+    brandSearchInput: {
+      flex: 1,
+      fontSize: RFValue(13),
+      color: theme.text,
+    },
+    brandChipsScroll: {
+      paddingBottom: 6,
+    },
+    brandChipsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    brandChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    brandChipActive: {
+      backgroundColor: `${theme.primary}20`,
+      borderColor: theme.primary,
+    },
+    brandChipText: {
+      fontSize: RFValue(11),
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
+    brandChipTextActive: {
+      color: theme.primary,
+      fontWeight: "700",
     },
     loadingContainer: {
       flex: 1,

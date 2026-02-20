@@ -114,10 +114,14 @@ export async function scanBarcode(code: string): Promise<Product> {
 export async function getProducts(
   page = 1,
   pageSize = 20,
+  brand?: string,
   signal?: AbortSignal,
 ): Promise<{ products: Product[]; total: number }> {
+  const brandParam = brand?.trim()
+    ? `&brand=${encodeURIComponent(brand.trim())}`
+    : "";
   return apiFetch<{ products: Product[]; total: number }>(
-    `nutrition/products?page=${page}&pageSize=${pageSize}`,
+    `nutrition/products?page=${page}&pageSize=${pageSize}${brandParam}`,
     {
       method: "GET",
       signal,
@@ -130,21 +134,126 @@ export async function searchProductsByName(
   searchTerm: string,
   page = 1,
   pageSize = 20,
+  brand?: string,
+  includeOverlay = true,
   signal?: AbortSignal,
 ): Promise<{ products: Product[]; total: number }> {
   if (!searchTerm || searchTerm.trim().length === 0) {
     return { products: [], total: 0 };
   }
 
-  return apiFetch<{ products: Product[]; total: number }>(
+  const brandParam = brand?.trim()
+    ? `&brand=${encodeURIComponent(brand.trim())}`
+    : "";
+  const primaryResult = await apiFetch<{ products: Product[]; total: number }>(
     `nutrition/products/search?q=${encodeURIComponent(
       searchTerm.trim(),
-    )}&page=${page}&pageSize=${pageSize}`,
+    )}&page=${page}&pageSize=${pageSize}&overlay=${includeOverlay ? "1" : "0"}${brandParam}`,
     {
       method: "GET",
       signal,
     },
   );
+
+  if ((primaryResult.products?.length ?? 0) >= 3) {
+    return primaryResult;
+  }
+
+  const fallbackQueries = buildFallbackQueries(searchTerm.trim()).slice(0, 3);
+  if (fallbackQueries.length === 0) {
+    return primaryResult;
+  }
+
+  const merged = dedupeProducts(primaryResult.products ?? []);
+
+  for (const fallbackQuery of fallbackQueries) {
+    if (signal?.aborted) {
+      const abortError = new Error("Aborted");
+      abortError.name = "AbortError";
+      throw abortError;
+    }
+
+    const fallbackResult = await apiFetch<{ products: Product[]; total: number }>(
+      `nutrition/products/search?q=${encodeURIComponent(
+        fallbackQuery,
+      )}&page=${page}&pageSize=${pageSize}&overlay=${includeOverlay ? "1" : "0"}${brandParam}`,
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+    merged.push(...(fallbackResult.products ?? []));
+    const uniqueNow = dedupeProducts(merged);
+    if (uniqueNow.length >= pageSize) {
+      return { products: uniqueNow.slice(0, pageSize), total: uniqueNow.length };
+    }
+  }
+
+  const finalProducts = dedupeProducts(merged).slice(0, pageSize);
+  return { products: finalProducts, total: finalProducts.length };
+}
+
+function normalizeSearchTerm(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildFallbackQueries(searchTerm: string): string[] {
+  const normalized = normalizeSearchTerm(searchTerm);
+  const queries = new Set<string>();
+
+  const compact = normalized
+    .replace(/\b(de|del|la|el|los|las|para|con)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (compact && compact !== normalized) queries.add(compact);
+
+  if (normalized.includes("mercadona")) {
+    queries.add(normalized.replace(/\bmercadona\b/g, "hacendado"));
+    queries.add(`hacendado ${compact || normalized}`.trim());
+  }
+
+  if (normalized.includes("copos de avena") || normalized.includes("copos avena")) {
+    queries.add("avena");
+    queries.add("copos avena");
+    if (normalized.includes("hacendado") || normalized.includes("mercadona")) {
+      queries.add("avena hacendado");
+      queries.add("copos avena hacendado");
+    }
+  }
+
+  if (normalized.includes("oatmeal")) {
+    queries.add("avena");
+    queries.add("copos avena");
+  }
+
+  queries.delete(normalized);
+  return Array.from(queries).filter((q) => q.length >= 2);
+}
+
+function dedupeProducts(products: Product[]): Product[] {
+  const byKey = new Map<string, Product>();
+  for (const product of products) {
+    const key =
+      product.code && product.code.trim().length > 0
+        ? `code:${product.code}`
+        : `name:${(product.name ?? "").trim().toLowerCase()}|brand:${(
+            product.brand ?? ""
+          )
+            .trim()
+            .toLowerCase()}`;
+
+    if (!byKey.has(key)) {
+      byKey.set(key, product);
+    }
+  }
+  return Array.from(byKey.values());
 }
 
 // Get product detail by code
