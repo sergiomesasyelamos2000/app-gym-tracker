@@ -116,11 +116,12 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
       console.error("[ExerciseService] Cache read failed:", cacheError);
     }
 
-    // If both fail, throw the original error
-    console.error("[ExerciseService] No cached data available");
-    throw new Error(
-      "No se pudieron cargar los ejercicios. Por favor, conecta a internet al menos una vez."
-    );
+    // If both network and cache fail, surface a controlled error so UI can show retry state.
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudieron cargar los ejercicios.";
+    throw new Error(message);
   }
 };
 

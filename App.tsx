@@ -1,4 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
+import Constants from "expo-constants";
 import React, { useEffect } from "react";
 import { LogBox, Platform, StatusBar, TextInput } from "react-native";
 import "react-native-gesture-handler";
@@ -8,8 +9,6 @@ import { RootNavigator } from "./src/navigation";
 
 import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
-
-import * as Notifications from "expo-notifications";
 import { notificationService } from "./src/services/notificationService";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -21,6 +20,19 @@ import { SyncProvider } from "./src/components/SyncProvider";
 import KeyboardDismissButton, {
   GLOBAL_KEYBOARD_ACCESSORY_ID,
 } from "./src/components/KeyboardDismissButton";
+
+const isExpoGoAndroid =
+  Platform.OS === "android" && Constants.appOwnership === "expo";
+const Notifications: any =
+  !isExpoGoAndroid
+    ? (() => {
+        try {
+          return require("expo-notifications");
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
 LogBox.ignoreLogs([
   "expo-notifications: Android Push notifications",
@@ -60,6 +72,11 @@ function AppContent() {
 
   // Initialize notification listeners
   useEffect(() => {
+    if (!Notifications) {
+      useNotificationSettingsStore.getState().setPermissionsGranted(false);
+      return;
+    }
+
     const setupNotifications = async () => {
       // Register for push notifications
       const token =
@@ -85,22 +102,22 @@ function AppContent() {
     setupNotifications();
 
     // Listener for notifications received while app is in foreground
-    const notificationListener = Notifications.addNotificationReceivedListener(
-      (notification) => {
+    const notificationListener = Notifications?.addNotificationReceivedListener(
+      (notification: any) => {
         console.log("Notification received in foreground:", notification);
       }
     );
 
     // Listener for when user taps on a notification
     const responseListener =
-      Notifications.addNotificationResponseReceivedListener((response) => {
+      Notifications?.addNotificationResponseReceivedListener((response: any) => {
         console.log("Notification response received:", response);
         // You can add navigation logic here if needed
       });
 
     return () => {
-      notificationListener.remove();
-      responseListener.remove();
+      notificationListener?.remove?.();
+      responseListener?.remove?.();
     };
   }, []);
 

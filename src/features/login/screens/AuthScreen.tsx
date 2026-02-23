@@ -1,4 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from "react";
@@ -46,6 +47,8 @@ export default function AuthScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [nameFocused, setNameFocused] = useState(false);
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -56,6 +59,8 @@ export default function AuthScreen() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: ENV.GOOGLE_CLIENT_ID_IOS,
+    androidClientId:
+      ENV.GOOGLE_CLIENT_ID_ANDROID || ENV.GOOGLE_CLIENT_ID_WEB,
     webClientId: ENV.GOOGLE_CLIENT_ID_WEB,
     scopes: ["openid", "profile", "email"],
   });
@@ -323,6 +328,9 @@ export default function AuthScreen() {
                       placeholderTextColor={theme.textTertiary}
                       value={name}
                       onChangeText={setName}
+                      autoComplete="name"
+                      textContentType="name"
+                      importantForAutofill="yes"
                       onFocus={() => setNameFocused(true)}
                       onBlur={() => setNameFocused(false)}
                     />
@@ -351,7 +359,11 @@ export default function AuthScreen() {
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
+                    autoCorrect={false}
                     keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="username"
+                    importantForAutofill="yes"
                     onFocus={() => setEmailFocused(true)}
                     onBlur={() => setEmailFocused(false)}
                   />
@@ -361,27 +373,48 @@ export default function AuthScreen() {
                   <Text style={[styles.inputLabel, { color: theme.text }]}>
                     Contraseña
                   </Text>
-                  <TextInput
+                  <View
                     style={[
-                      styles.input,
+                      styles.passwordInputContainer,
                       {
                         backgroundColor: isDark
                           ? "rgba(255,255,255,0.06)"
                           : "#F9FAFB",
-                        color: theme.text,
                         borderColor: passwordFocused
                           ? theme.primary
                           : "transparent",
                       },
                     ]}
-                    placeholder="••••••••"
-                    placeholderTextColor={theme.textTertiary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                  />
+                  >
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      placeholder="••••••••"
+                      placeholderTextColor={theme.textTertiary}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoComplete={
+                        mode === "login" ? "current-password" : "new-password"
+                      }
+                      textContentType={
+                        mode === "login" ? "password" : "newPassword"
+                      }
+                      importantForAutofill="yes"
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword((prev) => !prev)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={theme.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
                   {mode === "login" && (
                     <TouchableOpacity
                       onPress={handleNavigateForgotPassword}
@@ -406,27 +439,50 @@ export default function AuthScreen() {
                       <Text style={[styles.inputLabel, { color: theme.text }]}>
                         Confirmar contraseña
                       </Text>
-                      <TextInput
+                      <View
                         style={[
-                          styles.input,
+                          styles.passwordInputContainer,
                           {
                             backgroundColor: isDark
                               ? "rgba(255,255,255,0.06)"
                               : "#F9FAFB",
-                            color: theme.text,
                             borderColor: confirmPasswordFocused
                               ? theme.primary
                               : "transparent",
                           },
                         ]}
-                        placeholder="••••••••"
-                        placeholderTextColor={theme.textTertiary}
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry
-                        onFocus={() => setConfirmPasswordFocused(true)}
-                        onBlur={() => setConfirmPasswordFocused(false)}
-                      />
+                      >
+                        <TextInput
+                          style={[styles.input, styles.passwordInput]}
+                          placeholder="••••••••"
+                          placeholderTextColor={theme.textTertiary}
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          secureTextEntry={!showConfirmPassword}
+                          autoComplete="new-password"
+                          textContentType="newPassword"
+                          importantForAutofill="yes"
+                          onFocus={() => setConfirmPasswordFocused(true)}
+                          onBlur={() => setConfirmPasswordFocused(false)}
+                        />
+                        <TouchableOpacity
+                          style={styles.eyeButton}
+                          onPress={() =>
+                            setShowConfirmPassword((prev) => !prev)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={
+                              showConfirmPassword
+                                ? "eye-off-outline"
+                                : "eye-outline"
+                            }
+                            size={20}
+                            color={theme.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <Text
                       style={[
@@ -652,6 +708,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 2,
     fontWeight: "500",
+  },
+  passwordInputContainer: {
+    borderRadius: 12,
+    borderWidth: 2,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingRight: 8,
+  },
+  eyeButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
   },
   passwordRequirements: {
     fontSize: 12,

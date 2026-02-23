@@ -1,7 +1,20 @@
 import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
 import { AppState, Linking, Platform } from "react-native";
 import type { AppStateStatus } from "react-native";
+
+let Notifications: any = null;
+const isExpoGoAndroid =
+  Platform.OS === "android" && Constants.appOwnership === "expo";
+
+if (!isExpoGoAndroid) {
+  try {
+    Notifications = require("expo-notifications");
+  } catch {
+    Notifications = null;
+  }
+}
+
+const areNotificationsAvailable = !!Notifications;
 
 // Track app state globally
 let currentAppState: AppStateStatus = AppState.currentState;
@@ -12,21 +25,23 @@ AppState.addEventListener("change", (nextAppState) => {
 });
 
 // Configure notification behavior dynamically based on app state
-Notifications.setNotificationHandler({
-  handleNotification: async () => {
-    const isAppInForeground = currentAppState === "active";
+if (areNotificationsAvailable) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => {
+      const isAppInForeground = currentAppState === "active";
 
-    return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      // For user friendliness, we generally want to show the notification even in foreground
-      // especially for timers.
-      shouldShowList: !isAppInForeground,
-    };
-  },
-});
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        // For user friendliness, we generally want to show the notification even in foreground
+        // especially for timers.
+        shouldShowList: !isAppInForeground,
+      };
+    },
+  });
+}
 
 export interface RestTimerNotification {
   notificationId: string;
@@ -44,6 +59,9 @@ class NotificationService {
    * Request notification permissions with better handling
    */
   async requestPermissions(): Promise<boolean> {
+    if (!areNotificationsAvailable) {
+      return false;
+    }
     try {
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
@@ -100,6 +118,9 @@ class NotificationService {
     restSeconds: number,
     exerciseName?: string
   ): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     try {
       // Ensure permissions before scheduling
       const hasPermissions = await this.requestPermissions();
@@ -172,6 +193,9 @@ class NotificationService {
    * Cancel a specific rest timer
    */
   async cancelRestTimer(timerId: string) {
+    if (!areNotificationsAvailable) {
+      return;
+    }
     try {
       await Notifications.cancelScheduledNotificationAsync(timerId);
       this.notificationIds.delete(timerId);
@@ -190,6 +214,9 @@ class NotificationService {
    * Cancel all active rest timers
    */
   async cancelAllRestTimers() {
+    if (!areNotificationsAvailable) {
+      return;
+    }
     try {
       const scheduledNotifications =
         await Notifications.getAllScheduledNotificationsAsync();
@@ -218,6 +245,9 @@ class NotificationService {
     body: string,
     triggerDate: Date
   ): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     try {
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) return null;
@@ -253,6 +283,9 @@ class NotificationService {
     seconds: number,
     repeats: boolean = false
   ): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     try {
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) return null;
@@ -289,6 +322,9 @@ class NotificationService {
     hour: number,
     minute: number = 0
   ): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     try {
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) return null;
@@ -326,6 +362,9 @@ class NotificationService {
     hour: number,
     minute: number = 0
   ): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     try {
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) return null;
@@ -358,6 +397,9 @@ class NotificationService {
    * Cancel a scheduled notification
    */
   async cancelNotification(notificationId: string) {
+    if (!areNotificationsAvailable) {
+      return;
+    }
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
     } catch (error) {
@@ -369,6 +411,9 @@ class NotificationService {
    * Cancel all notifications
    */
   async cancelAllNotifications() {
+    if (!areNotificationsAvailable) {
+      return;
+    }
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.dismissAllNotificationsAsync();
@@ -381,6 +426,9 @@ class NotificationService {
    * Register for push notifications and return the token
    */
   async registerForPushNotificationsAsync(): Promise<string | null> {
+    if (!areNotificationsAvailable) {
+      return null;
+    }
     if (Platform.OS === "web") {
       return null;
     }
