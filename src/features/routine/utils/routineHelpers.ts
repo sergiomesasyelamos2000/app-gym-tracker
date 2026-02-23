@@ -23,6 +23,8 @@ export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
     const sortedSets = normalizeAndSortSets(sets);
     return sortedSets.map((set, index) => ({
       ...set,
+      setType:
+        (set as SetRequestDto & { setType?: string }).setType || "normal",
       id:
         typeof set.id === "string" && set.id.trim().length > 0
           ? set.id
@@ -39,6 +41,7 @@ export const initializeSets = (sets: SetRequestDto[] = []): SetRequestDto[] => {
       weight: 0,
       reps: 0,
       completed: false, // 🔄 Valor por defecto
+      setType: "normal",
     },
   ];
 };

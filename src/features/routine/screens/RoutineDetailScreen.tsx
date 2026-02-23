@@ -906,6 +906,10 @@ export default function RoutineDetailScreen() {
             reps: s.reps || 0,
             completed: s.completed ?? false,
             isRecord,
+            setType:
+              (s as SetRequestDto & {
+                setType?: "warmup" | "normal" | "failed" | "drop";
+              }).setType || "normal",
           };
         }),
       })),

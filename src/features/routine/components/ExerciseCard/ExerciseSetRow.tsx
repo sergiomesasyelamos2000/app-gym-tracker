@@ -3,11 +3,14 @@ import { TrendingUp, Trophy, Zap } from "lucide-react-native";
 import React, { memo, useCallback, useRef } from "react";
 import {
   Animated,
+  Easing,
+  Modal,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -25,7 +28,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: SetRequestDto[keyof SetRequestDto]
   ) => void;
   repsType: "reps" | "range";
   readonly?: boolean;
@@ -33,6 +36,65 @@ interface Props {
   started?: boolean;
   recordType?: "1RM" | "maxWeight" | "maxVolume";
 }
+
+type SetTypeOption = {
+  key: "warmup" | "normal" | "failed" | "drop";
+  label: string;
+  color: string;
+  description: string;
+  icon?: string;
+};
+
+const SET_TYPE_OPTIONS: SetTypeOption[] = [
+  {
+    key: "warmup",
+    label: "Serie de calentamiento",
+    color: "#EAB308",
+    icon: "local-fire-department",
+    description: "Preparación con menor carga para activar el músculo.",
+  },
+  {
+    key: "normal",
+    label: "Serie normal",
+    color: "#6B7280",
+    description: "Serie principal de trabajo.",
+  },
+  {
+    key: "failed",
+    label: "Serie fallida",
+    color: "#DC2626",
+    icon: "report",
+    description: "Llegaste al fallo muscular en la serie.",
+  },
+  {
+    key: "drop",
+    label: "Serie drop",
+    color: "#2563EB",
+    icon: "trending-down",
+    description: "Redujiste peso y continuaste sin descanso largo.",
+  },
+];
+
+type SetTypeValue = SetTypeOption["key"];
+
+const isSetTypeValue = (value: unknown): value is SetTypeValue =>
+  typeof value === "string" &&
+  SET_TYPE_OPTIONS.some((option) => option.key === value);
+
+const getSetTypeValue = (value: unknown): SetTypeValue =>
+  isSetTypeValue(value) ? value : "normal";
+
+const getSetTypeLabel = (value: unknown): string =>
+  SET_TYPE_OPTIONS.find((option) => option.key === getSetTypeValue(value))
+    ?.label ?? "Serie normal";
+
+const getSetTypeIcon = (value: unknown): string | null =>
+  SET_TYPE_OPTIONS.find((option) => option.key === getSetTypeValue(value))
+    ?.icon ?? null;
+
+const getSetTypeColor = (value: unknown): string =>
+  SET_TYPE_OPTIONS.find((option) => option.key === getSetTypeValue(value))
+    ?.color ?? "#6B7280";
 
 const ExerciseSetRow = ({
   item,
@@ -140,6 +202,58 @@ const ExerciseSetRow = ({
     ],
   });
   const completedCheckColor = isDark ? "#4ADE80" : "#16A34A";
+  const [isSetTypeModalVisible, setIsSetTypeModalVisible] = React.useState(false);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const modalTranslateY = useRef(new Animated.Value(280)).current;
+  const setType = getSetTypeValue(
+    (item as SetRequestDto & { setType?: SetTypeValue }).setType
+  );
+  const setTypeIcon = getSetTypeIcon(setType);
+
+  const openSetTypeModal = () => {
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalTranslateY, {
+        toValue: 0,
+        duration: 260,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeSetTypeModal = (callback?: () => void) => {
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalTranslateY, {
+        toValue: 280,
+        duration: 220,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      callback?.();
+    });
+  };
+
+  const handleSelectSetType = (nextType: SetTypeValue) => {
+    onUpdate(
+      item.id,
+      "setType" as keyof SetRequestDto,
+      nextType as SetRequestDto[keyof SetRequestDto]
+    );
+    closeSetTypeModal(() => setIsSetTypeModalVisible(false));
+  };
 
   return (
     <Animated.View
@@ -163,18 +277,41 @@ const ExerciseSetRow = ({
           justifyContent: "center",
         }}
       >
-        <Text
-          style={[
-            styles.label,
-            {
-              color: theme.text,
-              fontSize: RFValue(isSmallScreen ? 13 : 15),
-            },
-          ]}
-          accessibilityLabel={`Serie ${item.order}`}
+        <TouchableOpacity
+          onPress={() => !readonly && setIsSetTypeModalVisible(true)}
+          disabled={readonly}
+          style={styles.setTypeTrigger}
+          accessibilityLabel={`Serie ${item.order}. ${getSetTypeLabel(setType)}`}
+          accessibilityHint={
+            readonly
+              ? undefined
+              : "Toca para cambiar el tipo de serie"
+          }
         >
-          {item.order}
-        </Text>
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.text,
+                fontSize: RFValue(isSmallScreen ? 13 : 15),
+              },
+            ]}
+          >
+            {item.order}
+          </Text>
+          {setTypeIcon ? (
+            <View
+              style={[
+                styles.setTypeBadge,
+                {
+                  backgroundColor: getSetTypeColor(setType),
+                },
+              ]}
+            >
+              <Icon name={setTypeIcon} size={11} color="#FFFFFF" />
+            </View>
+          ) : null}
+        </TouchableOpacity>
       </View>
       {/* Marca anterior - Ahora es clickable */}
       {started && (
@@ -463,6 +600,109 @@ const ExerciseSetRow = ({
           )}
         </Animated.View>
       )}
+
+      <Modal
+        visible={isSetTypeModalVisible}
+        transparent
+        animationType="none"
+        onShow={openSetTypeModal}
+        onRequestClose={() =>
+          closeSetTypeModal(() => setIsSetTypeModalVisible(false))
+        }
+      >
+        <TouchableWithoutFeedback
+          onPress={() =>
+            closeSetTypeModal(() => setIsSetTypeModalVisible(false))
+          }
+        >
+          <Animated.View style={[styles.modalOverlay, { opacity: overlayOpacity }]}>
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                    transform: [{ translateY: modalTranslateY }],
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.modalHandle,
+                    { backgroundColor: theme.textTertiary },
+                  ]}
+                />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Tipo de serie
+                </Text>
+                {SET_TYPE_OPTIONS.map((option) => {
+                  const isSelected = setType === option.key;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[
+                        styles.modalOption,
+                        {
+                          borderColor: theme.border,
+                          backgroundColor: isSelected
+                            ? `${theme.primary}14`
+                            : theme.card,
+                        },
+                      ]}
+                      onPress={() => handleSelectSetType(option.key)}
+                    >
+                      <View style={styles.modalOptionRow}>
+                        <View
+                          style={[
+                            styles.modalTypePill,
+                            { backgroundColor: option.color },
+                          ]}
+                        >
+                          {option.icon ? (
+                            <Icon name={option.icon} size={14} color="#FFFFFF" />
+                          ) : (
+                            <View style={styles.modalTypeDot} />
+                          )}
+                        </View>
+
+                        <View style={styles.modalTextBlock}>
+                          <View style={styles.modalTitleRow}>
+                            <Text
+                              style={[
+                                styles.modalOptionText,
+                                {
+                                  color: isSelected ? theme.primary : theme.text,
+                                },
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                            <Icon
+                              name="info-outline"
+                              size={16}
+                              color={theme.textSecondary}
+                              style={styles.modalInfoIcon}
+                            />
+                          </View>
+                          <Text
+                            style={[
+                              styles.modalOptionDescription,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
+                            {option.description}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Animated.View>
   );
 };
@@ -476,6 +716,8 @@ const arePropsEqual = (prevProps: Props, nextProps: Props) => {
     prevProps.item.repsMin === nextProps.item.repsMin &&
     prevProps.item.repsMax === nextProps.item.repsMax &&
     prevProps.item.completed === nextProps.item.completed &&
+    (prevProps.item as SetRequestDto & { setType?: string }).setType ===
+      (nextProps.item as SetRequestDto & { setType?: string }).setType &&
     prevProps.item.order === nextProps.item.order &&
     prevProps.repsType === nextProps.repsType &&
     prevProps.readonly === nextProps.readonly &&
@@ -516,6 +758,91 @@ const styles = StyleSheet.create({
   },
   clickablePreviousMark: {
     fontWeight: "600",
+  },
+  setTypeTrigger: {
+    alignItems: "center",
+  },
+  setTypeBadge: {
+    marginTop: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    width: "100%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 22,
+  },
+  modalHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    alignSelf: "center",
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  modalOption: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  modalOptionRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  modalTypePill: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    marginRight: 10,
+  },
+  modalTypeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+  },
+  modalTextBlock: {
+    flex: 1,
+  },
+  modalTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalInfoIcon: {
+    marginLeft: 8,
+  },
+  modalOptionDescription: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });
 

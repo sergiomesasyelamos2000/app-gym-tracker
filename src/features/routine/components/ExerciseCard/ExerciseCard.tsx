@@ -50,6 +50,8 @@ const normalizeSetIds = (
 
   return sortedSets.map((set, index) => ({
     ...set,
+    setType:
+      (set as SetRequestDto & { setType?: string }).setType || "normal",
     id:
       typeof set.id === "string" && set.id.trim().length > 0
         ? set.id
@@ -201,6 +203,7 @@ const ExerciseCard = ({
   // Undo deletion state
   const [pendingDelete, setPendingDelete] = useState<{
     set: SetRequestDto;
+    originalIndex: number;
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
@@ -286,6 +289,9 @@ const ExerciseCard = ({
             repsMin: previousSet?.repsMin || 0,
             repsMax: previousSet?.repsMax || 0,
             completed: false,
+            setType:
+              (previousSet as SetRequestDto & { setType?: string })?.setType ||
+              "normal",
           } as SetRequestDto)
         : ({
             id: uuid.v4() as string,
@@ -293,13 +299,17 @@ const ExerciseCard = ({
             weight: previousSet?.weight || 0,
             reps: previousSet?.reps || 0,
             completed: false,
+            setType:
+              (previousSet as SetRequestDto & { setType?: string })?.setType ||
+              "normal",
           } as SetRequestDto);
     setSets([...sets, newSet]);
   };
 
   const deleteSet = (id: string) => {
     // Find the set to delete
-    const setToDelete = sets.find((set) => set.id === id);
+    const setIndex = sets.findIndex((set) => set.id === id);
+    const setToDelete = setIndex >= 0 ? sets[setIndex] : undefined;
     if (!setToDelete) return;
 
     // Cancel rest timer immediately if the set was completed
@@ -310,20 +320,22 @@ const ExerciseCard = ({
     // Clear any existing pending deletion
     if (pendingDelete) {
       clearTimeout(pendingDelete.timeoutId);
-      // Commit the previous deletion immediately
-      setSets((prev) =>
-        prev
-          .filter((set) => set.id !== pendingDelete.set.id)
-          .map((s, i) => ({ ...s, order: i + 1 }))
-      );
+      finalizeDelete(pendingDelete.set.id);
     }
+
+    // Optimistic delete: remove immediately so saving routine does not persist deleted set.
+    setSets((prev) =>
+      prev
+        .filter((set) => set.id !== id)
+        .map((s, i) => ({ ...s, order: i + 1 }))
+    );
 
     // Set up new pending deletion with 4 second timeout
     const timeoutId = setTimeout(() => {
-      commitDelete(id);
+      finalizeDelete(id);
     }, 4000);
 
-    setPendingDelete({ set: setToDelete, timeoutId });
+    setPendingDelete({ set: setToDelete, originalIndex: setIndex, timeoutId });
 
     // Show undo snackbar at screen level
     // We pass a direct closure that captures the timeoutId to avoid stale state issues
@@ -335,13 +347,7 @@ const ExerciseCard = ({
     }
   };
 
-  const commitDelete = (id: string) => {
-    setSets((prev) =>
-      prev
-        .filter((set) => set.id !== id)
-        .map((s, i) => ({ ...s, order: i + 1 }))
-    );
-
+  const finalizeDelete = (id: string) => {
     // Remove from record tracking if it was a PR
     if (recordSetTypes[id]) {
       setRecordSetTypes((prev) => {
@@ -358,6 +364,15 @@ const ExerciseCard = ({
   const handleUndo = () => {
     if (pendingDelete) {
       clearTimeout(pendingDelete.timeoutId);
+      setSets((prev) => {
+        const restored = [...prev];
+        const safeIndex = Math.min(
+          Math.max(0, pendingDelete.originalIndex),
+          restored.length
+        );
+        restored.splice(safeIndex, 0, pendingDelete.set);
+        return restored.map((set, index) => ({ ...set, order: index + 1 }));
+      });
       setPendingDelete(null);
     }
   };
@@ -365,7 +380,7 @@ const ExerciseCard = ({
   const updateSet = (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: SetRequestDto[keyof SetRequestDto]
   ) => {
     const updatedSetRef: { current: SetRequestDto | null } = { current: null };
 

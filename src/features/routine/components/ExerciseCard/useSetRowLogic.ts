@@ -6,7 +6,7 @@ interface UseSetRowLogicProps {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean,
+    value: SetRequestDto[keyof SetRequestDto],
   ) => void;
   repsType: "reps" | "range";
   started: boolean;

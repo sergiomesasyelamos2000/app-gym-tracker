@@ -30,7 +30,7 @@ interface Props {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: SetRequestDto[keyof SetRequestDto]
   ) => void;
   onDelete: (id: string) => void;
   weightUnit: "kg" | "lbs";
@@ -52,7 +52,7 @@ interface SetListItemProps {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: number | boolean
+    value: SetRequestDto[keyof SetRequestDto]
   ) => void;
   onSwipeableWillOpen: () => void;
   renderRightActions: (
@@ -137,7 +137,11 @@ const ExerciseSetList = ({
   }, [onDelete]);
 
   const handleUpdate = useCallback(
-    (id: string, field: keyof SetRequestDto, value: number | boolean) => {
+    (
+      id: string,
+      field: keyof SetRequestDto,
+      value: SetRequestDto[keyof SetRequestDto]
+    ) => {
       onUpdateRef.current(id, field, value);
     },
     []
