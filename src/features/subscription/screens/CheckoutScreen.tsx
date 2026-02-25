@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -6,20 +6,25 @@ import {
   Alert,
   Text,
   TouchableOpacity,
-} from 'react-native';
-import { WebView, WebViewNavigation } from 'react-native-webview';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
-import { verifyPayment } from '../services/subscriptionService';
-import { useSubscriptionStore } from '../../../store/useSubscriptionStore';
-import type { SubscriptionStatusResponse } from '@sergiomesasyelamos2000/shared';
-import type { BaseNavigation, CaughtError } from '../../../types';
-import type { SubscriptionStackParamList } from './SubscriptionStack';
+} from "react-native";
+import { WebView, WebViewNavigation } from "react-native-webview";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { X } from "lucide-react-native";
+import {
+  getMySubscription,
+  verifyPayment,
+} from "../services/subscriptionService";
+import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
+import type { SubscriptionStatusResponse } from "@sergiomesasyelamos2000/shared";
+import { SubscriptionPlan } from "@sergiomesasyelamos2000/shared";
+import { getErrorMessage } from "../../../types";
+import type { BaseNavigation, CaughtError } from "../../../types";
+import type { SubscriptionStackParamList } from "./SubscriptionStack";
 
 type CheckoutScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
-  'CheckoutScreen'
+  "CheckoutScreen"
 >;
 
 export function CheckoutScreen() {
@@ -27,57 +32,111 @@ export function CheckoutScreen() {
   const route = useRoute<CheckoutScreenRouteProp>();
   const params = route.params;
   const webViewRef = useRef<WebView>(null);
+  const hasStartedVerificationRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const { setSubscription } = useSubscriptionStore();
 
+  const delay = (ms: number) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  const isExpectedPlanActive = (
+    plan: SubscriptionPlan,
+    expectedPlan: SubscriptionPlan
+  ) => {
+    if (expectedPlan === SubscriptionPlan.MONTHLY) {
+      return (
+        plan === SubscriptionPlan.MONTHLY ||
+        plan === SubscriptionPlan.YEARLY ||
+        plan === SubscriptionPlan.LIFETIME
+      );
+    }
+
+    return plan === expectedPlan;
+  };
+
+  const refreshSubscriptionWithRetries = async (
+    expectedPlan: SubscriptionPlan,
+    retries: number = 8
+  ): Promise<SubscriptionStatusResponse> => {
+    let latestData: SubscriptionStatusResponse | null = null;
+
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      const data = await getMySubscription();
+      latestData = data;
+      setSubscription(data);
+
+      if (isExpectedPlanActive(data.subscription.plan, expectedPlan)) {
+        return data;
+      }
+
+      await delay(1500);
+    }
+
+    if (latestData) {
+      return latestData;
+    }
+
+    throw new Error("No se pudo obtener el estado de suscripción");
+  };
+
   const handleNavigationStateChange = async (navState: WebViewNavigation) => {
     const { url } = navState;
+    const queryString = url.includes("?") ? url.split("?")[1] : "";
+    const urlParams = new URLSearchParams(queryString);
+    const orderId = urlParams.get("order_id");
+    const sessionIdFromUrl = urlParams.get("session_id");
+    const checkoutId = urlParams.get("checkout_id");
+    const hasSuccessSignal =
+      url.includes("/subscription/success") ||
+      Boolean(orderId) ||
+      Boolean(sessionIdFromUrl) ||
+      Boolean(checkoutId);
 
     // Check if success URL
-    if (url.includes('/subscription/success') || url.includes('session_id=')) {
+    if (hasSuccessSignal && !hasStartedVerificationRef.current) {
+      hasStartedVerificationRef.current = true;
       setVerifying(true);
 
       try {
-        // Extract session ID from URL if present
-        let sessionId = params.sessionId;
-        const urlParams = new URLSearchParams(url.split('?')[1]);
-        const urlSessionId = urlParams.get('session_id');
-        if (urlSessionId) {
-          sessionId = urlSessionId;
+        const verificationId =
+          sessionIdFromUrl || checkoutId || orderId || params.sessionId;
+
+        if (verificationId) {
+          await verifyPayment(verificationId, params.planId);
         }
 
-        // Verify payment
-        const subscription = await verifyPayment(sessionId);
+        await refreshSubscriptionWithRetries(params.planId);
 
-        // Update store
-        const statusResponse: SubscriptionStatusResponse = {
-          subscription,
-          features: {
-            maxRoutines: null,
-            maxCustomProducts: null,
-            maxCustomMeals: null,
-            aiAnalysisEnabled: true,
-            advancedStatsEnabled: true,
-            exportDataEnabled: true,
-            prioritySupportEnabled: true,
-          },
-          isPremium: true,
-        };
-        setSubscription(statusResponse);
-
-        // Navigate to success screen
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'StatusScreen', params: { success: true } }],
+        navigation.navigate("SubscriptionStack" as any, {
+          screen: "StatusScreen",
+          params: { success: true },
         });
       } catch (error: CaughtError) {
-        console.error('Error verifying payment:', error);
         Alert.alert(
-          'Error de Verificación',
-          'Pago exitoso pero la verificación falló. Por favor, contacta con soporte.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          "No se pudo confirmar la suscripción",
+          getErrorMessage(error) ||
+            "El pago puede haberse completado, pero todavía no pudimos confirmar el cambio de plan. Espera unos segundos y reintenta.",
+          [
+            {
+              text: "Reintentar",
+              onPress: () => {
+                hasStartedVerificationRef.current = false;
+                void handleNavigationStateChange(navState);
+              },
+            },
+            {
+              text: "Ver suscripción",
+              onPress: () => {
+                navigation.navigate("SubscriptionStack" as any, {
+                  screen: "StatusScreen",
+                });
+              },
+            },
+          ]
         );
       } finally {
         setVerifying(false);
@@ -85,38 +144,44 @@ export function CheckoutScreen() {
     }
 
     // Check if cancel URL
-    if (url.includes('/subscription/cancel')) {
-      Alert.alert('Pago Cancelado', 'Has cancelado el proceso de pago.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+    if (url.includes("/subscription/cancel")) {
+      Alert.alert("Pago Cancelado", "Has cancelado el proceso de pago.", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
     }
   };
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancelar Pago',
-      '¿Estás seguro de que quieres cancelar el proceso de pago?',
+      "Cancelar Pago",
+      "¿Estás seguro de que quieres cancelar el proceso de pago?",
       [
-        { text: 'Continuar con el Pago', style: 'cancel' },
-        { text: 'Cancelar', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: "Continuar con el Pago", style: "cancel" },
+        {
+          text: "Cancelar",
+          style: "destructive",
+          onPress: () => navigation.goBack(),
+        },
       ]
     );
   };
 
   if (verifying) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.verifyingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
           <Text style={styles.verifyingText}>Verificando pago...</Text>
-          <Text style={styles.verifyingSubtext}>Por favor espera mientras confirmamos tu compra</Text>
+          <Text style={styles.verifyingSubtext}>
+            Por favor espera mientras confirmamos tu compra
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
@@ -153,54 +218,54 @@ export function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   closeButton: {
     padding: 8,
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   webView: {
     flex: 1,
   },
   loadingOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   verifyingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   verifyingText: {
     marginTop: 16,
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   verifyingSubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
+    color: "#6b7280",
+    textAlign: "center",
   },
 });

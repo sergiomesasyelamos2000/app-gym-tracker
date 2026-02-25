@@ -120,7 +120,7 @@ export function PlansScreen() {
             Todos los planes incluyen garantía de devolución de 7 días
           </Text>
           <Text style={[styles.footerSubtext, { color: theme.textTertiary }]}>
-            Cancela cuando quieras • Pago seguro con Stripe
+            Cancela cuando quieras • Pago seguro con Lemon Squeezy
           </Text>
         </View>
       </ScrollView>

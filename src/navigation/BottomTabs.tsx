@@ -2,6 +2,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { BarChart3, Dumbbell, Heart, Home, User } from "lucide-react-native";
 import React from "react";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { useTheme } from "../contexts/ThemeContext";
 import NutritionStack from "../features/nutrition/screens/NutritionStack";
 import ProfileStack from "../features/profile/screens/ProfileStack";
@@ -15,6 +16,11 @@ const Tab = createBottomTabNavigator();
 export const BottomTabs = () => {
   const hiddenTabs = useNavigationStore((state) => state.hiddenTabs);
   const { theme } = useTheme();
+
+  const isTabBarLockedForPayment = (route: any) => {
+    const focusedRouteName = getFocusedRouteNameFromRoute(route);
+    return focusedRouteName === "CheckoutScreen";
+  };
 
   return (
     <Tab.Navigator
@@ -40,7 +46,10 @@ export const BottomTabs = () => {
         headerShown: false,
         // Aplicar visibilidad específica por tab
         tabBarStyle: {
-          display: hiddenTabs[route.name] ? "none" : "flex",
+          display:
+            hiddenTabs[route.name] || isTabBarLockedForPayment(route)
+              ? "none"
+              : "flex",
           backgroundColor: theme.tabBarBackground,
           borderTopColor: theme.tabBarBorder,
           borderTopWidth: 1,

@@ -4,7 +4,6 @@ import type {
   SubscriptionStatusResponse,
   CreateCheckoutSessionRequest,
   CheckoutSessionResponse,
-  VerifyPaymentRequest,
   CancelSubscriptionRequest,
   CustomerPortalResponse,
   SubscriptionPlan,
@@ -20,7 +19,7 @@ export async function getMySubscription(): Promise<SubscriptionStatusResponse> {
 }
 
 /**
- * Create a Stripe checkout session
+ * Create a Lemon Squeezy checkout session
  */
 export async function createCheckoutSession(
   planId: SubscriptionPlan,
@@ -42,9 +41,13 @@ export async function createCheckoutSession(
 /**
  * Verify payment after checkout
  */
-export async function verifyPayment(sessionId: string): Promise<Subscription> {
-  const dto: VerifyPaymentRequest = {
-    sessionId,
+export async function verifyPayment(
+  verificationId: string,
+  planId?: SubscriptionPlan
+): Promise<Subscription> {
+  const dto = {
+    sessionId: verificationId,
+    ...(planId ? { planId } : {}),
   };
 
   return await apiFetch<Subscription>('subscription/verify-payment', {
@@ -81,7 +84,7 @@ export async function reactivateSubscription(): Promise<Subscription> {
 }
 
 /**
- * Get Stripe Customer Portal URL
+ * Get Lemon Squeezy Customer Portal URL
  */
 export async function getCustomerPortalUrl(): Promise<CustomerPortalResponse> {
   return await apiFetch<CustomerPortalResponse>('subscription/customer-portal', {
