@@ -8,7 +8,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { WebView, WebViewNavigation } from "react-native-webview";
-import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  RouteProp,
+  StackActions,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import {
@@ -37,6 +42,33 @@ export function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const { setSubscription } = useSubscriptionStore();
+
+  const openStatusScreen = (success: boolean) => {
+    const state = navigation.getState() as any;
+    const routeNames: string[] = state?.routeNames || [];
+
+    if (routeNames.includes("StatusScreen")) {
+      navigation.dispatch(
+        StackActions.replace("StatusScreen", success ? { success: true } : {})
+      );
+      return;
+    }
+
+    if (routeNames.includes("SubscriptionStatus")) {
+      navigation.dispatch(
+        StackActions.replace(
+          "SubscriptionStatus",
+          success ? { success: true } : {}
+        )
+      );
+      return;
+    }
+
+    navigation.navigate("SubscriptionStack" as any, {
+      screen: "StatusScreen",
+      params: success ? { success: true } : {},
+    });
+  };
 
   const delay = (ms: number) =>
     new Promise((resolve) => {
@@ -111,10 +143,7 @@ export function CheckoutScreen() {
 
         await refreshSubscriptionWithRetries(params.planId);
 
-        navigation.navigate("SubscriptionStack" as any, {
-          screen: "StatusScreen",
-          params: { success: true },
-        });
+        openStatusScreen(true);
       } catch (error: CaughtError) {
         Alert.alert(
           "No se pudo confirmar la suscripción",
@@ -131,9 +160,7 @@ export function CheckoutScreen() {
             {
               text: "Ver suscripción",
               onPress: () => {
-                navigation.navigate("SubscriptionStack" as any, {
-                  screen: "StatusScreen",
-                });
+                openStatusScreen(false);
               },
             },
           ]
@@ -164,6 +191,17 @@ export function CheckoutScreen() {
         },
       ]
     );
+  };
+
+  const handleShouldStartLoadWithRequest = (request: any) => {
+    const requestUrl = request?.url || "";
+
+    // iOS can try to open about:srcdoc externally, which is not needed here.
+    if (requestUrl.startsWith("about:srcdoc")) {
+      return false;
+    }
+
+    return true;
   };
 
   if (verifying) {
@@ -199,6 +237,7 @@ export function CheckoutScreen() {
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
         onNavigationStateChange={handleNavigationStateChange}
+        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         startInLoadingState
         javaScriptEnabled
         domStorageEnabled

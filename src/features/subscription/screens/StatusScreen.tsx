@@ -29,7 +29,7 @@ import {
 import {
   SubscriptionPlan,
   PLAN_METADATA,
-} from '@sergiomesasyelamos2000/shared';
+} from "@sergiomesasyelamos2000/shared";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
@@ -77,19 +77,19 @@ export function StatusScreen() {
               await fetchSubscription();
               Alert.alert(
                 "Éxito",
-                "Tu suscripción se cancelará al final del período de facturación.",
+                "Tu suscripción se cancelará al final del período de facturación."
               );
             } catch (error: CaughtError) {
               Alert.alert(
                 "Error",
-                getErrorMessage(error) || "No se pudo cancelar la suscripción",
+                getErrorMessage(error) || "No se pudo cancelar la suscripción"
               );
             } finally {
               setActionLoading(false);
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -102,7 +102,7 @@ export function StatusScreen() {
     } catch (error: CaughtError) {
       Alert.alert(
         "Error",
-        getErrorMessage(error) || "No se pudo reactivar la suscripción",
+        getErrorMessage(error) || "No se pudo reactivar la suscripción"
       );
     } finally {
       setActionLoading(false);
@@ -117,7 +117,7 @@ export function StatusScreen() {
     } catch (error: CaughtError) {
       Alert.alert(
         "Error",
-        getErrorMessage(error) || "No se pudo abrir el portal de cliente",
+        getErrorMessage(error) || "No se pudo abrir el portal de cliente"
       );
     } finally {
       setActionLoading(false);
@@ -150,11 +150,13 @@ export function StatusScreen() {
       >
         {/* Success Banner */}
         {success && (
-          <View style={styles.successBanner}>
-            <CheckCircle size={24} color="#10b981" />
-            <Text style={styles.successText}>
-              ¡Bienvenido a Premium! Tu suscripción está activa.
-            </Text>
+          <View>
+            <View style={styles.successBanner}>
+              <CheckCircle size={24} color="#10b981" />
+              <Text style={styles.successText}>
+                ¡Bienvenido a Premium! Tu suscripción está activa.
+              </Text>
+            </View>
           </View>
         )}
 
@@ -186,11 +188,10 @@ export function StatusScreen() {
                 <Text style={styles.detailLabel}>Precio:</Text>
                 <Text style={styles.detailValue}>
                   {planMetadata.price.toFixed(2)}€
-                  {planMetadata.interval && planMetadata.interval !== "lifetime" && (
-                    <>
-                      /{planMetadata.interval === "month" ? "mes" : "año"}
-                    </>
-                  )}
+                  {planMetadata.interval &&
+                    planMetadata.interval !== "lifetime" && (
+                      <>/{planMetadata.interval === "month" ? "mes" : "año"}</>
+                    )}
                   {planMetadata.interval === "lifetime" && " (pago único)"}
                 </Text>
               </View>
@@ -205,7 +206,7 @@ export function StatusScreen() {
                     </Text>
                     <Text style={styles.detailValue}>
                       {new Date(
-                        subscription.currentPeriodEnd,
+                        subscription.currentPeriodEnd
                       ).toLocaleDateString("es-ES")}
                       {daysRemaining !== undefined &&
                         ` (${daysRemaining} días)`}
@@ -343,6 +344,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#065f46",
     flex: 1,
+  },
+  closeFlowButton: {
+    marginTop: 12,
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  closeFlowButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
   },
   header: {
     alignItems: "center",
