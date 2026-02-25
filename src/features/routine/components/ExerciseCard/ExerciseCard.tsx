@@ -288,6 +288,7 @@ const ExerciseCard = ({
             weight: previousSet?.weight || 0,
             repsMin: previousSet?.repsMin || 0,
             repsMax: previousSet?.repsMax || 0,
+            assistedReps: previousSet?.assistedReps || 0,
             completed: false,
             setType:
               (previousSet as SetRequestDto & { setType?: string })?.setType ||
@@ -298,6 +299,7 @@ const ExerciseCard = ({
             order: sets.length + 1,
             weight: previousSet?.weight || 0,
             reps: previousSet?.reps || 0,
+            assistedReps: previousSet?.assistedReps || 0,
             completed: false,
             setType:
               (previousSet as SetRequestDto & { setType?: string })?.setType ||

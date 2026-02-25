@@ -118,10 +118,12 @@ const ExerciseSetRow = ({
   const {
     localWeight,
     localReps,
+    localAssistedReps,
     localRepsMin,
     localRepsMax,
     handleWeightChange,
     handleRepsChange,
+    handleAssistedRepsChange,
     handleRepsMinChange,
     handleRepsMaxChange,
     handleToggleCompleted,
@@ -202,13 +204,20 @@ const ExerciseSetRow = ({
     ],
   });
   const completedCheckColor = isDark ? "#4ADE80" : "#16A34A";
-  const [isSetTypeModalVisible, setIsSetTypeModalVisible] = React.useState(false);
+  const [isSetTypeModalVisible, setIsSetTypeModalVisible] =
+    React.useState(false);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(280)).current;
   const setType = getSetTypeValue(
     (item as SetRequestDto & { setType?: SetTypeValue }).setType
   );
   const setTypeIcon = getSetTypeIcon(setType);
+  const previousWeightPlaceholder =
+    previousMark?.match(/^\s*([\d.,]+)/)?.[1]?.replace(",", ".") || "0";
+  const previousRepsPlaceholder = previousMark?.match(/x\s*(\d+)/i)?.[1] || "0";
+  const previousMainMark =
+    previousMark?.replace(/\s*\(A:\d+\)\s*$/i, "").trim() || "-";
+  const previousAssistedMark = previousMark?.match(/\(A:(\d+)\)/i)?.[1];
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -281,11 +290,11 @@ const ExerciseSetRow = ({
           onPress={() => !readonly && setIsSetTypeModalVisible(true)}
           disabled={readonly}
           style={styles.setTypeTrigger}
-          accessibilityLabel={`Serie ${item.order}. ${getSetTypeLabel(setType)}`}
+          accessibilityLabel={`Serie ${item.order}. ${getSetTypeLabel(
+            setType
+          )}`}
           accessibilityHint={
-            readonly
-              ? undefined
-              : "Toca para cambiar el tipo de serie"
+            readonly ? undefined : "Toca para cambiar el tipo de serie"
           }
         >
           <Text
@@ -331,23 +340,38 @@ const ExerciseSetRow = ({
             accessibilityHint="Toca para copiar los valores de tu sesión anterior"
             style={{ width: "100%" }}
           >
-            <Text
-              style={[
-                styles.previousMark,
-                {
-                  color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 12 : 14),
-                },
-                previousMark &&
-                  previousMark !== "-" &&
-                  styles.clickablePreviousMark,
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-            >
-              {previousMark || "-"}
-            </Text>
+            <View style={styles.previousMarkContainer}>
+              <Text
+                style={[
+                  styles.previousMark,
+                  {
+                    color: theme.textSecondary,
+                    fontSize: RFValue(isSmallScreen ? 12 : 14),
+                  },
+                  previousMark &&
+                    previousMark !== "-" &&
+                    styles.clickablePreviousMark,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {previousMainMark}
+              </Text>
+              {previousAssistedMark ? (
+                <Text
+                  style={[
+                    styles.previousAssistedMark,
+                    {
+                      color: theme.textTertiary,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  A:{previousAssistedMark}
+                </Text>
+              ) : null}
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -376,9 +400,7 @@ const ExerciseSetRow = ({
           ]}
           keyboardType="decimal-pad"
           value={localWeight}
-          placeholder={
-            started ? previousMark?.split("kg")[0]?.trim() || "0" : "0"
-          }
+          placeholder={started ? previousWeightPlaceholder : "0"}
           placeholderTextColor={theme.textTertiary}
           onChangeText={handleWeightChange}
           editable={!readonly}
@@ -415,8 +437,20 @@ const ExerciseSetRow = ({
             value={localReps}
             placeholder={
               repsType === "range"
-                ? `${item.repsMin && item.repsMin > 0 ? item.repsMin : item.reps && item.reps > 0 ? item.reps : 0}-${item.repsMax && item.repsMax > 0 ? item.repsMax : item.reps && item.reps > 0 ? item.reps : 0}`
-                : previousMark?.split("x")[1]?.trim() || "0"
+                ? `${
+                    item.repsMin && item.repsMin > 0
+                      ? item.repsMin
+                      : item.reps && item.reps > 0
+                      ? item.reps
+                      : 0
+                  }-${
+                    item.repsMax && item.repsMax > 0
+                      ? item.repsMax
+                      : item.reps && item.reps > 0
+                      ? item.reps
+                      : 0
+                  }`
+                : previousRepsPlaceholder
             }
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
@@ -466,7 +500,7 @@ const ExerciseSetRow = ({
                   ? item.repsMin && item.repsMin > 0
                     ? item.repsMin.toString()
                     : item.reps && item.reps > 0
-                      ? item.reps.toString()
+                    ? item.reps.toString()
                     : "0"
                   : "0"
               }
@@ -505,7 +539,7 @@ const ExerciseSetRow = ({
                   ? item.repsMax && item.repsMax > 0
                     ? item.repsMax.toString()
                     : item.reps && item.reps > 0
-                      ? item.reps.toString()
+                    ? item.reps.toString()
                     : "0"
                   : "0"
               }
@@ -550,6 +584,39 @@ const ExerciseSetRow = ({
           />
         </View>
       )}
+      {/* Repeticiones asistidas */}
+      <View
+        style={{
+          flex: isSmallScreen
+            ? COLUMN_FLEX.small.assisted
+            : COLUMN_FLEX.normal.assisted,
+          marginHorizontal: 2,
+        }}
+      >
+        <TextInput
+          {...inputAccessoryProps}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.inputBackground,
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+              padding: isSmallScreen ? 8 : 12,
+              fontSize: RFValue(isSmallScreen ? 13 : 15),
+              minHeight: isSmallScreen ? 40 : 44,
+            },
+          ]}
+          keyboardType="numeric"
+          value={localAssistedReps}
+          placeholder="0"
+          placeholderTextColor={theme.textTertiary}
+          onChangeText={handleAssistedRepsChange}
+          editable={!readonly}
+          accessibilityLabel="Repeticiones asistidas"
+          accessibilityHint="Introduce cuántas repeticiones fueron asistidas"
+        />
+      </View>
       {/* Check */}
       {!readonly && (
         <View
@@ -615,7 +682,9 @@ const ExerciseSetRow = ({
             closeSetTypeModal(() => setIsSetTypeModalVisible(false))
           }
         >
-          <Animated.View style={[styles.modalOverlay, { opacity: overlayOpacity }]}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+          >
             <TouchableWithoutFeedback>
               <Animated.View
                 style={[
@@ -660,7 +729,11 @@ const ExerciseSetRow = ({
                           ]}
                         >
                           {option.icon ? (
-                            <Icon name={option.icon} size={14} color="#FFFFFF" />
+                            <Icon
+                              name={option.icon}
+                              size={14}
+                              color="#FFFFFF"
+                            />
                           ) : (
                             <View style={styles.modalTypeDot} />
                           )}
@@ -672,7 +745,9 @@ const ExerciseSetRow = ({
                               style={[
                                 styles.modalOptionText,
                                 {
-                                  color: isSelected ? theme.primary : theme.text,
+                                  color: isSelected
+                                    ? theme.primary
+                                    : theme.text,
                                 },
                               ]}
                             >
@@ -713,6 +788,7 @@ const arePropsEqual = (prevProps: Props, nextProps: Props) => {
     prevProps.item.id === nextProps.item.id &&
     prevProps.item.weight === nextProps.item.weight &&
     prevProps.item.reps === nextProps.item.reps &&
+    prevProps.item.assistedReps === nextProps.item.assistedReps &&
     prevProps.item.repsMin === nextProps.item.repsMin &&
     prevProps.item.repsMax === nextProps.item.repsMax &&
     prevProps.item.completed === nextProps.item.completed &&
@@ -755,6 +831,15 @@ const styles = StyleSheet.create({
   },
   previousMark: {
     textAlign: "center",
+  },
+  previousMarkContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previousAssistedMark: {
+    textAlign: "center",
+    fontSize: 12,
+    marginTop: 1,
   },
   clickablePreviousMark: {
     fontWeight: "600",

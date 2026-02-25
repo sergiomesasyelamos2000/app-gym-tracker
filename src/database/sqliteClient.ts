@@ -49,6 +49,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       order_index INTEGER,
       weight REAL,
       reps INTEGER,
+      assistedReps INTEGER,
       repsMin INTEGER,
       repsMax INTEGER,
       completed INTEGER DEFAULT 0,
@@ -162,6 +163,14 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     CREATE INDEX IF NOT EXISTS idx_custom_products_user ON custom_products(userId);
     CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
   `);
+
+  // Backward-compatible schema migration for existing local DBs.
+  // If the column already exists, SQLite throws and we ignore it.
+  try {
+    await db.execAsync(`ALTER TABLE sets ADD COLUMN assistedReps INTEGER;`);
+  } catch {
+    // no-op
+  }
 
   return db;
 }

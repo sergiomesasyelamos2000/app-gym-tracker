@@ -129,8 +129,8 @@ export async function saveSetOffline(
 
   const query = `
     INSERT OR REPLACE INTO sets
-    (id, routineExerciseId, order_index, weight, reps, repsMin, repsMax, completed, weightUnit, repsType, synced, deleted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+    (id, routineExerciseId, order_index, weight, reps, assistedReps, repsMin, repsMax, completed, weightUnit, repsType, synced, deleted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
   `;
 
   await db.runAsync(query, [
@@ -139,6 +139,7 @@ export async function saveSetOffline(
     set.order,
     set.weight ?? 0, // Agregar ?? 0 para evitar undefined
     set.reps ?? 0, // Agregar ?? 0 para evitar undefined
+    set.assistedReps ?? null,
     set.repsMin ?? null, // Ya está bien
     set.repsMax ?? null, // Ya está bien
     set.completed ? 1 : 0,

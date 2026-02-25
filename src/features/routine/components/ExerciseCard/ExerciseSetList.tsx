@@ -200,15 +200,28 @@ const ExerciseSetList = ({
     (item: SetRequestDto): string | undefined => {
       if (!started) return undefined;
 
+      const previousWeight = item.previousWeight;
+      const previousReps = item.previousReps;
+      const previousAssistedReps = (
+        item as SetRequestDto & { previousAssistedReps?: number }
+      ).previousAssistedReps;
+
       if (
-        "previousWeight" in item &&
-        "previousReps" in item &&
-        item.previousWeight &&
-        item.previousReps
+        typeof previousWeight === "number" &&
+        Number.isFinite(previousWeight) &&
+        typeof previousReps === "number" &&
+        Number.isFinite(previousReps)
       ) {
-        return `${item.previousWeight || 0} ${weightUnit} x ${
-          item.previousReps || 0
-        }`;
+        const baseMark = `${previousWeight} ${weightUnit} x ${previousReps}`;
+        if (
+          typeof previousAssistedReps === "number" &&
+          Number.isFinite(previousAssistedReps) &&
+          previousAssistedReps > 0
+        ) {
+          return `${baseMark} (A:${previousAssistedReps})`;
+        }
+
+        return baseMark;
       }
 
       return "-";
@@ -606,6 +619,32 @@ const ExerciseSetList = ({
               />
             )}
           </TouchableOpacity>
+        </View>
+
+        <View
+          style={{
+            flex: isSmallScreen
+              ? COLUMN_FLEX.small.assisted
+              : COLUMN_FLEX.normal.assisted,
+            marginHorizontal: 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={[
+              styles.columnTitle,
+              {
+                color: theme.textSecondary,
+                fontSize: RFValue(isSmallScreen ? 8 : 10),
+              },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            ASIS
+          </Text>
         </View>
 
         {!readonly && (

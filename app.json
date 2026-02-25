@@ -1,12 +1,8 @@
 {
   "expo": {
-    "name": "app",
+    "name": "EvoFit",
     "slug": "app",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "platforms": ["ios", "android", "web"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

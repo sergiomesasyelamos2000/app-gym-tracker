@@ -56,6 +56,7 @@ import {
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
+type SetWithPreviousAssisted = SetRequestDto & { previousAssistedReps?: number };
 
 const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
   [...sets]
@@ -345,6 +346,7 @@ export default function RoutineDetailScreen() {
         completed: false,
         previousWeight: set.weight,
         previousReps: set.reps || set.repsMin,
+        previousAssistedReps: set.assistedReps,
       })),
     }));
 
@@ -389,6 +391,7 @@ export default function RoutineDetailScreen() {
         ...set,
         previousWeight: set.weight,
         previousReps: set.reps || set.repsMin,
+        previousAssistedReps: set.assistedReps,
       }));
     });
     setSets(updatedSets);
@@ -828,6 +831,7 @@ export default function RoutineDetailScreen() {
             ...set,
             previousWeight: set.weight,
             previousReps: set.reps || set.repsMin,
+            previousAssistedReps: (set as SetWithPreviousAssisted).assistedReps,
           })),
           notes: re.notes,
           restSeconds: re.restSeconds,

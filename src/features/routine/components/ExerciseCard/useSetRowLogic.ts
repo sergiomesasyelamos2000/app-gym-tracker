@@ -35,6 +35,13 @@ export const useSetRowLogic = ({
         ? item.reps.toString()
         : "",
   );
+  const [localAssistedReps, setLocalAssistedReps] = useState<string>(
+    started
+      ? ""
+      : item.assistedReps && item.assistedReps > 0
+        ? item.assistedReps.toString()
+        : "",
+  );
   const [localRepsMin, setLocalRepsMin] = useState<string>(
     started
       ? ""
@@ -55,16 +62,14 @@ export const useSetRowLogic = ({
     if (!previousMark || previousMark === "-") return null;
 
     try {
-      // Formato esperado: "10 kg x 8" o "22 lbs x 12"
-      const parts = previousMark.split(" x ");
-      if (parts.length !== 2) return null;
+      // Acepta: "10 kg x 8", "22 lbs x 12", "80 kg x 10 (A:2)"
+      const match = previousMark.match(
+        /^\s*([\d.,]+)\s*(?:kg|lbs)?\s*x\s*(\d+)/i
+      );
+      if (!match) return null;
 
-      const weightPart = parts[0]; // "10 kg" o "22 lbs"
-      const repsPart = parts[1]; // "8"
-
-      // Extraer el número del peso (eliminar la unidad)
-      const weightValue = weightPart.split(" ")[0];
-      const repsValue = repsPart;
+      const weightValue = match[1].replace(",", ".");
+      const repsValue = match[2];
 
       return {
         weight: weightValue,
@@ -95,6 +100,7 @@ export const useSetRowLogic = ({
     if (started) {
       setLocalWeight("");
       setLocalReps("");
+      setLocalAssistedReps("");
       setLocalRepsMin("");
       setLocalRepsMax("");
     }
@@ -105,6 +111,11 @@ export const useSetRowLogic = ({
     if (!started) {
       setLocalWeight(item.weight && item.weight > 0 ? item.weight.toString() : "");
       setLocalReps(item.reps && item.reps > 0 ? item.reps.toString() : "");
+      setLocalAssistedReps(
+        item.assistedReps && item.assistedReps > 0
+          ? item.assistedReps.toString()
+          : "",
+      );
       setLocalRepsMin(
         item.repsMin && item.repsMin > 0 ? item.repsMin.toString() : ""
       );
@@ -112,7 +123,14 @@ export const useSetRowLogic = ({
         item.repsMax && item.repsMax > 0 ? item.repsMax.toString() : ""
       );
     }
-  }, [started, item.weight, item.reps, item.repsMin, item.repsMax]);
+  }, [
+    started,
+    item.weight,
+    item.reps,
+    item.assistedReps,
+    item.repsMin,
+    item.repsMax,
+  ]);
 
   // Función helper para sanitizar valores
   const sanitizeValue = useCallback(
@@ -157,6 +175,15 @@ export const useSetRowLogic = ({
       setLocalRepsMin(text);
       const value = sanitizeValue(text, "repsMin");
       onUpdate(item.id, "repsMin", value);
+    },
+    [item.id, onUpdate, sanitizeValue],
+  );
+
+  const handleAssistedRepsChange = useCallback(
+    (text: string) => {
+      setLocalAssistedReps(text);
+      const value = sanitizeValue(text, "assistedReps");
+      onUpdate(item.id, "assistedReps", value);
     },
     [item.id, onUpdate, sanitizeValue],
   );
@@ -206,10 +233,12 @@ export const useSetRowLogic = ({
   return {
     localWeight,
     localReps,
+    localAssistedReps,
     localRepsMin,
     localRepsMax,
     handleWeightChange,
     handleRepsChange,
+    handleAssistedRepsChange,
     handleRepsMinChange,
     handleRepsMaxChange,
     handleToggleCompleted,

@@ -45,6 +45,8 @@ export interface BaseNavigation {
   replace: (screen: string, params?: Record<string, unknown>) => void;
   reset: (state: unknown) => void;
   setParams: (params: Record<string, unknown>) => void;
+  dispatch: (action: unknown) => void;
+  getState: () => unknown;
   getParent: () => BaseNavigation | undefined;
 }
 
