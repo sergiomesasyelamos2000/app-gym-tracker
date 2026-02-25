@@ -291,6 +291,12 @@ export default function ProfileScreen() {
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.background }]}
       >
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.background}
+          hidden={false}
+          translucent={false}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -305,6 +311,8 @@ export default function ProfileScreen() {
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.backgroundSecondary}
+        hidden={false}
+        translucent={false}
       />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}

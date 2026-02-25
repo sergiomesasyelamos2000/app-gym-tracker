@@ -129,6 +129,24 @@ export default function AuthScreen() {
     }
   };
 
+  const handleGooglePress = async () => {
+    if (!request || isLoading) {
+      return;
+    }
+
+    try {
+      if (Platform.OS === "web") {
+        await promptAsync({ windowName: "google-auth" });
+        return;
+      }
+
+      await promptAsync();
+    } catch (error) {
+      const errorMessage = getErrorMessage(error as CaughtError);
+      Alert.alert("Error", errorMessage);
+    }
+  };
+
   const handleEmailAuth = async () => {
     if (
       !email ||
@@ -550,7 +568,7 @@ export default function AuthScreen() {
                     },
                     (isLoading || !request) && styles.disabledButton,
                   ]}
-                  onPress={() => promptAsync()}
+                  onPress={handleGooglePress}
                   disabled={isLoading || !request}
                   activeOpacity={0.7}
                 >

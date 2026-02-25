@@ -11,11 +11,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
-import { SubscriptionStack } from "../features/subscription/screens/SubscriptionStack";
 import { prefetchExerciseCatalog } from "../services/exerciseService";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
-import { BottomTabs } from "./BottomTabs";
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +25,10 @@ export const RootNavigator = () => {
   );
   const [isInitializing, setIsInitializing] = useState(true);
   const hasWarmedUpCatalogRef = useRef(false);
+  const MainAppComponent = useRef<React.ComponentType<any> | null>(null);
+  const SubscriptionStackComponent = useRef<React.ComponentType<any> | null>(
+    null
+  );
 
   // Check if auth state is loaded from AsyncStorage
   useEffect(() => {
@@ -66,15 +68,30 @@ export const RootNavigator = () => {
     );
   }
 
+  if (isAuthenticated && !MainAppComponent.current) {
+    MainAppComponent.current = require("./BottomTabs").BottomTabs;
+  }
+
+  if (isAuthenticated && !SubscriptionStackComponent.current) {
+    SubscriptionStackComponent.current =
+      require("../features/subscription/screens/SubscriptionStack")
+        .SubscriptionStack;
+  }
+
   // Show auth screen or main app with subscription stack
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="MainApp" component={BottomTabs} />
+          <Stack.Screen
+            name="MainApp"
+            component={MainAppComponent.current as React.ComponentType<any>}
+          />
           <Stack.Screen
             name="SubscriptionStack"
-            component={SubscriptionStack}
+            component={
+              SubscriptionStackComponent.current as React.ComponentType<any>
+            }
             options={{
               presentation: "modal",
               headerShown: false,

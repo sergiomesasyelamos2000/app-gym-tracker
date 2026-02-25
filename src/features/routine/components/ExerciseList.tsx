@@ -96,6 +96,8 @@ export default function ExerciseList() {
     mode = "createRoutine",
     replaceExerciseId,
     singleSelection = false,
+    draftTitle,
+    draftExercises,
   } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -333,19 +335,31 @@ export default function ExerciseList() {
     if (selectedExercises.length === 0) return;
 
     if (mode === "replaceExercise" && routineId && replaceExerciseId) {
-      navigation.navigate("RoutineEdit", {
-        id: routineId,
-        replaceExerciseId,
-        replacementExercise: selectedExercises[0],
+      navigation.navigate({
+        name: "RoutineEdit",
+        params: {
+          id: routineId,
+          title: draftTitle,
+          exercises: draftExercises,
+          replaceExerciseId,
+          replacementExercise: selectedExercises[0],
+        },
+        merge: true,
       });
       clearSelectionContext();
       return;
     }
 
     if (mode === "addToRoutine" && routineId) {
-      navigation.navigate("RoutineEdit", {
-        id: routineId,
-        addExercises: selectedExercises,
+      navigation.navigate({
+        name: "RoutineEdit",
+        params: {
+          id: routineId,
+          title: draftTitle,
+          exercises: draftExercises,
+          addExercises: selectedExercises,
+        },
+        merge: true,
       });
       clearSelectionContext();
       return;

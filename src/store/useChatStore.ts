@@ -8,6 +8,30 @@ import {
   postText,
 } from '../features/nutrition/services/nutritionService';
 
+const getPhotoProcessingErrorMessage = (error: unknown): string => {
+  const candidate = error as {
+    status?: number;
+    details?: { message?: string } | string;
+    message?: string;
+  };
+  const status = candidate?.status;
+  const detailsMessage =
+    typeof candidate?.details === 'string'
+      ? candidate.details
+      : candidate?.details?.message;
+  const message = (detailsMessage || candidate?.message || '').toLowerCase();
+
+  if (status === 503 || message.includes('high demand')) {
+    return '⚠️ El servicio de analisis de imagen esta saturado temporalmente. Intenta de nuevo en unos segundos.';
+  }
+
+  if (status && status >= 500) {
+    return '⚠️ El servidor no pudo procesar la imagen en este momento. Intenta de nuevo en unos segundos.';
+  }
+
+  return '🚫 Error procesando la imagen.';
+};
+
 // Tipos
 export interface Message {
   id: number;
@@ -246,7 +270,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ...currentUserData.messages,
               {
                 id: newNextId,
-                text: '🚫 Error procesando la imagen.',
+                text: getPhotoProcessingErrorMessage(error),
                 sender: 'bot',
               },
             ],

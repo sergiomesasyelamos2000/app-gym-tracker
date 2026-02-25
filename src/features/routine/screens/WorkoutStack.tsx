@@ -26,6 +26,8 @@ export type WorkoutStackParamList = {
     singleSelection?: boolean;
     mode?: "createRoutine" | "replaceExercise" | "addToRoutine";
     replaceExerciseId?: string;
+    draftTitle?: string;
+    draftExercises?: ExerciseRequestDto[];
   };
   RoutineEdit: {
     id: string;

@@ -220,24 +220,24 @@ export default function HomeScreen() {
     }).start();
   }, []);
 
-  // Actualizar hora cada minuto
-  const [currentHour, setCurrentHour] = useState(new Date().getHours());
-
+  // Actualizar hora en tiempo real según el reloj del sistema
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now);
-      setCurrentHour(now.getHours());
-    }, 60000);
+    const updateCurrentTime = () => {
+      setCurrentTime(new Date());
+    };
+
+    updateCurrentTime();
+    const timer = setInterval(updateCurrentTime, 1000);
     return () => clearInterval(timer);
   }, []);
 
   // Período del día (solo cambia cuando el saludo debe cambiar)
   const dayPeriod = useMemo(() => {
+    const currentHour = currentTime.getHours();
     if (currentHour < 12) return "morning";
     if (currentHour < 20) return "afternoon";
     return "night";
-  }, [currentHour]);
+  }, [currentTime]);
 
   // Saludo según período del día
   const greeting = useMemo(() => {

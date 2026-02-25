@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-const LOCAL_IP = "192.168.1.133";
+const LOCAL_IP = "192.168.1.136";
 const LOCAL_API_URL = `http://${LOCAL_IP}:3000/api`;
 const LOCAL_ANDROID_EMULATOR_API_URL = "http://10.0.2.2:3000/api";
 const PROD_API_URL = "https://api-gym-tracker.onrender.com/api";

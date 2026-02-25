@@ -313,7 +313,7 @@ export default function NutritionScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.8,
       });
@@ -495,7 +495,12 @@ export default function NutritionScreen() {
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
-      <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.primary}
+        hidden={false}
+        translucent={false}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

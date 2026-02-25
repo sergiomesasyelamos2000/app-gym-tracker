@@ -204,6 +204,8 @@ export default function WorkoutScreen() {
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.backgroundSecondary}
+        hidden={false}
+        translucent={false}
       />
       {/* Encabezado */}
       <View

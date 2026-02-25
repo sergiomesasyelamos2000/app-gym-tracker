@@ -115,6 +115,11 @@ export default function RoutineEditScreen() {
     });
   }, []);
 
+  const handleTitleChange = useCallback((value: string) => {
+    hasLocalEditsRef.current = true;
+    setEditTitle(value);
+  }, []);
+
   useEffect(() => {
     const fetchRoutine = async () => {
       if (id) {
@@ -396,12 +401,24 @@ export default function RoutineEditScreen() {
     setTempExercisesOrder([]);
   };
 
+  const buildDraftExercises = useCallback(
+    () =>
+      exercisesState.map((exercise) => ({
+        ...exercise,
+        sets: sortSetsByOrder(sets[exercise.id] || []),
+        supersetWith: supersets[exercise.id] || undefined,
+      })),
+    [exercisesState, sets, supersets]
+  );
+
   const handleReplaceExercise = (exerciseId: string) => {
     navigation.navigate("ExerciseList", {
       routineId: id,
       singleSelection: true,
       mode: "replaceExercise",
       replaceExerciseId: exerciseId,
+      draftTitle: editTitle,
+      draftExercises: buildDraftExercises(),
     });
   };
 
@@ -449,6 +466,7 @@ export default function RoutineEditScreen() {
 
   // 🔥 FUNCIÓN PARA AGREGAR SUPERSERIE
   const handleAddSuperset = (exerciseId: string, targetExerciseId: string) => {
+    hasLocalEditsRef.current = true;
     setSupersets((prev) => ({
       ...prev,
       [exerciseId]: targetExerciseId,
@@ -485,6 +503,7 @@ export default function RoutineEditScreen() {
           text: "Eliminar",
           style: "destructive",
           onPress: () => {
+            hasLocalEditsRef.current = true;
             setSupersets((prev) => {
               const newSupersets = { ...prev };
               delete newSupersets[exerciseId];
@@ -553,10 +572,12 @@ export default function RoutineEditScreen() {
       <ExerciseCard
         exercise={item}
         initialSets={sets[item.id] || []}
-        onChangeSets={(updatedSets) =>
-          setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
-        }
+        onChangeSets={(updatedSets) => {
+          hasLocalEditsRef.current = true;
+          setSets((prev) => ({ ...prev, [item.id]: updatedSets }));
+        }}
         onChangeExercise={(updatedExercise) => {
+          hasLocalEditsRef.current = true;
           setExercises((prev) =>
             prev.map((exercise) =>
               exercise.id === updatedExercise.id ? updatedExercise : exercise
@@ -587,7 +608,7 @@ export default function RoutineEditScreen() {
           <TextInput
             style={styles.titleInput}
             value={editTitle}
-            onChangeText={setEditTitle}
+            onChangeText={handleTitleChange}
             placeholder="Título de la rutina"
             editable={!reorderMode}
           />
@@ -674,6 +695,8 @@ export default function RoutineEditScreen() {
                 navigation.navigate("ExerciseList", {
                   routineId: id,
                   mode: "addToRoutine",
+                  draftTitle: editTitle,
+                  draftExercises: buildDraftExercises(),
                 });
               }}
             >

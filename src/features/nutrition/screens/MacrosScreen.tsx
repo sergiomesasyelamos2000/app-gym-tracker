@@ -585,6 +585,12 @@ export default function MacrosScreen({ navigation }: Props) {
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.background}
+          hidden={false}
+          translucent={false}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
@@ -601,6 +607,12 @@ export default function MacrosScreen({ navigation }: Props) {
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.background}
+          hidden={false}
+          translucent={false}
+        />
         <View
           style={[
             styles.setupPromptContainer,
@@ -900,6 +912,8 @@ export default function MacrosScreen({ navigation }: Props) {
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
       />
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
