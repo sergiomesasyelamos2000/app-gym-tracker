@@ -65,6 +65,13 @@ export default function AuthScreen() {
     scopes: ["openid", "profile", "email"],
   });
 
+  const hasRequiredGoogleClientId =
+    Platform.OS === "ios"
+      ? Boolean(ENV.GOOGLE_CLIENT_ID_IOS)
+      : Platform.OS === "android"
+      ? Boolean(ENV.GOOGLE_CLIENT_ID_ANDROID || ENV.GOOGLE_CLIENT_ID_WEB)
+      : Boolean(ENV.GOOGLE_CLIENT_ID_WEB);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -103,9 +110,9 @@ export default function AuthScreen() {
   ) => {
     setIsLoading(true);
     try {
-      if (!ENV.GOOGLE_CLIENT_ID_IOS || !ENV.GOOGLE_CLIENT_ID_WEB) {
+      if (!hasRequiredGoogleClientId) {
         throw new Error(
-          "Falta configurar EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS/WEB en la app."
+          "Falta configurar el Google Client ID para esta plataforma."
         );
       }
 
@@ -135,6 +142,14 @@ export default function AuthScreen() {
     }
 
     try {
+      if (!hasRequiredGoogleClientId) {
+        Alert.alert(
+          "Configuración incompleta",
+          "Falta configurar el Google Client ID para esta plataforma."
+        );
+        return;
+      }
+
       if (Platform.OS === "web") {
         await promptAsync({ windowName: "google-auth" });
         return;

@@ -19,7 +19,7 @@ export async function getMySubscription(): Promise<SubscriptionStatusResponse> {
 }
 
 /**
- * Create a Lemon Squeezy checkout session
+ * Create a Stripe checkout session
  */
 export async function createCheckoutSession(
   planId: SubscriptionPlan,
@@ -84,7 +84,7 @@ export async function reactivateSubscription(): Promise<Subscription> {
 }
 
 /**
- * Get Lemon Squeezy Customer Portal URL
+ * Get Stripe customer portal URL
  */
 export async function getCustomerPortalUrl(): Promise<CustomerPortalResponse> {
   return await apiFetch<CustomerPortalResponse>('subscription/customer-portal', {

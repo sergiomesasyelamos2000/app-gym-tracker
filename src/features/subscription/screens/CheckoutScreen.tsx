@@ -119,14 +119,10 @@ export function CheckoutScreen() {
     const { url } = navState;
     const queryString = url.includes("?") ? url.split("?")[1] : "";
     const urlParams = new URLSearchParams(queryString);
-    const orderId = urlParams.get("order_id");
     const sessionIdFromUrl = urlParams.get("session_id");
-    const checkoutId = urlParams.get("checkout_id");
     const hasSuccessSignal =
       url.includes("/subscription/success") ||
-      Boolean(orderId) ||
-      Boolean(sessionIdFromUrl) ||
-      Boolean(checkoutId);
+      Boolean(sessionIdFromUrl);
 
     // Check if success URL
     if (hasSuccessSignal && !hasStartedVerificationRef.current) {
@@ -134,8 +130,7 @@ export function CheckoutScreen() {
       setVerifying(true);
 
       try {
-        const verificationId =
-          sessionIdFromUrl || checkoutId || orderId || params.sessionId;
+        const verificationId = sessionIdFromUrl || params.sessionId;
 
         if (verificationId) {
           await verifyPayment(verificationId, params.planId);
