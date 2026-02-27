@@ -20,7 +20,6 @@ import {
   NativeSyntheticEvent,
   Platform,
   SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -495,12 +494,6 @@ export default function NutritionScreen() {
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.primary}
-        hidden={false}
-        translucent={false}
-      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

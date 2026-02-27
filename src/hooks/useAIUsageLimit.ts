@@ -19,63 +19,100 @@ export function useAIUsageLimit() {
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
 
-  const [remainingCalls, setRemainingCalls] = useState<number | null>(null);
+  const [remainingCalls, setRemainingCalls] = useState<number | null>(() => {
+    if (!userId || isPremium) return null;
+    return FREE_TIER_TOTAL_LIMIT;
+  });
   const [loading, setLoading] = useState(true);
 
   // Cargar datos de uso al montar o cuando cambia el usuario
   useEffect(() => {
+    let isCancelled = false;
+
     if (userId) {
-      loadUsageData();
+      if (isPremium) {
+        setRemainingCalls(null);
+        setLoading(false);
+        return;
+      }
+
+      // Mostrar un valor inmediato para evitar que el banner tarde en aparecer.
+      setRemainingCalls((prev) =>
+        prev === null ? FREE_TIER_TOTAL_LIMIT : Math.max(0, prev)
+      );
+      setLoading(true);
+      loadUsageData(userId, () => isCancelled);
     } else {
       setRemainingCalls(null);
       setLoading(false);
     }
+    return () => {
+      isCancelled = true;
+    };
   }, [userId, isPremium]);
 
-  const loadUsageData = async () => {
-    if (!userId) {
+  const loadUsageData = async (
+    currentUserId: string,
+    isCancelled: () => boolean
+  ) => {
+    if (!currentUserId) {
       setLoading(false);
       return;
     }
 
     try {
-      // Source of truth from backend
-      const backendUsage = await getAIUsage(userId);
+      // 1) Cargar cache local primero para pintar contador rápido.
+      const cachedData = await AsyncStorage.getItem(getAIUsageKey(currentUserId));
+      if (!isCancelled()) {
+        if (cachedData) {
+          const usageData: AIUsageData = JSON.parse(cachedData);
+          setRemainingCalls(Math.max(0, FREE_TIER_TOTAL_LIMIT - usageData.count));
+        } else {
+          setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
+        }
+      }
+    } catch (error) {
+      if (!isCancelled()) {
+        setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
+      }
+      console.error('Error loading cached AI usage data:', error);
+    } finally {
+      if (!isCancelled()) {
+        setLoading(false);
+      }
+    }
+
+    try {
+      // 2) Sincronizar con backend en segundo plano y corregir contador.
+      const backendUsage = await getAIUsage(currentUserId);
+      if (isCancelled()) return;
+
       if (backendUsage.isPremium || isPremium) {
         setRemainingCalls(null);
         return;
       }
 
       if (backendUsage.remaining !== null) {
-        setRemainingCalls(Math.max(0, backendUsage.remaining));
+        const normalizedRemaining = Math.max(0, backendUsage.remaining);
+        setRemainingCalls(normalizedRemaining);
 
         const usedFromBackend = Math.max(
           0,
-          FREE_TIER_TOTAL_LIMIT - backendUsage.remaining
+          FREE_TIER_TOTAL_LIMIT - normalizedRemaining
         );
         await AsyncStorage.setItem(
-          getAIUsageKey(userId),
+          getAIUsageKey(currentUserId),
           JSON.stringify({ count: usedFromBackend })
         );
-        return;
       }
     } catch (error) {
-      console.warn('Could not sync AI usage from backend, using local cache');
-    }
-
-    try {
-      const data = await AsyncStorage.getItem(getAIUsageKey(userId));
-      if (data) {
-        const usageData: AIUsageData = JSON.parse(data);
-        setRemainingCalls(Math.max(0, FREE_TIER_TOTAL_LIMIT - usageData.count));
-      } else {
-        setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
+      if (!isCancelled()) {
+        console.warn('Could not sync AI usage from backend, keeping local cache');
       }
-    } catch (error) {
-      console.error('Error loading AI usage data:', error);
-      setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
     } finally {
-      setLoading(false);
+      if (!isCancelled()) {
+        setLoading(false);
+      }
     }
   };
 
