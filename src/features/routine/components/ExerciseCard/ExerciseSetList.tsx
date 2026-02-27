@@ -4,6 +4,7 @@ import {
   Easing,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -147,50 +148,53 @@ const ExerciseSetList = ({
     []
   );
 
-  const renderRightActions = useCallback((
-    progress: Animated.AnimatedInterpolation<number>,
-    _dragX: Animated.AnimatedInterpolation<number>,
-    itemId: string
-  ) => {
-    const scale = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.85, 1],
-      extrapolate: "clamp",
-    });
+  const renderRightActions = useCallback(
+    (
+      progress: Animated.AnimatedInterpolation<number>,
+      _dragX: Animated.AnimatedInterpolation<number>,
+      itemId: string
+    ) => {
+      const scale = progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.85, 1],
+        extrapolate: "clamp",
+      });
 
-    const opacity = progress.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0, 0.6, 1],
-      extrapolate: "clamp",
-    });
+      const opacity = progress.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 0.6, 1],
+        extrapolate: "clamp",
+      });
 
-    return (
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          onPress={() => onDeleteRef.current(itemId)}
-          activeOpacity={0.7}
-          style={[
-            styles.deleteButton,
-            {
-              backgroundColor: theme.error,
-            },
-          ]}
-        >
-          <Animated.View
+      return (
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            onPress={() => onDeleteRef.current(itemId)}
+            activeOpacity={0.7}
             style={[
-              styles.deleteContent,
+              styles.deleteButton,
               {
-                opacity,
-                transform: [{ scale }],
+                backgroundColor: theme.error,
               },
             ]}
           >
-            <Icon name="delete-outline" size={24} color="#fff" />
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
-    );
-  }, [theme.error]);
+            <Animated.View
+              style={[
+                styles.deleteContent,
+                {
+                  opacity,
+                  transform: [{ scale }],
+                },
+              ]}
+            >
+              <Icon name="delete-outline" size={24} color="#fff" />
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [theme.error]
+  );
 
   const handleSwipeableWillOpen = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -308,6 +312,7 @@ const ExerciseSetList = ({
       animationType="none"
       onRequestClose={() => closeModal(() => setShowWeightModal(false))}
       onShow={openModal}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <TouchableWithoutFeedback
         onPress={() => closeModal(() => setShowWeightModal(false))}
@@ -394,6 +399,7 @@ const ExerciseSetList = ({
       animationType="none"
       onRequestClose={() => closeModal(() => setShowRepsModal(false))}
       onShow={openModal}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <TouchableWithoutFeedback
         onPress={() => closeModal(() => setShowRepsModal(false))}

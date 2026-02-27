@@ -281,6 +281,7 @@ export default function RecordCelebration({
       transparent
       animationType="none"
       onRequestClose={handleDismiss}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <Animated.View style={[styles.overlay, { opacity: backdropOpacityAnim }]}>
         {confettiAnims.map((anim, index) => (
@@ -328,19 +329,26 @@ export default function RecordCelebration({
             ]}
           >
             <View style={styles.badgeRow}>
-              <Text style={[styles.badge, { color: theme.primary }]}>RECORD</Text>
+              <Text style={[styles.badge, { color: theme.primary }]}>
+                RECORD
+              </Text>
             </View>
 
             <Animated.View
               style={[
                 styles.iconHalo,
-                { transform: [{ scale: iconPulseAnim }], borderColor: "#F8C53B55" },
+                {
+                  transform: [{ scale: iconPulseAnim }],
+                  borderColor: "#F8C53B55",
+                },
               ]}
             >
               <View style={styles.iconContainer}>{getIcon()}</View>
             </Animated.View>
 
-            <Text style={[styles.title, { color: theme.text }]}>{getMessage()}</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {getMessage()}
+            </Text>
 
             <Text style={[styles.recordType, { color: theme.text }]}>
               {formatRecordType(record.type)}
@@ -351,8 +359,15 @@ export default function RecordCelebration({
             </Text>
 
             <View style={styles.comparisonContainer}>
-              <View style={[styles.valueBlock, { backgroundColor: theme.backgroundSecondary }]}>
-                <Text style={[styles.label, { color: theme.textTertiary }]}>Anterior</Text>
+              <View
+                style={[
+                  styles.valueBlock,
+                  { backgroundColor: theme.backgroundSecondary },
+                ]}
+              >
+                <Text style={[styles.label, { color: theme.textTertiary }]}>
+                  Anterior
+                </Text>
                 <Text style={[styles.value, { color: theme.text }]}>
                   {formatRecordValue(record.type, record.previousValue)}
                 </Text>
@@ -362,8 +377,12 @@ export default function RecordCelebration({
                 <ArrowRight size={18} color="#4FD1C5" />
               </View>
 
-              <View style={[styles.valueBlock, { backgroundColor: "#4FD1C51A" }]}>
-                <Text style={[styles.label, { color: theme.textTertiary }]}>Nuevo</Text>
+              <View
+                style={[styles.valueBlock, { backgroundColor: "#4FD1C51A" }]}
+              >
+                <Text style={[styles.label, { color: theme.textTertiary }]}>
+                  Nuevo
+                </Text>
                 <Text style={[styles.newValue, { color: "#23B7AA" }]}>
                   {formatRecordValue(record.type, record.value)}
                 </Text>
@@ -377,12 +396,16 @@ export default function RecordCelebration({
             </View>
 
             <View style={styles.setInfo}>
-              <Text style={[styles.setInfoText, { color: theme.textSecondary }]}>
+              <Text
+                style={[styles.setInfoText, { color: theme.textSecondary }]}
+              >
                 {record.setData.weight} kg x {record.setData.reps} reps
               </Text>
             </View>
 
-            <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
+            <View
+              style={[styles.progressTrack, { backgroundColor: theme.border }]}
+            >
               <Animated.View
                 style={[
                   styles.progressBar,

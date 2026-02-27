@@ -1,5 +1,12 @@
 import React from "react";
-import { Image, Modal, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Modal,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { withOpacity } from "../../../utils/themeStyles";
@@ -19,6 +26,7 @@ const ImageModal: React.FC<ImagenModalProps> = ({ uri, visible, onClose }) => {
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <View
         style={[

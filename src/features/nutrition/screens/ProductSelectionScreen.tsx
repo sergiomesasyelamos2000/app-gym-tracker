@@ -13,6 +13,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -22,6 +23,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   CustomMealResponseDto as CustomMeal,
@@ -595,6 +597,7 @@ function CustomProductsTab({
 // Componente Principal
 export default function ProductSelectionScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<ProductSelectionScreenRouteProp>();
@@ -684,7 +687,12 @@ export default function ProductSelectionScreen() {
   const tabConfig = getTabConfig();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

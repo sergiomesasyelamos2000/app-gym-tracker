@@ -32,12 +32,62 @@ const CACHE_KEYS = {
 
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+const EXERCISE_CACHE_KEYS = [
+  CACHE_KEYS.EXERCISES,
+  CACHE_KEYS.EQUIPMENT,
+  CACHE_KEYS.EXERCISE_TYPES,
+  CACHE_KEYS.MUSCLES,
+  CACHE_KEYS.LAST_SYNC,
+  `${CACHE_KEYS.EXERCISES}_from_cache`,
+];
+
+const isStorageFullError = (error: unknown): boolean => {
+  const message =
+    error instanceof Error ? error.message : String(error || "");
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("sqlite_full") ||
+    normalized.includes("database or disk is full") ||
+    normalized.includes("code 13")
+  );
+};
+
+let hasLoggedStorageFullWarning = false;
+
+async function safeSetItem(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch (error) {
+    if (isStorageFullError(error)) {
+      if (!hasLoggedStorageFullWarning) {
+        hasLoggedStorageFullWarning = true;
+        console.warn(
+          "[ExerciseService] AsyncStorage lleno. Se omite la escritura de cache temporalmente."
+        );
+      }
+      // Intento best-effort de liberar únicamente cache del catálogo.
+      try {
+        await AsyncStorage.multiRemove(EXERCISE_CACHE_KEYS);
+        await AsyncStorage.setItem(key, value);
+      } catch {
+        // Mantener comportamiento resiliente: no romper el flujo por cache.
+      }
+      return;
+    }
+    // Otros errores de storage no deben romper el flujo principal.
+    console.warn(
+      `[ExerciseService] No se pudo guardar cache para ${key}:`,
+      error
+    );
+  }
+}
+
 async function refreshExercisesCacheInBackground(): Promise<void> {
   try {
     const freshData = await apiFetch<ExerciseRequestDto[]>("exercises");
-    await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(freshData));
-    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
-    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(freshData));
+    await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
+    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
   } catch {
     // Best-effort refresh, ignore failures.
   }
@@ -84,7 +134,7 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
   if (cached) {
     const cachedExercises = JSON.parse(cached) as ExerciseRequestDto[];
     // Cache-first strategy: this is not necessarily offline mode.
-    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
     if (await shouldRevalidate()) {
       void refreshExercisesCacheInBackground();
     }
@@ -94,9 +144,9 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
   try {
     const data = await apiFetch<ExerciseRequestDto[]>("exercises");
 
-    await AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
-    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
-    await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
+    await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
+    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
 
     return data;
   } catch (error: CaughtError) {
@@ -106,7 +156,7 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
       const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
       if (cached) {
         const exercises = JSON.parse(cached);
-        await AsyncStorage.setItem(
+        await safeSetItem(
           `${CACHE_KEYS.EXERCISES}_from_cache`,
           "true"
         );
@@ -145,11 +195,11 @@ export const prefetchExerciseCatalog = async (
     ]);
 
     await Promise.all([
-      AsyncStorage.setItem(CACHE_KEYS.EXERCISES, JSON.stringify(exercises)),
-      AsyncStorage.setItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(equipment)),
-      AsyncStorage.setItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
-      AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, Date.now().toString()),
-      AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false"),
+      safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(exercises)),
+      safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(equipment)),
+      safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
+      safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString()),
+      safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false"),
     ]);
   } catch {
     // Best-effort prefetch. Existing cache continues to be used.
@@ -198,7 +248,7 @@ export const searchExercises = async (
       const lowerEquipment = equipment.toLowerCase();
       const lowerMuscle = muscle.toLowerCase();
 
-      await AsyncStorage.setItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
+      await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
 
       return exercises.filter((ex) => {
         const matchesName =
@@ -243,7 +293,7 @@ export const createExercise = async (
 export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
   try {
     const data = await apiFetch<EquipmentDto[]>("exercises/equipment/all");
-    await AsyncStorage.setItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(data));
+    await safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(data));
     return data;
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EQUIPMENT);
@@ -259,7 +309,7 @@ export const fetchExerciseTypes = async (): Promise<ExerciseTypeDto[]> => {
     const data = await apiFetch<ExerciseTypeDto[]>(
       "exercises/exercise-types/all"
     );
-    await AsyncStorage.setItem(CACHE_KEYS.EXERCISE_TYPES, JSON.stringify(data));
+    await safeSetItem(CACHE_KEYS.EXERCISE_TYPES, JSON.stringify(data));
     return data;
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISE_TYPES);
@@ -273,7 +323,7 @@ export const fetchExerciseTypes = async (): Promise<ExerciseTypeDto[]> => {
 export const fetchMuscles = async (): Promise<MuscleDto[]> => {
   try {
     const data = await apiFetch<MuscleDto[]>("exercises/muscles/all");
-    await AsyncStorage.setItem(CACHE_KEYS.MUSCLES, JSON.stringify(data));
+    await safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(data));
     return data;
   } catch (error) {
     const cached = await AsyncStorage.getItem(CACHE_KEYS.MUSCLES);

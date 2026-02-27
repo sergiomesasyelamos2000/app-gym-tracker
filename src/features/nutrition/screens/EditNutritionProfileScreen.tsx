@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   ActivityLevel,
   Gender,
@@ -45,6 +47,7 @@ export default function EditNutritionProfileScreen({
   route,
 }: Props) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const currentUser = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
@@ -57,29 +60,29 @@ export default function EditNutritionProfileScreen({
 
   // Form data - inicializar con datos del perfil existente
   const [gender, setGender] = useState<Gender>(
-    userProfile?.anthropometrics.gender || "male",
+    userProfile?.anthropometrics.gender || "male"
   );
 
   const [age, setAge] = useState(
-    userProfile?.anthropometrics.age.toString() || "",
+    userProfile?.anthropometrics.age.toString() || ""
   );
   const [weight, setWeight] = useState(
-    userProfile?.anthropometrics.weight.toString() || "",
+    userProfile?.anthropometrics.weight.toString() || ""
   );
   const [height, setHeight] = useState(
-    userProfile?.anthropometrics.height.toString() || "",
+    userProfile?.anthropometrics.height.toString() || ""
   );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
-    userProfile?.anthropometrics.activityLevel || "moderately_active",
+    userProfile?.anthropometrics.activityLevel || "moderately_active"
   );
   const [weightGoal, setWeightGoal] = useState<WeightGoal>(
-    userProfile?.goals.weightGoal || "maintain",
+    userProfile?.goals.weightGoal || "maintain"
   );
   const [targetWeight, setTargetWeight] = useState(
-    userProfile?.goals.targetWeight.toString() || "",
+    userProfile?.goals.targetWeight.toString() || ""
   );
   const [weeklyWeightChange, setWeeklyWeightChange] = useState(
-    userProfile?.goals.weeklyWeightChange || 0.5,
+    userProfile?.goals.weeklyWeightChange || 0.5
   );
 
   // Modal states
@@ -92,7 +95,7 @@ export default function EditNutritionProfileScreen({
       Alert.alert(
         "Error",
         "No se encontró el perfil de nutrición. Por favor, completa la configuración inicial.",
-        [{ text: "OK", onPress: () => navigation.goBack() }],
+        [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     }
   }, [userProfile, currentUser]);
@@ -221,13 +224,13 @@ export default function EditNutritionProfileScreen({
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ],
+        ]
       );
     } catch (error) {
       console.error("Error updating profile:", error);
       Alert.alert(
         "Error",
-        "No se pudo actualizar el perfil. Por favor intenta de nuevo.",
+        "No se pudo actualizar el perfil. Por favor intenta de nuevo."
       );
     } finally {
       setLoading(false);
@@ -468,17 +471,22 @@ export default function EditNutritionProfileScreen({
               {weightGoal === "lose"
                 ? "Pérdida de peso recomendada: 0.5 kg/semana"
                 : weightGoal === "gain"
-                  ? "Ganancia de peso recomendada: 0.35 kg/semana"
-                  : "Mantener peso actual"}
+                ? "Ganancia de peso recomendada: 0.35 kg/semana"
+                : "Mantener peso actual"}
             </Text>
             {weightGoal === "maintain" ? (
               <View style={styles.maintainCard}>
-                <Ionicons name="checkmark-circle" size={64} color={theme.success} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={64}
+                  color={theme.success}
+                />
                 <Text style={styles.maintainTitle}>
                   Tu objetivo es mantener tu peso actual
                 </Text>
                 <Text style={styles.maintainDescription}>
-                  Calcularemos tus macros para que mantengas tu peso de {weight} kg de forma saludable y equilibrada.
+                  Calcularemos tus macros para que mantengas tu peso de {weight}{" "}
+                  kg de forma saludable y equilibrada.
                 </Text>
               </View>
             ) : (
@@ -522,7 +530,7 @@ export default function EditNutritionProfileScreen({
                         getEstimatedTimeToGoal(
                           parseFloat(weight),
                           parseFloat(targetWeight),
-                          weeklyWeightChange,
+                          weeklyWeightChange
                         ).months
                       }{" "}
                       meses
@@ -858,7 +866,13 @@ export default function EditNutritionProfileScreen({
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centerContent]}>
+      <SafeAreaView
+        style={[
+          styles.container,
+          styles.centerContent,
+          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Actualizando perfil...</Text>
       </SafeAreaView>
@@ -866,7 +880,12 @@ export default function EditNutritionProfileScreen({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -899,6 +918,7 @@ export default function EditNutritionProfileScreen({
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -295,9 +296,10 @@ export default function ExerciseList() {
         const matchesMuscle =
           selectedMuscleNames.length === 0 ||
           selectedMuscleNames.every((selectedMuscleName) =>
-            [...(exercise.targetMuscles || []), ...(exercise.bodyParts || [])].some(
-              (value) => matchesToken(value, selectedMuscleName)
-            )
+            [
+              ...(exercise.targetMuscles || []),
+              ...(exercise.bodyParts || []),
+            ].some((value) => matchesToken(value, selectedMuscleName))
           );
 
         return {
@@ -452,14 +454,20 @@ export default function ExerciseList() {
           </View>
 
           <View style={styles.filterActionsRow}>
-            <TouchableOpacity style={styles.openFiltersButton} onPress={openFiltersModal}>
+            <TouchableOpacity
+              style={styles.openFiltersButton}
+              onPress={openFiltersModal}
+            >
               <Text style={styles.openFiltersText}>
                 Filtros
                 {selectionFiltersCount > 0 ? ` (${selectionFiltersCount})` : ""}
               </Text>
             </TouchableOpacity>
             {hasActiveFilters && (
-              <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={clearFilters}
+              >
                 <Text style={styles.clearFiltersText}>Limpiar todo</Text>
               </TouchableOpacity>
             )}
@@ -492,6 +500,7 @@ export default function ExerciseList() {
             transparent
             animationType="slide"
             onRequestClose={closeFiltersModal}
+            statusBarTranslucent={Platform.OS === "android"}
           >
             <View style={styles.modalOverlay}>
               <TouchableOpacity
@@ -519,7 +528,8 @@ export default function ExerciseList() {
                     <Text
                       style={[
                         styles.filterChipText,
-                        tempEquipmentIds.length === 0 && styles.filterChipTextActive,
+                        tempEquipmentIds.length === 0 &&
+                          styles.filterChipTextActive,
                       ]}
                     >
                       Todos
@@ -566,7 +576,8 @@ export default function ExerciseList() {
                     <Text
                       style={[
                         styles.filterChipText,
-                        tempMuscleIds.length === 0 && styles.filterChipTextActive,
+                        tempMuscleIds.length === 0 &&
+                          styles.filterChipTextActive,
                       ]}
                     >
                       Todos
@@ -577,7 +588,8 @@ export default function ExerciseList() {
                       key={item.id}
                       style={[
                         styles.filterChip,
-                        tempMuscleIds.includes(item.id) && styles.filterChipActive,
+                        tempMuscleIds.includes(item.id) &&
+                          styles.filterChipActive,
                       ]}
                       activeOpacity={1}
                       onPress={() => toggleTempMuscle(item.id)}
@@ -606,7 +618,9 @@ export default function ExerciseList() {
                     style={styles.modalSecondaryButton}
                     onPress={closeFiltersModal}
                   >
-                    <Text style={styles.modalSecondaryButtonText}>Cancelar</Text>
+                    <Text style={styles.modalSecondaryButtonText}>
+                      Cancelar
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalPrimaryButton}

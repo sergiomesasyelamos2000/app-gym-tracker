@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   Dimensions,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -53,7 +54,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       Alert.alert(
         "Error",
         "No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.",
-        [{ text: "OK", onPress: () => navigation.goBack() }],
+        [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     }
   }, [userId, navigation]);
@@ -538,8 +539,8 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
               {weightGoal === "lose"
                 ? "Pérdida de peso recomendada: 0.5 kg/semana"
                 : weightGoal === "gain"
-                  ? "Ganancia de peso recomendada: 0.35 kg/semana"
-                  : "Mantener peso actual"}
+                ? "Ganancia de peso recomendada: 0.35 kg/semana"
+                : "Mantener peso actual"}
             </Text>
             {weightGoal === "maintain" ? (
               <View
@@ -645,269 +646,269 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
-    scrollContent: {
-      flexGrow: 1,
-      paddingBottom: 100,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 10,
-    },
-    backButton: {
-      marginRight: 10,
-    },
-    headerTitle: {
-      fontSize: RFValue(20),
-      fontWeight: "700",
-      color: theme.text,
-    },
-    progressContainer: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      paddingVertical: 20,
-      gap: 8,
-    },
-    progressDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    progressDotActive: {
-      backgroundColor: theme.primary,
-    },
-    progressDotInactive: {
-      backgroundColor: theme.border,
-    },
-    stepContainer: {
-      paddingHorizontal: 20,
-      paddingVertical: 20,
-    },
-    stepTitle: {
-      fontSize: RFValue(22),
-      fontWeight: "700",
-      marginBottom: 8,
-    },
-    stepSubtitle: {
-      fontSize: RFValue(14),
-      marginBottom: 30,
-    },
-    optionsRow: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      marginBottom: 30,
-    },
-    genderOption: {
-      width: width * 0.28,
-      aspectRatio: 1,
-      borderRadius: 16,
-      justifyContent: "center",
-      alignItems: "center",
-      borderWidth: 2,
-      elevation: 2,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
-    optionSelected: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary,
-    },
-    optionText: {
-      fontSize: RFValue(14),
-      fontWeight: "600",
-      marginTop: 8,
-    },
-    optionTextSelected: {
-      color: "#fff",
-    },
-    inputContainer: {
-      marginBottom: 20,
-    },
-    inputLabel: {
-      fontSize: RFValue(16),
-      fontWeight: "600",
-      marginBottom: 12,
-    },
-    inputWithUnit: {
-      position: "relative",
-    },
-    input: {
-      borderRadius: 12,
-      padding: 16,
-      fontSize: RFValue(16),
-      borderWidth: 1,
-    },
-    largeInput: {
-      fontSize: RFValue(32),
-      fontWeight: "700",
-      textAlign: "center",
-      paddingRight: 60,
-    },
-    unitLabel: {
-      position: "absolute",
-      right: 20,
-      top: "50%",
-      transform: [{ translateY: -12 }],
-      fontSize: RFValue(20),
-      fontWeight: "600",
-    },
-    activitySelector: {
-      borderRadius: 12,
-      padding: 20,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      borderWidth: 1,
-    },
-    activityLabel: {
-      fontSize: RFValue(16),
-      fontWeight: "600",
-    },
-    activityDescription: {
-      fontSize: RFValue(13),
-      marginTop: 4,
-    },
-    goalsContainer: {
-      gap: 12,
-      marginBottom: 20,
-    },
-    goalOption: {
-      borderRadius: 12,
-      padding: 20,
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 2,
-      gap: 16,
-    },
-    goalText: {
-      fontSize: RFValue(16),
-      fontWeight: "600",
-    },
-    rateContainer: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 12,
-      marginTop: 20,
-      marginBottom: 20,
-    },
-    rateOption: {
-      width: (width - 56) / 2,
-      borderRadius: 12,
-      padding: 20,
-      alignItems: "center",
-      borderWidth: 2,
-    },
-    rateText: {
-      fontSize: RFValue(18),
-      fontWeight: "700",
-    },
-    rateSubtext: {
-      fontSize: RFValue(12),
-      marginTop: 4,
-    },
-    estimateCard: {
-      borderRadius: 12,
-      padding: 20,
-      alignItems: "center",
-    },
-    estimateTitle: {
-      fontSize: RFValue(14),
-      color: "#fff",
-      fontWeight: "600",
-    },
-    estimateValue: {
-      fontSize: RFValue(24),
-      color: "#fff",
-      fontWeight: "700",
-      marginTop: 4,
-    },
-    maintainCard: {
-      borderRadius: 16,
-      padding: 30,
-      alignItems: "center",
-      marginTop: 20,
-      borderWidth: 2,
-    },
-    maintainTitle: {
-      fontSize: RFValue(18),
-      fontWeight: "700",
-      textAlign: "center",
-      marginTop: 16,
-      marginBottom: 12,
-    },
-    maintainDescription: {
-      fontSize: RFValue(14),
-      textAlign: "center",
-      lineHeight: 22,
-    },
-    footer: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.card,
-      padding: 20,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-    },
-    nextButton: {
-      backgroundColor: theme.primary,
-      borderRadius: 12,
-      padding: 16,
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: 8,
-    },
-    nextButtonText: {
-      fontSize: RFValue(16),
-      fontWeight: "600",
-      color: "#fff",
-    },
-    modal: {
-      justifyContent: "flex-end",
-      margin: 0,
-    },
-    modalContent: {
-      backgroundColor: theme.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      padding: 20,
-    },
-    modalTitle: {
-      fontSize: RFValue(18),
-      fontWeight: "700",
-      color: theme.text,
-      marginBottom: 20,
-    },
-    modalOption: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    modalOptionLabel: {
-      fontSize: RFValue(16),
-      fontWeight: "600",
-      color: theme.text,
-    },
-    modalOptionDescription: {
-      fontSize: RFValue(13),
-      color: theme.textSecondary,
-      marginTop: 4,
-    },
-  }),
+        container: {
+          flex: 1,
+          backgroundColor: theme.background,
+        },
+        scrollContent: {
+          flexGrow: 1,
+          paddingBottom: 100,
+        },
+        header: {
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 10,
+        },
+        backButton: {
+          marginRight: 10,
+        },
+        headerTitle: {
+          fontSize: RFValue(20),
+          fontWeight: "700",
+          color: theme.text,
+        },
+        progressContainer: {
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+          paddingVertical: 20,
+          gap: 8,
+        },
+        progressDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+        },
+        progressDotActive: {
+          backgroundColor: theme.primary,
+        },
+        progressDotInactive: {
+          backgroundColor: theme.border,
+        },
+        stepContainer: {
+          paddingHorizontal: 20,
+          paddingVertical: 20,
+        },
+        stepTitle: {
+          fontSize: RFValue(22),
+          fontWeight: "700",
+          marginBottom: 8,
+        },
+        stepSubtitle: {
+          fontSize: RFValue(14),
+          marginBottom: 30,
+        },
+        optionsRow: {
+          flexDirection: "row",
+          justifyContent: "space-around",
+          marginBottom: 30,
+        },
+        genderOption: {
+          width: width * 0.28,
+          aspectRatio: 1,
+          borderRadius: 16,
+          justifyContent: "center",
+          alignItems: "center",
+          borderWidth: 2,
+          elevation: 2,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        optionSelected: {
+          backgroundColor: theme.primary,
+          borderColor: theme.primary,
+        },
+        optionText: {
+          fontSize: RFValue(14),
+          fontWeight: "600",
+          marginTop: 8,
+        },
+        optionTextSelected: {
+          color: "#fff",
+        },
+        inputContainer: {
+          marginBottom: 20,
+        },
+        inputLabel: {
+          fontSize: RFValue(16),
+          fontWeight: "600",
+          marginBottom: 12,
+        },
+        inputWithUnit: {
+          position: "relative",
+        },
+        input: {
+          borderRadius: 12,
+          padding: 16,
+          fontSize: RFValue(16),
+          borderWidth: 1,
+        },
+        largeInput: {
+          fontSize: RFValue(32),
+          fontWeight: "700",
+          textAlign: "center",
+          paddingRight: 60,
+        },
+        unitLabel: {
+          position: "absolute",
+          right: 20,
+          top: "50%",
+          transform: [{ translateY: -12 }],
+          fontSize: RFValue(20),
+          fontWeight: "600",
+        },
+        activitySelector: {
+          borderRadius: 12,
+          padding: 20,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderWidth: 1,
+        },
+        activityLabel: {
+          fontSize: RFValue(16),
+          fontWeight: "600",
+        },
+        activityDescription: {
+          fontSize: RFValue(13),
+          marginTop: 4,
+        },
+        goalsContainer: {
+          gap: 12,
+          marginBottom: 20,
+        },
+        goalOption: {
+          borderRadius: 12,
+          padding: 20,
+          flexDirection: "row",
+          alignItems: "center",
+          borderWidth: 2,
+          gap: 16,
+        },
+        goalText: {
+          fontSize: RFValue(16),
+          fontWeight: "600",
+        },
+        rateContainer: {
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: 12,
+          marginTop: 20,
+          marginBottom: 20,
+        },
+        rateOption: {
+          width: (width - 56) / 2,
+          borderRadius: 12,
+          padding: 20,
+          alignItems: "center",
+          borderWidth: 2,
+        },
+        rateText: {
+          fontSize: RFValue(18),
+          fontWeight: "700",
+        },
+        rateSubtext: {
+          fontSize: RFValue(12),
+          marginTop: 4,
+        },
+        estimateCard: {
+          borderRadius: 12,
+          padding: 20,
+          alignItems: "center",
+        },
+        estimateTitle: {
+          fontSize: RFValue(14),
+          color: "#fff",
+          fontWeight: "600",
+        },
+        estimateValue: {
+          fontSize: RFValue(24),
+          color: "#fff",
+          fontWeight: "700",
+          marginTop: 4,
+        },
+        maintainCard: {
+          borderRadius: 16,
+          padding: 30,
+          alignItems: "center",
+          marginTop: 20,
+          borderWidth: 2,
+        },
+        maintainTitle: {
+          fontSize: RFValue(18),
+          fontWeight: "700",
+          textAlign: "center",
+          marginTop: 16,
+          marginBottom: 12,
+        },
+        maintainDescription: {
+          fontSize: RFValue(14),
+          textAlign: "center",
+          lineHeight: 22,
+        },
+        footer: {
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: theme.card,
+          padding: 20,
+          borderTopWidth: 1,
+          borderTopColor: theme.border,
+        },
+        nextButton: {
+          backgroundColor: theme.primary,
+          borderRadius: 12,
+          padding: 16,
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 8,
+        },
+        nextButtonText: {
+          fontSize: RFValue(16),
+          fontWeight: "600",
+          color: "#fff",
+        },
+        modal: {
+          justifyContent: "flex-end",
+          margin: 0,
+        },
+        modalContent: {
+          backgroundColor: theme.card,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          padding: 20,
+        },
+        modalTitle: {
+          fontSize: RFValue(18),
+          fontWeight: "700",
+          color: theme.text,
+          marginBottom: 20,
+        },
+        modalOption: {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingVertical: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.border,
+        },
+        modalOptionLabel: {
+          fontSize: RFValue(16),
+          fontWeight: "600",
+          color: theme.text,
+        },
+        modalOptionDescription: {
+          fontSize: RFValue(13),
+          color: theme.textSecondary,
+          marginTop: 4,
+        },
+      }),
     [theme]
   );
 
@@ -941,6 +942,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
         isVisible={showActivityModal}
         onBackdropPress={() => setShowActivityModal(false)}
         style={styles.modal}
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Nivel de Actividad</Text>

@@ -31,7 +31,9 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
@@ -114,10 +116,7 @@ const dataCache = {
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 const normalizeBrandFilter = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
+  value.toLowerCase().trim().replace(/\s+/g, " ");
 
 const matchesBrandFilters = (
   brandValue: string | null | undefined,
@@ -479,9 +478,7 @@ function AllProductsTab({
           cp.name.toLowerCase().includes(searchLower) ||
           (cp.brand && cp.brand.toLowerCase().includes(searchLower))
       )
-      .filter((cp) =>
-        matchesBrandFilters(cp.brand, selectedBrands)
-      )
+      .filter((cp) => matchesBrandFilters(cp.brand, selectedBrands))
       .map(customProductToProduct);
 
     // Combinar: productos personalizados primero, luego los del backend
@@ -1116,9 +1113,10 @@ function CustomProductsTab({
     });
   };
 
-  const filteredProducts = customProducts.filter((p) =>
-    p?.name?.toLowerCase().includes(searchText.toLowerCase()) &&
-    matchesBrandFilters(p.brand, selectedBrands)
+  const filteredProducts = customProducts.filter(
+    (p) =>
+      p?.name?.toLowerCase().includes(searchText.toLowerCase()) &&
+      matchesBrandFilters(p.brand, selectedBrands)
   );
 
   const renderItem = ({ item }: { item: CustomProduct }) => (
@@ -1592,6 +1590,7 @@ type ProductDetailScreenRouteProp = RouteProp<
 export default function ProductListScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
+  const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [showBrandFiltersModal, setShowBrandFiltersModal] = useState(false);
@@ -1731,7 +1730,12 @@ export default function ProductListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       <View style={styles.container}>
         {/* Header Global */}
         <View style={styles.header}>
@@ -1779,7 +1783,6 @@ export default function ProductListScreen() {
             <Ionicons name="barcode-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-
 
         {/* Navegador de Tabs */}
         <Tab.Navigator
@@ -1902,18 +1905,27 @@ export default function ProductListScreen() {
         animationType="slide"
         transparent
         onRequestClose={() => setShowBrandFiltersModal(false)}
+        statusBarTranslucent={Platform.OS === "android"}
       >
-        <TouchableWithoutFeedback onPress={() => setShowBrandFiltersModal(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setShowBrandFiltersModal(false)}
+        >
           <View style={styles.filtersModalOverlay}>
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.filtersModalCard}>
                 <View style={styles.filtersModalHandle} />
                 <View style={styles.filtersModalHeader}>
-                  <Text style={styles.filtersModalTitle}>Filtrar por marca</Text>
+                  <Text style={styles.filtersModalTitle}>
+                    Filtrar por marca
+                  </Text>
                   <TouchableOpacity
                     onPress={() => setShowBrandFiltersModal(false)}
                   >
-                    <Ionicons name="close" size={22} color={theme.textSecondary} />
+                    <Ionicons
+                      name="close"
+                      size={22}
+                      color={theme.textSecondary}
+                    />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.filtersModalSubtitle}>
@@ -1950,7 +1962,8 @@ export default function ProductListScreen() {
                       setBrandSearchText("");
                     }}
                   />
-                  {(brandSearchText.length > 0 || selectedBrands.length > 0) && (
+                  {(brandSearchText.length > 0 ||
+                    selectedBrands.length > 0) && (
                     <TouchableOpacity onPress={clearBrandFilter}>
                       <Ionicons
                         name="close-circle"
@@ -1977,34 +1990,39 @@ export default function ProductListScreen() {
                       <Text
                         style={[
                           styles.brandChipText,
-                          selectedBrands.length === 0 && styles.brandChipTextActive,
+                          selectedBrands.length === 0 &&
+                            styles.brandChipTextActive,
                         ]}
                       >
                         Todas
                       </Text>
                     </TouchableOpacity>
-                  {brandFilters.map((brand) => {
-                    const isActive = selectedBrands.some(
-                      (value) =>
-                        normalizeBrandFilter(value) === normalizeBrandFilter(brand)
-                    );
-                    return (
-                      <TouchableOpacity
-                        key={brand}
-                        style={[styles.brandChip, isActive && styles.brandChipActive]}
-                        activeOpacity={1}
-                        onPress={() => {
-                          setSelectedBrands((prev) =>
-                            isActive
-                              ? prev.filter(
-                                  (value) =>
-                                    normalizeBrandFilter(value) !==
-                                    normalizeBrandFilter(brand)
-                                )
-                              : [...prev, brand]
-                          );
-                        }}
-                      >
+                    {brandFilters.map((brand) => {
+                      const isActive = selectedBrands.some(
+                        (value) =>
+                          normalizeBrandFilter(value) ===
+                          normalizeBrandFilter(brand)
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={brand}
+                          style={[
+                            styles.brandChip,
+                            isActive && styles.brandChipActive,
+                          ]}
+                          activeOpacity={1}
+                          onPress={() => {
+                            setSelectedBrands((prev) =>
+                              isActive
+                                ? prev.filter(
+                                    (value) =>
+                                      normalizeBrandFilter(value) !==
+                                      normalizeBrandFilter(brand)
+                                  )
+                                : [...prev, brand]
+                            );
+                          }}
+                        >
                           <Text
                             style={[
                               styles.brandChipText,

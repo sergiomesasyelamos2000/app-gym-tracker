@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -145,6 +146,7 @@ const ExerciseHeader = ({
           backdropOpacity={0.5}
           backdropTransitionOutTiming={0}
           useNativeDriver
+          statusBarTranslucent={Platform.OS === "android"}
           hideModalContentWhileAnimating
         >
           <View style={styles.modalContent}>
@@ -233,6 +235,7 @@ const ExerciseHeader = ({
           backdropOpacity={0.5}
           backdropTransitionOutTiming={0}
           useNativeDriver
+          statusBarTranslucent={Platform.OS === "android"}
           hideModalContentWhileAnimating
         >
           <View style={styles.modalContent}>

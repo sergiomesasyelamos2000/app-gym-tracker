@@ -8,13 +8,16 @@ import {
   Alert,
   Animated,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -86,6 +89,15 @@ export default function AuthScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+  }, []);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "android" &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -228,6 +240,19 @@ export default function AuthScreen() {
   };
 
   const toggleMode = () => {
+    const nextMode = mode === "login" ? "register" : "login";
+
+    if (Platform.OS === "android") {
+      Keyboard.dismiss();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setMode(nextMode);
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setName("");
+      return;
+    }
+
     Animated.sequence([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -241,7 +266,7 @@ export default function AuthScreen() {
       }),
     ]).start();
 
-    setMode(mode === "login" ? "register" : "login");
+    setMode(nextMode);
     setEmail("");
     setPassword("");
     setConfirmPassword("");

@@ -1,7 +1,4 @@
-import {
-  NavigationProp,
-  useNavigation,
-} from "@react-navigation/native";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -14,6 +11,7 @@ import {
   FlatList,
   Image,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -352,6 +350,7 @@ export default function CreateExerciseScreen() {
       animationType="none"
       onRequestClose={() => closeModal(onClose)}
       onShow={openModal}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <TouchableWithoutFeedback onPress={() => closeModal(onClose)}>
         <Animated.View

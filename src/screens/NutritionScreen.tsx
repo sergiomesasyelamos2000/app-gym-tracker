@@ -26,6 +26,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../contexts/ThemeContext";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
@@ -171,9 +172,8 @@ export default function NutritionScreen() {
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showAddFoodModal, setShowAddFoodModal] = useState(false);
-  const [pendingFood, setPendingFood] = useState<RecognizeFoodResponseDto | null>(
-    null
-  );
+  const [pendingFood, setPendingFood] =
+    useState<RecognizeFoodResponseDto | null>(null);
   const [pendingMealType, setPendingMealType] = useState<MealType>("lunch");
   const [pendingGrams, setPendingGrams] = useState("");
   const [savingRecognizedFood, setSavingRecognizedFood] = useState(false);
@@ -192,6 +192,7 @@ export default function NutritionScreen() {
 
   const { theme, isDark } = useTheme();
   const navigation = useNavigation<BaseNavigation>();
+  const insets = useSafeAreaInsets();
 
   // Hook para límite de uso de IA
   const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } =
@@ -442,7 +443,9 @@ export default function NutritionScreen() {
     const parsed = Number(pendingGrams.replace(",", "."));
     const defaultGrams = Math.round(Number(pendingFood.servingSize || 100));
     const safeGrams =
-      Number.isFinite(parsed) && parsed > 0 ? parsed : Math.max(1, defaultGrams);
+      Number.isFinite(parsed) && parsed > 0
+        ? parsed
+        : Math.max(1, defaultGrams);
 
     try {
       setSavingRecognizedFood(true);
@@ -492,7 +495,11 @@ export default function NutritionScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+      style={[
+        styles.safeArea,
+        { backgroundColor: theme.backgroundSecondary },
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
     >
       <KeyboardAvoidingView
         style={styles.container}
@@ -619,13 +626,16 @@ export default function NutritionScreen() {
         transparent
         animationType="fade"
         onRequestClose={closeAddFoodModal}
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Añadir al diario
             </Text>
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+            <Text
+              style={[styles.modalSubtitle, { color: theme.textSecondary }]}
+            >
               {pendingFood?.name || "Alimento"}
             </Text>
 
@@ -647,7 +657,9 @@ export default function NutritionScreen() {
                     styles.mealChip,
                     {
                       borderColor:
-                        pendingMealType === item.key ? theme.primary : theme.border,
+                        pendingMealType === item.key
+                          ? theme.primary
+                          : theme.border,
                       backgroundColor:
                         pendingMealType === item.key
                           ? `${theme.primary}20`
@@ -659,7 +671,9 @@ export default function NutritionScreen() {
                   <Text
                     style={{
                       color:
-                        pendingMealType === item.key ? theme.primary : theme.text,
+                        pendingMealType === item.key
+                          ? theme.primary
+                          : theme.text,
                       fontWeight: "600",
                       fontSize: 12,
                     }}
@@ -699,7 +713,12 @@ export default function NutritionScreen() {
                 onPress={closeAddFoodModal}
                 disabled={savingRecognizedFood}
               >
-                <Text style={[styles.modalSecondaryButtonText, { color: theme.text }]}>
+                <Text
+                  style={[
+                    styles.modalSecondaryButtonText,
+                    { color: theme.text },
+                  ]}
+                >
                   Cancelar
                 </Text>
               </TouchableOpacity>

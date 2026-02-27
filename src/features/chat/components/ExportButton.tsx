@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -68,6 +69,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <TouchableOpacity
           style={styles.modalOverlay}

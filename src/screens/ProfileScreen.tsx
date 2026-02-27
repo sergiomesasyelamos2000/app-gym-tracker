@@ -29,6 +29,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
@@ -780,6 +781,7 @@ export default function ProfileScreen() {
         transparent
         animationType="fade"
         onRequestClose={closeEditProfileModal}
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor: theme.card }]}>

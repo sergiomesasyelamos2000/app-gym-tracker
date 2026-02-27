@@ -5,6 +5,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   CreateFoodEntryDto,
   FoodEntryResponseDto,
@@ -126,6 +128,7 @@ const MEALS_CONFIG: {
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     producto: rawProducto,
     fromDiary = false,
@@ -416,7 +419,12 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={handleGoBack}>
@@ -707,6 +715,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -766,6 +775,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>

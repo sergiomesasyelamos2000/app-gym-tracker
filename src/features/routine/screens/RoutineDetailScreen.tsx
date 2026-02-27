@@ -18,12 +18,14 @@ import {
   Animated,
   AppState,
   FlatList,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
@@ -84,6 +86,7 @@ const sortSetsMapByOrder = (setsMap: { [exerciseId: string]: SetRequestDto[] }) 
 
 export default function RoutineDetailScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const {
@@ -1039,6 +1042,9 @@ export default function RoutineDetailScreen() {
         <Animated.View
           style={[
             styles.toastContainer,
+            Platform.OS === "android"
+              ? { bottom: Math.max(insets.bottom, 12) }
+              : null,
             { transform: [{ translateY: slideAnim }] },
           ]}
         >

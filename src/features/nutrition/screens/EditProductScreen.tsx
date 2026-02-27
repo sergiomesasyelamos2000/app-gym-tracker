@@ -92,14 +92,14 @@ export default function EditProductScreen() {
   const [description, setDescription] = useState(product?.description || "");
   const [brand, setBrand] = useState(product?.brand || "");
   const [imageUri, setImageUri] = useState<string | null>(
-    product?.image || null,
+    product?.image || null
   );
   const [barcode, setBarcode] = useState(product?.barcode || "");
   const [servingSize, setServingSize] = useState(
-    product?.servingSize ? String(product.servingSize) : "",
+    product?.servingSize ? String(product.servingSize) : ""
   );
   const [servingUnit, setServingUnit] = useState<FoodUnit>(
-    normalizeFoodUnit(product?.servingUnit),
+    normalizeFoodUnit(product?.servingUnit)
   );
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -112,7 +112,7 @@ export default function EditProductScreen() {
       fiber: product?.fiberPer100 ? String(product.fiberPer100) : "",
       sugar: product?.sugarPer100 ? String(product.sugarPer100) : "",
       sodium: product?.sodiumPer100 ? String(product.sodiumPer100) : "",
-    },
+    }
   );
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function EditProductScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos",
+        "Por favor permite el acceso a tus fotos"
       );
       return;
     }
@@ -158,13 +158,13 @@ export default function EditProductScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ],
+      ]
     );
   };
 
   const updateNutritionalValue = (
     key: keyof NutritionalValues,
-    value: string,
+    value: string
   ) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
@@ -259,7 +259,7 @@ export default function EditProductScreen() {
       console.error("Error updating product:", error);
       Alert.alert(
         "Error",
-        "No se pudo actualizar el producto. Intenta de nuevo.",
+        "No se pudo actualizar el producto. Intenta de nuevo."
       );
     } finally {
       setLoading(false);
@@ -297,14 +297,14 @@ export default function EditProductScreen() {
               console.error("Error deleting product:", error);
               Alert.alert(
                 "Error",
-                "No se pudo eliminar el producto. Intenta de nuevo.",
+                "No se pudo eliminar el producto. Intenta de nuevo."
               );
             } finally {
               setDeleting(false);
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -650,6 +650,7 @@ export default function EditProductScreen() {
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>

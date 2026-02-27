@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Crown, X, Check } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -55,6 +56,7 @@ export function PaywallScreen({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === "android"}
     >
       <View style={styles.container}>
         {/* Header */}

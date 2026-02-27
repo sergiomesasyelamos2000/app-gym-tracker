@@ -17,6 +17,7 @@ import {
   FlatList,
   Image,
   ImageStyle,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -29,6 +30,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CachedExerciseImage from "../components/CachedExerciseImage";
 import { useTheme } from "../contexts/ThemeContext";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
@@ -202,6 +204,7 @@ export default function HomeScreen() {
   const scaleAnim = useState(new Animated.Value(1))[0];
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   // Listener para el tab press
   useEffect(() => {
@@ -576,7 +579,12 @@ export default function HomeScreen() {
         backgroundColor={theme.primary}
         translucent={true}
       />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+        ]}
+      >
         <ScrollView
           ref={scrollViewRef}
           style={styles.container}

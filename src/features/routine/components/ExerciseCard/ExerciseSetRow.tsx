@@ -676,6 +676,7 @@ const ExerciseSetRow = ({
         onRequestClose={() =>
           closeSetTypeModal(() => setIsSetTypeModalVisible(false))
         }
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <TouchableWithoutFeedback
           onPress={() =>

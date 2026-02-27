@@ -3,15 +3,10 @@ import { AppState, Linking, Platform } from "react-native";
 import type { AppStateStatus } from "react-native";
 
 let Notifications: any = null;
-const isExpoGoAndroid =
-  Platform.OS === "android" && Constants.appOwnership === "expo";
-
-if (!isExpoGoAndroid) {
-  try {
-    Notifications = require("expo-notifications");
-  } catch {
-    Notifications = null;
-  }
+try {
+  Notifications = require("expo-notifications");
+} catch {
+  Notifications = null;
 }
 
 const areNotificationsAvailable = !!Notifications;
@@ -28,16 +23,14 @@ AppState.addEventListener("change", (nextAppState) => {
 if (areNotificationsAvailable) {
   Notifications.setNotificationHandler({
     handleNotification: async () => {
-      const isAppInForeground = currentAppState === "active";
-
       return {
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
         shouldShowBanner: true,
-        // For user friendliness, we generally want to show the notification even in foreground
-        // especially for timers.
-        shouldShowList: !isAppInForeground,
+        // Keep it visible both as heads-up/banner and in notification tray.
+        // This helps Android devices that otherwise only show the tray entry.
+        shouldShowList: true,
       };
     },
   });

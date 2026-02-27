@@ -1,8 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,6 +29,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useShallow } from "zustand/react/shallow";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 import {
@@ -40,6 +48,7 @@ export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { width } = useWindowDimensions();
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [routines, setRoutines] = useState<RoutineResponseDto[]>([]);
   const [routineDetailsById, setRoutineDetailsById] = useState<
@@ -200,7 +209,12 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.backgroundSecondary }}>
+    <View
+      style={[
+        { flex: 1, backgroundColor: theme.backgroundSecondary },
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.backgroundSecondary}
@@ -209,7 +223,11 @@ export default function WorkoutScreen() {
       />
       {/* Encabezado */}
       <View
-        style={[styles.header, { backgroundColor: theme.backgroundSecondary }]}
+        style={[
+          styles.header,
+          { backgroundColor: theme.backgroundSecondary },
+          Platform.OS === "android" ? styles.headerAndroid : null,
+        ]}
       >
         <Text style={[styles.headerTitle, { color: theme.primary }]}>
           Rutinas de entrenamiento
@@ -354,6 +372,7 @@ export default function WorkoutScreen() {
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -470,6 +489,9 @@ const createStyles = (theme: Theme) =>
       paddingTop: 32,
       paddingBottom: 16,
       paddingHorizontal: 24,
+    },
+    headerAndroid: {
+      paddingTop: 10,
     },
     headerTitle: {
       fontSize: RFValue(22),

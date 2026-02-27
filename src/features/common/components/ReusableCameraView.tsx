@@ -12,6 +12,7 @@ import {
   Vibration,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { withOpacity } from "../../../utils/themeStyles";
@@ -29,6 +30,7 @@ export default function ReusableCameraView({
   onCloseCamera,
 }: Props) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +234,14 @@ export default function ReusableCameraView({
       />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          Platform.OS === "android"
+            ? { top: Math.max(insets.top + 8, 20) }
+            : null,
+        ]}
+      >
         <TouchableOpacity
           testID="close-camera-button"
           style={styles.closeButton}

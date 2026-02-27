@@ -67,8 +67,31 @@ const ExerciseRestPicker = ({
     setShowPicker(false);
   };
 
+  const adjustMinutes = (delta: number) => {
+    setTempMinutes((prev) => Math.max(0, Math.min(59, prev + delta)));
+  };
+
+  const adjustSeconds = (delta: number) => {
+    setTempSeconds((prev) => Math.max(0, Math.min(59, prev + delta)));
+  };
+
+  const applyPresetSeconds = (totalSeconds: number) => {
+    const safeSeconds = Math.max(0, Math.min(59 * 60 + 59, totalSeconds));
+    const minutes = Math.floor(safeSeconds / 60);
+    const seconds = safeSeconds % 60;
+    setTempMinutes(minutes);
+    setTempSeconds(seconds);
+  };
+
   const minuteValues = Array.from({ length: 60 }, (_, i) => i);
   const secondValues = Array.from({ length: 60 }, (_, i) => i);
+  const androidPresets = [30, 45, 60, 90, 120, 150];
+  const formatPresetLabel = (totalSeconds: number) => {
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return seconds === 0 ? `${minutes}m` : `${minutes}m${seconds}`;
+  };
 
   return (
     <>
@@ -135,6 +158,7 @@ const ExerciseRestPicker = ({
         visible={showPicker}
         transparent
         animationType="fade"
+        statusBarTranslucent
         onRequestClose={() => setShowPicker(false)}
       >
         <View style={styles.modalOverlay}>
@@ -152,121 +176,248 @@ const ExerciseRestPicker = ({
               Tiempo de descanso
             </Text>
 
-            <View style={styles.unitsHeader}>
-              <TouchableOpacity
-                onPress={() => setActiveUnit("minutes")}
-                style={[
-                  styles.unitChip,
-                  {
-                    backgroundColor:
-                      activeUnit === "minutes"
-                        ? theme.primary + "20"
-                        : theme.backgroundSecondary,
-                    borderColor:
-                      activeUnit === "minutes" ? theme.primary : theme.border,
-                  },
-                ]}
-              >
-                <Text
+            {Platform.OS === "android" ? (
+              <>
+                <View
                   style={[
-                    styles.unitChipText,
+                    styles.androidPreviewCard,
                     {
-                      color:
-                        activeUnit === "minutes" ? theme.primary : theme.text,
+                      backgroundColor: theme.backgroundSecondary,
+                      borderColor: theme.border,
                     },
                   ]}
                 >
-                  Min
-                </Text>
-              </TouchableOpacity>
+                  <Text style={[styles.androidPreviewLabel, { color: theme.textSecondary }]}>
+                    Seleccionado
+                  </Text>
+                  <Text style={[styles.androidPreviewValue, { color: theme.text }]}>
+                    {formatTime({ minutes: tempMinutes, seconds: tempSeconds })}
+                  </Text>
+                </View>
 
-              <TouchableOpacity
-                onPress={() => setActiveUnit("seconds")}
-                style={[
-                  styles.unitChip,
-                  {
-                    backgroundColor:
-                      activeUnit === "seconds"
-                        ? theme.primary + "20"
-                        : theme.backgroundSecondary,
-                    borderColor:
-                      activeUnit === "seconds" ? theme.primary : theme.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.unitChipText,
-                    {
-                      color:
-                        activeUnit === "seconds" ? theme.primary : theme.text,
-                    },
-                  ]}
-                >
-                  Seg
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.androidControlsRow}>
+                  <View
+                    style={[
+                      styles.androidUnitCard,
+                      {
+                        backgroundColor: theme.backgroundSecondary,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.androidUnitLabel, { color: theme.textSecondary }]}>
+                      Minutos
+                    </Text>
+                    <Text style={[styles.androidUnitValue, { color: theme.text }]}>
+                      {tempMinutes.toString().padStart(2, "0")}
+                    </Text>
+                    <View style={styles.androidButtonsRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.androidStepButton,
+                          { backgroundColor: theme.card, borderColor: theme.border },
+                        ]}
+                        onPress={() => adjustMinutes(-1)}
+                      >
+                        <Text style={[styles.androidStepButtonText, { color: theme.text }]}>
+                          -1
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.androidStepButton,
+                          { backgroundColor: theme.card, borderColor: theme.border },
+                        ]}
+                        onPress={() => adjustMinutes(1)}
+                      >
+                        <Text style={[styles.androidStepButtonText, { color: theme.text }]}>
+                          +1
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-            <View style={styles.pickersRow}>
-              <View
-                style={[
-                  styles.singlePickerContainer,
-                  {
-                    borderColor:
-                      activeUnit === "minutes" ? theme.primary : theme.border,
-                    backgroundColor: theme.backgroundSecondary,
-                  },
-                ]}
-              >
-                <Picker
-                  selectedValue={tempMinutes}
-                  onValueChange={(value) => {
-                    setActiveUnit("minutes");
-                    setTempMinutes(Number(value));
-                  }}
-                  style={styles.picker}
-                  itemStyle={{ color: theme.text }}
-                >
-                  {minuteValues.map((value) => (
-                    <Picker.Item
-                      key={`m-${value}`}
-                      label={`${value.toString().padStart(2, "0")} min`}
-                      value={value}
-                    />
+                  <View
+                    style={[
+                      styles.androidUnitCard,
+                      {
+                        backgroundColor: theme.backgroundSecondary,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.androidUnitLabel, { color: theme.textSecondary }]}>
+                      Segundos
+                    </Text>
+                    <Text style={[styles.androidUnitValue, { color: theme.text }]}>
+                      {tempSeconds.toString().padStart(2, "0")}
+                    </Text>
+                    <View style={styles.androidButtonsRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.androidStepButton,
+                          { backgroundColor: theme.card, borderColor: theme.border },
+                        ]}
+                        onPress={() => adjustSeconds(-5)}
+                      >
+                        <Text style={[styles.androidStepButtonText, { color: theme.text }]}>
+                          -5
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.androidStepButton,
+                          { backgroundColor: theme.card, borderColor: theme.border },
+                        ]}
+                        onPress={() => adjustSeconds(5)}
+                      >
+                        <Text style={[styles.androidStepButtonText, { color: theme.text }]}>
+                          +5
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.androidPresetsRow}>
+                  {androidPresets.map((presetSeconds) => (
+                    <TouchableOpacity
+                      key={presetSeconds}
+                      style={[
+                        styles.androidPresetChip,
+                        {
+                          backgroundColor: theme.backgroundSecondary,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                      onPress={() => applyPresetSeconds(presetSeconds)}
+                    >
+                      <Text style={[styles.androidPresetText, { color: theme.text }]}>
+                        {formatPresetLabel(presetSeconds)}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
-                </Picker>
-              </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.unitsHeader}>
+                  <TouchableOpacity
+                    onPress={() => setActiveUnit("minutes")}
+                    style={[
+                      styles.unitChip,
+                      {
+                        backgroundColor:
+                          activeUnit === "minutes"
+                            ? theme.primary + "20"
+                            : theme.backgroundSecondary,
+                        borderColor:
+                          activeUnit === "minutes" ? theme.primary : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.unitChipText,
+                        {
+                          color:
+                            activeUnit === "minutes" ? theme.primary : theme.text,
+                        },
+                      ]}
+                    >
+                      Min
+                    </Text>
+                  </TouchableOpacity>
 
-              <View
-                style={[
-                  styles.singlePickerContainer,
-                  {
-                    borderColor:
-                      activeUnit === "seconds" ? theme.primary : theme.border,
-                    backgroundColor: theme.backgroundSecondary,
-                  },
-                ]}
-              >
-                <Picker
-                  selectedValue={tempSeconds}
-                  onValueChange={(value) => {
-                    setActiveUnit("seconds");
-                    setTempSeconds(Number(value));
-                  }}
-                  style={styles.picker}
-                  itemStyle={{ color: theme.text }}
-                >
-                  {secondValues.map((value) => (
-                    <Picker.Item
-                      key={`s-${value}`}
-                      label={`${value.toString().padStart(2, "0")} seg`}
-                      value={value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+                  <TouchableOpacity
+                    onPress={() => setActiveUnit("seconds")}
+                    style={[
+                      styles.unitChip,
+                      {
+                        backgroundColor:
+                          activeUnit === "seconds"
+                            ? theme.primary + "20"
+                            : theme.backgroundSecondary,
+                        borderColor:
+                          activeUnit === "seconds" ? theme.primary : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.unitChipText,
+                        {
+                          color:
+                            activeUnit === "seconds" ? theme.primary : theme.text,
+                        },
+                      ]}
+                    >
+                      Seg
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.pickersRow}>
+                  <View
+                    style={[
+                      styles.singlePickerContainer,
+                      {
+                        borderColor:
+                          activeUnit === "minutes" ? theme.primary : theme.border,
+                        backgroundColor: theme.backgroundSecondary,
+                      },
+                    ]}
+                  >
+                    <Picker
+                      selectedValue={tempMinutes}
+                      onValueChange={(value) => {
+                        setActiveUnit("minutes");
+                        setTempMinutes(Number(value));
+                      }}
+                      style={styles.picker}
+                      itemStyle={{ color: theme.text }}
+                    >
+                      {minuteValues.map((value) => (
+                        <Picker.Item
+                          key={`m-${value}`}
+                          label={`${value.toString().padStart(2, "0")} min`}
+                          value={value}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.singlePickerContainer,
+                      {
+                        borderColor:
+                          activeUnit === "seconds" ? theme.primary : theme.border,
+                        backgroundColor: theme.backgroundSecondary,
+                      },
+                    ]}
+                  >
+                    <Picker
+                      selectedValue={tempSeconds}
+                      onValueChange={(value) => {
+                        setActiveUnit("seconds");
+                        setTempSeconds(Number(value));
+                      }}
+                      style={styles.picker}
+                      itemStyle={{ color: theme.text }}
+                    >
+                      {secondValues.map((value) => (
+                        <Picker.Item
+                          key={`s-${value}`}
+                          label={`${value.toString().padStart(2, "0")} seg`}
+                          value={value}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              </>
+            )}
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -368,6 +519,78 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 14,
+  },
+  androidPreviewCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  androidPreviewLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  androidPreviewValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  androidControlsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  androidUnitCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+  },
+  androidUnitLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  androidUnitValue: {
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+  androidButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  androidStepButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  androidStepButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  androidPresetsRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  androidPresetChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  androidPresetText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   unitsHeader: {
     flexDirection: "row",

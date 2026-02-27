@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -40,18 +41,37 @@ export const RoutineHeader: React.FC<Props> = ({
             {routineTitle || "Rutina sin nombre"}
           </Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={[styles.startButton, { backgroundColor: theme.primary }]} onPress={onStart}>
+            <TouchableOpacity
+              style={[styles.startButton, { backgroundColor: theme.primary }]}
+              onPress={onStart}
+            >
               <Text style={styles.startButtonText}>Iniciar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.editButton, { backgroundColor: theme.primary + '20' }]} onPress={onEdit}>
-              <Text style={[styles.editButtonText, { color: theme.primary }]}>Editar</Text>
+            <TouchableOpacity
+              style={[
+                styles.editButton,
+                { backgroundColor: theme.primary + "20" },
+                Platform.OS === "android" && styles.editButtonAndroid,
+              ]}
+              onPress={onEdit}
+            >
+              <Text style={[styles.editButtonText, { color: theme.primary }]}>
+                Editar
+              </Text>
             </TouchableOpacity>
           </View>
         </>
       ) : (
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.titleInput, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+            style={[
+              styles.titleInput,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
             placeholder="Nombre de la rutina"
             placeholderTextColor={theme.textTertiary}
             value={routineTitle}
@@ -100,6 +120,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     elevation: 2,
+  },
+  editButtonAndroid: {
+    elevation: 0,
   },
   editButtonText: {
     color: "#6C3BAA",

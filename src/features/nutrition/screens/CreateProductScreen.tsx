@@ -107,7 +107,7 @@ export default function CreateProductScreen() {
       fiber: "",
       sugar: "",
       sodium: "",
-    },
+    }
   );
 
   const handlePickImage = async () => {
@@ -117,7 +117,7 @@ export default function CreateProductScreen() {
     if (permissionResult.granted === false) {
       Alert.alert(
         "Permiso Requerido",
-        "Por favor permite el acceso a tus fotos",
+        "Por favor permite el acceso a tus fotos"
       );
       return;
     }
@@ -145,13 +145,13 @@ export default function CreateProductScreen() {
           style: "destructive",
           onPress: () => setImageUri(null),
         },
-      ],
+      ]
     );
   };
 
   const updateNutritionalValue = (
     key: keyof NutritionalValues,
-    value: string,
+    value: string
   ) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
     setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
@@ -579,6 +579,7 @@ export default function CreateProductScreen() {
         backdropOpacity={0.5}
         backdropTransitionOutTiming={0}
         useNativeDriver
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>

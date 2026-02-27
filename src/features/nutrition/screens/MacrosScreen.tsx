@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   FoodEntryResponseDto,
   MealType,
@@ -113,6 +114,7 @@ type FoodEntry = FoodEntryResponseDto;
 
 export default function MacrosScreen({ navigation }: Props) {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -582,7 +584,11 @@ export default function MacrosScreen({ navigation }: Props) {
   if (checkingProfile) {
     return (
       <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: theme.background }]}
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.background },
+          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+        ]}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -598,7 +604,11 @@ export default function MacrosScreen({ navigation }: Props) {
   if (showSetupPrompt && !hasProfile) {
     return (
       <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: theme.background }]}
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.background },
+          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+        ]}
       >
         <View
           style={[
@@ -895,7 +905,12 @@ export default function MacrosScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -1013,6 +1028,7 @@ export default function MacrosScreen({ navigation }: Props) {
         animationType="slide"
         onRequestClose={() => setShowScanner(false)}
         presentationStyle="fullScreen"
+        statusBarTranslucent={Platform.OS === "android"}
       >
         <ReusableCameraView
           onBarCodeScanned={handleBarCodeScanned}
@@ -1021,7 +1037,12 @@ export default function MacrosScreen({ navigation }: Props) {
       </Modal>
 
       {/* Calendar Modal */}
-      <Modal visible={showCalendar} transparent animationType="fade">
+      <Modal
+        visible={showCalendar}
+        transparent
+        animationType="fade"
+        statusBarTranslucent={Platform.OS === "android"}
+      >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
