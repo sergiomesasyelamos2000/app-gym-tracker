@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		2681D83A13332B02C1978BA0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F5FBC856D163A6B66DA42C29 /* PrivacyInfo.xcprivacy */; };
+		2DBE470534861445EE9F5108 /* libPods-EvoFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 848B7CC527EE22E96456939E /* libPods-EvoFit.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		56500A079AC18CBA522946A2 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE5709E212BEAAA4F3A7B16 /* ExpoModulesProvider.swift */; };
-		88E5331F424FABA467094FD9 /* libPods-EvoFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C275F120AA3404C1EA7864C /* libPods-EvoFit.a */; };
+		718B615A4C4593F9CCF8BE55 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5DE9EE4BF6FB3B37A2370D84 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		D4E89DA3EED25E0BEFDCBA9F /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D49AA9FFADD74047CD6084 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -20,16 +20,16 @@
 		13B07F961A680F5B00A75B9A /* EvoFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvoFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = EvoFit/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = EvoFit/Info.plist; sourceTree = "<group>"; };
-		1C275F120AA3404C1EA7864C /* libPods-EvoFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-EvoFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		3288098A6862687ADDCB5724 /* Pods-EvoFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.release.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.release.xcconfig"; sourceTree = "<group>"; };
-		5F3484A8989507B44E5149BD /* Pods-EvoFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.debug.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.debug.xcconfig"; sourceTree = "<group>"; };
-		6CE5709E212BEAAA4F3A7B16 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-EvoFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		16D49AA9FFADD74047CD6084 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-EvoFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		2ED1532250FA0B4BFFE8EBB5 /* Pods-EvoFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.release.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.release.xcconfig"; sourceTree = "<group>"; };
+		5DE9EE4BF6FB3B37A2370D84 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = EvoFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		848B7CC527EE22E96456939E /* libPods-EvoFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-EvoFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = EvoFit/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = EvoFit/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "EvoFit-Bridging-Header.h"; path = "EvoFit/EvoFit-Bridging-Header.h"; sourceTree = "<group>"; };
-		F5FBC856D163A6B66DA42C29 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = EvoFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FFECBB4C06EAD7DCCD625A95 /* Pods-EvoFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.debug.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				88E5331F424FABA467094FD9 /* libPods-EvoFit.a in Frameworks */,
+				2DBE470534861445EE9F5108 /* libPods-EvoFit.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,24 +53,16 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				F5FBC856D163A6B66DA42C29 /* PrivacyInfo.xcprivacy */,
+				5DE9EE4BF6FB3B37A2370D84 /* PrivacyInfo.xcprivacy */,
 			);
 			name = EvoFit;
-			sourceTree = "<group>";
-		};
-		2B146C612785A192C3BD1709 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				FB0F5B73B480F6F0C5FE8F76 /* EvoFit */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				1C275F120AA3404C1EA7864C /* libPods-EvoFit.a */,
+				848B7CC527EE22E96456939E /* libPods-EvoFit.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -89,8 +81,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				F98E267CBAD38B7126B2C287 /* Pods */,
-				2B146C612785A192C3BD1709 /* ExpoModulesProviders */,
+				AB374DD7C34DC213CFFDCEE4 /* Pods */,
+				B259CEE103C143850E9FCC24 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,6 +97,32 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		AB374DD7C34DC213CFFDCEE4 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				FFECBB4C06EAD7DCCD625A95 /* Pods-EvoFit.debug.xcconfig */,
+				2ED1532250FA0B4BFFE8EBB5 /* Pods-EvoFit.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		B259CEE103C143850E9FCC24 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				B81A9D6CA2CD8E2CB04E6322 /* EvoFit */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		B81A9D6CA2CD8E2CB04E6322 /* EvoFit */ = {
+			isa = PBXGroup;
+			children = (
+				16D49AA9FFADD74047CD6084 /* ExpoModulesProvider.swift */,
+			);
+			name = EvoFit;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -112,24 +130,6 @@
 			);
 			name = Supporting;
 			path = EvoFit/Supporting;
-			sourceTree = "<group>";
-		};
-		F98E267CBAD38B7126B2C287 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				5F3484A8989507B44E5149BD /* Pods-EvoFit.debug.xcconfig */,
-				3288098A6862687ADDCB5724 /* Pods-EvoFit.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		FB0F5B73B480F6F0C5FE8F76 /* EvoFit */ = {
-			isa = PBXGroup;
-			children = (
-				6CE5709E212BEAAA4F3A7B16 /* ExpoModulesProvider.swift */,
-			);
-			name = EvoFit;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "EvoFit" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				6AEBA91CEE0C3BBC6FBDBFE1 /* [Expo] Configure project */,
+				21B031467DD5969AA50E93FF /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				25E3C6BB701ECD561970A10E /* [CP] Embed Pods Frameworks */,
+				A7E8A6E0F7946F18C6E4A082 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				2681D83A13332B02C1978BA0 /* PrivacyInfo.xcprivacy in Resources */,
+				718B615A4C4593F9CCF8BE55 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,29 +242,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		25E3C6BB701ECD561970A10E /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		6AEBA91CEE0C3BBC6FBDBFE1 /* [Expo] Configure project */ = {
+		21B031467DD5969AA50E93FF /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -368,6 +346,28 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		A7E8A6E0F7946F18C6E4A082 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -376,7 +376,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				56500A079AC18CBA522946A2 /* ExpoModulesProvider.swift in Sources */,
+				D4E89DA3EED25E0BEFDCBA9F /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -385,7 +385,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5F3484A8989507B44E5149BD /* Pods-EvoFit.debug.xcconfig */;
+			baseConfigurationReference = FFECBB4C06EAD7DCCD625A95 /* Pods-EvoFit.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -421,7 +421,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3288098A6862687ADDCB5724 /* Pods-EvoFit.release.xcconfig */;
+			baseConfigurationReference = 2ED1532250FA0B4BFFE8EBB5 /* Pods-EvoFit.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
