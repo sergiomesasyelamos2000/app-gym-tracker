@@ -17,9 +17,7 @@ import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
 import { useNotificationSettingsStore } from "./src/store/useNotificationSettingsStore";
 import CustomToast from "./src/ui/CustomToast";
 import { SyncProvider } from "./src/components/SyncProvider";
-import KeyboardDismissButton, {
-  GLOBAL_KEYBOARD_ACCESSORY_ID,
-} from "./src/components/KeyboardDismissButton";
+import { GLOBAL_KEYBOARD_ACCESSORY_ID } from "./src/components/KeyboardDismissButton";
 
 const isExpoGoAndroid =
   Platform.OS === "android" && Constants.appOwnership === "expo";
@@ -127,7 +125,6 @@ function AppContent() {
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         <RootNavigator />
       </NavigationContainer>
-      <KeyboardDismissButton />
       <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );

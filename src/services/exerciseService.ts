@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiFetch } from "../api/client";
+import { ApiError, apiFetch } from "../api/client";
+import { ENV } from "../environments/environment";
 import type {
   CreateExerciseDto,
   EquipmentDto,
@@ -28,6 +29,7 @@ const CACHE_KEYS = {
   EXERCISE_TYPES: "@exercise_types_cache",
   MUSCLES: "@muscles_cache",
   LAST_SYNC: "@exercises_last_sync",
+  API_URL: "@exercises_cache_api_url",
 };
 
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -38,6 +40,7 @@ const EXERCISE_CACHE_KEYS = [
   CACHE_KEYS.EXERCISE_TYPES,
   CACHE_KEYS.MUSCLES,
   CACHE_KEYS.LAST_SYNC,
+  CACHE_KEYS.API_URL,
   `${CACHE_KEYS.EXERCISES}_from_cache`,
 ];
 
@@ -53,6 +56,37 @@ const isStorageFullError = (error: unknown): boolean => {
 };
 
 let hasLoggedStorageFullWarning = false;
+
+const isNetworkError = (error: unknown): boolean => {
+  if (error instanceof ApiError) return false;
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error || "");
+
+  return (
+    message.includes("network request failed") ||
+    message.includes("failed to fetch") ||
+    message.includes("networkerror") ||
+    message.includes("timeout") ||
+    message.includes("timed out")
+  );
+};
+
+const normalizeApiUrl = (value: string) =>
+  value.trim().replace(/\/+$/, "").toLowerCase();
+
+async function markCacheApiUrl(): Promise<void> {
+  await safeSetItem(CACHE_KEYS.API_URL, normalizeApiUrl(ENV.API_URL));
+}
+
+async function isCacheFromCurrentApi(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(CACHE_KEYS.API_URL);
+  if (!stored) return false;
+  return normalizeApiUrl(stored) === normalizeApiUrl(ENV.API_URL);
+}
+
+async function clearExerciseCatalogCache(): Promise<void> {
+  await AsyncStorage.multiRemove(EXERCISE_CACHE_KEYS);
+}
 
 async function safeSetItem(key: string, value: string): Promise<void> {
   try {
@@ -124,35 +158,38 @@ async function isCacheValid(key: string): Promise<boolean> {
 }
 
 /**
- * Fetch exercises with offline-first strategy
- * 1. Try to load from cache immediately
- * 2. If online, fetch from backend and update cache
- * 3. If offline, use cached data
+ * Fetch exercises with network-first strategy
+ * 1. Try backend first (source of truth)
+ * 2. If backend fails, fallback to cache
  */
 export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
-  const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
-  if (cached) {
-    const cachedExercises = JSON.parse(cached) as ExerciseRequestDto[];
-    // Cache-first strategy: this is not necessarily offline mode.
-    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
-    if (await shouldRevalidate()) {
-      void refreshExercisesCacheInBackground();
-    }
-    return cachedExercises;
-  }
-
   try {
     const data = await apiFetch<ExerciseRequestDto[]>("exercises");
 
     await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
     await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
     await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    await markCacheApiUrl();
 
     return data;
   } catch (error: CaughtError) {
-    // If network fails, try to load from cache
+    // Only fallback to cache when the error is an actual network failure.
+    // For API errors (401/403/500/etc), surface the error to avoid stale data.
+    if (!isNetworkError(error)) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "No se pudieron cargar los ejercicios.";
+      throw new Error(message);
+    }
 
     try {
+      const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
+      if (!cacheMatchesCurrentApi) {
+        await clearExerciseCatalogCache();
+        throw new Error("Cache de ejercicios invalido para la API actual.");
+      }
+
       const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
       if (cached) {
         const exercises = JSON.parse(cached);
@@ -200,6 +237,7 @@ export const prefetchExerciseCatalog = async (
       safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
       safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString()),
       safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false"),
+      markCacheApiUrl(),
     ]);
   } catch {
     // Best-effort prefetch. Existing cache continues to be used.
@@ -256,6 +294,7 @@ export const searchExercises = async (
         const exerciseEquipments = ex.equipments || [];
         const exerciseMuscles = [
           ...(ex.targetMuscles || []),
+          ...(ex.secondaryMuscles || []),
           ...(ex.bodyParts || []),
         ];
         const matchesEquipment =

@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import type {
   EquipmentDto,
   ExerciseRequestDto,
@@ -39,6 +40,7 @@ import {
   normalizeExerciseImage,
   normalizeExercisesImage,
 } from "../utils/normalizeExerciseImage";
+import { GLOBAL_KEYBOARD_ACCESSORY_ID } from "../../../components/KeyboardDismissButton";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
 
@@ -78,6 +80,8 @@ const tokenizeSearch = (value: string) =>
     .split(" ")
     .filter((token) => token.length > 0 && !SEARCH_STOP_WORDS.has(token));
 
+const toFilterKey = (value: string) => normalizeSearchText(value);
+
 const matchesToken = (value: string, expected: string) => {
   const normalizedValue = normalizeSearchText(value);
   const normalizedExpected = normalizeSearchText(expected);
@@ -114,6 +118,10 @@ export default function ExerciseList() {
   const [muscleOptions, setMuscleOptions] = useState<MuscleDto[]>([]);
 
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const inputAccessoryProps =
+    Platform.OS === "ios"
+      ? { inputAccessoryViewID: GLOBAL_KEYBOARD_ACCESSORY_ID }
+      : {};
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseRequestDto[]
   >([]);
@@ -138,12 +146,43 @@ export default function ExerciseList() {
         .map((item) => item.name),
     [equipmentOptions, selectedEquipmentIds]
   );
+  const combinedMuscleOptions = useMemo(() => {
+    const byKey = new Map<string, MuscleDto>();
+
+    muscleOptions.forEach((item) => {
+      const key = toFilterKey(item.name);
+      if (!key) return;
+      byKey.set(key, item);
+    });
+
+    allExercises.forEach((exercise) => {
+      const muscleNames = [
+        ...(exercise.targetMuscles || []),
+        ...(exercise.secondaryMuscles || []),
+        ...(exercise.bodyParts || []),
+      ];
+
+      muscleNames.forEach((name) => {
+        const key = toFilterKey(name);
+        if (!key || byKey.has(key)) return;
+
+        byKey.set(key, {
+          id: `derived-muscle-${key}`,
+          name: name.trim(),
+        });
+      });
+    });
+
+    return Array.from(byKey.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+    );
+  }, [allExercises, muscleOptions]);
   const selectedMuscleNames = useMemo(
     () =>
-      muscleOptions
+      combinedMuscleOptions
         .filter((item) => selectedMuscleIds.includes(item.id))
         .map((item) => item.name),
-    [muscleOptions, selectedMuscleIds]
+    [combinedMuscleOptions, selectedMuscleIds]
   );
   const selectedEquipmentLabel = useMemo(
     () => selectedEquipmentNames.join(", "),
@@ -437,20 +476,37 @@ export default function ExerciseList() {
           {isOfflineMode && filteredExercises.length > 0 && (
             <View style={styles.offlineBanner}>
               <Text style={styles.offlineBannerText}>
-                Modo sin conexion - Mostrando ejercicios guardados
+                Modo sin conexión - Mostrando ejercicios guardados
               </Text>
             </View>
           )}
 
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar ejercicio..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={theme.textTertiary}
-            />
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar ejercicio..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor={theme.textTertiary}
+                {...inputAccessoryProps}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSearchButton}
+                  onPress={() => setSearchQuery("")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Limpiar busqueda"
+                >
+                  <Icon
+                    name="close"
+                    size={RFValue(16)}
+                    color={theme.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.filterActionsRow}>
@@ -559,7 +615,7 @@ export default function ExerciseList() {
                   ))}
                 </ScrollView>
 
-                <Text style={styles.modalSectionTitle}>Musculo</Text>
+                <Text style={styles.modalSectionTitle}>Músculo</Text>
                 <ScrollView
                   style={styles.modalSectionScroll}
                   contentContainerStyle={styles.modalChipsWrap}
@@ -583,7 +639,7 @@ export default function ExerciseList() {
                       Todos
                     </Text>
                   </TouchableOpacity>
-                  {muscleOptions.map((item) => (
+                  {combinedMuscleOptions.map((item) => (
                     <TouchableOpacity
                       key={item.id}
                       style={[
@@ -708,16 +764,30 @@ const createStyles = (theme: Theme) =>
       color: theme.text,
       marginBottom: 8,
     },
-    searchInput: {
+    searchInputContainer: {
       backgroundColor: theme.card,
       borderRadius: 12,
       paddingHorizontal: 12,
-      paddingVertical: 8,
       elevation: 2,
-      fontSize: RFValue(16),
-      color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: 8,
+      fontSize: RFValue(16),
+      color: theme.text,
+    },
+    clearSearchButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+      marginLeft: 8,
     },
     filterActionsRow: {
       flexDirection: "row",

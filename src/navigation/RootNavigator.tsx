@@ -8,7 +8,14 @@
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  StyleSheet,
+  View,
+} from "react-native";
+import KeyboardDismissButton from "../components/KeyboardDismissButton";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
 import { prefetchExerciseCatalog } from "../services/exerciseService";
@@ -59,6 +66,26 @@ export const RootNavigator = () => {
     void prefetchExerciseCatalog({ force: true });
   }, [isAuthenticated, isInitializing]);
 
+  useEffect(() => {
+    if (!isAuthenticated || isInitializing) return;
+
+    let previousState: AppStateStatus = AppState.currentState;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      const isReturningToForeground =
+        (previousState === "background" || previousState === "inactive") &&
+        nextState === "active";
+
+      previousState = nextState;
+
+      if (!isReturningToForeground) return;
+      void prefetchExerciseCatalog({ force: true });
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated, isInitializing]);
+
   // Show loading screen while checking auth state
   if (isInitializing) {
     return (
@@ -80,39 +107,45 @@ export const RootNavigator = () => {
 
   // Show auth screen or main app with subscription stack
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen
-            name="MainApp"
-            component={MainAppComponent.current as React.ComponentType<any>}
-          />
-          <Stack.Screen
-            name="SubscriptionStack"
-            component={
-              SubscriptionStackComponent.current as React.ComponentType<any>
-            }
-            options={{
-              presentation: "modal",
-              headerShown: false,
-            }}
-          />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="Auth" component={AuthScreen} />
-          <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-            options={{ animation: "slide_from_right" }}
-          />
-        </>
-      )}
-    </Stack.Navigator>
+    <View style={styles.root}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen
+              name="MainApp"
+              component={MainAppComponent.current as React.ComponentType<any>}
+            />
+            <Stack.Screen
+              name="SubscriptionStack"
+              component={
+                SubscriptionStackComponent.current as React.ComponentType<any>
+              }
+              options={{
+                presentation: "modal",
+                headerShown: false,
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Auth" component={AuthScreen} />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ animation: "slide_from_right" }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+      <KeyboardDismissButton />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

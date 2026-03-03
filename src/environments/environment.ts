@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 
 const LOCAL_IP = "192.168.1.133";
 const LOCAL_API_URL = `http://${LOCAL_IP}:3000/api`;
+const LOCAL_IOS_SIMULATOR_API_URL = "http://localhost:3000/api";
 const LOCAL_ANDROID_EMULATOR_API_URL = "http://10.0.2.2:3000/api";
 const LOCAL_ANDROID_DEVICE_API_URL = LOCAL_API_URL;
 const PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
@@ -32,13 +33,14 @@ const DEFAULT_ANDROID_API_URL = isAndroidEmulator
 // Si defines EXPO_PUBLIC_API_URL, tiene prioridad.
 // Si no, en dev usa URL por plataforma y en producción usa remoto.
 // Android Emulator usa 10.0.2.2 para acceder al host.
+// iOS Simulator usa localhost. Para iPhone fisico, define EXPO_PUBLIC_API_URL_IOS.
 const RESOLVED_API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__
     ? Platform.OS === "android"
       ? process.env.EXPO_PUBLIC_API_URL_ANDROID ||
         DEFAULT_ANDROID_API_URL
-      : process.env.EXPO_PUBLIC_API_URL_IOS || LOCAL_API_URL
+      : process.env.EXPO_PUBLIC_API_URL_IOS || LOCAL_IOS_SIMULATOR_API_URL
     : PROD_API_URL);
 
 const getAssetBaseUrl = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");

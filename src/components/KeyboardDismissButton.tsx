@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Animated,
-  InputAccessoryView,
   Keyboard,
   KeyboardEvent,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
+  TextInput,
   View,
 } from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -20,80 +19,68 @@ export default function KeyboardDismissButton() {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const handleDismissKeyboard = () => {
+    const state = TextInput.State as unknown as {
+      currentlyFocusedInput?: () => { blur?: () => void } | null;
+    };
+
+    const focusedInput = state.currentlyFocusedInput?.();
+    focusedInput?.blur?.();
+
+    setVisible(false);
+    setKeyboardHeight(0);
+    Keyboard.dismiss();
+    requestAnimationFrame(() => Keyboard.dismiss());
+    setTimeout(() => Keyboard.dismiss(), 60);
+  };
 
   useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
     const onShow = (event: KeyboardEvent) => {
       setKeyboardHeight(event.endCoordinates?.height || 0);
       setVisible(true);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
     };
 
     const onHide = () => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 140,
-        useNativeDriver: true,
-      }).start(() => {
-        setVisible(false);
-        setKeyboardHeight(0);
-      });
+      setVisible(false);
+      setKeyboardHeight(0);
     };
 
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    const showSub = Keyboard.addListener("keyboardDidShow", onShow);
+    const hideSub = Keyboard.addListener("keyboardDidHide", onHide);
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [fadeAnim]);
+  }, []);
 
   const containerStyle = useMemo(
-    () => [
-      styles.container,
-      {
-        bottom: Math.max(12, keyboardHeight - insets.bottom + 8),
-      },
-    ],
+    () => {
+      const keyboardMetricsHeight = Keyboard.metrics?.()?.height ?? 0;
+      const effectiveKeyboardHeight = Math.max(
+        0,
+        keyboardHeight || keyboardMetricsHeight
+      );
+
+      const bottomOffset =
+        Platform.OS === "ios"
+          ? Math.max(insets.bottom + 8, effectiveKeyboardHeight + 8)
+          : 12;
+
+      return [
+        styles.container,
+        {
+          bottom: bottomOffset,
+        },
+      ];
+    },
     [insets.bottom, keyboardHeight]
   );
-
-  if (Platform.OS === "ios") {
-    return (
-      <InputAccessoryView nativeID={GLOBAL_KEYBOARD_ACCESSORY_ID}>
-        <View
-          style={[
-            styles.iosAccessoryContainer,
-            {
-              backgroundColor: theme.card,
-              borderTopColor: theme.border,
-            },
-          ]}
-        >
-          <Pressable onPress={Keyboard.dismiss} style={styles.iosAccessoryButton}>
-            <Text style={[styles.iosAccessoryText, { color: theme.primary }]}>
-              Listo
-            </Text>
-          </Pressable>
-        </View>
-      </InputAccessoryView>
-    );
-  }
 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[containerStyle, { opacity: fadeAnim }]}>
+    <View style={containerStyle} pointerEvents="box-none">
       <View
         style={[
           styles.buttonContainer,
@@ -104,11 +91,17 @@ export default function KeyboardDismissButton() {
           },
         ]}
       >
-        <Pressable onPress={Keyboard.dismiss} style={styles.button}>
-          <Text style={[styles.text, { color: theme.text }]}>Ocultar teclado</Text>
+        <Pressable
+          onPressIn={handleDismissKeyboard}
+          style={styles.button}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Ocultar teclado"
+        >
+          <Icon name="keyboard-hide" size={20} color={theme.text} />
         </Pressable>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -127,25 +120,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   button: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  text: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  iosAccessoryContainer: {
-    borderTopWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: "flex-end",
-  },
-  iosAccessoryButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-  iosAccessoryText: {
-    fontSize: 16,
-    fontWeight: "700",
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -39,7 +39,6 @@ import {
   getGlobalStats,
 } from "../features/routine/services/routineService";
 import type { GlobalStats } from "../features/routine/services/routineService";
-import { formatTime } from "../features/routine/utils/routineHelpers";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -109,6 +108,17 @@ const toSafeNumber = (value: unknown): number => {
         : NaN;
 
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatSessionDuration = (totalSeconds: number): string => {
+  const safeSeconds = Math.max(0, toSafeNumber(totalSeconds));
+  const totalMinutes = Math.floor(safeSeconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) return `${totalMinutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 };
 
 const normalizeSessionExercise = (
@@ -458,7 +468,7 @@ export default function HomeScreen() {
               <Text
                 style={[styles.sessionStatText, { color: theme.textSecondary }]}
               >
-                {formatTime(session.totalTime)}
+                {formatSessionDuration(session.totalTime)}
               </Text>
             </View>
             <View style={styles.sessionStat}>

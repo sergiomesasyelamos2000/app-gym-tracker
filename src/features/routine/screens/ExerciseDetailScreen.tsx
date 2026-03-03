@@ -68,23 +68,66 @@ interface ExerciseHistoryItem {
 }
 
 interface ExerciseImageProps {
-  exercise: ExerciseRequestDto & { giftUrl?: string; imageUrl?: string };
+  exercise: ExerciseRequestDto & {
+    giftUrl?: string;
+    gifUrl?: string;
+    imageUrl?: string;
+  };
   style: ImageStyle;
-  theme: Theme;
 }
 
 // ============================================================================
 // UTILIDADES DE IMAGEN
 // ============================================================================
-const ExerciseImage = ({ exercise, style, theme }: ExerciseImageProps) => {
-  // Use giftUrl if available (animated GIF)
-  if (exercise.giftUrl) {
+const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
+  const gifUrl = exercise.giftUrl || exercise.gifUrl;
+  const staticFallbackUrl =
+    exercise.imageUrl && exercise.imageUrl !== gifUrl ? exercise.imageUrl : "";
+  const canPauseGif = Boolean(gifUrl && staticFallbackUrl);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    setIsPaused(false);
+  }, [gifUrl, staticFallbackUrl]);
+
+  // Use giftUrl/gifUrl if available (animated GIF)
+  if (gifUrl) {
     return (
-      <Image
-        source={{ uri: exercise.giftUrl }}
-        style={style}
-        resizeMode="cover"
-      />
+      <TouchableOpacity
+        activeOpacity={0.95}
+        onPress={() => {
+          if (!canPauseGif) return;
+          setIsPaused((prev) => !prev);
+        }}
+        disabled={!canPauseGif}
+      >
+        {isPaused && staticFallbackUrl ? (
+          <CachedExerciseImage imageUrl={staticFallbackUrl} style={style} />
+        ) : (
+          <Image source={{ uri: gifUrl }} style={style} resizeMode="cover" />
+        )}
+        {canPauseGif && (
+          <View
+            style={{
+              position: "absolute",
+              right: 8,
+              bottom: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: "rgba(0,0,0,0.55)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon
+              name={isPaused ? "play-arrow" : "pause"}
+              size={RFValue(12)}
+              color="#fff"
+            />
+          </View>
+        )}
+      </TouchableOpacity>
     );
   }
 
@@ -242,11 +285,7 @@ const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-      <ExerciseImage
-        exercise={exercise}
-        style={styles.exerciseImage}
-        theme={theme}
-      />
+      <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName} numberOfLines={2}>
           {exercise.name}
@@ -425,7 +464,9 @@ const ProgressSection = ({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Análisis de Progreso</Text>
-        <Text style={styles.sectionSubtitle}>Métricas consistentes con Gráficas</Text>
+        <Text style={styles.sectionSubtitle}>
+          Métricas consistentes con Gráficas
+        </Text>
       </View>
 
       <ScrollView
@@ -456,9 +497,12 @@ const ProgressSection = ({
 
       {!hasPeriodData ? (
         <View style={styles.analysisEmptyBox}>
-          <Text style={styles.analysisEmptyTitle}>Sin datos en este período</Text>
+          <Text style={styles.analysisEmptyTitle}>
+            Sin datos en este período
+          </Text>
           <Text style={styles.analysisEmptyText}>
-            Prueba con otro rango o pulsa en Gráficas para ver el histórico completo.
+            Prueba con otro rango o pulsa en Gráficas para ver el histórico
+            completo.
           </Text>
           <TouchableOpacity
             style={styles.analysisEmptyAction}
@@ -472,7 +516,8 @@ const ProgressSection = ({
           <Text style={styles.analysisMetaText}>{periodText}</Text>
           <Text style={styles.analysisMetaText}>{trendLabel}</Text>
           <Text style={styles.analysisMetaText}>
-            Consistencia: {consistency.toFixed(1)} sesiones/semana | Racha: {streak} días
+            Consistencia: {consistency.toFixed(1)} sesiones/semana | Racha:{" "}
+            {streak} días
           </Text>
 
           <View style={styles.analysisGrid}>
@@ -507,13 +552,17 @@ const ProgressSection = ({
             <AnalysisMetricCard
               title="Volumen total (kg)"
               value={`${Math.round(currentStats?.totalVolume ?? 0)} kg`}
-              subtitle={`${currentStats?.totalSessions ?? 0} sesiones en el período`}
-              actualLabel={`Actual: ${
-                Math.round(currentData[currentData.length - 1]?.totalVolume ?? 0)
-              } kg`}
+              subtitle={`${
+                currentStats?.totalSessions ?? 0
+              } sesiones en el período`}
+              actualLabel={`Actual: ${Math.round(
+                currentData[currentData.length - 1]?.totalVolume ?? 0
+              )} kg`}
               averageLabel={`Promedio: ${
                 currentStats && currentStats.totalSessions > 0
-                  ? Math.round(currentStats.totalVolume / currentStats.totalSessions)
+                  ? Math.round(
+                      currentStats.totalVolume / currentStats.totalSessions
+                    )
                   : 0
               } kg/sesión`}
               comparisonLabel={`Comparación: ${formatDelta(
