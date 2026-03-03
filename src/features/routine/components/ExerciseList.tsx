@@ -66,6 +66,54 @@ const SEARCH_STOP_WORDS = new Set([
   "al",
 ]);
 
+const MAX_EQUIPMENT_FILTER_OPTIONS = 10;
+const MAX_MUSCLE_FILTER_OPTIONS = 12;
+const COMMON_EQUIPMENT_PATTERNS = [
+  "barra",
+  "barbell",
+  "mancuerna",
+  "dumbbell",
+  "maquina",
+  "machine",
+  "polea",
+  "cable",
+  "peso corporal",
+  "bodyweight",
+  "banda",
+  "band",
+  "kettlebell",
+  "smith",
+  "banco",
+  "bench",
+];
+const COMMON_MUSCLE_PATTERNS = [
+  "pecho",
+  "chest",
+  "espalda",
+  "back",
+  "hombro",
+  "shoulder",
+  "delto",
+  "delts",
+  "biceps",
+  "bíceps",
+  "triceps",
+  "tríceps",
+  "cuadriceps",
+  "cuádriceps",
+  "quadriceps",
+  "isquio",
+  "hamstring",
+  "glute",
+  "glúte",
+  "abdominal",
+  "abs",
+  "core",
+  "pantorrilla",
+  "calf",
+  "gemelo",
+];
+
 const normalizeSearchText = (value: string) =>
   value
     .toLowerCase()
@@ -204,6 +252,100 @@ export default function ExerciseList() {
   const selectionFiltersCount =
     selectedEquipmentIds.length + selectedMuscleIds.length;
 
+  const displayedEquipmentOptions = useMemo(() => {
+    if (equipmentOptions.length <= MAX_EQUIPMENT_FILTER_OPTIONS) {
+      return equipmentOptions;
+    }
+
+    const usageByEquipment = new Map<string, number>();
+
+    allExercises.forEach((exercise) => {
+      (exercise.equipments || []).forEach((equipmentName) => {
+        const key = toFilterKey(equipmentName);
+        if (!key) return;
+        usageByEquipment.set(key, (usageByEquipment.get(key) || 0) + 1);
+      });
+    });
+
+    const withScore = equipmentOptions.map((option) => {
+      const normalizedOption = toFilterKey(option.name);
+      const usageScore = usageByEquipment.get(normalizedOption) || 0;
+      const commonBonus = COMMON_EQUIPMENT_PATTERNS.some((pattern) =>
+        normalizedOption.includes(pattern)
+      )
+        ? 1000
+        : 0;
+
+      return {
+        option,
+        score: usageScore + commonBonus,
+      };
+    });
+
+    const selectedSet = new Set(tempEquipmentIds);
+    const topOptions = withScore
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_EQUIPMENT_FILTER_OPTIONS)
+      .map((entry) => entry.option);
+
+    const selectedOutsideTop = equipmentOptions.filter(
+      (option) =>
+        selectedSet.has(option.id) &&
+        !topOptions.some((topOption) => topOption.id === option.id)
+    );
+
+    return [...topOptions, ...selectedOutsideTop];
+  }, [allExercises, equipmentOptions, tempEquipmentIds]);
+
+  const displayedMuscleOptions = useMemo(() => {
+    if (combinedMuscleOptions.length <= MAX_MUSCLE_FILTER_OPTIONS) {
+      return combinedMuscleOptions;
+    }
+
+    const usageByMuscle = new Map<string, number>();
+
+    allExercises.forEach((exercise) => {
+      [
+        ...(exercise.targetMuscles || []),
+        ...(exercise.secondaryMuscles || []),
+        ...(exercise.bodyParts || []),
+      ].forEach((muscleName) => {
+        const key = toFilterKey(muscleName);
+        if (!key) return;
+        usageByMuscle.set(key, (usageByMuscle.get(key) || 0) + 1);
+      });
+    });
+
+    const withScore = combinedMuscleOptions.map((option) => {
+      const normalizedOption = toFilterKey(option.name);
+      const usageScore = usageByMuscle.get(normalizedOption) || 0;
+      const commonBonus = COMMON_MUSCLE_PATTERNS.some((pattern) =>
+        normalizedOption.includes(pattern)
+      )
+        ? 1000
+        : 0;
+
+      return {
+        option,
+        score: usageScore + commonBonus,
+      };
+    });
+
+    const selectedSet = new Set(tempMuscleIds);
+    const topOptions = withScore
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_MUSCLE_FILTER_OPTIONS)
+      .map((entry) => entry.option);
+
+    const selectedOutsideTop = combinedMuscleOptions.filter(
+      (option) =>
+        selectedSet.has(option.id) &&
+        !topOptions.some((topOption) => topOption.id === option.id)
+    );
+
+    return [...topOptions, ...selectedOutsideTop];
+  }, [allExercises, combinedMuscleOptions, tempMuscleIds]);
+
   const navigateToCreateExercise = () => {
     setSelectionContext({
       mode,
@@ -279,7 +421,7 @@ export default function ExerciseList() {
     if (!allExercises.length) return [];
 
     const scored = allExercises
-      .map((exercise) => {
+      .map((exercise, index) => {
         const normalizedName = normalizeSearchText(exercise.name);
         const nameTokens = tokenizeSearch(exercise.name);
 
@@ -316,12 +458,12 @@ export default function ExerciseList() {
           }
         }
 
-        return { exercise, nameScore };
+        return { exercise, nameScore, originalIndex: index };
       })
       .filter(({ nameScore }) => nameScore > 0);
 
     return scored
-      .map(({ exercise, nameScore }) => {
+      .map(({ exercise, nameScore, originalIndex }) => {
         const matchesName = nameScore > 0;
 
         const matchesEquipment =
@@ -344,11 +486,22 @@ export default function ExerciseList() {
         return {
           exercise,
           nameScore,
+          originalIndex,
           visible: matchesName && matchesEquipment && matchesMuscle,
         };
       })
       .filter((item) => item.visible)
-      .sort((a, b) => b.nameScore - a.nameScore)
+      .sort((a, b) => {
+        if (!normalizedQuery) {
+          return a.originalIndex - b.originalIndex;
+        }
+
+        if (b.nameScore !== a.nameScore) {
+          return b.nameScore - a.nameScore;
+        }
+
+        return a.originalIndex - b.originalIndex;
+      })
       .map((item) => item.exercise);
   }, [
     allExercises,
@@ -591,7 +744,7 @@ export default function ExerciseList() {
                       Todos
                     </Text>
                   </TouchableOpacity>
-                  {equipmentOptions.map((item) => (
+                  {displayedEquipmentOptions.map((item) => (
                     <TouchableOpacity
                       key={item.id}
                       style={[
@@ -639,7 +792,7 @@ export default function ExerciseList() {
                       Todos
                     </Text>
                   </TouchableOpacity>
-                  {combinedMuscleOptions.map((item) => (
+                  {displayedMuscleOptions.map((item) => (
                     <TouchableOpacity
                       key={item.id}
                       style={[
