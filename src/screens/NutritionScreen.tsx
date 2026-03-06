@@ -195,8 +195,14 @@ export default function NutritionScreen() {
   const insets = useSafeAreaInsets();
 
   // Hook para límite de uso de IA
-  const { remainingCalls, canUseAI, incrementUsage, isPremium, dailyLimit } =
-    useAIUsageLimit();
+  const {
+    remainingCalls,
+    canUseAI,
+    incrementUsage,
+    isPremium,
+    dailyLimit,
+    loading: usageLoading,
+  } = useAIUsageLimit();
 
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
@@ -519,7 +525,7 @@ export default function NutritionScreen() {
         </View>
 
         {/* Banner de uso de IA para usuarios gratuitos */}
-        {!isPremium && remainingCalls !== null && (
+        {!usageLoading && !isPremium && remainingCalls !== null && (
           <TouchableOpacity
             style={[
               styles.usageBanner,

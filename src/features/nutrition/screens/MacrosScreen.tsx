@@ -106,6 +106,8 @@ const MEAL_CONFIG: Record<
   snack: { icon: "pizza-outline", label: "Snack", color: "#2196F3" },
 };
 
+const APP_PURPLE = "#6C3BAA";
+
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { NutritionStackParamList } from "./NutritionStack";
 
@@ -591,7 +593,7 @@ export default function MacrosScreen({ navigation }: Props) {
         ]}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <ActivityIndicator size="large" color={APP_PURPLE} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
             Cargando...
           </Text>
@@ -913,7 +915,7 @@ export default function MacrosScreen({ navigation }: Props) {
     >
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <ActivityIndicator size="large" color={APP_PURPLE} />
           <Text style={styles.loadingText}>
             {duplicating ? "Duplicando alimentos..." : "Cargando..."}
           </Text>
@@ -943,12 +945,15 @@ export default function MacrosScreen({ navigation }: Props) {
 
       <ScrollView
         style={styles.screen}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        indicatorStyle={isDark ? "white" : "black"}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[APP_PURPLE]}
+            tintColor={APP_PURPLE}
           />
         }
       >

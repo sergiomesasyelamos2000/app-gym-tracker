@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { WebView } from "react-native-webview";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
@@ -72,6 +73,7 @@ interface ExerciseImageProps {
     giftUrl?: string;
     gifUrl?: string;
     imageUrl?: string;
+    videoUrl?: string;
   };
   style: ImageStyle;
 }
@@ -80,6 +82,9 @@ interface ExerciseImageProps {
 // UTILIDADES DE IMAGEN
 // ============================================================================
 const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
+  const webViewRef = React.useRef<WebView>(null);
+  const videoUrl = exercise.videoUrl?.trim();
+  const flattenedStyle = StyleSheet.flatten(style);
   const gifUrl = exercise.giftUrl || exercise.gifUrl;
   const staticFallbackUrl =
     exercise.imageUrl && exercise.imageUrl !== gifUrl ? exercise.imageUrl : "";
@@ -88,7 +93,104 @@ const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
 
   useEffect(() => {
     setIsPaused(false);
-  }, [gifUrl, staticFallbackUrl]);
+  }, [videoUrl, gifUrl, staticFallbackUrl]);
+
+  if (videoUrl) {
+    const videoContainerWidth =
+      typeof flattenedStyle?.width === "number"
+        ? flattenedStyle.width * 1.2
+        : flattenedStyle?.width;
+
+    const videoHtml = `<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+      video { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+  </head>
+  <body>
+    <video id="exerciseVideo" src="${videoUrl}" playsinline webkit-playsinline muted loop autoplay></video>
+    <script>
+      const video = document.getElementById('exerciseVideo');
+      function sendPausedState() {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ paused: video.paused }));
+        }
+      }
+      window.__togglePlayback = function () {
+        if (video.paused) { video.play(); } else { video.pause(); }
+        sendPausedState();
+      };
+      video.addEventListener('play', sendPausedState);
+      video.addEventListener('pause', sendPausedState);
+      sendPausedState();
+    </script>
+  </body>
+</html>`;
+
+    return (
+      <View
+        style={[
+          style,
+          {
+            width: videoContainerWidth,
+            position: "relative",
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <WebView
+          ref={webViewRef}
+          source={{ html: videoHtml }}
+          style={StyleSheet.absoluteFillObject}
+          originWhitelist={["*"]}
+          scrollEnabled={false}
+          bounces={false}
+          overScrollMode="never"
+          androidLayerType="hardware"
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+        onMessage={(event) => {
+            try {
+              const payload = JSON.parse(event.nativeEvent.data);
+              if (typeof payload?.paused === "boolean") {
+                setIsPaused(payload.paused);
+              }
+            } catch {
+              // no-op
+            }
+          }}
+        />
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => {
+            webViewRef.current?.injectJavaScript(
+              "window.__togglePlayback && window.__togglePlayback(); true;"
+            );
+          }}
+          style={{
+            position: "absolute",
+            right: 8,
+            bottom: 8,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            name={isPaused ? "play-arrow" : "pause"}
+            size={RFValue(14)}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // Use giftUrl/gifUrl if available (animated GIF)
   if (gifUrl) {

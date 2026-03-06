@@ -24,7 +24,7 @@ type SearchableExercise = ExerciseRequestDto & {
 };
 
 const CACHE_KEYS = {
-  EXERCISES: "@exercises_cache",
+  EXERCISES: "@exercises_cache_v2",
   EQUIPMENT: "@equipment_cache",
   EXERCISE_TYPES: "@exercise_types_cache",
   MUSCLES: "@muscles_cache",
@@ -45,8 +45,7 @@ const EXERCISE_CACHE_KEYS = [
 ];
 
 const isStorageFullError = (error: unknown): boolean => {
-  const message =
-    error instanceof Error ? error.message : String(error || "");
+  const message = error instanceof Error ? error.message : String(error || "");
   const normalized = message.toLowerCase();
   return (
     normalized.includes("sqlite_full") ||
@@ -122,8 +121,19 @@ async function refreshExercisesCacheInBackground(): Promise<void> {
     await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(freshData));
     await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
     await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+    await markCacheApiUrl();
   } catch {
     // Best-effort refresh, ignore failures.
+  }
+}
+
+async function getCachedJson<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
   }
 }
 
@@ -158,11 +168,31 @@ async function isCacheValid(key: string): Promise<boolean> {
 }
 
 /**
- * Fetch exercises with network-first strategy
- * 1. Try backend first (source of truth)
- * 2. If backend fails, fallback to cache
+ * Fetch exercises with cache-first strategy:
+ * 1. Return cache immediately if available (fast UX)
+ * 2. Refresh cache in background when stale
+ * 3. If no cache, fetch from backend
  */
 export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
+  const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
+  if (!cacheMatchesCurrentApi) {
+    await clearExerciseCatalogCache();
+  } else {
+    const cached = await getCachedJson<ExerciseRequestDto[]>(
+      CACHE_KEYS.EXERCISES
+    );
+    if (cached && cached.length > 0) {
+      await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
+      // Stale-while-revalidate in background.
+      void (async () => {
+        if (await shouldRevalidate()) {
+          await refreshExercisesCacheInBackground();
+        }
+      })();
+      return cached;
+    }
+  }
+
   try {
     const data = await apiFetch<ExerciseRequestDto[]>("exercises");
 
@@ -184,19 +214,10 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
     }
 
     try {
-      const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
-      if (!cacheMatchesCurrentApi) {
-        await clearExerciseCatalogCache();
-        throw new Error("Cache de ejercicios invalido para la API actual.");
-      }
-
       const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
       if (cached) {
         const exercises = JSON.parse(cached);
-        await safeSetItem(
-          `${CACHE_KEYS.EXERCISES}_from_cache`,
-          "true"
-        );
+        await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
         return exercises;
       }
     } catch (cacheError) {
@@ -216,9 +237,9 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
  * Warm-up catalog data after login/app boot:
  * refreshes exercises + filters and leaves everything cached.
  */
-export const prefetchExerciseCatalog = async (
-  options?: { force?: boolean }
-): Promise<void> => {
+export const prefetchExerciseCatalog = async (options?: {
+  force?: boolean;
+}): Promise<void> => {
   try {
     const force = options?.force === true;
     if (!force && !(await shouldRevalidate())) {
@@ -301,7 +322,9 @@ export const searchExercises = async (
           !lowerEquipment ||
           exerciseEquipments.some((item) => {
             const token = item.toLowerCase().trim();
-            return token === lowerEquipment || token.startsWith(`${lowerEquipment} `);
+            return (
+              token === lowerEquipment || token.startsWith(`${lowerEquipment} `)
+            );
           });
         const matchesMuscle =
           !lowerMuscle ||
@@ -330,6 +353,24 @@ export const createExercise = async (
 };
 
 export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
+  const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
+  if (cacheMatchesCurrentApi) {
+    const cached = await getCachedJson<EquipmentDto[]>(CACHE_KEYS.EQUIPMENT);
+    if (cached && cached.length > 0) {
+      void (async () => {
+        try {
+          const fresh = await apiFetch<EquipmentDto[]>(
+            "exercises/equipment/all"
+          );
+          await safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(fresh));
+        } catch {
+          // Best effort
+        }
+      })();
+      return cached;
+    }
+  }
+
   try {
     const data = await apiFetch<EquipmentDto[]>("exercises/equipment/all");
     await safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(data));
@@ -360,6 +401,22 @@ export const fetchExerciseTypes = async (): Promise<ExerciseTypeDto[]> => {
 };
 
 export const fetchMuscles = async (): Promise<MuscleDto[]> => {
+  const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
+  if (cacheMatchesCurrentApi) {
+    const cached = await getCachedJson<MuscleDto[]>(CACHE_KEYS.MUSCLES);
+    if (cached && cached.length > 0) {
+      void (async () => {
+        try {
+          const fresh = await apiFetch<MuscleDto[]>("exercises/muscles/all");
+          await safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(fresh));
+        } catch {
+          // Best effort
+        }
+      })();
+      return cached;
+    }
+  }
+
   try {
     const data = await apiFetch<MuscleDto[]>("exercises/muscles/all");
     await safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(data));

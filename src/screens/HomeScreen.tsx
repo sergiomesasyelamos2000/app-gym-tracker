@@ -116,6 +116,7 @@ const formatSessionDuration = (totalSeconds: number): string => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
+  if (totalMinutes === 0) return `${safeSeconds}s`;
   if (hours === 0) return `${totalMinutes}m`;
   if (minutes === 0) return `${hours}h`;
   return `${hours}h ${minutes}m`;

@@ -23,7 +23,10 @@ export function useAIUsageLimit() {
     if (!userId || isPremium) return null;
     return FREE_TIER_TOTAL_LIMIT;
   });
+  const [backendPremium, setBackendPremium] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const effectiveIsPremium = isPremium || backendPremium;
 
   // Cargar datos de uso al montar o cuando cambia el usuario
   useEffect(() => {
@@ -31,10 +34,13 @@ export function useAIUsageLimit() {
 
     if (userId) {
       if (isPremium) {
+        setBackendPremium(true);
         setRemainingCalls(null);
         setLoading(false);
         return;
       }
+
+      setBackendPremium(false);
 
       // Mostrar un valor inmediato para evitar que el banner tarde en aparecer.
       setRemainingCalls((prev) =>
@@ -76,10 +82,6 @@ export function useAIUsageLimit() {
         setRemainingCalls(FREE_TIER_TOTAL_LIMIT);
       }
       console.error('Error loading cached AI usage data:', error);
-    } finally {
-      if (!isCancelled()) {
-        setLoading(false);
-      }
     }
 
     try {
@@ -88,9 +90,12 @@ export function useAIUsageLimit() {
       if (isCancelled()) return;
 
       if (backendUsage.isPremium || isPremium) {
+        setBackendPremium(true);
         setRemainingCalls(null);
         return;
       }
+
+      setBackendPremium(false);
 
       if (backendUsage.remaining !== null) {
         const normalizedRemaining = Math.max(0, backendUsage.remaining);
@@ -118,7 +123,12 @@ export function useAIUsageLimit() {
 
   const incrementUsage = async (): Promise<boolean> => {
     // Usuarios premium tienen uso ilimitado
-    if (isPremium) {
+    if (effectiveIsPremium) {
+      return true;
+    }
+
+    // Si todavía estamos sincronizando estado con backend, no bloquear por cliente.
+    if (loading) {
       return true;
     }
 
@@ -162,16 +172,17 @@ export function useAIUsageLimit() {
   };
 
   const canUseAI = (): boolean => {
-    if (isPremium) return true;
+    if (effectiveIsPremium) return true;
+    if (loading) return true;
     return remainingCalls !== null && remainingCalls > 0;
   };
 
   return {
-    remainingCalls: isPremium ? null : remainingCalls, // null significa ilimitado
+    remainingCalls: effectiveIsPremium ? null : remainingCalls, // null significa ilimitado
     canUseAI,
     incrementUsage,
     loading,
-    isPremium,
+    isPremium: effectiveIsPremium,
     dailyLimit: FREE_TIER_TOTAL_LIMIT,
   };
 }

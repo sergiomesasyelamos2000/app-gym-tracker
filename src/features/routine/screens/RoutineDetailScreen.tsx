@@ -14,15 +14,18 @@ import {
 } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   AppState,
   FlatList,
+  Modal,
   Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -127,6 +130,7 @@ export default function RoutineDetailScreen() {
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const restTimerEndTimeRef = useRef<number | null>(null);
   const workoutStartTimeRef = useRef<number | null>(null);
+  const savePauseStartedAtRef = useRef<number | null>(null);
   const durationRef = useRef(0);
   const slideAnim = useRef(new Animated.Value(100)).current;
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -149,6 +153,7 @@ export default function RoutineDetailScreen() {
 
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   const MIN_WORKOUT_DURATION = 300; // 5 minutos
   const targetRoutineId = routineData?.id ?? routineId;
 
@@ -379,11 +384,35 @@ export default function RoutineDetailScreen() {
   ]);
 
   useEffect(() => {
-    if (!started || showShortWorkoutModal) return;
+    if (!started || showShortWorkoutModal || isSaving) return;
     syncDurationFromStartTime();
     const interval = setInterval(syncDurationFromStartTime, 1000);
     return () => clearInterval(interval);
-  }, [started, showShortWorkoutModal, syncDurationFromStartTime]);
+  }, [started, showShortWorkoutModal, isSaving, syncDurationFromStartTime]);
+
+  useEffect(() => {
+    if (!started) {
+      savePauseStartedAtRef.current = null;
+      return;
+    }
+
+    if (isSaving) {
+      if (!savePauseStartedAtRef.current) {
+        savePauseStartedAtRef.current = Date.now();
+      }
+      return;
+    }
+
+    if (!savePauseStartedAtRef.current) return;
+
+    const pausedMs = Date.now() - savePauseStartedAtRef.current;
+    savePauseStartedAtRef.current = null;
+
+    if (workoutStartTimeRef.current) {
+      workoutStartTimeRef.current += pausedMs;
+      patchWorkoutInProgress({ startedAt: workoutStartTimeRef.current });
+    }
+  }, [started, isSaving, patchWorkoutInProgress]);
 
   useEffect(() => {
     if (!started) return;
@@ -457,7 +486,7 @@ export default function RoutineDetailScreen() {
     if (!parent?.setOptions) return;
 
     parent.setOptions({
-      tabBarStyle: started
+      tabBarStyle: started || isSaving
         ? { display: "none" }
         : {
             backgroundColor: theme.tabBarBackground,
@@ -478,7 +507,18 @@ export default function RoutineDetailScreen() {
         });
       }
     };
-  }, [started, navigation, theme]);
+  }, [started, isSaving, navigation, theme]);
+
+  useEffect(() => {
+    if (!isSaving) return;
+
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      if (event?.data?.action?.type === "RESET") return;
+      event.preventDefault();
+    });
+
+    return unsubscribe;
+  }, [navigation, isSaving]);
 
   useEffect(() => {
     if (showRestToast) {
@@ -500,7 +540,7 @@ export default function RoutineDetailScreen() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        if (started) {
+        if (started && !isSaving) {
           syncDurationFromStartTime();
         }
 
@@ -541,9 +581,10 @@ export default function RoutineDetailScreen() {
         });
       }
     };
-  }, [navigation, theme, started, syncDurationFromStartTime]);
+  }, [navigation, theme, started, isSaving, syncDurationFromStartTime]);
 
   const handleStartRoutine = () => {
+    if (isSaving) return;
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
 
     exercisesState.forEach((exercise) => {
@@ -579,6 +620,9 @@ export default function RoutineDetailScreen() {
   };
 
   const processFinishRoutine = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
       // Debug: Check auth state before saving
       const currentUser = useAuthStore.getState().user;
@@ -590,12 +634,8 @@ export default function RoutineDetailScreen() {
           "Error de Sesión",
           "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión."
         );
-        setStarted(true);
         return;
       }
-
-      setStarted(false);
-      setHasInitializedFromStore(false);
 
       const parent = (navigation as any).getParent?.();
       if (parent?.setOptions) {
@@ -625,6 +665,8 @@ export default function RoutineDetailScreen() {
       workoutStartTimeRef.current = null;
       navigation.setParams({ start: undefined, routineId: undefined });
 
+      setStarted(false);
+      setHasInitializedFromStore(false);
       resetSetsCompletionStatus();
 
       // Check if saved offline or online
@@ -648,13 +690,13 @@ export default function RoutineDetailScreen() {
       const errorMessage = getErrorMessage(err);
       Alert.alert("Error", errorMessage);
 
-      // Restore workout state if save failed
-      setStarted(true);
-      setHasInitializedFromStore(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleFinishAndSaveRoutine = async () => {
+    if (isSaving) return;
     // Freeze the current duration before showing modal
     setFrozenDuration(duration);
 
@@ -666,6 +708,7 @@ export default function RoutineDetailScreen() {
   };
 
   const handleDiscardWorkout = () => {
+    if (isSaving) return;
     setShowShortWorkoutModal(false);
     setStarted(false);
     clearWorkoutInProgress();
@@ -677,6 +720,9 @@ export default function RoutineDetailScreen() {
   };
 
   const handleSaveRoutine = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
       // Debug: Check auth state before saving
       const currentUser = useAuthStore.getState().user;
@@ -713,10 +759,13 @@ export default function RoutineDetailScreen() {
 
       const errorMessage = getErrorMessage(err);
       Alert.alert("Error", errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const goToEditRoutine = () => {
+    if (isSaving) return;
     const exercisesForEdit = exercisesState.map((ex) => ({
       ...ex,
       sets: sets[ex.id] || [],
@@ -1003,12 +1052,16 @@ export default function RoutineDetailScreen() {
           volume={volume}
           completedSets={completedSets}
           records={sessionRecordsCount}
-          onFinish={handleFinishAndSaveRoutine}
+          onFinish={() => {
+            if (isSaving) return;
+            handleFinishAndSaveRoutine();
+          }}
         />
       )}
 
       <FlatList
         data={exercisesState}
+        scrollEnabled={!isSaving}
         keyExtractor={(item) => item.id}
         initialNumToRender={4}
         maxToRenderPerBatch={5}
@@ -1032,6 +1085,7 @@ export default function RoutineDetailScreen() {
       {!routineData?.id && !started && (
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: theme.primary }]}
+          disabled={isSaving}
           onPress={handleSaveRoutine}
         >
           <Text style={styles.saveButtonText}>Guardar rutina</Text>
@@ -1067,6 +1121,7 @@ export default function RoutineDetailScreen() {
         onContinue={() => setShowShortWorkoutModal(false)}
         onDiscard={handleDiscardWorkout}
         onSave={() => {
+          if (isSaving) return;
           setShowShortWorkoutModal(false);
           processFinishRoutine();
         }}
@@ -1081,6 +1136,23 @@ export default function RoutineDetailScreen() {
         }}
         onDismiss={() => setShowUndoSnackbar(false)}
       />
+
+      <Modal
+        visible={isSaving}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => {
+          // Bloquear cierre por botón físico mientras se guarda.
+        }}
+      >
+        <View style={styles.savingOverlay}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.savingText, { color: theme.text }]}>
+            Guardando rutina...
+          </Text>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1114,5 +1186,17 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     zIndex: 1000,
+  },
+  savingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2000,
+  },
+  savingText: {
+    marginTop: 12,
+    fontSize: RFValue(14),
+    fontWeight: "600",
   },
 });
