@@ -18,6 +18,7 @@ import {
 import KeyboardDismissButton from "../components/KeyboardDismissButton";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
+import { prefetchProductCatalog } from "../features/nutrition/services/nutritionService";
 import { prefetchExerciseCatalog } from "../services/exerciseService";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
@@ -63,7 +64,10 @@ export const RootNavigator = () => {
     }
     if (hasWarmedUpCatalogRef.current) return;
     hasWarmedUpCatalogRef.current = true;
-    void prefetchExerciseCatalog({ force: true });
+    void Promise.all([
+      prefetchExerciseCatalog({ force: true }),
+      prefetchProductCatalog({ force: true, pageSize: 24 }),
+    ]);
   }, [isAuthenticated, isInitializing]);
 
   useEffect(() => {
@@ -78,7 +82,10 @@ export const RootNavigator = () => {
       previousState = nextState;
 
       if (!isReturningToForeground) return;
-      void prefetchExerciseCatalog({ force: true });
+      void Promise.all([
+        prefetchExerciseCatalog({ force: true }),
+        prefetchProductCatalog({ force: true, pageSize: 24 }),
+      ]);
     });
 
     return () => {

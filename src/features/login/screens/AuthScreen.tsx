@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { ENV } from "../../../environments/environment";
+import { prefetchProductCatalog } from "../../nutrition/services/nutritionService";
 import { prefetchExerciseCatalog } from "../../../services/exerciseService";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { googleLogin, login, register } from "../services/authService";
@@ -58,6 +59,7 @@ export default function AuthScreen() {
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setWelcomeMessage = useAuthStore((state) => state.setWelcomeMessage);
   const navigation = useNavigation();
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -137,8 +139,11 @@ export default function AuthScreen() {
       const authResponse = await googleLogin(authentication.idToken);
 
       setAuth(authResponse.user, authResponse.tokens);
-      void prefetchExerciseCatalog({ force: true });
-      Alert.alert("¡Bienvenido!", `Hola ${authResponse.user.name}`);
+      void Promise.all([
+        prefetchExerciseCatalog({ force: true }),
+        prefetchProductCatalog({ force: true, pageSize: 24 }),
+      ]);
+      setWelcomeMessage(`Hola ${authResponse.user.name}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Error al conectar con Google";
@@ -224,11 +229,11 @@ export default function AuthScreen() {
             });
 
       setAuth(authResponse.user, authResponse.tokens);
-      void prefetchExerciseCatalog({ force: true });
-      Alert.alert(
-        mode === "login" ? "¡Hola de nuevo!" : "¡Cuenta creada!",
-        `Bienvenido ${authResponse.user.name}`
-      );
+      void Promise.all([
+        prefetchExerciseCatalog({ force: true }),
+        prefetchProductCatalog({ force: true, pageSize: 24 }),
+      ]);
+      setWelcomeMessage(`Bienvenido ${authResponse.user.name}`);
     } catch (error: CaughtError) {
       Alert.alert(
         "Error",

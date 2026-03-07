@@ -11,6 +11,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  welcomeMessage: string | null;
 
   // Actions
   setAuth: (user: UserResponseDto, tokens: AuthTokens) => void;
@@ -18,6 +19,8 @@ interface AuthState {
   updateTokens: (tokens: AuthTokens) => void;
   clearAuth: () => void;
   setLoading: (isLoading: boolean) => void;
+  setWelcomeMessage: (message: string | null) => void;
+  clearWelcomeMessage: () => void;
   logout: () => Promise<void>;
 }
 
@@ -30,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      welcomeMessage: null,
 
       // Set authentication (login/register success)
       setAuth: (user: UserResponseDto, tokens: AuthTokens) => {
@@ -68,12 +72,21 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
+          welcomeMessage: null,
         });
       },
 
       // Set loading state
       setLoading: (isLoading: boolean) => {
         set({ isLoading });
+      },
+
+      setWelcomeMessage: (message: string | null) => {
+        set({ welcomeMessage: message });
+      },
+
+      clearWelcomeMessage: () => {
+        set({ welcomeMessage: null });
       },
 
       // Logout (clear state and storage)

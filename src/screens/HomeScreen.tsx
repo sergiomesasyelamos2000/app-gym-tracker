@@ -13,9 +13,10 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
-  Image,
   ImageStyle,
   Platform,
   Pressable,
@@ -168,18 +169,7 @@ const ExerciseImage = ({
   exercise: SessionExercise;
   style: StyleProp<ImageStyle>;
 }) => {
-  // Use giftUrl if available (animated GIF), otherwise use imageUrl with caching
-  if (exercise.giftUrl) {
-    return (
-      <Image
-        source={{ uri: exercise.giftUrl }}
-        style={style}
-        resizeMode="cover"
-      />
-    );
-  }
-
-  // Use cached image component for regular images
+  // Always use static image in session history (avoid animated GIFs)
   return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
 };
 
@@ -204,11 +194,17 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const [sessions, setSessions] = useState<SessionWithTotals[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
+    new Set()
+  );
   const [currentTime, setCurrentTime] = useState(new Date());
   const [motivationalQuote, setMotivationalQuote] = useState<string>("");
   const { theme, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const welcomeMessage = useAuthStore((state) => state.welcomeMessage);
+  const clearWelcomeMessage = useAuthStore((state) => state.clearWelcomeMessage);
   const responsive = useResponsive();
 
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -284,6 +280,13 @@ export default function HomeScreen() {
     setMotivationalQuote(generateMotivationalQuote());
   }, [greeting, generateMotivationalQuote]);
 
+  useEffect(() => {
+    if (!initialLoading && welcomeMessage) {
+      Alert.alert("¡Bienvenido!", welcomeMessage);
+      clearWelcomeMessage();
+    }
+  }, [initialLoading, welcomeMessage, clearWelcomeMessage]);
+
   // Formato de hora sin segundos
   const formattedTime = currentTime.toLocaleTimeString("es-ES", {
     hour: "2-digit",
@@ -292,7 +295,11 @@ export default function HomeScreen() {
 
   // Cargar datos
   const fetchData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setInitialLoading(false);
+      setRefreshing(false);
+      return;
+    }
 
     try {
       const [globalStats, sessionsData] = await Promise.all([
@@ -378,6 +385,7 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error fetching data", error);
     } finally {
+      setInitialLoading(false);
       setRefreshing(false);
     }
   }, [user?.id]);
@@ -419,13 +427,34 @@ export default function HomeScreen() {
     });
   };
 
+  const toggleSessionExpanded = useCallback((sessionId: string) => {
+    setExpandedSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  }, []);
+
   // Renderizar SessionCard como componente separado para mejor performance
   const renderSessionCard = useCallback(
-    ({ item: session, index }: { item: SessionWithTotals; index: number }) => {
+    ({ item: session }: { item: SessionWithTotals }) => {
       const cardWidth =
         responsive.sessionColumns === 2
           ? (responsive.width - 60) / 2
           : responsive.width - 40;
+      const previewLimit = responsive.isTablet ? 3 : 4;
+      const isExpanded = expandedSessionIds.has(session.id);
+      const visibleExercises = isExpanded
+        ? session.exercises || []
+        : (session.exercises || []).slice(0, previewLimit);
+      const remainingExercises = Math.max(
+        0,
+        (session.exercises?.length || 0) - previewLimit
+      );
 
       return (
         <Pressable
@@ -532,47 +561,47 @@ export default function HomeScreen() {
                 Ejercicios realizados:
               </Text>
               <View style={styles.exercisesList}>
-                {session.exercises
-                  ?.slice(0, responsive.isTablet ? 3 : 4)
-                  .map((exercise: SessionExercise) => (
-                    <View key={exercise.exerciseId} style={styles.exerciseItem}>
-                      <ExerciseImage
-                        exercise={exercise}
-                        style={styles.exerciseImage}
-                      />
-                      <View style={styles.exerciseInfo}>
-                        <Text
-                          style={[styles.exerciseName, { color: theme.text }]}
-                          numberOfLines={1}
-                        >
-                          {exercise.name}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.exerciseSets,
-                            { color: theme.textSecondary },
-                          ]}
-                        >
-                          {exercise.sets?.length || 0} series
-                        </Text>
-                      </View>
+                {visibleExercises.map((exercise: SessionExercise) => (
+                  <View key={exercise.exerciseId} style={styles.exerciseItem}>
+                    <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
+                    <View style={styles.exerciseInfo}>
+                      <Text
+                        style={[styles.exerciseName, { color: theme.text }]}
+                        numberOfLines={1}
+                      >
+                        {exercise.name}
+                      </Text>
+                      <Text
+                        style={[styles.exerciseSets, { color: theme.textSecondary }]}
+                      >
+                        {exercise.sets?.length || 0} series
+                      </Text>
                     </View>
-                  ))}
-                {(session.exercises?.length ?? 0) >
-                  (responsive.isTablet ? 3 : 4) && (
-                  <View style={styles.moreExercises}>
-                    <Text
-                      style={[
-                        styles.moreExercisesText,
-                        { color: theme.primary },
-                      ]}
-                    >
-                      +
-                      {(session.exercises?.length ?? 0) -
-                        (responsive.isTablet ? 3 : 4)}{" "}
-                      más
-                    </Text>
                   </View>
+                ))}
+                {remainingExercises > 0 && !isExpanded && (
+                  <TouchableOpacity
+                    style={styles.moreExercises}
+                    onPress={() => toggleSessionExpanded(session.id)}
+                  >
+                    <Text
+                      style={[styles.moreExercisesText, { color: theme.primary }]}
+                    >
+                      +{remainingExercises} más
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {remainingExercises > 0 && isExpanded && (
+                  <TouchableOpacity
+                    style={styles.moreExercises}
+                    onPress={() => toggleSessionExpanded(session.id)}
+                  >
+                    <Text
+                      style={[styles.moreExercisesText, { color: theme.primary }]}
+                    >
+                      Mostrar menos
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -580,14 +609,23 @@ export default function HomeScreen() {
         </Pressable>
       );
     },
-    [theme, isDark, responsive]
+    [theme, isDark, responsive, expandedSessionIds, toggleSessionExpanded]
   );
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor: theme.primary }]}>
+    <View
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor: initialLoading
+            ? theme.backgroundSecondary
+            : theme.primary,
+        },
+      ]}
+    >
       <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.primary}
+        barStyle={initialLoading ? (isDark ? "light-content" : "dark-content") : "light-content"}
+        backgroundColor={initialLoading ? theme.backgroundSecondary : theme.primary}
         translucent={true}
       />
       <SafeAreaView
@@ -596,20 +634,28 @@ export default function HomeScreen() {
           Platform.OS === "android" ? { paddingTop: insets.top } : null,
         ]}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.container}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[theme.primary]}
-              tintColor="#FFFFFF"
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 0 }}
-        >
+        {initialLoading ? (
+          <View style={styles.fullScreenLoading}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={[styles.fullScreenLoadingText, { color: theme.text }]}>
+              Cargando datos...
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.container}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.primary]}
+                tintColor="#FFFFFF"
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 0 }}
+          >
           {/* Header Section */}
           <Animated.View
             style={[
@@ -904,7 +950,8 @@ export default function HomeScreen() {
               )}
             </View>
           </View>
-        </ScrollView>
+          </ScrollView>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -1261,6 +1308,17 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: RFValue(16),
     fontWeight: "700",
+  },
+  fullScreenLoading: {
+    flex: 1,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  fullScreenLoadingText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
   },
   sessionRow: {
     justifyContent: "space-between",

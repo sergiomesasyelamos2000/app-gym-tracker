@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../../../api/client";
 import {
   ChatMessageDto,
@@ -22,6 +23,99 @@ export interface AIUsageResponseDto {
   used: number;
   limit: number | null;
   remaining: number | null;
+}
+
+const PRODUCT_CACHE_KEYS = {
+  FIRST_PAGE: "@nutrition_products_first_page_cache_v1",
+  LAST_SYNC: "@nutrition_products_first_page_last_sync_v1",
+};
+
+const PRODUCT_CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6h
+
+type ProductCachePayload = {
+  products: Product[];
+  total: number;
+  pageSize: number;
+};
+
+async function safeSetItem(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {
+    // Best effort; no bloquear flujo principal por cache.
+  }
+}
+
+async function readFirstPageProductCache(
+  requestedPageSize: number,
+): Promise<{ products: Product[]; total: number } | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PRODUCT_CACHE_KEYS.FIRST_PAGE);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as ProductCachePayload;
+    if (!Array.isArray(parsed.products)) return null;
+
+    if (requestedPageSize <= parsed.products.length) {
+      return {
+        products: parsed.products.slice(0, requestedPageSize),
+        total: Number.isFinite(parsed.total)
+          ? parsed.total
+          : parsed.products.length,
+      };
+    }
+
+    return {
+      products: parsed.products,
+      total: Number.isFinite(parsed.total) ? parsed.total : parsed.products.length,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeFirstPageProductCache(
+  pageSize: number,
+  data: { products: Product[]; total: number },
+): Promise<void> {
+  const payload: ProductCachePayload = {
+    products: data.products,
+    total: data.total,
+    pageSize,
+  };
+
+  await Promise.all([
+    safeSetItem(PRODUCT_CACHE_KEYS.FIRST_PAGE, JSON.stringify(payload)),
+    safeSetItem(PRODUCT_CACHE_KEYS.LAST_SYNC, Date.now().toString()),
+  ]);
+}
+
+async function shouldRevalidateProductCache(
+  maxAgeMs: number = PRODUCT_CACHE_EXPIRY_MS,
+): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(PRODUCT_CACHE_KEYS.LAST_SYNC);
+  if (!raw) return true;
+  const lastSync = Number.parseInt(raw, 10);
+  if (!Number.isFinite(lastSync)) return true;
+  return Date.now() - lastSync > maxAgeMs;
+}
+
+async function refreshFirstPageProductCacheInBackground(
+  pageSize: number,
+): Promise<void> {
+  try {
+    const fresh = await apiFetch<{ products: Product[]; total: number }>(
+      `nutrition/products?page=1&pageSize=${pageSize}`,
+      {
+        method: "GET",
+      },
+    );
+
+    if (!fresh?.products) return;
+    await writeFirstPageProductCache(pageSize, fresh);
+  } catch {
+    // Best effort refresh.
+  }
 }
 
 /**
@@ -117,16 +211,73 @@ export async function getProducts(
   brand?: string,
   signal?: AbortSignal,
 ): Promise<{ products: Product[]; total: number }> {
+  const normalizedBrand = brand?.trim();
+  const isFirstPageWithoutBrand = page === 1 && !normalizedBrand;
+
+  if (isFirstPageWithoutBrand) {
+    const cached = await readFirstPageProductCache(pageSize);
+    if (cached && cached.products.length > 0) {
+      void (async () => {
+        if (await shouldRevalidateProductCache()) {
+          await refreshFirstPageProductCacheInBackground(pageSize);
+        }
+      })();
+      return cached;
+    }
+  }
+
   const brandParam = brand?.trim()
     ? `&brand=${encodeURIComponent(brand.trim())}`
     : "";
-  return apiFetch<{ products: Product[]; total: number }>(
-    `nutrition/products?page=${page}&pageSize=${pageSize}${brandParam}`,
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  try {
+    const data = await apiFetch<{ products: Product[]; total: number }>(
+      `nutrition/products?page=${page}&pageSize=${pageSize}${brandParam}`,
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+    if (isFirstPageWithoutBrand && data?.products?.length) {
+      await writeFirstPageProductCache(pageSize, data);
+    }
+
+    return data;
+  } catch (error) {
+    if (isFirstPageWithoutBrand) {
+      const cached = await readFirstPageProductCache(pageSize);
+      if (cached && cached.products.length > 0) {
+        return cached;
+      }
+    }
+    throw error;
+  }
+}
+
+export async function prefetchProductCatalog(options?: {
+  force?: boolean;
+  pageSize?: number;
+}): Promise<void> {
+  try {
+    const force = options?.force === true;
+    const pageSize = options?.pageSize ?? 24;
+
+    if (!force && !(await shouldRevalidateProductCache())) {
+      return;
+    }
+
+    const data = await apiFetch<{ products: Product[]; total: number }>(
+      `nutrition/products?page=1&pageSize=${pageSize}`,
+      {
+        method: "GET",
+      },
+    );
+
+    if (!data?.products?.length) return;
+    await writeFirstPageProductCache(pageSize, data);
+  } catch {
+    // Best effort prefetch. Existing cache continues to be used.
+  }
 }
 
 // Búsqueda avanzada de productos por nombre (optimizado para España)

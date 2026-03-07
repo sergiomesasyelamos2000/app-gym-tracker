@@ -1790,6 +1790,9 @@ export default function ProductListScreen() {
           screenOptions={{
             lazy: true, // Lazy loading activado
             lazyPreloadDistance: 1, // Pre-cargar solo el tab adyacente
+            sceneStyle: {
+              backgroundColor: theme.background,
+            },
             tabBarActiveTintColor: theme.primary,
             tabBarInactiveTintColor: theme.textTertiary,
             tabBarLabelStyle: {
