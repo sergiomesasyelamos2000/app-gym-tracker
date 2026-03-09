@@ -114,6 +114,22 @@ const dataCache = {
 };
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const FALLBACK_PRODUCT_IMAGE = require("./../../../../assets/not-image.png");
+const prefetchedImageUris = new Set<string>();
+
+const prefetchImageBatch = (uris: Array<string | null | undefined>, limit = 30) => {
+  let queued = 0;
+  for (const rawUri of uris) {
+    if (queued >= limit) break;
+    const uri = rawUri?.trim();
+    if (!uri || prefetchedImageUris.has(uri)) continue;
+    prefetchedImageUris.add(uri);
+    queued += 1;
+    void Image.prefetch(uri).catch(() => {
+      prefetchedImageUris.delete(uri);
+    });
+  }
+};
 
 const normalizeBrandFilter = (value: string) =>
   value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -507,7 +523,17 @@ function AllProductsTab({
     return Array.from(deduped.values());
   };
 
-  const allProducts = getCombinedProducts();
+  const allProducts = useMemo(
+    () => getCombinedProducts(),
+    [customProducts, productos, searchText, selectedBrands]
+  );
+
+  useEffect(() => {
+    prefetchImageBatch(
+      allProducts.map((product) => product.image),
+      24
+    );
+  }, [allProducts]);
 
   const handleQuickAdd = (item: Product, event: GestureResponderEvent) => {
     event.stopPropagation();
@@ -543,15 +569,17 @@ function AllProductsTab({
       >
         {item.image ? (
           <Image
-            source={{ uri: item.image }}
+            source={{ uri: item.image, cache: "force-cache" }}
+            defaultSource={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               { width: width * 0.12, height: width * 0.12 },
             ]}
+            fadeDuration={80}
           />
         ) : (
           <Image
-            source={require("./../../../../assets/not-image.png")}
+            source={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               {
@@ -865,6 +893,13 @@ function FavoritesTab({
     f?.productName?.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  useEffect(() => {
+    prefetchImageBatch(
+      filteredFavorites.map((favorite) => favorite.productImage),
+      20
+    );
+  }, [filteredFavorites]);
+
   const renderItem = ({ item }: { item: FavoriteProduct }) => (
     <TouchableOpacity
       style={[
@@ -885,15 +920,17 @@ function FavoritesTab({
       >
         {item.productImage ? (
           <Image
-            source={{ uri: item.productImage }}
+            source={{ uri: item.productImage, cache: "force-cache" }}
+            defaultSource={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               { width: width * 0.12, height: width * 0.12 },
             ]}
+            fadeDuration={80}
           />
         ) : (
           <Image
-            source={require("./../../../../assets/not-image.png")}
+            source={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               { width: width * 0.12, height: width * 0.12 },
@@ -1119,6 +1156,13 @@ function CustomProductsTab({
       matchesBrandFilters(p.brand, selectedBrands)
   );
 
+  useEffect(() => {
+    prefetchImageBatch(
+      filteredProducts.map((product) => product.image),
+      20
+    );
+  }, [filteredProducts]);
+
   const renderItem = ({ item }: { item: CustomProduct }) => (
     <TouchableOpacity
       style={[
@@ -1139,11 +1183,13 @@ function CustomProductsTab({
       >
         {item.image ? (
           <Image
-            source={{ uri: item.image }}
+            source={{ uri: item.image, cache: "force-cache" }}
+            defaultSource={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               { width: width * 0.12, height: width * 0.12 },
             ]}
+            fadeDuration={80}
           />
         ) : (
           <Ionicons name="cube" size={28} color={theme.primary} />
@@ -1394,6 +1440,13 @@ function CustomMealsTab({
     m?.name?.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  useEffect(() => {
+    prefetchImageBatch(
+      filteredMeals.map((meal) => meal.image),
+      20
+    );
+  }, [filteredMeals]);
+
   const renderItem = ({ item }: { item: CustomMeal }) => (
     <TouchableOpacity
       style={[
@@ -1414,11 +1467,13 @@ function CustomMealsTab({
       >
         {item.image ? (
           <Image
-            source={{ uri: item.image }}
+            source={{ uri: item.image, cache: "force-cache" }}
+            defaultSource={FALLBACK_PRODUCT_IMAGE}
             style={[
               styles.productImage,
               { width: width * 0.12, height: width * 0.12 },
             ]}
+            fadeDuration={80}
           />
         ) : (
           <Ionicons name="restaurant" size={28} color={theme.primary} />

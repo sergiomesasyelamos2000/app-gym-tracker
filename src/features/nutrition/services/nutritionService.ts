@@ -24,6 +24,7 @@ export interface AIUsageResponseDto {
   limit: number | null;
   remaining: number | null;
 }
+const AI_CHAT_TIMEOUT_MS = 25000;
 
 const PRODUCT_CACHE_KEYS = {
   FIRST_PAGE: "@nutrition_products_first_page_cache_v1",
@@ -159,13 +160,23 @@ export async function postText(
   history?: ChatMessageDto[],
   userId?: string,
 ): Promise<ChatResponseDto> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, AI_CHAT_TIMEOUT_MS);
+
   // We need to map the history to match proper types if needed,
   // typically the DTO expects role as 'user'|'assistant'|'system'
   // and history comes as such.
-  return apiFetch<ChatResponseDto>("nutrition", {
-    method: "POST",
-    body: JSON.stringify({ text, history, userId }),
-  });
+  try {
+    return await apiFetch<ChatResponseDto>("nutrition", {
+      method: "POST",
+      body: JSON.stringify({ text, history, userId }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Photo analysis

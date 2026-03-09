@@ -8,6 +8,28 @@ import {
   postText,
 } from '../features/nutrition/services/nutritionService';
 
+const MAX_HISTORY_MESSAGES = 10;
+const MAX_MESSAGE_CHARS = 500;
+
+const normalizeMessageContent = (value: string): string => {
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  if (trimmed.length <= MAX_MESSAGE_CHARS) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, MAX_MESSAGE_CHARS)}...`;
+};
+
+const buildOptimizedHistory = (messages: Message[]): ChatMessageDto[] => {
+  const relevant = messages
+    .filter((msg) => !!msg?.text?.trim())
+    .slice(-MAX_HISTORY_MESSAGES);
+
+  return relevant.map((msg) => ({
+    role: msg.sender === 'user' ? 'user' : 'assistant',
+    content: normalizeMessageContent(msg.text),
+  }));
+};
+
 const getPhotoProcessingErrorMessage = (error: unknown): string => {
   const candidate = error as {
     status?: number;
@@ -151,11 +173,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { userChats } = get();
     const userData = userChats[userId] || getInitialUserData();
 
-    // Construir historial de mensajes del usuario actual
-    const history: ChatMessageDto[] = userData.messages.map((msg) => ({
-      role: msg.sender === 'user' ? 'user' : 'assistant',
-      content: msg.text,
-    }));
+    // Limitar historial acelera respuesta del proveedor LLM.
+    const history: ChatMessageDto[] = buildOptimizedHistory(userData.messages);
 
     set({ loading: true });
 
@@ -186,6 +205,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (error) {
       console.error('Error sending message:', error);
       set({ loading: false });
+      const isTimeout =
+        error instanceof Error &&
+        (error.name === "AbortError" ||
+          error.message.toLowerCase().includes("aborted"));
 
       // Agregar mensaje de error
       const currentUserData = get().userChats[userId];
@@ -199,7 +222,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ...currentUserData.messages,
               {
                 id: newNextId,
-                text: '🚫 Error conectando con el servidor.',
+                text: isTimeout
+                  ? '⏱️ La IA está tardando demasiado en responder. Intenta de nuevo.'
+                  : '🚫 Error conectando con el servidor.',
                 sender: 'bot',
               },
             ],
