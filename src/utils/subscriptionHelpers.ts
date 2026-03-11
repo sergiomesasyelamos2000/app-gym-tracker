@@ -11,7 +11,7 @@ import { BaseNavigation } from "../types/common";
  */
 export function canCreateRoutine(
   currentCount: number,
-  navigation?: BaseNavigation
+  navigation?: any
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 

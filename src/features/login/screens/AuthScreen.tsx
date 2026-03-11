@@ -32,6 +32,19 @@ import { CaughtError, getErrorMessage } from "../../../types";
 WebBrowser.maybeCompleteAuthSession();
 type AuthMode = "login" | "register";
 
+const stripControlCharacters = (value: string) =>
+  value.replace(/[\u0000-\u001F\u007F]/g, "");
+
+const stripHtmlTags = (value: string) => value.replace(/<[^>]*>/g, "");
+
+const collapseWhitespace = (value: string) => value.replace(/\s{2,}/g, " ");
+
+const sanitizeFreeTextInput = (value: string) =>
+  collapseWhitespace(stripHtmlTags(stripControlCharacters(value))).trim();
+
+const sanitizePasswordInput = (value: string) =>
+  stripControlCharacters(value);
+
 interface GoogleAuthentication {
   accessToken: string;
   refreshToken?: string;
@@ -61,6 +74,18 @@ export default function AuthScreen() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const setWelcomeMessage = useAuthStore((state) => state.setWelcomeMessage);
   const navigation = useNavigation();
+
+  const handleNameChange = (value: string) =>
+    setName(sanitizeFreeTextInput(value));
+
+  const handleEmailChange = (value: string) =>
+    setEmail(sanitizeFreeTextInput(value));
+
+  const handlePasswordChange = (value: string) =>
+    setPassword(sanitizePasswordInput(value));
+
+  const handleConfirmPasswordChange = (value: string) =>
+    setConfirmPassword(sanitizePasswordInput(value));
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: ENV.GOOGLE_CLIENT_ID_IOS,
@@ -390,7 +415,7 @@ export default function AuthScreen() {
                       placeholder="Tu nombre"
                       placeholderTextColor={theme.textTertiary}
                       value={name}
-                      onChangeText={setName}
+                      onChangeText={handleNameChange}
                       autoComplete="name"
                       textContentType="name"
                       importantForAutofill="yes"
@@ -420,7 +445,7 @@ export default function AuthScreen() {
                     placeholder="tu@email.com"
                     placeholderTextColor={theme.textTertiary}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={handleEmailChange}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
@@ -454,7 +479,7 @@ export default function AuthScreen() {
                       placeholder="••••••••"
                       placeholderTextColor={theme.textTertiary}
                       value={password}
-                      onChangeText={setPassword}
+                      onChangeText={handlePasswordChange}
                       secureTextEntry={!showPassword}
                       autoComplete={
                         mode === "login" ? "current-password" : "new-password"
@@ -520,7 +545,7 @@ export default function AuthScreen() {
                           placeholder="••••••••"
                           placeholderTextColor={theme.textTertiary}
                           value={confirmPassword}
-                          onChangeText={setConfirmPassword}
+                          onChangeText={handleConfirmPasswordChange}
                           secureTextEntry={!showConfirmPassword}
                           autoComplete="new-password"
                           textContentType="newPassword"
