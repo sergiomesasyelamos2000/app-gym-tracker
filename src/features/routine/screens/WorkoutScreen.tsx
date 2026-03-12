@@ -243,7 +243,7 @@ export default function WorkoutScreen() {
           style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => {
             // Verificar límite de rutinas antes de permitir crear
-            if (canCreateRoutine(routines.length)) {
+            if (canCreateRoutine(routines.length, navigation)) {
               navigation.navigate("ExerciseList", {
                 mode: "createRoutine",
               });

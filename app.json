@@ -13,7 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "app",
+    "scheme": "com.smy862.app",
     "notification": {
       "icon": "./assets/icon.png"
     },

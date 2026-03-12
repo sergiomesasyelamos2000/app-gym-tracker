@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -42,8 +43,7 @@ const collapseWhitespace = (value: string) => value.replace(/\s{2,}/g, " ");
 const sanitizeFreeTextInput = (value: string) =>
   collapseWhitespace(stripHtmlTags(stripControlCharacters(value))).trim();
 
-const sanitizePasswordInput = (value: string) =>
-  stripControlCharacters(value);
+const sanitizePasswordInput = (value: string) => stripControlCharacters(value);
 
 interface GoogleAuthentication {
   accessToken: string;
@@ -87,20 +87,25 @@ export default function AuthScreen() {
   const handleConfirmPasswordChange = (value: string) =>
     setConfirmPassword(sanitizePasswordInput(value));
 
+  const googleClientIds = {
+    ios: ENV.GOOGLE_CLIENT_ID_IOS,
+    android: ENV.GOOGLE_CLIENT_ID_ANDROID,
+    web: ENV.GOOGLE_CLIENT_ID_WEB,
+  };
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: ENV.GOOGLE_CLIENT_ID_IOS,
-    androidClientId:
-      ENV.GOOGLE_CLIENT_ID_ANDROID || ENV.GOOGLE_CLIENT_ID_WEB,
-    webClientId: ENV.GOOGLE_CLIENT_ID_WEB,
+    iosClientId: googleClientIds.ios,
+    androidClientId: googleClientIds.android,
+    webClientId: googleClientIds.web,
     scopes: ["openid", "profile", "email"],
   });
 
   const hasRequiredGoogleClientId =
     Platform.OS === "ios"
-      ? Boolean(ENV.GOOGLE_CLIENT_ID_IOS)
+      ? Boolean(googleClientIds.ios)
       : Platform.OS === "android"
-      ? Boolean(ENV.GOOGLE_CLIENT_ID_ANDROID || ENV.GOOGLE_CLIENT_ID_WEB)
-      : Boolean(ENV.GOOGLE_CLIENT_ID_WEB);
+      ? Boolean(googleClientIds.android)
+      : Boolean(googleClientIds.web);
 
   useEffect(() => {
     Animated.parallel([
@@ -179,6 +184,11 @@ export default function AuthScreen() {
   };
 
   const handleGooglePress = async () => {
+    console.log("=== GOOGLE AUTH DEBUG ===");
+    console.log("Platform:", Platform.OS);
+    console.log("Android Client ID:", googleClientIds.android);
+    console.log("Request redirect URI:", request?.redirectUri);
+    console.log("========================");
     if (!request || isLoading) {
       return;
     }

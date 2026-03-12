@@ -28,7 +28,7 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="app"/>
+        <data android:scheme="com.smy862.app"/>
         <data android:scheme="exp+app"/>
       </intent-filter>
     </activity>

@@ -1,7 +1,7 @@
 import { NavigationProp } from "@react-navigation/native";
 import { Alert } from "react-native";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
-import { BaseNavigation } from "../types/common";
+import { BaseNavigation } from "../types";
 
 /**
  * Check if user can create a new routine
@@ -11,13 +11,18 @@ import { BaseNavigation } from "../types/common";
  */
 export function canCreateRoutine(
   currentCount: number,
-  navigation?: any
+  navigation?: NavigationProp<any>
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
+  // Premium should always allow unlimited creation, even if features not loaded.
+  if (isPremium) {
+    return true;
+  }
+
   if (!features) return true; // Allow if not loaded yet
 
-  if (isPremium || features.maxRoutines === null) {
+  if (features.maxRoutines === null) {
     return true; // Unlimited
   }
 
@@ -56,9 +61,11 @@ export function canCreateCustomProduct(
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
+  if (isPremium) return true;
+
   if (!features) return true;
 
-  if (isPremium || features.maxCustomProducts === null) {
+  if (features.maxCustomProducts === null) {
     return true;
   }
 
@@ -97,9 +104,11 @@ export function canCreateCustomMeal(
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
+  if (isPremium) return true;
+
   if (!features) return true;
 
-  if (isPremium || features.maxCustomMeals === null) {
+  if (features.maxCustomMeals === null) {
     return true;
   }
 

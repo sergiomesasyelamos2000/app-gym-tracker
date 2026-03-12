@@ -14,11 +14,16 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "remote"
       }
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      },
       "env": {
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
@@ -34,6 +39,10 @@
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
       }
     }
   },
