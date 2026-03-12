@@ -98,6 +98,11 @@ export default function AuthScreen() {
     androidClientId: googleClientIds.android,
     webClientId: googleClientIds.web,
     scopes: ["openid", "profile", "email"],
+    redirectUri: AuthSession.makeRedirectUri({
+      scheme:
+        "com.googleusercontent.apps.1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni",
+      path: "oauthredirect",
+    }),
   });
 
   const hasRequiredGoogleClientId =
@@ -184,11 +189,6 @@ export default function AuthScreen() {
   };
 
   const handleGooglePress = async () => {
-    console.log("=== GOOGLE AUTH DEBUG ===");
-    console.log("Platform:", Platform.OS);
-    console.log("Android Client ID:", googleClientIds.android);
-    console.log("Request redirect URI:", request?.redirectUri);
-    console.log("========================");
     if (!request || isLoading) {
       return;
     }

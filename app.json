@@ -13,7 +13,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "com.smy862.app",
+    "scheme": [
+      "com.smy862.app",
+      "com.googleusercontent.apps.1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni"
+    ],
     "notification": {
       "icon": "./assets/icon.png"
     },
