@@ -2,7 +2,10 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -56,6 +59,7 @@ interface GoogleAuthentication {
 export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [googleSigninReady, setGoogleSigninReady] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -93,24 +97,24 @@ export default function AuthScreen() {
     web: ENV.GOOGLE_CLIENT_ID_WEB,
   };
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: googleClientIds.ios,
-    androidClientId: googleClientIds.android,
-    webClientId: googleClientIds.web,
-    scopes: ["openid", "profile", "email"],
-    redirectUri: AuthSession.makeRedirectUri({
-      scheme:
-        "com.googleusercontent.apps.1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni",
-      path: "oauthredirect",
-    }),
-  });
-
-  const hasRequiredGoogleClientId =
+  const useGoogleAuthRequest =
     Platform.OS === "ios"
-      ? Boolean(googleClientIds.ios)
-      : Platform.OS === "android"
-      ? Boolean(googleClientIds.android)
-      : Boolean(googleClientIds.web);
+      ? Google.useAuthRequest
+      : ((..._args: unknown[]) => [
+          null,
+          null,
+          async () => ({ type: "dismiss" as const }),
+        ]);
+
+  const [request, response, promptAsync] = useGoogleAuthRequest(
+    Platform.OS === "ios"
+      ? {
+          iosClientId: googleClientIds.ios,
+          webClientId: googleClientIds.web,
+          scopes: ["openid", "profile", "email"],
+        }
+      : {}
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -129,6 +133,26 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
+    
+    if (!googleClientIds.web) {
+      setGoogleSigninReady(false);
+      return;
+    }
+
+    try {
+      GoogleSignin.configure({
+        webClientId: googleClientIds.web,
+        androidClientId: googleClientIds.android || undefined,
+        scopes: ["profile", "email"],
+      });
+      setGoogleSigninReady(true);
+    } catch (error) {
+      setGoogleSigninReady(false);
+      console.warn("Google Sign-In config error", error);
+    }
+  }, [googleClientIds.android, googleClientIds.web]);
+
+  useEffect(() => {
     if (
       Platform.OS === "android" &&
       UIManager.setLayoutAnimationEnabledExperimental
@@ -138,7 +162,7 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    if (response?.type === "success") {
+    if (Platform.OS === "ios" && response?.type === "success") {
       handleGoogleAuthSuccess(response.authentication as GoogleAuthentication);
     }
   }, [response]);
@@ -159,20 +183,10 @@ export default function AuthScreen() {
   ) => {
     setIsLoading(true);
     try {
-      if (!hasRequiredGoogleClientId) {
-        throw new Error(
-          "Falta configurar el Google Client ID para esta plataforma."
-        );
-      }
-
       if (!authentication?.idToken) {
-        throw new Error(
-          "No se obtuvo idToken de Google. Revisa la configuración OAuth para iOS Dev Build."
-        );
+        throw new Error("No se obtuvo idToken de Google.");
       }
-
       const authResponse = await googleLogin(authentication.idToken);
-
       setAuth(authResponse.user, authResponse.tokens);
       void Promise.all([
         prefetchExerciseCatalog({ force: true }),
@@ -188,25 +202,49 @@ export default function AuthScreen() {
     }
   };
 
+  const handleGooglePressAndroid = async () => {
+    try {
+      setIsLoading(true);
+      if (!googleSigninReady) {
+        throw new Error(
+          "Google Sign-In no esta configurado. Revisa los Client IDs."
+        );
+      }
+      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.getTokens();
+
+      if (!idToken) throw new Error("No se obtuvo idToken de Google.");
+
+      const authResponse = await googleLogin(idToken);
+      setAuth(authResponse.user, authResponse.tokens);
+      void Promise.all([
+        prefetchExerciseCatalog({ force: true }),
+        prefetchProductCatalog({ force: true, pageSize: 24 }),
+      ]);
+      setWelcomeMessage(`Hola ${authResponse.user.name}`);
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
+      Alert.alert("Error", error.message || "Error al conectar con Google");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGooglePress = async () => {
-    if (!request || isLoading) {
+    if (isLoading) return;
+
+    if (Platform.OS === "android") {
+      await handleGooglePressAndroid();
       return;
     }
 
+    if (!request) return;
     try {
-      if (!hasRequiredGoogleClientId) {
-        Alert.alert(
-          "Configuración incompleta",
-          "Falta configurar el Google Client ID para esta plataforma."
-        );
-        return;
-      }
-
       if (Platform.OS === "web") {
         await promptAsync({ windowName: "google-auth" });
         return;
       }
-
       await promptAsync();
     } catch (error) {
       const errorMessage = getErrorMessage(error as CaughtError);
@@ -319,25 +357,17 @@ export default function AuthScreen() {
     });
   };
 
+  const isGoogleButtonDisabled =
+    isLoading || (Platform.OS === "ios" && !request);
+
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
-      {/* Decorative Gradient Background */}
       <View style={styles.decorativeBackground}>
         <View
-          style={[
-            styles.gradientBlob1,
-            {
-              backgroundColor: theme.primary,
-            },
-          ]}
+          style={[styles.gradientBlob1, { backgroundColor: theme.primary }]}
         />
         <View
-          style={[
-            styles.gradientBlob2,
-            {
-              backgroundColor: theme.primary,
-            },
-          ]}
+          style={[styles.gradientBlob2, { backgroundColor: theme.primary }]}
         />
       </View>
 
@@ -360,7 +390,6 @@ export default function AuthScreen() {
                 },
               ]}
             >
-              {/* Modern Header */}
               <View style={styles.header}>
                 <View style={styles.brandContainer}>
                   <View
@@ -393,7 +422,6 @@ export default function AuthScreen() {
                 </View>
               </View>
 
-              {/* Form Container */}
               <View
                 style={[
                   styles.formContainer,
@@ -615,7 +643,6 @@ export default function AuthScreen() {
                   )}
                 </TouchableOpacity>
 
-                {/* Divider */}
                 <View style={styles.divider}>
                   <View
                     style={[
@@ -636,7 +663,6 @@ export default function AuthScreen() {
                   />
                 </View>
 
-                {/* Google Button */}
                 <TouchableOpacity
                   style={[
                     styles.googleButton,
@@ -646,10 +672,10 @@ export default function AuthScreen() {
                         : "#FFFFFF",
                       borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E7EB",
                     },
-                    (isLoading || !request) && styles.disabledButton,
+                    isGoogleButtonDisabled && styles.disabledButton,
                   ]}
                   onPress={handleGooglePress}
-                  disabled={isLoading || !request}
+                  disabled={isGoogleButtonDisabled}
                   activeOpacity={0.7}
                 >
                   <View style={styles.googleIconContainer}>
@@ -670,7 +696,6 @@ export default function AuthScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Footer Toggle */}
               <View style={styles.footer}>
                 <Text
                   style={[styles.footerText, { color: theme.textSecondary }]}
@@ -694,9 +719,7 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-  },
+  mainContainer: { flex: 1 },
   decorativeBackground: {
     position: "absolute",
     width: "100%",
@@ -723,50 +746,21 @@ const styles = StyleSheet.create({
     left: -80,
     transform: [{ rotate: "-30deg" }],
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20 },
+  safeArea: { flex: 1 },
   contentContainer: {
     flex: 1,
     justifyContent: "center",
     paddingVertical: 40,
     gap: 40,
   },
-  header: {
-    gap: 24,
-  },
-  brandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  brandAccent: {
-    width: 4,
-    height: 32,
-    borderRadius: 2,
-  },
-  brandName: {
-    fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -1,
-  },
-  headerTextContainer: {
-    gap: 8,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: "700",
-    letterSpacing: -0.5,
-  },
-  subtitleText: {
-    fontSize: 16,
-    fontWeight: "400",
-    lineHeight: 22,
-  },
+  header: { gap: 24 },
+  brandContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
+  brandAccent: { width: 4, height: 32, borderRadius: 2 },
+  brandName: { fontSize: 32, fontWeight: "800", letterSpacing: -1 },
+  headerTextContainer: { gap: 8 },
+  welcomeText: { fontSize: 28, fontWeight: "700", letterSpacing: -0.5 },
+  subtitleText: { fontSize: 16, fontWeight: "400", lineHeight: 22 },
   formContainer: {
     borderRadius: 20,
     padding: 24,
@@ -778,27 +772,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 12,
       },
-      android: {
-        elevation: 3,
-      },
+      android: { elevation: 3 },
     }),
   },
-  inputGroup: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  forgotPasswordContainer: {
-    alignSelf: "flex-end",
-    marginTop: 4,
-  },
-  forgotPassword: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  inputGroup: { gap: 8 },
+  inputLabel: { fontSize: 14, fontWeight: "600", marginLeft: 4 },
+  forgotPasswordContainer: { alignSelf: "flex-end", marginTop: 4 },
+  forgotPassword: { fontSize: 13, fontWeight: "600" },
   input: {
     borderRadius: 12,
     paddingVertical: 14,
@@ -813,11 +793,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  passwordInput: {
-    flex: 1,
-    borderWidth: 0,
-    paddingRight: 8,
-  },
+  passwordInput: { flex: 1, borderWidth: 0, paddingRight: 8 },
   eyeButton: {
     width: 44,
     height: 44,
@@ -844,9 +820,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 8,
       },
-      android: {
-        elevation: 4,
-      },
+      android: { elevation: 4 },
     }),
   },
   primaryButtonText: {
@@ -861,14 +835,8 @@ const styles = StyleSheet.create({
     gap: 16,
     marginVertical: 4,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontWeight: "500" },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -884,28 +852,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 3,
       },
-      android: {
-        elevation: 1,
-      },
+      android: { elevation: 1 },
     }),
   },
-  disabledButton: {
-    opacity: 0.5,
-  },
+  disabledButton: { opacity: 0.5 },
   googleIconContainer: {
     width: 24,
     height: 24,
     justifyContent: "center",
     alignItems: "center",
   },
-  googleIcon: {
-    width: 20,
-    height: 20,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  googleIcon: { width: 20, height: 20 },
+  googleButtonText: { fontSize: 15, fontWeight: "600" },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -913,12 +871,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8,
   },
-  footerText: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  footerLink: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
+  footerText: { fontSize: 15, fontWeight: "500" },
+  footerLink: { fontSize: 15, fontWeight: "700" },
 });

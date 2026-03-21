@@ -49,6 +49,12 @@
     },
     "plugins": [
       [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv"
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
