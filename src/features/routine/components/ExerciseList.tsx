@@ -135,7 +135,9 @@ const matchesToken = (value: string, expected: string) => {
   const normalizedExpected = normalizeSearchText(expected);
   return (
     normalizedValue === normalizedExpected ||
-    normalizedValue.startsWith(`${normalizedExpected} `)
+    normalizedValue.startsWith(`${normalizedExpected} `) ||
+    normalizedValue.startsWith(normalizedExpected) ||
+    normalizedExpected.startsWith(normalizedValue)
   );
 };
 
@@ -194,6 +196,10 @@ export default function ExerciseList() {
         .map((item) => item.name),
     [equipmentOptions, selectedEquipmentIds]
   );
+  const selectedEquipmentFilters = useMemo(
+    () => equipmentOptions.filter((item) => selectedEquipmentIds.includes(item.id)),
+    [equipmentOptions, selectedEquipmentIds]
+  );
   const combinedMuscleOptions = useMemo(() => {
     const byKey = new Map<string, MuscleDto>();
 
@@ -232,15 +238,10 @@ export default function ExerciseList() {
         .map((item) => item.name),
     [combinedMuscleOptions, selectedMuscleIds]
   );
-  const selectedEquipmentLabel = useMemo(
-    () => selectedEquipmentNames.join(", "),
-    [selectedEquipmentNames]
+  const selectedMuscleFilters = useMemo(
+    () => combinedMuscleOptions.filter((item) => selectedMuscleIds.includes(item.id)),
+    [combinedMuscleOptions, selectedMuscleIds]
   );
-  const selectedMuscleLabel = useMemo(
-    () => selectedMuscleNames.join(", "),
-    [selectedMuscleNames]
-  );
-
   const normalizedQuery = normalizeSearchText(searchQuery);
   const queryTokens = useMemo(() => tokenizeSearch(searchQuery), [searchQuery]);
   const hasActiveFilters = Boolean(
@@ -588,9 +589,12 @@ export default function ExerciseList() {
     setShowFiltersModal(false);
   };
 
-  const clearSelectionFilters = () => {
-    setSelectedEquipmentIds([]);
-    setSelectedMuscleIds([]);
+  const removeEquipmentFilter = (id: string) => {
+    setSelectedEquipmentIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const removeMuscleFilter = (id: string) => {
+    setSelectedMuscleIds((prev) => prev.filter((item) => item !== id));
   };
 
   const clearModalSelectionFilters = () => {
@@ -684,23 +688,44 @@ export default function ExerciseList() {
 
           {hasSelectionFilters && (
             <View style={styles.activeFiltersRow}>
-              {selectedEquipmentLabel.length > 0 && (
-                <View style={styles.activeFilterPill}>
+              {selectedEquipmentFilters.map((item) => (
+                <View key={`equipment-${item.id}`} style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Equipo: {selectedEquipmentLabel}
+                    Equipo: {item.name}
                   </Text>
+                  <TouchableOpacity
+                    style={styles.activeFilterPillClose}
+                    onPress={() => removeEquipmentFilter(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Quitar filtro de equipo ${item.name}`}
+                  >
+                    <Icon
+                      name="close"
+                      size={RFValue(12)}
+                      color={theme.primary}
+                    />
+                  </TouchableOpacity>
                 </View>
-              )}
-              {selectedMuscleLabel.length > 0 && (
-                <View style={styles.activeFilterPill}>
+              ))}
+              {selectedMuscleFilters.map((item) => (
+                <View key={`muscle-${item.id}`} style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Músculo: {selectedMuscleLabel}
+                    Músculo: {item.name}
                   </Text>
+                  <TouchableOpacity
+                    style={styles.activeFilterPillClose}
+                    onPress={() => removeMuscleFilter(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Quitar filtro de músculo ${item.name}`}
+                  >
+                    <Icon
+                      name="close"
+                      size={RFValue(12)}
+                      color={theme.primary}
+                    />
+                  </TouchableOpacity>
                 </View>
-              )}
-              <TouchableOpacity onPress={clearSelectionFilters}>
-                <Text style={styles.clearSelectionText}>Quitar</Text>
-              </TouchableOpacity>
+              ))}
             </View>
           )}
 
@@ -973,16 +998,22 @@ const createStyles = (theme: Theme) =>
       borderRadius: 999,
       paddingHorizontal: 10,
       paddingVertical: 6,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
     },
     activeFilterPillText: {
       color: theme.primary,
       fontWeight: "600",
       fontSize: RFValue(12),
     },
-    clearSelectionText: {
-      color: theme.textSecondary,
-      fontSize: RFValue(12),
-      fontWeight: "600",
+    activeFilterPillClose: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: `${theme.primary}22`,
     },
     filterChip: {
       borderRadius: 16,

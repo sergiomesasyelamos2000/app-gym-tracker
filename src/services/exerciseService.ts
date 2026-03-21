@@ -23,6 +23,27 @@ type SearchableExercise = ExerciseRequestDto & {
   bodyParts?: string[];
 };
 
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const matchesToken = (value: string, expected: string) => {
+  const normalizedValue = normalizeSearchText(value);
+  const normalizedExpected = normalizeSearchText(expected);
+  if (!normalizedExpected) return true;
+  return (
+    normalizedValue === normalizedExpected ||
+    normalizedValue.startsWith(`${normalizedExpected} `) ||
+    normalizedValue.startsWith(normalizedExpected) ||
+    normalizedExpected.startsWith(normalizedValue)
+  );
+};
+
 const CACHE_KEYS = {
   EXERCISES: "@exercises_cache_v2",
   EQUIPMENT: "@equipment_cache",
@@ -303,15 +324,12 @@ export const searchExercises = async (
     const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
     if (cached) {
       const exercises: SearchableExercise[] = JSON.parse(cached);
-      const lowerName = name.toLowerCase();
-      const lowerEquipment = equipment.toLowerCase();
-      const lowerMuscle = muscle.toLowerCase();
-
       await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
 
       return exercises.filter((ex) => {
         const matchesName =
-          !lowerName || ex.name.toLowerCase().includes(lowerName);
+          !name ||
+          normalizeSearchText(ex.name).includes(normalizeSearchText(name));
         const exerciseEquipments = ex.equipments || [];
         const exerciseMuscles = [
           ...(ex.targetMuscles || []),
@@ -319,19 +337,11 @@ export const searchExercises = async (
           ...(ex.bodyParts || []),
         ];
         const matchesEquipment =
-          !lowerEquipment ||
-          exerciseEquipments.some((item) => {
-            const token = item.toLowerCase().trim();
-            return (
-              token === lowerEquipment || token.startsWith(`${lowerEquipment} `)
-            );
-          });
+          !equipment ||
+          exerciseEquipments.some((item) => matchesToken(item, equipment));
         const matchesMuscle =
-          !lowerMuscle ||
-          exerciseMuscles.some((item) => {
-            const token = item.toLowerCase().trim();
-            return token === lowerMuscle || token.startsWith(`${lowerMuscle} `);
-          });
+          !muscle ||
+          exerciseMuscles.some((item) => matchesToken(item, muscle));
 
         return matchesName && matchesEquipment && matchesMuscle;
       });

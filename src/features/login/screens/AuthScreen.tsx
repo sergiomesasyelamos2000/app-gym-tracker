@@ -133,8 +133,10 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    
-    if (!googleClientIds.web) {
+    const missingIosClientId =
+      Platform.OS === "ios" && !googleClientIds.ios;
+
+    if (!googleClientIds.web || missingIosClientId) {
       setGoogleSigninReady(false);
       return;
     }
@@ -142,6 +144,7 @@ export default function AuthScreen() {
     try {
       GoogleSignin.configure({
         webClientId: googleClientIds.web,
+        iosClientId: googleClientIds.ios || undefined,
         androidClientId: googleClientIds.android || undefined,
         scopes: ["profile", "email"],
       });
@@ -150,7 +153,7 @@ export default function AuthScreen() {
       setGoogleSigninReady(false);
       console.warn("Google Sign-In config error", error);
     }
-  }, [googleClientIds.android, googleClientIds.web]);
+  }, [googleClientIds.android, googleClientIds.ios, googleClientIds.web]);
 
   useEffect(() => {
     if (
