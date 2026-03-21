@@ -694,7 +694,7 @@ export default function ExerciseList() {
               {selectedMuscleLabel.length > 0 && (
                 <View style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Musculo: {selectedMuscleLabel}
+                    Músculo: {selectedMuscleLabel}
                   </Text>
                 </View>
               )}

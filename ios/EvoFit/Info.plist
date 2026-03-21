@@ -27,7 +27,8 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>app</string>
+          <string>com.smy862.app</string>
+          <string>com.googleusercontent.apps.1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni</string>
           <string>com.smy862.app</string>
         </array>
       </dict>
@@ -35,6 +36,12 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>exp+app</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv</string>
         </array>
       </dict>
     </array>
