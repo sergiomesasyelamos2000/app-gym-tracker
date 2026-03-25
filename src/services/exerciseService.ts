@@ -14,6 +14,7 @@ type ExerciseSearchFilters = {
   name?: string;
   equipment?: string;
   muscle?: string;
+  muscles?: string[] | string;
 };
 
 type SearchableExercise = ExerciseRequestDto & {
@@ -305,12 +306,22 @@ export const searchExercises = async (
 ): Promise<ExerciseRequestDto[]> => {
   const name = filters.name?.trim() || "";
   const equipment = filters.equipment?.trim() || "";
+  const musclesInput =
+    typeof filters.muscles === "string"
+      ? filters.muscles
+      : Array.isArray(filters.muscles)
+        ? filters.muscles.join(",")
+        : "";
   const muscle = filters.muscle?.trim() || "";
+  const muscles = (musclesInput || muscle)
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 
   const params = new URLSearchParams();
   if (name) params.append("name", name);
   if (equipment) params.append("equipment", equipment);
-  if (muscle) params.append("muscle", muscle);
+  if (muscles.length > 0) params.append("muscles", muscles.join(","));
 
   try {
     const endpoint = params.toString()
@@ -331,17 +342,15 @@ export const searchExercises = async (
           !name ||
           normalizeSearchText(ex.name).includes(normalizeSearchText(name));
         const exerciseEquipments = ex.equipments || [];
-        const exerciseMuscles = [
-          ...(ex.targetMuscles || []),
-          ...(ex.secondaryMuscles || []),
-          ...(ex.bodyParts || []),
-        ];
+        const exerciseMuscles = [...(ex.targetMuscles || [])];
         const matchesEquipment =
           !equipment ||
           exerciseEquipments.some((item) => matchesToken(item, equipment));
         const matchesMuscle =
-          !muscle ||
-          exerciseMuscles.some((item) => matchesToken(item, muscle));
+          muscles.length === 0 ||
+          muscles.some((selectedMuscle) =>
+            exerciseMuscles.some((item) => matchesToken(item, selectedMuscle))
+          );
 
         return matchesName && matchesEquipment && matchesMuscle;
       });

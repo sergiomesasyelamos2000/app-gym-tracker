@@ -477,11 +477,10 @@ export default function ExerciseList() {
 
         const matchesMuscle =
           selectedMuscleNames.length === 0 ||
-          selectedMuscleNames.every((selectedMuscleName) =>
-            [
-              ...(exercise.targetMuscles || []),
-              ...(exercise.bodyParts || []),
-            ].some((value) => matchesToken(value, selectedMuscleName))
+          selectedMuscleNames.some((selectedMuscleName) =>
+            (exercise.targetMuscles || []).some((value) =>
+              matchesToken(value, selectedMuscleName)
+            )
           );
 
         return {
@@ -593,8 +592,16 @@ export default function ExerciseList() {
     setSelectedEquipmentIds((prev) => prev.filter((item) => item !== id));
   };
 
+  const clearEquipmentFilters = () => {
+    setSelectedEquipmentIds([]);
+  };
+
   const removeMuscleFilter = (id: string) => {
     setSelectedMuscleIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const clearMuscleFilters = () => {
+    setSelectedMuscleIds([]);
   };
 
   const clearModalSelectionFilters = () => {
@@ -688,16 +695,17 @@ export default function ExerciseList() {
 
           {hasSelectionFilters && (
             <View style={styles.activeFiltersRow}>
-              {selectedEquipmentFilters.map((item) => (
-                <View key={`equipment-${item.id}`} style={styles.activeFilterPill}>
+              {selectedEquipmentFilters.length > 0 && (
+                <View style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Equipo: {item.name}
+                    <Text style={styles.activeFilterPillLabel}>Equipo: </Text>
+                    {selectedEquipmentFilters.map((item) => item.name).join(", ")}
                   </Text>
                   <TouchableOpacity
                     style={styles.activeFilterPillClose}
-                    onPress={() => removeEquipmentFilter(item.id)}
+                    onPress={clearEquipmentFilters}
                     accessibilityRole="button"
-                    accessibilityLabel={`Quitar filtro de equipo ${item.name}`}
+                    accessibilityLabel="Quitar filtro de equipo"
                   >
                     <Icon
                       name="close"
@@ -706,17 +714,18 @@ export default function ExerciseList() {
                     />
                   </TouchableOpacity>
                 </View>
-              ))}
-              {selectedMuscleFilters.map((item) => (
-                <View key={`muscle-${item.id}`} style={styles.activeFilterPill}>
+              )}
+              {selectedMuscleFilters.length > 0 && (
+                <View style={styles.activeFilterPill}>
                   <Text style={styles.activeFilterPillText}>
-                    Músculo: {item.name}
+                    <Text style={styles.activeFilterPillLabel}>Músculo: </Text>
+                    {selectedMuscleFilters.map((item) => item.name).join(", ")}
                   </Text>
                   <TouchableOpacity
                     style={styles.activeFilterPillClose}
-                    onPress={() => removeMuscleFilter(item.id)}
+                    onPress={clearMuscleFilters}
                     accessibilityRole="button"
-                    accessibilityLabel={`Quitar filtro de músculo ${item.name}`}
+                    accessibilityLabel="Quitar filtro de músculo"
                   >
                     <Icon
                       name="close"
@@ -725,7 +734,7 @@ export default function ExerciseList() {
                     />
                   </TouchableOpacity>
                 </View>
-              ))}
+              )}
             </View>
           )}
 
@@ -1004,8 +1013,11 @@ const createStyles = (theme: Theme) =>
     },
     activeFilterPillText: {
       color: theme.primary,
-      fontWeight: "600",
+      fontWeight: "400",
       fontSize: RFValue(12),
+    },
+    activeFilterPillLabel: {
+      fontWeight: "700",
     },
     activeFilterPillClose: {
       width: 18,
