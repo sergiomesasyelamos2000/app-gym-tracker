@@ -132,6 +132,55 @@ export const useSetRowLogic = ({
     item.repsMax,
   ]);
 
+  // En modo entrenamiento, si la UI perdió estado local, rehidratar desde el item.
+  useEffect(() => {
+    if (!started) return;
+
+    if ((!localWeight || localWeight === "0") && item.weight && item.weight > 0) {
+      setLocalWeight(item.weight.toString());
+    }
+
+    if ((!localReps || localReps === "0") && item.reps && item.reps > 0) {
+      setLocalReps(item.reps.toString());
+    }
+
+    if (
+      (!localAssistedReps || localAssistedReps === "0") &&
+      item.assistedReps &&
+      item.assistedReps > 0
+    ) {
+      setLocalAssistedReps(item.assistedReps.toString());
+    }
+
+    if (
+      (!localRepsMin || localRepsMin === "0") &&
+      item.repsMin &&
+      item.repsMin > 0
+    ) {
+      setLocalRepsMin(item.repsMin.toString());
+    }
+
+    if (
+      (!localRepsMax || localRepsMax === "0") &&
+      item.repsMax &&
+      item.repsMax > 0
+    ) {
+      setLocalRepsMax(item.repsMax.toString());
+    }
+  }, [
+    started,
+    item.weight,
+    item.reps,
+    item.assistedReps,
+    item.repsMin,
+    item.repsMax,
+    localWeight,
+    localReps,
+    localAssistedReps,
+    localRepsMin,
+    localRepsMax,
+  ]);
+
   // Función helper para sanitizar valores
   const sanitizeValue = useCallback(
     (value: string, field: keyof SetRequestDto): number | boolean => {
