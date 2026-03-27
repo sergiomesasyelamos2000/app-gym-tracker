@@ -215,9 +215,12 @@ export default function AuthScreen() {
         );
       }
       await GoogleSignin.hasPlayServices();
-      await GoogleSignin.signIn();
-      const { idToken } = await GoogleSignin.getTokens();
 
+      // Fuerza mostrar el selector de cuentas
+      await GoogleSignin.signOut();
+      await GoogleSignin.signIn();
+
+      const { idToken } = await GoogleSignin.getTokens();
       if (!idToken) throw new Error("No se obtuvo idToken de Google.");
 
       const authResponse = await googleLogin(idToken);
