@@ -305,7 +305,7 @@ export function StatusScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            ¿Preguntas? Contáctanos en support@gymtracker.com
+            ¿Preguntas? Contáctanos enevofit.support@gmail.com
           </Text>
         </View>
       </ScrollView>

@@ -115,7 +115,7 @@ export function PaywallScreen({
             <View style={styles.pricingOption}>
               <Text style={styles.pricingLabel}>Anual</Text>
               <Text style={styles.pricingPrice}>9.99€/año</Text>
-              <Text style={styles.pricingSavings}>Ahorra 17%</Text>
+              <Text style={styles.pricingSavings}>Ahorra 16%</Text>
             </View>
           </View>
 
