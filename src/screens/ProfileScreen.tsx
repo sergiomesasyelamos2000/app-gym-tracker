@@ -842,7 +842,7 @@ export default function ProfileScreen() {
               <TextInput
                 value={editedEmail}
                 onChangeText={setEditedEmail}
-                placeholder="tu@email.com"
+                placeholder="email@ejemplo.com"
                 placeholderTextColor={theme.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"

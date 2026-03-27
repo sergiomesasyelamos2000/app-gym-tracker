@@ -100,11 +100,11 @@ export default function AuthScreen() {
   const useGoogleAuthRequest =
     Platform.OS === "ios"
       ? Google.useAuthRequest
-      : ((..._args: unknown[]) => [
+      : (..._args: unknown[]) => [
           null,
           null,
           async () => ({ type: "dismiss" as const }),
-        ]);
+        ];
 
   const [request, response, promptAsync] = useGoogleAuthRequest(
     Platform.OS === "ios"
@@ -133,8 +133,7 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    const missingIosClientId =
-      Platform.OS === "ios" && !googleClientIds.ios;
+    const missingIosClientId = Platform.OS === "ios" && !googleClientIds.ios;
 
     if (!googleClientIds.web || missingIosClientId) {
       setGoogleSigninReady(false);
@@ -483,7 +482,7 @@ export default function AuthScreen() {
                           : "transparent",
                       },
                     ]}
-                    placeholder="tu@email.com"
+                    placeholder="email@ejemplo.com"
                     placeholderTextColor={theme.textTertiary}
                     value={email}
                     onChangeText={handleEmailChange}
