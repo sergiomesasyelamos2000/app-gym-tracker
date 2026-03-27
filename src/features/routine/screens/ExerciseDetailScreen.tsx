@@ -76,12 +76,13 @@ interface ExerciseImageProps {
     videoUrl?: string;
   };
   style: ImageStyle;
+  onLoadEnd?: () => void;
 }
 
 // ============================================================================
 // UTILIDADES DE IMAGEN
 // ============================================================================
-const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
+const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
   const webViewRef = React.useRef<WebView>(null);
   const videoUrl = exercise.videoUrl?.trim();
   const flattenedStyle = StyleSheet.flatten(style);
@@ -152,7 +153,8 @@ const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
           androidLayerType="hardware"
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
-        onMessage={(event) => {
+          onLoadEnd={onLoadEnd}
+          onMessage={(event) => {
             try {
               const payload = JSON.parse(event.nativeEvent.data);
               if (typeof payload?.paused === "boolean") {
@@ -204,9 +206,18 @@ const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
         disabled={!canPauseGif}
       >
         {isPaused && staticFallbackUrl ? (
-          <CachedExerciseImage imageUrl={staticFallbackUrl} style={style} />
+          <CachedExerciseImage
+            imageUrl={staticFallbackUrl}
+            style={style}
+            onLoadEnd={onLoadEnd}
+          />
         ) : (
-          <Image source={{ uri: gifUrl }} style={style} resizeMode="cover" />
+          <Image
+            source={{ uri: gifUrl }}
+            style={style}
+            resizeMode="cover"
+            onLoadEnd={onLoadEnd}
+          />
         )}
         {canPauseGif && (
           <View
@@ -234,7 +245,13 @@ const ExerciseImage = ({ exercise, style }: ExerciseImageProps) => {
   }
 
   // Use cached image for regular exercise images
-  return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
+  return (
+    <CachedExerciseImage
+      imageUrl={exercise.imageUrl}
+      style={style}
+      onLoadEnd={onLoadEnd}
+    />
+  );
 };
 
 // ============================================================================
@@ -351,18 +368,6 @@ const getWindowData = (
 // ============================================================================
 // COMPONENTES
 // ============================================================================
-const LoadingView = ({ theme }: { theme: Theme }) => {
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando histórico...</Text>
-      </View>
-    </SafeAreaView>
-  );
-};
-
 const EmptyStateView = ({ theme }: { theme: Theme }) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
@@ -381,13 +386,18 @@ interface HeaderProps {
   exercise: ExerciseRequestDto;
   fadeAnim: Animated.Value;
   theme: Theme;
+  onMediaLoadEnd?: () => void;
 }
 
-const Header = ({ exercise, fadeAnim, theme }: HeaderProps) => {
+const Header = ({ exercise, fadeAnim, theme, onMediaLoadEnd }: HeaderProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   return (
     <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-      <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
+      <ExerciseImage
+        exercise={exercise}
+        style={styles.exerciseImage}
+        onLoadEnd={onMediaLoadEnd}
+      />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName} numberOfLines={2}>
           {exercise.name}
@@ -841,8 +851,24 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const [history, setHistory] = useState<ExerciseHistoryItem[]>([]);
   const [allSessions, setAllSessions] = useState<RoutineSessionEntity[]>([]);
   const [loading, setLoading] = useState(true);
+  const giftUrl = (exercise as { giftUrl?: string }).giftUrl;
+  const hasMedia = Boolean(
+    exercise.videoUrl?.trim() ||
+      exercise.gifUrl?.trim() ||
+      giftUrl?.trim() ||
+      exercise.imageUrl?.trim()
+  );
+  const [mediaLoading, setMediaLoading] = useState(hasMedia);
   const [refreshing, setRefreshing] = useState(false);
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
+  const mediaLabel = exercise.videoUrl?.trim()
+    ? "video"
+    : "imagen";
+  const loadingMessage = loading
+    ? "Cargando histórico..."
+    : mediaLoading
+    ? `Cargando ${mediaLabel}...`
+    : "";
 
   // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
@@ -880,6 +906,27 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
       useNativeDriver: true,
     }).start();
   }, [fetchExerciseHistory]);
+
+  useEffect(() => {
+    if (!hasMedia) {
+      setMediaLoading(false);
+      return;
+    }
+
+    setMediaLoading(true);
+    const fallbackTimer = setTimeout(() => {
+      setMediaLoading(false);
+    }, 8000);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [
+    exercise.id,
+    exercise.videoUrl,
+    exercise.gifUrl,
+    giftUrl,
+    exercise.imageUrl,
+    hasMedia,
+  ]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -954,12 +1001,14 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
     />
   );
 
-  if (loading) {
-    return <LoadingView theme={theme} />;
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
+      {(loading || mediaLoading) && (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={styles.loadingText}>{loadingMessage}</Text>
+        </View>
+      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -973,7 +1022,12 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
         }
         showsVerticalScrollIndicator={false}
       >
-        <Header exercise={exercise} fadeAnim={fadeAnim} theme={theme} />
+        <Header
+          exercise={exercise}
+          fadeAnim={fadeAnim}
+          theme={theme}
+          onMediaLoadEnd={() => setMediaLoading(false)}
+        />
 
         <QuickStats
           currentWeight={stats.currentWeight}
@@ -1077,13 +1131,16 @@ const createStyles = (theme: Theme) =>
       alignItems: "center",
       backgroundColor: theme.background,
     },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
+      zIndex: 10,
+    },
     loadingText: {
       marginTop: 16,
-      fontSize: IS_VERY_SMALL_DEVICE
-        ? RFValue(14)
-        : IS_SMALL_DEVICE
-        ? RFValue(15)
-        : RFValue(16),
+      fontSize: 16,
       color: theme.textSecondary,
       fontWeight: "500",
     },

@@ -527,11 +527,13 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
+      backgroundColor: theme.backgroundSecondary,
     },
     loadingText: {
       marginTop: 16,
       color: theme.textSecondary,
       fontSize: 16,
+      fontWeight: "500",
     },
     emptyContainer: {
       alignItems: "center",

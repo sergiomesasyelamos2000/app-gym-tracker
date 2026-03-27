@@ -105,6 +105,9 @@ export default function RoutineDetailScreen() {
   );
 
   const [loading, setLoading] = useState(Boolean(routineId && !routine));
+  const [isExercisesLoading, setIsExercisesLoading] = useState(
+    !(initialExercises && initialExercises.length > 0)
+  );
   const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(
     routine || null
   );
@@ -290,6 +293,7 @@ export default function RoutineDetailScreen() {
     workoutStartTimeRef.current = workoutInProgress.startedAt;
     setStarted(true);
     setHasInitializedFromStore(true);
+    setIsExercisesLoading(false);
 
     navigation.setParams({ start: undefined });
   }, [
@@ -317,6 +321,7 @@ export default function RoutineDetailScreen() {
     });
     setSets(initialSets);
     setRoutineTitle(routine?.title || "Nueva rutina");
+    setIsExercisesLoading(false);
   }, [initialExercises, hasInitializedFromStore, routine?.title]);
 
   useEffect(() => {
@@ -335,7 +340,15 @@ export default function RoutineDetailScreen() {
       initialSets[exercise.id] = initializeSets(exercise.sets);
     });
     setSets(initialSets);
+    setIsExercisesLoading(false);
   }, [routineData, initialExercises, hasInitializedFromStore]);
+
+  useEffect(() => {
+    if (routineId || routine || initialExercises?.length) {
+      return;
+    }
+    setIsExercisesLoading(false);
+  }, [routineId, routine, initialExercises?.length]);
 
   useEffect(() => {
     if (
@@ -1027,7 +1040,7 @@ export default function RoutineDetailScreen() {
     ]
   );
 
-  if (loading) {
+  if (loading || isExercisesLoading) {
     return (
       <SafeAreaView
         style={[
@@ -1035,8 +1048,9 @@ export default function RoutineDetailScreen() {
           { backgroundColor: theme.backgroundSecondary },
         ]}
       >
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.text }]}>
-          Cargando rutina...
+          Cargando ejercicios...
         </Text>
       </SafeAreaView>
     );

@@ -5,6 +5,7 @@ interface CachedExerciseImageProps {
   imageUrl: string | null | undefined;
   style: StyleProp<ImageStyle>;
   showLoader?: boolean;
+  onLoadEnd?: () => void;
 }
 
 const DEFAULT_IMAGE = require("../../assets/not-image.png");
@@ -34,6 +35,7 @@ const resolveImageUri = (imageUrl: string | null | undefined): string | null => 
 export default function CachedExerciseImage({
   imageUrl,
   style,
+  onLoadEnd,
 }: CachedExerciseImageProps) {
   const [hasError, setHasError] = useState(false);
   const resolvedUri = useMemo(() => resolveImageUri(imageUrl), [imageUrl]);
@@ -48,6 +50,7 @@ export default function CachedExerciseImage({
     <Image
       source={source}
       style={style}
+      onLoadEnd={onLoadEnd}
       onError={() => setHasError(true)}
     />
   );
