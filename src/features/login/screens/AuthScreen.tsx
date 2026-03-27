@@ -93,7 +93,6 @@ export default function AuthScreen() {
 
   const googleClientIds = {
     ios: ENV.GOOGLE_CLIENT_ID_IOS,
-    android: ENV.GOOGLE_CLIENT_ID_ANDROID,
     web: ENV.GOOGLE_CLIENT_ID_WEB,
   };
 
@@ -144,7 +143,6 @@ export default function AuthScreen() {
       GoogleSignin.configure({
         webClientId: googleClientIds.web,
         iosClientId: googleClientIds.ios || undefined,
-        androidClientId: googleClientIds.android || undefined,
         scopes: ["profile", "email"],
       });
       setGoogleSigninReady(true);
@@ -152,7 +150,7 @@ export default function AuthScreen() {
       setGoogleSigninReady(false);
       console.warn("Google Sign-In config error", error);
     }
-  }, [googleClientIds.android, googleClientIds.ios, googleClientIds.web]);
+  }, [googleClientIds.ios, googleClientIds.web]);
 
   useEffect(() => {
     if (
@@ -164,9 +162,13 @@ export default function AuthScreen() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === "ios" && response?.type === "success") {
-      handleGoogleAuthSuccess(response.authentication as GoogleAuthentication);
-    }
+    if (Platform.OS !== "ios") return;
+
+    const res = response as any;
+    if (!res || res.type !== "success") return;
+    if (!res.authentication) return;
+
+    handleGoogleAuthSuccess(res.authentication as GoogleAuthentication);
   }, [response]);
 
   const isValidEmail = (value: string) =>
@@ -241,13 +243,14 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!request) return;
+    if (!request || !promptAsync) return;
+
     try {
       if (Platform.OS === "web") {
-        await promptAsync({ windowName: "google-auth" });
+        await (promptAsync as any)({ windowName: "google-auth" });
         return;
       }
-      await promptAsync();
+      await (promptAsync as any)();
     } catch (error) {
       const errorMessage = getErrorMessage(error as CaughtError);
       Alert.alert("Error", errorMessage);

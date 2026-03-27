@@ -1,0 +1,36 @@
+{
+  "project_info": {
+    "project_number": "1029378599483",
+    "project_id": "bamboo-truck-486717-q3"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1029378599483:android:abc123",
+        "android_client_info": {
+          "package_name": "com.smy862.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.smy862.app",
+            "certificate_hash": "5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25"
+          }
+        },
+        {
+          "client_id": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": ""
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}
