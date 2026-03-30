@@ -385,6 +385,8 @@ const ExerciseCard = ({
     value: SetRequestDto[keyof SetRequestDto]
   ) => {
     const updatedSetRef: { current: SetRequestDto | null } = { current: null };
+    const shouldStartRestTimer =
+      started && field === "completed" && value === true && onStartRestTimer;
 
     // Use functional update to avoid stale state overwrites when multiple updates
     // arrive in quick succession (e.g. checking one set and editing another).
@@ -403,19 +405,18 @@ const ExerciseCard = ({
       return newSets;
     });
 
+    if (shouldStartRestTimer) {
+      const { minutes, seconds } = parseTime(restTime);
+      const totalSeconds = minutes * 60 + seconds;
+      if (totalSeconds > 0) {
+        onStartRestTimer?.(totalSeconds, exercise.name);
+      }
+    }
+
     const updatedSet = updatedSetRef.current;
     if (!updatedSet) return;
 
     // 3. Handle Side Effects (Rest timer + record detection)
-    // Start rest timer on every explicit completion, regardless of previous sessions.
-    if (started && field === "completed" && value === true && onStartRestTimer) {
-      const { minutes, seconds } = parseTime(restTime);
-      const totalSeconds = minutes * 60 + seconds;
-      if (totalSeconds > 0) {
-        onStartRestTimer(totalSeconds, exercise.name);
-      }
-    }
-
     // Record detection requires previous sessions as baseline.
     if (started && previousSessions.length > 0) {
       if (
