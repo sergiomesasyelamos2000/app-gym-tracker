@@ -400,6 +400,7 @@ const ExerciseSetRow = ({
           ]}
           keyboardType="decimal-pad"
           value={localWeight}
+          selectTextOnFocus
           placeholder={started ? previousWeightPlaceholder : "0"}
           placeholderTextColor={theme.textTertiary}
           onChangeText={handleWeightChange}
@@ -435,6 +436,7 @@ const ExerciseSetRow = ({
             ]}
             keyboardType="numeric"
             value={localReps}
+            selectTextOnFocus
             placeholder={
               repsType === "range"
                 ? `${
@@ -495,6 +497,7 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMin}
+              selectTextOnFocus
               placeholder={
                 started
                   ? item.repsMin && item.repsMin > 0
@@ -534,6 +537,7 @@ const ExerciseSetRow = ({
               ]}
               keyboardType="numeric"
               value={localRepsMax}
+              selectTextOnFocus
               placeholder={
                 started
                   ? item.repsMax && item.repsMax > 0
@@ -575,6 +579,7 @@ const ExerciseSetRow = ({
             ]}
             keyboardType="numeric"
             value={localReps}
+            selectTextOnFocus
             placeholder="0"
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
@@ -609,6 +614,7 @@ const ExerciseSetRow = ({
           ]}
           keyboardType="numeric"
           value={localAssistedReps}
+          selectTextOnFocus
           placeholder="0"
           placeholderTextColor={theme.textTertiary}
           onChangeText={handleAssistedRepsChange}
