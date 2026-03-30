@@ -25,6 +25,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -90,6 +91,7 @@ const sortSetsMapByOrder = (setsMap: { [exerciseId: string]: SetRequestDto[] }) 
 export default function RoutineDetailScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const {
@@ -1040,6 +1042,9 @@ export default function RoutineDetailScreen() {
     ]
   );
 
+  const isSmallDevice = width < 360;
+  const loadingTextMaxWidth = Math.min(width * 0.8, 360);
+
   if (loading || isExercisesLoading) {
     return (
       <SafeAreaView
@@ -1048,10 +1053,24 @@ export default function RoutineDetailScreen() {
           { backgroundColor: theme.backgroundSecondary },
         ]}
       >
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.text }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size={isSmallDevice ? "small" : "large"}
+            color={theme.primary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              {
+                color: theme.textSecondary,
+                maxWidth: loadingTextMaxWidth,
+                fontSize: RFValue(isSmallDevice ? 14 : 16),
+              },
+            ]}
+          >
           Cargando ejercicios...
-        </Text>
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -1177,8 +1196,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     textAlign: "center",
-    marginTop: 40,
-    fontSize: RFValue(16),
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
   },
   saveButton: {
     padding: 16,

@@ -125,6 +125,9 @@ const ExerciseSetList = ({
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+  const inputHeight = isSmallScreen ? 40 : 44;
+  const deleteButtonSize = inputHeight;
+  const deleteButtonOffset = Platform.OS === "ios" ? -8 : 0;
 
   const onUpdateRef = useRef(onUpdate);
   const onDeleteRef = useRef(onDelete);
@@ -167,14 +170,29 @@ const ExerciseSetList = ({
       });
 
       return (
-        <View style={styles.actionsContainer}>
+        <View
+          style={[
+            styles.actionsContainer,
+            {
+              width: deleteButtonSize + 8,
+              paddingVertical: 0,
+              alignSelf: "stretch",
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => onDeleteRef.current(itemId)}
             activeOpacity={0.7}
             style={[
               styles.deleteButton,
               {
-                backgroundColor: theme.error,
+                backgroundColor: `${theme.error}1A`,
+                borderColor: `${theme.error}33`,
+                borderWidth: 1,
+                height: deleteButtonSize,
+                width: deleteButtonSize,
+                borderRadius: Math.max(8, Math.floor(deleteButtonSize / 4)),
+                marginTop: deleteButtonOffset,
               },
             ]}
           >
@@ -187,13 +205,17 @@ const ExerciseSetList = ({
                 },
               ]}
             >
-              <Icon name="delete-outline" size={24} color="#fff" />
+              <Icon
+                name="delete-outline"
+                size={18}
+                color={theme.error}
+              />
             </Animated.View>
           </TouchableOpacity>
         </View>
       );
     },
-    [theme.error]
+    [inputHeight, theme.error]
   );
 
   const handleSwipeableWillOpen = useCallback(() => {
@@ -713,13 +735,8 @@ const styles = StyleSheet.create({
   actionsContainer: {
     justifyContent: "center",
     alignItems: "center",
-    width: 70,
-    marginVertical: 4,
   },
   deleteButton: {
-    width: 64,
-    height: "100%",
-    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
