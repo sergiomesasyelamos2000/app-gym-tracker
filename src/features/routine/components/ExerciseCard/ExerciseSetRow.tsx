@@ -393,9 +393,9 @@ const ExerciseSetRow = ({
               color: theme.text,
               borderWidth: isDark ? 1 : 0,
               borderColor: theme.border,
-              padding: isSmallScreen ? 8 : 12,
-              fontSize: RFValue(isSmallScreen ? 13 : 15),
-              minHeight: isSmallScreen ? 40 : 44,
+              padding: isSmallScreen ? 9 : 12,
+              fontSize: RFValue(isSmallScreen ? 14 : 16),
+              minHeight: isSmallScreen ? 44 : 48,
             },
           ]}
           keyboardType="decimal-pad"
@@ -426,14 +426,14 @@ const ExerciseSetRow = ({
               styles.input,
               {
                 backgroundColor: theme.inputBackground,
-                color: theme.text,
-                borderWidth: isDark ? 1 : 0,
-                borderColor: theme.border,
-                padding: isSmallScreen ? 8 : 12,
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-                minHeight: isSmallScreen ? 40 : 44,
-              },
-            ]}
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+              padding: isSmallScreen ? 9 : 12,
+              fontSize: RFValue(isSmallScreen ? 14 : 16),
+              minHeight: isSmallScreen ? 44 : 48,
+            },
+          ]}
             keyboardType="numeric"
             value={localReps}
             selectTextOnFocus
@@ -478,8 +478,8 @@ const ExerciseSetRow = ({
                 backgroundColor: theme.inputBackground,
                 borderWidth: isDark ? 1 : 0,
                 borderColor: theme.border,
-                paddingHorizontal: isSmallScreen ? 2 : 4,
-                minHeight: isSmallScreen ? 40 : 44,
+                paddingHorizontal: isSmallScreen ? 3 : 4,
+                minHeight: isSmallScreen ? 44 : 48,
               },
             ]}
           >
@@ -490,9 +490,9 @@ const ExerciseSetRow = ({
                 {
                   flex: 1,
                   color: theme.text,
-                  paddingVertical: isSmallScreen ? 6 : 10,
+                  paddingVertical: isSmallScreen ? 7 : 10,
                   paddingHorizontal: 2,
-                  fontSize: RFValue(isSmallScreen ? 13 : 15),
+                  fontSize: RFValue(isSmallScreen ? 14 : 16),
                 },
               ]}
               keyboardType="numeric"
@@ -530,9 +530,9 @@ const ExerciseSetRow = ({
                 {
                   flex: 1,
                   color: theme.text,
-                  paddingVertical: isSmallScreen ? 6 : 10,
+                  paddingVertical: isSmallScreen ? 7 : 10,
                   paddingHorizontal: 2,
-                  fontSize: RFValue(isSmallScreen ? 13 : 15),
+                  fontSize: RFValue(isSmallScreen ? 14 : 16),
                 },
               ]}
               keyboardType="numeric"
@@ -569,14 +569,14 @@ const ExerciseSetRow = ({
               styles.input,
               {
                 backgroundColor: theme.inputBackground,
-                color: theme.text,
-                borderWidth: isDark ? 1 : 0,
-                borderColor: theme.border,
-                padding: isSmallScreen ? 8 : 12,
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-                minHeight: isSmallScreen ? 40 : 44,
-              },
-            ]}
+              color: theme.text,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: theme.border,
+              padding: isSmallScreen ? 9 : 12,
+              fontSize: RFValue(isSmallScreen ? 14 : 16),
+              minHeight: isSmallScreen ? 44 : 48,
+            },
+          ]}
             keyboardType="numeric"
             value={localReps}
             selectTextOnFocus
@@ -607,9 +607,9 @@ const ExerciseSetRow = ({
               color: theme.text,
               borderWidth: isDark ? 1 : 0,
               borderColor: theme.border,
-              padding: isSmallScreen ? 8 : 12,
-              fontSize: RFValue(isSmallScreen ? 13 : 15),
-              minHeight: isSmallScreen ? 40 : 44,
+              padding: isSmallScreen ? 9 : 12,
+              fontSize: RFValue(isSmallScreen ? 14 : 16),
+              minHeight: isSmallScreen ? 44 : 48,
             },
           ]}
           keyboardType="numeric"

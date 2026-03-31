@@ -125,7 +125,7 @@ const ExerciseSetList = ({
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
-  const inputHeight = isSmallScreen ? 40 : 44;
+  const inputHeight = isSmallScreen ? 44 : 48;
   const deleteButtonSize = inputHeight;
   const deleteButtonOffset = Platform.OS === "ios" ? -8 : 0;
 

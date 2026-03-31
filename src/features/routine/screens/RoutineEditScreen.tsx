@@ -2,7 +2,9 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -81,6 +83,7 @@ export default function RoutineEditScreen() {
   );
   const [reorderMode, setReorderMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [supersets, setSupersets] = useState<{ [key: string]: string }>({});
   const [reorderFromButton, setReorderFromButton] = useState(false);
   const [tempExercisesOrder, setTempExercisesOrder] = useState<
@@ -311,6 +314,8 @@ export default function RoutineEditScreen() {
   }, [addExercises, navigation, applyAddedExercises]);
 
   const handleUpdate = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const routineToUpdate = {
         id: id,
@@ -366,6 +371,8 @@ export default function RoutineEditScreen() {
       }
 
       Alert.alert("Error", errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -692,6 +699,7 @@ export default function RoutineEditScreen() {
             <TouchableOpacity
               style={styles.addExerciseButton}
               onPress={() => {
+                if (isSaving) return;
                 navigation.navigate("ExerciseList", {
                   routineId: id,
                   mode: "addToRoutine",
@@ -713,13 +721,16 @@ export default function RoutineEditScreen() {
             <TouchableOpacity
               style={[
                 styles.cancelButton,
-                reorderMode && styles.buttonDisabled,
+                (reorderMode || isSaving) && styles.buttonDisabled,
               ]}
               onPress={() => navigation.goBack()}
-              disabled={reorderMode}
+              disabled={reorderMode || isSaving}
             >
               <Text
-                style={[styles.cancelText, reorderMode && styles.textDisabled]}
+                style={[
+                  styles.cancelText,
+                  (reorderMode || isSaving) && styles.textDisabled,
+                ]}
               >
                 Cancelar
               </Text>
@@ -728,16 +739,33 @@ export default function RoutineEditScreen() {
             <TouchableOpacity
               style={[
                 styles.updateButton,
-                reorderMode && styles.updateButtonDisabled,
+                (reorderMode || isSaving) && styles.updateButtonDisabled,
               ]}
               onPress={handleUpdate}
-              disabled={reorderMode}
+              disabled={reorderMode || isSaving}
             >
               <Text style={styles.updateButtonText}>Actualizar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={isSaving}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => {
+          // Bloquear cierre por botón físico mientras se guarda.
+        }}
+      >
+        <View style={styles.savingOverlay}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.savingText, { color: theme.text }]}>
+            Actualizando rutina...
+          </Text>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -966,5 +994,17 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     },
     textDisabled: {
       opacity: 0.4,
+    },
+    savingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.25)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 2000,
+    },
+    savingText: {
+      marginTop: 12,
+      fontSize: RFValue(14),
+      fontWeight: "600",
     },
   });
