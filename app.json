@@ -62,6 +62,7 @@
           "recordAudioAndroid": true
         }
       ],
+      "./plugins/withRestTimerLiveActivity",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

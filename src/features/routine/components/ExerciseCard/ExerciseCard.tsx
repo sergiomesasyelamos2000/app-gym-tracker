@@ -130,7 +130,13 @@ interface Props {
   onChangeExercise: (exercise: ExerciseRequestDto) => void;
   readonly?: boolean;
   started?: boolean;
-  onStartRestTimer?: (restSeconds: number, exerciseName?: string) => void;
+  onStartRestTimer?: (
+    restSeconds: number,
+    exerciseId: string,
+    exerciseName?: string,
+    imageUrl?: string | null,
+    nextSetSummary?: string | null
+  ) => void;
   onCancelRestTimer?: () => void;
   onShowUndoSnackbar?: (message: string, onUndo: () => void) => void;
   compact?: boolean;
@@ -215,6 +221,44 @@ const ExerciseCard = ({
   const removeRecordBySetId = useRecordsStore(
     (state) => state.removeRecordBySetId
   );
+
+  const buildNextSetSummary = (
+    setList: SetRequestDto[],
+    completedSetId: string
+  ): string | null => {
+    const sortedSetList = [...setList].sort(
+      (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
+    );
+    const completedIndex = sortedSetList.findIndex((set) => set.id === completedSetId);
+    const nextSet = sortedSetList
+      .slice(completedIndex + 1)
+      .find((set) => !set.completed);
+
+    if (!nextSet) return null;
+
+    const weight =
+      typeof nextSet.weight === "number" && Number.isFinite(nextSet.weight)
+        ? `${nextSet.weight}kg`
+        : null;
+    const exactReps =
+      typeof nextSet.reps === "number" && Number.isFinite(nextSet.reps)
+        ? `${nextSet.reps} reps`
+        : null;
+    const rangedReps =
+      typeof nextSet.repsMin === "number" && typeof nextSet.repsMax === "number"
+        ? `${nextSet.repsMin}-${nextSet.repsMax} reps`
+        : typeof nextSet.repsMin === "number"
+          ? `${nextSet.repsMin}+ reps`
+          : typeof nextSet.repsMax === "number"
+            ? `hasta ${nextSet.repsMax} reps`
+            : null;
+    const repsLabel = exactReps ?? rangedReps;
+
+    if (weight && repsLabel) return `${weight} x ${repsLabel}`;
+    if (weight) return weight;
+    if (repsLabel) return repsLabel;
+    return `Serie ${nextSet.order}`;
+  };
 
   const bestMetrics = useMemo(
     () =>
@@ -409,7 +453,21 @@ const ExerciseCard = ({
       const { minutes, seconds } = parseTime(restTime);
       const totalSeconds = minutes * 60 + seconds;
       if (totalSeconds > 0) {
-        onStartRestTimer?.(totalSeconds, exercise.name);
+        const nextSets = updatedSetRef.current
+          ? sets.map((set) =>
+              set.id === updatedSetRef.current?.id ? updatedSetRef.current : set
+            )
+          : sets;
+        const nextSetSummary = updatedSetRef.current
+          ? buildNextSetSummary(nextSets, updatedSetRef.current.id)
+          : null;
+        onStartRestTimer?.(
+          totalSeconds,
+          exercise.id,
+          exercise.name,
+          exercise.imageUrl ?? null,
+          nextSetSummary
+        );
       }
     }
 

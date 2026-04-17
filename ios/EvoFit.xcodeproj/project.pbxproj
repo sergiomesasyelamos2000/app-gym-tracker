@@ -3,12 +3,19 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1D654098C0CDB6CECFC65FD1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 83319E837FFF00283C069B90 /* PrivacyInfo.xcprivacy */; };
+		20035E442F7D05EB008BA6E9 /* RestTimerShared in Frameworks */ = {isa = PBXBuildFile; productRef = 20035E432F7D05EB008BA6E9 /* RestTimerShared */; };
+		20035E462F7D076B008BA6E9 /* RestTimerShared in Frameworks */ = {isa = PBXBuildFile; productRef = 20035E452F7D076B008BA6E9 /* RestTimerShared */; };
+		20035E4A2F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */; };
+		2014C02D2F7C0FB3005F41CB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2014BFDA2F7C0D52005F41CB /* WidgetKit.framework */; };
+		2014C02E2F7C0FB3005F41CB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2014BFDC2F7C0D53005F41CB /* SwiftUI.framework */; };
+		2014C03F2F7C0FB7005F41CB /* RestTimerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */; };
 		2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321635CB9EA91FAB23C38495 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		73D98A287213000F29F6FABC /* libPods-EvoFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */; };
@@ -16,13 +23,49 @@
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2014C03D2F7C0FB7005F41CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2014C02B2F7C0FB3005F41CB;
+			remoteInfo = RestTimerLiveActivityExtension;
+		};
+		2014C0442F7C1756005F41CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2014C02B2F7C0FB3005F41CB;
+			remoteInfo = RestTimerLiveActivityExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2014BFEF2F7C0D57005F41CB /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2014C03F2F7C0FB7005F41CB /* RestTimerLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* EvoFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvoFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = EvoFit/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = EvoFit/Info.plist; sourceTree = "<group>"; };
+		20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EvoFit/RestTimerLiveActivityBridge.m; sourceTree = "<group>"; };
+		2014BFDA2F7C0D52005F41CB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		2014BFDC2F7C0D53005F41CB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RestTimerLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvoFit/RestTimerLiveActivityModule.swift; sourceTree = "<group>"; };
 		321635CB9EA91FAB23C38495 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-EvoFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		5007370640F880E3FDD8341D /* Pods-EvoFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.release.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.release.xcconfig"; sourceTree = "<group>"; };
-		83319E837FFF00283C069B90 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = EvoFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		83319E837FFF00283C069B90 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = EvoFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9C0A063FE0A689EC25F5019E /* Pods-EvoFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.debug.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = EvoFit/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
@@ -32,12 +75,38 @@
 		F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-EvoFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2014C0402F7C0FB7005F41CB /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2014C02B2F7C0FB3005F41CB /* RestTimerLiveActivityExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2014BFDE2F7C0D53005F41CB /* RestTimerLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RestTimerLiveActivity; sourceTree = "<group>"; };
+		2014C02F2F7C0FB3005F41CB /* RestTimerLiveActivity */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (2014C0402F7C0FB7005F41CB /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = RestTimerLiveActivity; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				73D98A287213000F29F6FABC /* libPods-EvoFit.a in Frameworks */,
+				20035E442F7D05EB008BA6E9 /* RestTimerShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2014C0292F7C0FB3005F41CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				20035E462F7D076B008BA6E9 /* RestTimerShared in Frameworks */,
+				2014C02E2F7C0FB3005F41CB /* SwiftUI.framework in Frameworks */,
+				2014C02D2F7C0FB3005F41CB /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -49,6 +118,7 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */,
+				201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -63,6 +133,8 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */,
+				2014BFDA2F7C0D52005F41CB /* WidgetKit.framework */,
+				2014BFDC2F7C0D53005F41CB /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -93,8 +165,11 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
+				20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */,
 				13B07FAE1A68108700A75B9A /* EvoFit */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
+				2014BFDE2F7C0D53005F41CB /* RestTimerLiveActivity */,
+				2014C02F2F7C0FB3005F41CB /* RestTimerLiveActivity */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				975DB8D13B372D9B9E01F1E8 /* Pods */,
@@ -109,6 +184,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* EvoFit.app */,
+				2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -119,7 +195,6 @@
 				9C0A063FE0A689EC25F5019E /* Pods-EvoFit.debug.xcconfig */,
 				5007370640F880E3FDD8341D /* Pods-EvoFit.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -147,15 +222,41 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				12AEF8CB4BB8A7288BCF2D77 /* [CP] Embed Pods Frameworks */,
+				2014BFEF2F7C0D57005F41CB /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2014C03E2F7C0FB7005F41CB /* PBXTargetDependency */,
+				2014C0452F7C1756005F41CB /* PBXTargetDependency */,
 			);
 			name = EvoFit;
 			productName = EvoFit;
 			productReference = 13B07F961A680F5B00A75B9A /* EvoFit.app */;
 			productType = "com.apple.product-type.application";
+		};
+		2014C02B2F7C0FB3005F41CB /* RestTimerLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2014C0412F7C0FB7005F41CB /* Build configuration list for PBXNativeTarget "RestTimerLiveActivityExtension" */;
+			buildPhases = (
+				2014C0282F7C0FB3005F41CB /* Sources */,
+				2014C0292F7C0FB3005F41CB /* Frameworks */,
+				2014C02A2F7C0FB3005F41CB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2014C02F2F7C0FB3005F41CB /* RestTimerLiveActivity */,
+			);
+			name = RestTimerLiveActivityExtension;
+			packageProductDependencies = (
+				20035E452F7D076B008BA6E9 /* RestTimerShared */,
+			);
+			productName = RestTimerLiveActivityExtension;
+			productReference = 2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -163,10 +264,14 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+					};
+					2014C02B2F7C0FB3005F41CB = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -179,11 +284,15 @@
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				20035E422F7D05EB008BA6E9 /* XCLocalSwiftPackageReference "RestTimerShared" */,
+			);
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* EvoFit */,
+				2014C02B2F7C0FB3005F41CB /* RestTimerLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -197,6 +306,13 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				1D654098C0CDB6CECFC65FD1 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2014C02A2F7C0FB3005F41CB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,10 +505,32 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */,
+				20035E4A2F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m in Sources */,
+				201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2014C0282F7C0FB3005F41CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2014C03E2F7C0FB7005F41CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2014C02B2F7C0FB3005F41CB /* RestTimerLiveActivityExtension */;
+			targetProxy = 2014C03D2F7C0FB7005F41CB /* PBXContainerItemProxy */;
+		};
+		2014C0452F7C1756005F41CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2014C02B2F7C0FB3005F41CB /* RestTimerLiveActivityExtension */;
+			targetProxy = 2014C0442F7C1756005F41CB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -403,13 +541,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = EvoFit/EvoFit.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M3V77T47GA;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
 				INFOPLIST_FILE = EvoFit/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -439,8 +578,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = EvoFit/EvoFit.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M3V77T47GA;
 				INFOPLIST_FILE = EvoFit/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -458,6 +598,101 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		2014C0422F7C0FB7005F41CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = M3V77T47GA;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RestTimerLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RestTimerLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				CODE_SIGN_ENTITLEMENTS = RestTimerLiveActivity/RestTimerLiveActivityExtension.entitlements;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.smy862.app.RestTimerLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2014C0432F7C0FB7005F41CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = M3V77T47GA;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RestTimerLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RestTimerLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				CODE_SIGN_ENTITLEMENTS = RestTimerLiveActivity/RestTimerLiveActivityExtension.entitlements;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.smy862.app.RestTimerLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -591,6 +826,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		2014C0412F7C0FB7005F41CB /* Build configuration list for PBXNativeTarget "RestTimerLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2014C0422F7C0FB7005F41CB /* Debug */,
+				2014C0432F7C0FB7005F41CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "EvoFit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -601,6 +845,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		20035E422F7D05EB008BA6E9 /* XCLocalSwiftPackageReference "RestTimerShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = RestTimerShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		20035E432F7D05EB008BA6E9 /* RestTimerShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RestTimerShared;
+		};
+		20035E452F7D076B008BA6E9 /* RestTimerShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 20035E422F7D05EB008BA6E9 /* XCLocalSwiftPackageReference "RestTimerShared" */;
+			productName = RestTimerShared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }
