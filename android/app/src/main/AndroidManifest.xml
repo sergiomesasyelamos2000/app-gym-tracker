@@ -33,5 +33,8 @@
         <data android:scheme="exp+app"/>
       </intent-filter>
     </activity>
+    <receiver
+      android:name=".notifications.RestTimerNotificationReceiver"
+      android:exported="false" />
   </application>
 </manifest>

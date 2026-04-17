@@ -1,4 +1,9 @@
-import { NativeEventEmitter, NativeModules, Platform } from "react-native";
+import {
+  DeviceEventEmitter,
+  NativeEventEmitter,
+  NativeModules,
+  Platform,
+} from "react-native";
 
 const AndroidModule = NativeModules.RestTimerNotification;
 const IOSModule = NativeModules.RestTimerLiveActivity;
@@ -97,6 +102,14 @@ export const endRestTimerLive = async () => {
 export const subscribeToRestTimerIntents = (
   handler: (event: RestTimerIntentEvent) => void
 ): (() => void) => {
+  if (Platform.OS === "android") {
+    const subscription = DeviceEventEmitter.addListener(
+      "onRestTimerIntent",
+      handler
+    );
+    return () => subscription.remove();
+  }
+
   const emitter = getEmitter();
   if (!emitter) return () => {};
 
