@@ -161,6 +161,12 @@ const normalizeSessionExercise = (
   };
 };
 
+const isExerciseFullyCompleted = (exercise: SessionExercise): boolean => {
+  const exerciseSets = exercise.sets || [];
+
+  return exerciseSets.length > 0 && exerciseSets.every((set) => set.completed);
+};
+
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({
   exercise,
@@ -309,12 +315,14 @@ export default function HomeScreen() {
 
       const sessionsWithTotals = sessionsData.map(
         (session): SessionWithTotals => {
-          const normalizedExercises: SessionExercise[] = (
+          const completedExercises: SessionExercise[] = (
             (session.exercises as RawSessionExercise[] | undefined) || []
-          ).map((exercise, index) => normalizeSessionExercise(exercise, index));
+          )
+            .map((exercise, index) => normalizeSessionExercise(exercise, index))
+            .filter(isExerciseFullyCompleted);
 
           const calculatedWeight =
-            normalizedExercises.reduce(
+            completedExercises.reduce(
               (sum: number, e) =>
                 sum +
                 (e.sets || []).reduce(
@@ -328,7 +336,7 @@ export default function HomeScreen() {
             ) || 0;
 
           const totalReps =
-            normalizedExercises.reduce((sum: number, e) => {
+            completedExercises.reduce((sum: number, e) => {
               const exerciseTotalReps = (e.sets || []).reduce(
                 (acc: number, s) =>
                   acc + toSafeNumber((s as { reps?: unknown }).reps),
@@ -349,7 +357,7 @@ export default function HomeScreen() {
 
           return {
             ...session,
-            exercises: normalizedExercises,
+            exercises: completedExercises,
             totalTime: sessionTotalTime,
             totalWeight: sessionTotalWeight || calculatedWeight,
             completedSets: sessionCompletedSets,

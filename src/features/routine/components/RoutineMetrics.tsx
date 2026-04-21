@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { formatTime } from "../utils/routineHelpers";
 
 type Props = {
   duration: number;
@@ -30,6 +29,22 @@ export const RoutineMetrics: React.FC<Props> = ({
   const isSmallScreen = width < 360;
   const { theme } = useTheme();
 
+  const formatWorkoutDuration = (seconds: number) => {
+    const totalMinutes = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+
+    if (totalMinutes > 0) {
+      return `${totalMinutes}min`;
+    }
+
+    return `${seconds}s`;
+  };
+
   return (
     <View
       style={[
@@ -46,7 +61,7 @@ export const RoutineMetrics: React.FC<Props> = ({
         {/* Tiempo */}
         <View style={styles.metricItem}>
           <Text style={[styles.metricValue, { color: theme.text }]}>
-            {formatTime(duration)}
+            {formatWorkoutDuration(duration)}
           </Text>
           <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
             Tiempo
