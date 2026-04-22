@@ -12,22 +12,26 @@ import { useTheme } from "../../../contexts/ThemeContext";
 
 type Props = {
   routineTitle: string;
+  subtitle?: string;
   started: boolean;
   routineId?: string;
   onStart?: () => void;
   onEdit?: () => void;
   onChangeTitle?: (text: string) => void;
   readonly?: boolean;
+  hideActions?: boolean;
 };
 
 export const RoutineHeader: React.FC<Props> = ({
   routineTitle,
+  subtitle,
   started,
   routineId,
   onStart,
   onEdit,
   onChangeTitle,
   readonly,
+  hideActions = false,
 }) => {
   const { theme } = useTheme();
 
@@ -35,31 +39,38 @@ export const RoutineHeader: React.FC<Props> = ({
 
   return (
     <View style={styles.header}>
-      {routineId && readonly ? (
+      {readonly ? (
         <>
           <Text style={[styles.title, { color: theme.text }]}>
             {routineTitle || "Rutina sin nombre"}
           </Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[styles.startButton, { backgroundColor: theme.primary }]}
-              onPress={onStart}
-            >
-              <Text style={styles.startButtonText}>Iniciar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.editButton,
-                { backgroundColor: theme.primary + "20" },
-                Platform.OS === "android" && styles.editButtonAndroid,
-              ]}
-              onPress={onEdit}
-            >
-              <Text style={[styles.editButtonText, { color: theme.primary }]}>
-                Editar
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {subtitle ? (
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              {subtitle}
+            </Text>
+          ) : null}
+          {!hideActions && (
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={[styles.startButton, { backgroundColor: theme.primary }]}
+                onPress={onStart}
+              >
+                <Text style={styles.startButtonText}>Iniciar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.editButton,
+                  { backgroundColor: theme.primary + "20" },
+                  Platform.OS === "android" && styles.editButtonAndroid,
+                ]}
+                onPress={onEdit}
+              >
+                <Text style={[styles.editButtonText, { color: theme.primary }]}>
+                  Editar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </>
       ) : (
         <View style={styles.inputContainer}>
@@ -92,6 +103,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
     letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: RFValue(13),
+    textAlign: "center",
+    marginBottom: 12,
+    fontWeight: "500",
   },
   headerActions: {
     flexDirection: "row",

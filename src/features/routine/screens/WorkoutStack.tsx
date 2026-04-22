@@ -20,6 +20,9 @@ export type WorkoutStackParamList = {
     routine?: RoutineResponseDto;
     exercises?: ExerciseRequestDto[];
     start?: boolean;
+    sessionView?: boolean;
+    sessionTitle?: string;
+    sessionDateLabel?: string;
   };
   ExerciseList: {
     routineId?: string;

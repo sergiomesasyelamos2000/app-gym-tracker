@@ -7,14 +7,17 @@ import {
   SetResponseDto,
 } from "@sergiomesasyelamos2000/shared";
 import {
+  CommonActions,
   NavigationProp,
   RouteProp,
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
+import { HeaderBackButton } from "@react-navigation/elements";
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -117,6 +120,9 @@ export default function RoutineDetailScreen() {
     routine,
     exercises: initialExercises,
     start,
+    sessionView,
+    sessionTitle,
+    sessionDateLabel,
   } = route.params;
 
   // Notification settings
@@ -131,8 +137,12 @@ export default function RoutineDetailScreen() {
   const [routineData, setRoutineData] = useState<RoutineResponseDto | null>(
     routine || null
   );
-  const [routineTitle, setRoutineTitle] = useState(routine?.title || "");
-  const [readonly, setReadonly] = useState(!!(routineId || routine?.id));
+  const [routineTitle, setRoutineTitle] = useState(
+    sessionTitle || routine?.title || ""
+  );
+  const [readonly, setReadonly] = useState(
+    Boolean(sessionView || routineId || routine?.id)
+  );
   const [started, setStarted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
@@ -205,6 +215,47 @@ export default function RoutineDetailScreen() {
     () => allSets.filter((s) => s.completed).length,
     [allSets]
   );
+
+  const handleExitSessionView = useCallback(() => {
+    if (!sessionView) return;
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "WorkoutList" }],
+      })
+    );
+
+    const parent = navigation.getParent();
+    parent?.navigate("Inicio" as never);
+  }, [navigation, sessionView]);
+
+  useLayoutEffect(() => {
+    if (!sessionView) {
+      navigation.setOptions({
+        headerLeft: undefined,
+        title: "Detalle",
+      });
+      return;
+    }
+
+    navigation.setOptions({
+      title: sessionTitle || "Detalle de sesión",
+      headerLeft: () => (
+        <HeaderBackButton
+          tintColor={theme.text}
+          labelVisible={false}
+          onPress={handleExitSessionView}
+        />
+      ),
+    });
+  }, [
+    handleExitSessionView,
+    navigation,
+    sessionTitle,
+    sessionView,
+    theme.primary,
+  ]);
 
   useEffect(() => {
     durationRef.current = duration;
@@ -308,7 +359,12 @@ export default function RoutineDetailScreen() {
   }, [routine, routineId, navigation]);
 
   useEffect(() => {
-    if (!workoutInProgress || !route.params?.start || hasInitializedFromStore) {
+    if (
+      sessionView ||
+      !workoutInProgress ||
+      !route.params?.start ||
+      hasInitializedFromStore
+    ) {
       return;
     }
 
@@ -328,6 +384,7 @@ export default function RoutineDetailScreen() {
 
     navigation.setParams({ start: undefined });
   }, [
+    sessionView,
     workoutInProgress,
     route.params?.start,
     hasInitializedFromStore,
@@ -340,21 +397,28 @@ export default function RoutineDetailScreen() {
       return;
     }
 
-    const normalizedInitialExercises =
-      normalizeExercisesImage(initialExercises);
+    const normalizedInitialExercises = normalizeExercisesImage(initialExercises);
     setExercises(normalizedInitialExercises);
 
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
     normalizedInitialExercises.forEach((exercise) => {
-      initialSets[exercise.id] = initializeSets(exercise.sets).map((set) => ({
-        ...set,
-        completed: false,
-      }));
+      initialSets[exercise.id] = sessionView
+        ? sortSetsByOrder(exercise.sets || []).map((set, index) => ({
+            ...set,
+            id:
+              typeof set.id === "string" && set.id.trim().length > 0
+                ? set.id
+                : `${exercise.id}_session_set_${index + 1}`,
+          }))
+        : initializeSets(exercise.sets).map((set) => ({
+            ...set,
+            completed: false,
+          }));
     });
     setSets(initialSets);
-    setRoutineTitle(routine?.title || "Nueva rutina");
+    setRoutineTitle(sessionTitle || routine?.title || "Nueva rutina");
     setIsExercisesLoading(false);
-  }, [initialExercises, hasInitializedFromStore, routine?.title]);
+  }, [initialExercises, hasInitializedFromStore, routine?.title, sessionTitle, sessionView]);
 
   useEffect(() => {
     if (hasInitializedFromStore || initialExercises?.length || !routineData) {
@@ -365,7 +429,7 @@ export default function RoutineDetailScreen() {
       mapRoutineExercises(routineData);
 
     setExercises(mappedExercises);
-    setRoutineTitle(routineData.title || "");
+    setRoutineTitle(sessionTitle || routineData.title || "");
 
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
     mappedExercises.forEach((exercise) => {
@@ -373,7 +437,7 @@ export default function RoutineDetailScreen() {
     });
     setSets(initialSets);
     setIsExercisesLoading(false);
-  }, [routineData, initialExercises, hasInitializedFromStore]);
+  }, [routineData, initialExercises, hasInitializedFromStore, sessionTitle]);
 
   useEffect(() => {
     if (routineId || routine || initialExercises?.length) {
@@ -384,6 +448,7 @@ export default function RoutineDetailScreen() {
 
   useEffect(() => {
     if (
+      sessionView ||
       !start ||
       !routineData ||
       hasMatchingWorkoutInProgress ||
@@ -424,6 +489,7 @@ export default function RoutineDetailScreen() {
       startedAt: Date.now(),
     });
   }, [
+    sessionView,
     start,
     routineData,
     hasInitializedFromStore,
@@ -1155,7 +1221,7 @@ export default function RoutineDetailScreen() {
               )
             )
           }
-          readonly={readonly && !started}
+          readonly={Boolean(sessionView || (readonly && !started))}
           started={started}
           onStartRestTimer={handleStartRestTimer}
           onCancelRestTimer={handleCancelRestTimer}
@@ -1172,6 +1238,7 @@ export default function RoutineDetailScreen() {
       previousSessions,
       readonly,
       started,
+      sessionView,
       sets,
       handleStartRestTimer,
       handleCancelRestTimer,
@@ -1261,19 +1328,21 @@ export default function RoutineDetailScreen() {
         ListHeaderComponent={
           <RoutineHeader
             routineTitle={routineTitle}
+            subtitle={sessionView ? sessionDateLabel : undefined}
             started={started}
             routineId={routineData?.id}
             onStart={handleStartRoutine}
             onEdit={goToEditRoutine}
             onChangeTitle={setRoutineTitle}
             readonly={readonly}
+            hideActions={Boolean(sessionView)}
           />
         }
         renderItem={renderExerciseCard}
         contentContainerStyle={{ paddingTop: started ? 80 : 0, padding: 16 }}
       />
 
-      {!routineData?.id && !started && (
+      {!sessionView && !routineData?.id && !started && (
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: theme.primary }]}
           disabled={isSaving}

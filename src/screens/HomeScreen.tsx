@@ -32,6 +32,7 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { ExerciseRequestDto, SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../components/CachedExerciseImage";
 import { useTheme } from "../contexts/ThemeContext";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
@@ -123,6 +124,32 @@ const formatSessionDuration = (totalSeconds: number): string => {
   return `${hours}h ${minutes}m`;
 };
 
+const formatSessionDateLabel = (createdAt: Date | string): string => {
+  const date = new Date(createdAt);
+  return date.toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formatSessionTitle = (
+  routineTitle: string | undefined,
+  createdAt: Date | string
+): string => {
+  if (routineTitle && routineTitle.trim().length > 0) {
+    return routineTitle;
+  }
+
+  const date = new Date(createdAt);
+  return `Sesion del ${date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })}`;
+};
+
 const normalizeSessionExercise = (
   exercise: RawSessionExercise,
   index: number
@@ -166,6 +193,27 @@ const isExerciseFullyCompleted = (exercise: SessionExercise): boolean => {
 
   return exerciseSets.length > 0 && exerciseSets.every((set) => set.completed);
 };
+
+const mapSessionExercisesToRoutineExercises = (
+  exercises: SessionExercise[] = []
+): ExerciseRequestDto[] =>
+  exercises.map((exercise, exerciseIndex) => ({
+    id: exercise.exerciseId || `session-exercise-${exerciseIndex}`,
+    name: exercise.name,
+    imageUrl: exercise.imageUrl,
+    giftUrl: exercise.giftUrl,
+    sets: (exercise.sets || []).map(
+      (set, setIndex): SetRequestDto => ({
+        id: `${exercise.exerciseId || `session-exercise-${exerciseIndex}`}-set-${setIndex + 1}`,
+        order: setIndex + 1,
+        weight: toSafeNumber(set.weight),
+        reps: toSafeNumber(set.reps),
+        completed: Boolean(set.completed),
+      })
+    ),
+    weightUnit: "kg",
+    repsType: "reps",
+  }));
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({
@@ -447,6 +495,24 @@ export default function HomeScreen() {
     });
   }, []);
 
+  const openSessionDetail = useCallback(
+    (session: SessionWithTotals) => {
+      navigation.navigate("Entreno", {
+        screen: "RoutineDetail",
+        params: {
+          exercises: mapSessionExercisesToRoutineExercises(session.exercises),
+          sessionView: true,
+          sessionTitle: formatSessionTitle(
+            session.routine?.title,
+            session.createdAt
+          ),
+          sessionDateLabel: formatSessionDateLabel(session.createdAt),
+        },
+      });
+    },
+    [navigation]
+  );
+
   // Renderizar SessionCard como componente separado para mejor performance
   const renderSessionCard = useCallback(
     ({ item: session }: { item: SessionWithTotals }) => {
@@ -478,6 +544,7 @@ export default function HomeScreen() {
             },
           ]}
           android_ripple={{ color: theme.primary + "20" }}
+          onPress={() => openSessionDetail(session)}
         >
           <View style={styles.sessionHeader}>
             <View style={styles.sessionDateContainer}>
@@ -617,7 +684,14 @@ export default function HomeScreen() {
         </Pressable>
       );
     },
-    [theme, isDark, responsive, expandedSessionIds, toggleSessionExpanded]
+    [
+      theme,
+      isDark,
+      responsive,
+      expandedSessionIds,
+      toggleSessionExpanded,
+      openSessionDetail,
+    ]
   );
 
   return (
