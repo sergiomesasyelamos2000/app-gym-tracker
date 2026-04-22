@@ -226,7 +226,18 @@ export default function RoutineDetailScreen() {
       })
     );
 
-    const parent = navigation.getParent();
+    const parent = navigation.getParent() as
+      | (NavigationProp<Record<string, object | undefined>> & {
+          addListener: (
+            eventName: string,
+            callback: (event: { target?: string }) => void
+          ) => () => void;
+          getState: () => {
+            index: number;
+            routes: Array<{ key: string }>;
+          };
+        })
+      | undefined;
     parent?.navigate("Inicio" as never);
   }, [navigation, sessionView]);
 
@@ -244,7 +255,6 @@ export default function RoutineDetailScreen() {
       headerLeft: () => (
         <HeaderBackButton
           tintColor={theme.text}
-          labelVisible={false}
           onPress={handleExitSessionView}
         />
       ),
@@ -256,6 +266,46 @@ export default function RoutineDetailScreen() {
     sessionView,
     theme.primary,
   ]);
+
+  useEffect(() => {
+    if (!sessionView) {
+      return;
+    }
+
+    const parent = navigation.getParent() as
+      | (NavigationProp<Record<string, object | undefined>> & {
+          addListener: (
+            eventName: string,
+            callback: (event: { target?: string }) => void
+          ) => () => void;
+          getState: () => {
+            index: number;
+            routes: Array<{ key: string }>;
+          };
+        })
+      | undefined;
+    if (!parent) {
+      return;
+    }
+
+    const unsubscribe = parent.addListener("tabPress", (event: any) => {
+      const parentState = parent.getState();
+      const currentTabKey = parentState.routes[parentState.index]?.key;
+
+      if (!event?.target || event.target === currentTabKey) {
+        return;
+      }
+
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "WorkoutList" }],
+        })
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, sessionView]);
 
   useEffect(() => {
     durationRef.current = duration;
