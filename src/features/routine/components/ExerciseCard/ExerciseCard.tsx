@@ -59,6 +59,49 @@ const normalizeSetIds = (
   }));
 };
 
+const areSetsEqual = (
+  left: SetRequestDto[],
+  right: SetRequestDto[]
+): boolean => {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+
+  return left.every((set, index) => {
+    const other = right[index] as
+      | (SetRequestDto & {
+          previousWeight?: number;
+          previousReps?: number;
+          previousAssistedReps?: number;
+          setType?: string;
+        })
+      | undefined;
+
+    const current = set as SetRequestDto & {
+      previousWeight?: number;
+      previousReps?: number;
+      previousAssistedReps?: number;
+      setType?: string;
+    };
+
+    if (!other) return false;
+
+    return (
+      current.id === other.id &&
+      current.order === other.order &&
+      current.weight === other.weight &&
+      current.reps === other.reps &&
+      current.repsMin === other.repsMin &&
+      current.repsMax === other.repsMax &&
+      current.assistedReps === other.assistedReps &&
+      current.completed === other.completed &&
+      current.previousWeight === other.previousWeight &&
+      current.previousReps === other.previousReps &&
+      current.previousAssistedReps === other.previousAssistedReps &&
+      current.setType === other.setType
+    );
+  });
+};
+
 const detectRecordWithPrecomputedMetrics = (
   exerciseId: string,
   exerciseName: string,
@@ -181,6 +224,7 @@ const ExerciseCard = ({
   const [sets, setSets] = useState<SetRequestDto[]>(() =>
     normalizeSetIds(initialSets, exercise.id)
   );
+  const skipNextOnChangeSetsRef = useRef(false);
   const [notes, setNotes] = useState<ExerciseNote[]>(
     (exercise.notes || []).map((note, index) => ({
       id: note.id ?? `note_${exercise.id}_${index}`,
@@ -309,8 +353,69 @@ const ExerciseCard = ({
   };
 
   useEffect(() => {
+    if (skipNextOnChangeSetsRef.current) {
+      skipNextOnChangeSetsRef.current = false;
+      return;
+    }
+
     onChangeSets?.(sets);
   }, [sets]);
+
+  useEffect(() => {
+    const normalizedIncomingSets = normalizeSetIds(initialSets, exercise.id);
+
+    setSets((currentSets) => {
+      if (areSetsEqual(currentSets, normalizedIncomingSets)) {
+        return currentSets;
+      }
+
+      skipNextOnChangeSetsRef.current = true;
+      return normalizedIncomingSets;
+    });
+  }, [initialSets, exercise.id]);
+
+  useEffect(() => {
+    if (!started) {
+      return;
+    }
+
+    setSets((currentSets) => {
+      const resetSets = currentSets.map((rawSet) => {
+        const set = rawSet as SetRequestDto & {
+          previousWeight?: number;
+          previousReps?: number;
+          previousAssistedReps?: number;
+        };
+
+        return {
+          ...set,
+          weight: 0,
+          reps: 0,
+          assistedReps: 0,
+          completed: false,
+          previousWeight:
+            typeof set.previousWeight === "number"
+              ? set.previousWeight
+              : set.weight,
+          previousReps:
+            typeof set.previousReps === "number"
+              ? set.previousReps
+              : set.reps || set.repsMin,
+          previousAssistedReps:
+            typeof set.previousAssistedReps === "number"
+              ? set.previousAssistedReps
+              : set.assistedReps,
+        };
+      });
+
+      if (areSetsEqual(currentSets, resetSets)) {
+        return currentSets;
+      }
+
+      skipNextOnChangeSetsRef.current = true;
+      return resetSets;
+    });
+  }, [started]);
 
   useEffect(() => {
     const { minutes, seconds } = parseTime(restTime);
@@ -329,10 +434,10 @@ const ExerciseCard = ({
         ? ({
             id: uuid.v4() as string,
             order: sets.length + 1,
-            weight: previousSet?.weight || 0,
+            weight: started ? 0 : previousSet?.weight || 0,
             repsMin: previousSet?.repsMin || 0,
             repsMax: previousSet?.repsMax || 0,
-            assistedReps: previousSet?.assistedReps || 0,
+            assistedReps: started ? 0 : previousSet?.assistedReps || 0,
             completed: false,
             setType:
               (previousSet as SetRequestDto & { setType?: string })?.setType ||
@@ -341,9 +446,9 @@ const ExerciseCard = ({
         : ({
             id: uuid.v4() as string,
             order: sets.length + 1,
-            weight: previousSet?.weight || 0,
-            reps: previousSet?.reps || 0,
-            assistedReps: previousSet?.assistedReps || 0,
+            weight: started ? 0 : previousSet?.weight || 0,
+            reps: started ? 0 : previousSet?.reps || 0,
+            assistedReps: started ? 0 : previousSet?.assistedReps || 0,
             completed: false,
             setType:
               (previousSet as SetRequestDto & { setType?: string })?.setType ||
@@ -639,6 +744,7 @@ const ExerciseCard = ({
         />
 
         <ExerciseSetList
+          key={`${exercise.id}-${started ? "started" : "idle"}`}
           sets={sets.filter((set) => set.id !== pendingDelete?.set.id)}
           onUpdate={updateSet}
           onDelete={deleteSet}

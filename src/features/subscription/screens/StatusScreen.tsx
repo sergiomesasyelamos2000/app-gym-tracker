@@ -30,6 +30,7 @@ import {
   SubscriptionPlan,
   PLAN_METADATA,
 } from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
@@ -43,6 +44,7 @@ export function StatusScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const route = useRoute<StatusScreenRouteProp>();
   const { success } = route.params || {};
+  const { theme, isDark } = useTheme();
 
   const {
     subscription,
@@ -130,9 +132,12 @@ export function StatusScreen() {
 
   if (isLoading || !subscription) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        edges={["top"]}
+      >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -142,7 +147,10 @@ export function StatusScreen() {
   const daysRemaining = getDaysRemaining;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={["top"]}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -151,9 +159,23 @@ export function StatusScreen() {
         {/* Success Banner */}
         {success && (
           <View>
-            <View style={styles.successBanner}>
-              <CheckCircle size={24} color="#10b981" />
-              <Text style={styles.successText}>
+            <View
+              style={[
+                styles.successBanner,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(16, 185, 129, 0.18)"
+                    : "#d1fae5",
+                },
+              ]}
+            >
+              <CheckCircle size={24} color={theme.success} />
+              <Text
+                style={[
+                  styles.successText,
+                  { color: isDark ? "#A7F3D0" : "#065f46" },
+                ]}
+              >
                 ¡Bienvenido a Premium! Tu suscripción está activa.
               </Text>
             </View>
@@ -162,31 +184,72 @@ export function StatusScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Crown size={32} color={isPremium ? "#f59e0b" : "#9ca3af"} />
-          <Text style={styles.title}>Mi Suscripción</Text>
+          <Crown
+            size={32}
+            color={isPremium ? theme.warning : theme.textTertiary}
+          />
+          <Text style={[styles.title, { color: theme.text }]}>
+            Mi Suscripción
+          </Text>
         </View>
 
         {/* Current Plan Card */}
-        <View style={[styles.card, isPremium && styles.premiumCard]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.card,
+              shadowColor: theme.shadowColor,
+            },
+            isPremium && styles.premiumCard,
+            isPremium && { borderColor: theme.warning },
+          ]}
+        >
           <View style={styles.cardHeader}>
-            <Text style={styles.planName}>{planMetadata.name}</Text>
+            <Text style={[styles.planName, { color: theme.text }]}>
+              {planMetadata.name}
+            </Text>
             {isPremium && (
-              <View style={styles.premiumBadge}>
-                <Text style={styles.premiumBadgeText}>Premium</Text>
+              <View
+                style={[
+                  styles.premiumBadge,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(245, 158, 11, 0.18)"
+                      : "#fef3c7",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.premiumBadgeText,
+                    { color: isDark ? "#FCD34D" : "#92400e" },
+                  ]}
+                >
+                  Premium
+                </Text>
               </View>
             )}
           </View>
 
-          <Text style={styles.planDescription}>{planMetadata.description}</Text>
+          <Text
+            style={[styles.planDescription, { color: theme.textSecondary }]}
+          >
+            {planMetadata.description}
+          </Text>
 
           {/* Subscription Details */}
           {isPremium && (
             <View style={styles.detailsContainer}>
               {/* Price */}
               <View style={styles.detailRow}>
-                <CreditCard size={20} color="#6b7280" />
-                <Text style={styles.detailLabel}>Precio:</Text>
-                <Text style={styles.detailValue}>
+                <CreditCard size={20} color={theme.textSecondary} />
+                <Text
+                  style={[styles.detailLabel, { color: theme.textSecondary }]}
+                >
+                  Precio:
+                </Text>
+                <Text style={[styles.detailValue, { color: theme.text }]}>
                   {planMetadata.price.toFixed(2)}€
                   {planMetadata.interval &&
                     planMetadata.interval !== "lifetime" && (
@@ -200,11 +263,16 @@ export function StatusScreen() {
               {subscription.currentPeriodEnd &&
                 subscription.plan !== SubscriptionPlan.LIFETIME && (
                   <View style={styles.detailRow}>
-                    <Calendar size={20} color="#6b7280" />
-                    <Text style={styles.detailLabel}>
+                    <Calendar size={20} color={theme.textSecondary} />
+                    <Text
+                      style={[
+                        styles.detailLabel,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
                       {isCanceled ? "Expira:" : "Se renueva:"}
                     </Text>
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailValue, { color: theme.text }]}>
                       {new Date(
                         subscription.currentPeriodEnd
                       ).toLocaleDateString("es-ES")}
@@ -216,8 +284,22 @@ export function StatusScreen() {
 
               {/* Canceled Notice */}
               {isCanceled && (
-                <View style={styles.canceledNotice}>
-                  <Text style={styles.canceledText}>
+                <View
+                  style={[
+                    styles.canceledNotice,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(239, 68, 68, 0.16)"
+                        : "#fef2f2",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.canceledText,
+                      { color: isDark ? "#FCA5A5" : "#991b1b" },
+                    ]}
+                  >
                     Tu suscripción se cancelará al final del período de
                     facturación.
                   </Text>
@@ -228,7 +310,9 @@ export function StatusScreen() {
 
           {/* Features List */}
           <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>Funciones Incluidas:</Text>
+            <Text style={[styles.featuresTitle, { color: theme.text }]}>
+              Funciones Incluidas:
+            </Text>
             <FeatureList features={planMetadata.features} />
           </View>
 
@@ -248,22 +332,48 @@ export function StatusScreen() {
               subscription.plan !== SubscriptionPlan.LIFETIME && (
                 <>
                   <TouchableOpacity
-                    style={[styles.button, styles.buttonSecondary]}
+                    style={[
+                      styles.button,
+                      styles.buttonSecondary,
+                      {
+                        backgroundColor: isDark
+                          ? theme.backgroundSecondary
+                          : "#f3f4f6",
+                      },
+                    ]}
                     onPress={handleManageSubscription}
                     disabled={actionLoading}
                   >
-                    <Text style={styles.buttonTextSecondary}>
+                    <Text
+                      style={[
+                        styles.buttonTextSecondary,
+                        { color: theme.text },
+                      ]}
+                    >
                       Gestionar Suscripción
                     </Text>
-                    <ArrowRight size={20} color="#374151" />
+                    <ArrowRight size={20} color={theme.text} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.button, styles.buttonDanger]}
+                    style={[
+                      styles.button,
+                      styles.buttonDanger,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(239, 68, 68, 0.16)"
+                          : "#fef2f2",
+                      },
+                    ]}
                     onPress={handleCancelSubscription}
                     disabled={actionLoading}
                   >
-                    <Text style={styles.buttonTextDanger}>
+                    <Text
+                      style={[
+                        styles.buttonTextDanger,
+                        { color: isDark ? "#FCA5A5" : theme.error },
+                      ]}
+                    >
                       Cancelar Suscripción
                     </Text>
                   </TouchableOpacity>
@@ -272,7 +382,11 @@ export function StatusScreen() {
 
             {isPremium && isCanceled && (
               <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary]}
+                style={[
+                  styles.button,
+                  styles.buttonPrimary,
+                  { backgroundColor: theme.primary },
+                ]}
                 onPress={handleReactivateSubscription}
                 disabled={actionLoading}
               >
@@ -284,11 +398,15 @@ export function StatusScreen() {
 
             {isPremium && (
               <TouchableOpacity
-                style={[styles.button, styles.buttonOutline]}
+                style={[
+                  styles.button,
+                  styles.buttonOutline,
+                  { borderColor: theme.border },
+                ]}
                 onPress={handleChangePlan}
                 disabled={actionLoading}
               >
-                <Text style={styles.buttonTextOutline}>
+                <Text style={[styles.buttonTextOutline, { color: theme.text }]}>
                   Ver Todos los Planes
                 </Text>
               </TouchableOpacity>
@@ -296,16 +414,25 @@ export function StatusScreen() {
           </View>
 
           {actionLoading && (
-            <View style={styles.actionLoadingOverlay}>
-              <ActivityIndicator size="small" color="#3b82f6" />
+            <View
+              style={[
+                styles.actionLoadingOverlay,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(15, 23, 42, 0.82)"
+                    : "rgba(255, 255, 255, 0.8)",
+                },
+              ]}
+            >
+              <ActivityIndicator size="small" color={theme.primary} />
             </View>
           )}
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            ¿Preguntas? Contáctanos enevofit.support@gmail.com
+          <Text style={[styles.footerText, { color: theme.textTertiary }]}>
+            ¿Preguntas? Contáctanos en evofit.support@gmail.com
           </Text>
         </View>
       </ScrollView>

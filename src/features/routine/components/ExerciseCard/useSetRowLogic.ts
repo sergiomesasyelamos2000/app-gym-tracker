@@ -132,41 +132,23 @@ export const useSetRowLogic = ({
     item.repsMax,
   ]);
 
-  // En modo entrenamiento, si la UI perdió estado local, rehidratar desde el item.
+  // En modo entrenamiento, mantener los inputs alineados con el set actual.
   useEffect(() => {
     if (!started) return;
 
-    if ((!localWeight || localWeight === "0") && item.weight && item.weight > 0) {
-      setLocalWeight(item.weight.toString());
-    }
-
-    if ((!localReps || localReps === "0") && item.reps && item.reps > 0) {
-      setLocalReps(item.reps.toString());
-    }
-
-    if (
-      (!localAssistedReps || localAssistedReps === "0") &&
-      item.assistedReps &&
-      item.assistedReps > 0
-    ) {
-      setLocalAssistedReps(item.assistedReps.toString());
-    }
-
-    if (
-      (!localRepsMin || localRepsMin === "0") &&
-      item.repsMin &&
-      item.repsMin > 0
-    ) {
-      setLocalRepsMin(item.repsMin.toString());
-    }
-
-    if (
-      (!localRepsMax || localRepsMax === "0") &&
-      item.repsMax &&
-      item.repsMax > 0
-    ) {
-      setLocalRepsMax(item.repsMax.toString());
-    }
+    setLocalWeight(item.weight && item.weight > 0 ? item.weight.toString() : "");
+    setLocalReps(item.reps && item.reps > 0 ? item.reps.toString() : "");
+    setLocalAssistedReps(
+      item.assistedReps && item.assistedReps > 0
+        ? item.assistedReps.toString()
+        : "",
+    );
+    setLocalRepsMin(
+      item.repsMin && item.repsMin > 0 ? item.repsMin.toString() : ""
+    );
+    setLocalRepsMax(
+      item.repsMax && item.repsMax > 0 ? item.repsMax.toString() : ""
+    );
   }, [
     started,
     item.weight,
@@ -174,11 +156,6 @@ export const useSetRowLogic = ({
     item.assistedReps,
     item.repsMin,
     item.repsMax,
-    localWeight,
-    localReps,
-    localAssistedReps,
-    localRepsMin,
-    localRepsMax,
   ]);
 
   // Función helper para sanitizar valores
@@ -248,36 +225,8 @@ export const useSetRowLogic = ({
 
   const handleToggleCompleted = useCallback(() => {
     const isMarkingCompleted = !item.completed;
-
-    if (isMarkingCompleted && started) {
-      const values = extractValuesFromPreviousMark();
-      if (values) {
-        // Solo autocompletar si el campo está vacío
-        const weightIsEmpty = !localWeight || localWeight.trim() === "";
-        const repsIsEmpty = !localReps || localReps.trim() === "";
-
-        if (weightIsEmpty) {
-          setLocalWeight(values.weight);
-          onUpdate(item.id, "weight", Number(values.weight));
-        }
-
-        if (repsIsEmpty) {
-          setLocalReps(values.reps);
-          onUpdate(item.id, "reps", Number(values.reps));
-        }
-      }
-    }
-
     onUpdate(item.id, "completed", isMarkingCompleted);
-  }, [
-    item.id,
-    item.completed,
-    onUpdate,
-    started,
-    localWeight,
-    localReps,
-    extractValuesFromPreviousMark,
-  ]);
+  }, [item.id, item.completed, onUpdate]);
 
   return {
     localWeight,

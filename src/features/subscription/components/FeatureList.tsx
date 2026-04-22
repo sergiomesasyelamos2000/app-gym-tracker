@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Check, X } from 'lucide-react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface FeatureListProps {
   features: string[];
@@ -9,13 +10,15 @@ interface FeatureListProps {
 }
 
 export function FeatureList({ features, showLimited, limitedFeatures = [] }: FeatureListProps) {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.container}>
       {/* Available features */}
       {features.map((feature, index) => (
         <View key={`available-${index}`} style={styles.featureRow}>
-          <Check size={20} color="#10b981" style={styles.icon} />
-          <Text style={styles.featureText}>{feature}</Text>
+          <Check size={20} color={theme.success} style={styles.icon} />
+          <Text style={[styles.featureText, { color: theme.text }]}>{feature}</Text>
         </View>
       ))}
 
@@ -23,8 +26,16 @@ export function FeatureList({ features, showLimited, limitedFeatures = [] }: Fea
       {showLimited &&
         limitedFeatures.map((feature, index) => (
           <View key={`limited-${index}`} style={styles.featureRow}>
-            <X size={20} color="#ef4444" style={styles.icon} />
-            <Text style={[styles.featureText, styles.limitedText]}>{feature}</Text>
+            <X size={20} color={theme.error} style={styles.icon} />
+            <Text
+              style={[
+                styles.featureText,
+                styles.limitedText,
+                { color: theme.textTertiary },
+              ]}
+            >
+              {feature}
+            </Text>
           </View>
         ))}
     </View>

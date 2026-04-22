@@ -214,10 +214,50 @@ const ExerciseSetRow = ({
   const setTypeIcon = getSetTypeIcon(setType);
   const previousWeightPlaceholder =
     previousMark?.match(/^\s*([\d.,]+)/)?.[1]?.replace(",", ".") || "0";
-  const previousRepsPlaceholder = previousMark?.match(/x\s*(\d+)/i)?.[1] || "0";
   const previousMainMark =
     previousMark?.replace(/\s*\(A:\d+\)\s*$/i, "").trim() || "-";
   const previousAssistedMark = previousMark?.match(/\(A:(\d+)\)/i)?.[1];
+  const rangePlaceholder =
+    repsType === "range"
+      ? `${
+          item.repsMin && item.repsMin > 0
+            ? item.repsMin
+            : item.reps && item.reps > 0
+              ? item.reps
+              : 0
+        }-${
+          item.repsMax && item.repsMax > 0
+            ? item.repsMax
+            : item.reps && item.reps > 0
+              ? item.reps
+              : 0
+        }`
+      : "0";
+  const repsDisplayValue = localReps || (repsType === "range" ? rangePlaceholder : "0");
+  const repsColumnFlex =
+    repsType === "range"
+      ? repsDisplayValue.length <= 3
+        ? isSmallScreen
+          ? 1.55
+          : 1.8
+        : repsDisplayValue.length <= 5
+          ? isSmallScreen
+            ? 1.9
+            : 2.25
+          : isSmallScreen
+            ? COLUMN_FLEX.small.repsRange
+            : COLUMN_FLEX.normal.repsRange
+      : repsDisplayValue.length <= 1
+        ? isSmallScreen
+          ? 0.95
+          : 1.1
+        : repsDisplayValue.length <= 2
+          ? isSmallScreen
+            ? 1.1
+            : 1.3
+          : isSmallScreen
+            ? COLUMN_FLEX.small.reps
+            : COLUMN_FLEX.normal.reps;
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -401,7 +441,7 @@ const ExerciseSetRow = ({
           keyboardType="decimal-pad"
           value={localWeight}
           selectTextOnFocus
-          placeholder={started ? previousWeightPlaceholder : "0"}
+          placeholder={previousWeightPlaceholder}
           placeholderTextColor={theme.textTertiary}
           onChangeText={handleWeightChange}
           editable={!readonly}
@@ -414,9 +454,7 @@ const ExerciseSetRow = ({
         // En modo entrenamiento, SIEMPRE mostrar un solo input de reps (como Hevy)
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.reps
-              : COLUMN_FLEX.normal.reps,
+            flex: repsColumnFlex,
             marginHorizontal: 2,
           }}
         >
@@ -426,34 +464,34 @@ const ExerciseSetRow = ({
               styles.input,
               {
                 backgroundColor: theme.inputBackground,
-              color: theme.text,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-              padding: isSmallScreen ? 9 : 12,
-              fontSize: RFValue(isSmallScreen ? 14 : 16),
-              minHeight: isSmallScreen ? 44 : 48,
-            },
-          ]}
+                color: theme.text,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: theme.border,
+                paddingHorizontal:
+                  repsType === "range"
+                    ? isSmallScreen
+                      ? 6
+                      : 8
+                    : isSmallScreen
+                      ? 9
+                      : 12,
+                paddingVertical: isSmallScreen ? 9 : 12,
+                fontSize: RFValue(
+                  repsType === "range"
+                    ? isSmallScreen
+                      ? 12
+                      : 14
+                    : isSmallScreen
+                      ? 14
+                      : 16
+                ),
+                minHeight: isSmallScreen ? 44 : 48,
+              },
+            ]}
             keyboardType="numeric"
             value={localReps}
             selectTextOnFocus
-            placeholder={
-              repsType === "range"
-                ? `${
-                    item.repsMin && item.repsMin > 0
-                      ? item.repsMin
-                      : item.reps && item.reps > 0
-                      ? item.reps
-                      : 0
-                  }-${
-                    item.repsMax && item.repsMax > 0
-                      ? item.repsMax
-                      : item.reps && item.reps > 0
-                      ? item.reps
-                      : 0
-                  }`
-                : previousRepsPlaceholder
-            }
+            placeholder={rangePlaceholder}
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
             editable={!readonly}

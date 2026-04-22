@@ -75,6 +75,8 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 type SetWithPreviousAssisted = SetRequestDto & {
+  previousWeight?: number;
+  previousReps?: number;
   previousAssistedReps?: number;
 };
 
@@ -394,6 +396,9 @@ export default function RoutineDetailScreen() {
       ...ex,
       sets: ex?.sets?.map((set) => ({
         ...set,
+        weight: 0,
+        reps: 0,
+        assistedReps: 0,
         completed: false,
         previousWeight: set.weight,
         previousReps: set.reps || set.repsMin,
@@ -462,12 +467,23 @@ export default function RoutineDetailScreen() {
 
     const updatedSets = { ...sets };
     exercisesState.forEach((exercise) => {
-      updatedSets[exercise.id] = updatedSets[exercise.id].map((set) => ({
+      updatedSets[exercise.id] = updatedSets[exercise.id].map((rawSet) => {
+        const set = rawSet as SetWithPreviousAssisted;
+
+        return {
         ...set,
-        previousWeight: set.weight,
-        previousReps: set.reps || set.repsMin,
-        previousAssistedReps: set.assistedReps,
-      }));
+        previousWeight:
+          typeof set.previousWeight === "number" ? set.previousWeight : set.weight,
+        previousReps:
+          typeof set.previousReps === "number"
+            ? set.previousReps
+            : set.reps || set.repsMin,
+        previousAssistedReps:
+          typeof set.previousAssistedReps === "number"
+            ? set.previousAssistedReps
+            : set.assistedReps,
+        };
+      });
     });
     setSets(updatedSets);
   }, [started]);
@@ -638,15 +654,35 @@ export default function RoutineDetailScreen() {
 
   const handleStartRoutine = () => {
     if (isSaving) return;
-    const initialSets: { [exerciseId: string]: SetRequestDto[] } = { ...sets };
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
 
     exercisesState.forEach((exercise) => {
-      if (!initialSets[exercise.id] || initialSets[exercise.id].length === 0) {
-        initialSets[exercise.id] = initializeSets(exercise.sets).map((s) => ({
-          ...s,
+      const existingSets =
+        sets[exercise.id]?.length > 0
+          ? sets[exercise.id]
+          : initializeSets(exercise.sets);
+
+      initialSets[exercise.id] = existingSets.map((rawSet) => {
+        const set = rawSet as SetWithPreviousAssisted;
+
+        return {
+          ...set,
+          weight: 0,
+          reps: 0,
+          assistedReps: 0,
           completed: false,
-        }));
-      }
+          previousWeight:
+            typeof set.previousWeight === "number" ? set.previousWeight : set.weight,
+          previousReps:
+            typeof set.previousReps === "number"
+              ? set.previousReps
+              : set.reps || set.repsMin,
+          previousAssistedReps:
+            typeof set.previousAssistedReps === "number"
+              ? set.previousAssistedReps
+              : set.assistedReps,
+        };
+      });
     });
 
     setSets(initialSets);
