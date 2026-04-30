@@ -28,8 +28,8 @@
       "buildNumber": "1.0.0",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "NSPhotoLibraryUsageDescription": "EvoFit necesita acceso a tu fototeca para que puedas elegir una imagen de perfil o subir una foto de comida para analizarla y registrarla en tu diario nutricional.",
-        "NSCameraUsageDescription": "EvoFit necesita acceso a la cámara para que puedas hacer fotos de comidas y registrarlas en tu seguimiento nutricional.",
+        "NSPhotoLibraryUsageDescription": "EvoFit necesita acceso a tu fototeca para que puedas, por ejemplo, elegir una foto para tu perfil o subir una imagen de una comida para estimar calorías y macronutrientes y guardarla en tu diario nutricional.",
+        "NSCameraUsageDescription": "EvoFit necesita acceso a la cámara para que puedas hacer una foto de tu comida, estimar calorías y macronutrientes y guardarla en tu diario nutricional.",
         "NSMicrophoneUsageDescription": "EvoFit solicita acceso al micrófono solo cuando grabas contenido multimedia que lo requiera dentro de la app."
       }
     },
@@ -61,7 +61,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "EvoFit necesita acceso a la camara para que puedas hacer fotos de comidas y registrarlas en tu seguimiento nutricional.",
+          "cameraPermission": "EvoFit necesita acceso a la camara para que puedas hacer fotos de comidas, estimar calorías y macronutrientes y guardarlas en tu diario nutricional.",
           "microphonePermission": "EvoFit solicita acceso al microfono solo cuando grabas contenido multimedia que lo requiera dentro de la app.",
           "recordAudioAndroid": true
         }

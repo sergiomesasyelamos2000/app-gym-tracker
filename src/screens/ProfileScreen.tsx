@@ -4,12 +4,15 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import {
   Bell,
+  Brain,
   Calendar,
   ChevronRight,
   Crown,
   Download,
+  ExternalLink,
   LogOut,
   Moon,
+  Shield,
   Trash2,
   User,
   Utensils,
@@ -30,6 +33,7 @@ import {
   TouchableOpacity,
   View,
   Platform,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
@@ -44,10 +48,37 @@ import { useNotificationSettingsStore } from "../store/useNotificationSettingsSt
 import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
+const PRIVACY_POLICY_URL = "https://evofitofficial.lovable.app/privacy";
+
+const AI_DATA_SHARING_DETAILS = [
+  {
+    title: "Chat de nutrición y entrenamiento",
+    provider: "Google Gemini y Groq",
+    description:
+      "Cuando usas el chat con IA, EvoFit puede enviar tu mensaje, el historial reciente de la conversación y un contexto resumido de tu perfil para personalizar la respuesta.",
+    dataShared:
+      "Texto del mensaje, historial reciente, edad, peso, altura, nivel de actividad, objetivos de calorías y macros, resumen de rutinas, sesiones recientes, frecuencia de entrenamiento e identificador interno de usuario.",
+  },
+  {
+    title: "Análisis de fotos de comida",
+    provider: "Google Gemini",
+    description:
+      "Cuando analizas una foto de comida, EvoFit envía la imagen para identificar alimentos y estimar calorías y macronutrientes.",
+    dataShared:
+      "Imagen subida por el usuario y metadatos técnicos mínimos del archivo, como el tipo de imagen.",
+  },
+];
+
+const NON_SHARED_WITH_AI = [
+  "Contraseña, tokens de autenticación y datos de pago no se envían a proveedores de IA.",
+  "Nombre y email no se incluyen en las solicitudes de IA para el chat o el análisis de fotos, salvo que el usuario los escriba manualmente en su mensaje o aparezcan en una imagen subida.",
+];
+
 export default function ProfileScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -213,6 +244,17 @@ export default function ProfileScreen() {
 
   const handleExportData = () => {
     navigation.navigate("ExportData");
+  };
+
+  const handleOpenPrivacyPolicy = async () => {
+    try {
+      await Linking.openURL(PRIVACY_POLICY_URL);
+    } catch (error) {
+      Alert.alert(
+        "No se pudo abrir la política",
+        "Inténtalo de nuevo en unos segundos."
+      );
+    }
   };
 
   const handleClearCache = () => {
@@ -757,7 +799,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[
                 styles.settingRow,
-                !isPremium && styles.settingRowBorder,
+                styles.settingRowBorder,
                 { borderBottomColor: theme.divider },
               ]}
               onPress={handleClearCache}
@@ -781,6 +823,66 @@ export default function ProfileScreen() {
                   ]}
                 >
                   Elimina ejercicios y datos guardados offline
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+              onPress={() => setIsPrivacyModalVisible(true)}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.info + "20" },
+                ]}
+              >
+                <Shield color={theme.info} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Privacidad y datos
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Qué datos se comparten con IA y terceros
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={handleOpenPrivacyPolicy}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.primary + "20" },
+                ]}
+              >
+                <ExternalLink color={theme.primary} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Política de privacidad
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Consulta la política completa en la web oficial
                 </Text>
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />
@@ -965,6 +1067,172 @@ export default function ProfileScreen() {
                     Guardar
                   </Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isPrivacyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPrivacyModalVisible(false)}
+        statusBarTranslucent={Platform.OS === "android"}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.modalCard,
+              styles.privacyModalCard,
+              { backgroundColor: theme.card },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Privacidad y datos
+            </Text>
+
+            <ScrollView
+              style={styles.privacyScroll}
+              contentContainerStyle={styles.privacyScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View
+                style={[
+                  styles.privacyIntroCard,
+                  {
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <View style={styles.privacyIntroHeader}>
+                  <Brain color={theme.primary} size={18} />
+                  <Text
+                    style={[styles.privacyIntroTitle, { color: theme.text }]}
+                  >
+                    Uso de IA de terceros
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.privacyParagraph,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  EvoFit utiliza proveedores externos de IA para el chat de
+                  nutrición y entrenamiento, y para el análisis de fotos de
+                  comida.
+                </Text>
+                <Text
+                  style={[
+                    styles.privacyParagraph,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Puedes consultar esta información en Perfil &gt; Datos &gt;
+                  Privacidad y datos.
+                </Text>
+              </View>
+
+              {AI_DATA_SHARING_DETAILS.map((item) => (
+                <View
+                  key={item.title}
+                  style={[
+                    styles.privacyDetailCard,
+                    {
+                      backgroundColor: theme.backgroundSecondary,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.privacyCardTitle, { color: theme.text }]}>
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.privacyProvider,
+                      { color: theme.primary },
+                    ]}
+                  >
+                    Proveedor: {item.provider}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.privacyParagraph,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
+                  <Text style={[styles.privacyLabel, { color: theme.text }]}>
+                    Datos compartidos
+                  </Text>
+                  <Text
+                    style={[
+                      styles.privacyParagraph,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {item.dataShared}
+                  </Text>
+                </View>
+              ))}
+
+              <View
+                style={[
+                  styles.privacyDetailCard,
+                  {
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.privacyCardTitle, { color: theme.text }]}>
+                  Datos que no compartimos con IA
+                </Text>
+                {NON_SHARED_WITH_AI.map((item) => (
+                  <Text
+                    key={item}
+                    style={[
+                      styles.privacyBullet,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                  },
+                ]}
+                onPress={() => setIsPrivacyModalVisible(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Cerrar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                onPress={handleOpenPrivacyPolicy}
+              >
+                <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                  Ver política
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1178,10 +1446,66 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
   },
+  privacyModalCard: {
+    maxHeight: "82%",
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 16,
+  },
+  privacyScroll: {
+    maxHeight: 520,
+  },
+  privacyScrollContent: {
+    paddingBottom: 8,
+  },
+  privacyIntroCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  privacyIntroHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  privacyIntroTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  privacyDetailCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  privacyCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  privacyProvider: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  privacyLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  privacyParagraph: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  privacyBullet: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 6,
   },
   modalAvatarContainer: {
     alignItems: "center",
