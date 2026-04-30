@@ -8,6 +8,7 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -45,6 +46,7 @@ export function StatusScreen() {
   const route = useRoute<StatusScreenRouteProp>();
   const { success } = route.params || {};
   const { theme, isDark } = useTheme();
+  const isIos = Platform.OS === "ios";
 
   const {
     subscription,
@@ -127,6 +129,14 @@ export function StatusScreen() {
   };
 
   const handleChangePlan = () => {
+    if (isIos) {
+      Alert.alert(
+        "Premium no disponible en iPhone o iPad",
+        "Las compras y la gestión de suscripciones externas están desactivadas en iOS en esta versión."
+      );
+      return;
+    }
+
     navigation.navigate("PlansScreen");
   };
 
@@ -318,7 +328,7 @@ export function StatusScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
-            {!isPremium && (
+            {!isPremium && !isIos && (
               <UpgradeButton
                 onPress={handleChangePlan}
                 variant="primary"
@@ -328,6 +338,7 @@ export function StatusScreen() {
             )}
 
             {isPremium &&
+              !isIos &&
               !isCanceled &&
               subscription.plan !== SubscriptionPlan.LIFETIME && (
                 <>
@@ -380,7 +391,7 @@ export function StatusScreen() {
                 </>
               )}
 
-            {isPremium && isCanceled && (
+            {isPremium && isCanceled && !isIos && (
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -396,7 +407,7 @@ export function StatusScreen() {
               </TouchableOpacity>
             )}
 
-            {isPremium && (
+            {isPremium && !isIos && (
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -410,6 +421,25 @@ export function StatusScreen() {
                   Ver Todos los Planes
                 </Text>
               </TouchableOpacity>
+            )}
+
+            {isIos && (
+              <View
+                style={[
+                  styles.iosNotice,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(148, 163, 184, 0.14)"
+                      : "#f8fafc",
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.iosNoticeText, { color: theme.text }]}>
+                  La compra y gestión de Premium no están disponibles en iOS en
+                  esta versión.
+                </Text>
+              </View>
             )}
           </View>
 
@@ -633,6 +663,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 16,
+  },
+  iosNotice: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+  },
+  iosNoticeText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
   footer: {
     paddingHorizontal: 24,

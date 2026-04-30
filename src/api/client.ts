@@ -209,6 +209,7 @@ export async function apiFetch<T = unknown>(
         "auth/login",
         "auth/register",
         "auth/google/login",
+        "auth/apple/login",
         "auth/google/callback",
         "auth/forgot-password",
         "auth/reset-password",

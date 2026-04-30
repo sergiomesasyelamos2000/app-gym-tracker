@@ -1,5 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -30,7 +31,7 @@ import { ENV } from "../../../environments/environment";
 import { prefetchProductCatalog } from "../../nutrition/services/nutritionService";
 import { prefetchExerciseCatalog } from "../../../services/exerciseService";
 import { useAuthStore } from "../../../store/useAuthStore";
-import { googleLogin, login, register } from "../services/authService";
+import { appleLogin, googleLogin, login, register } from "../services/authService";
 import { CaughtError, getErrorMessage } from "../../../types";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -60,6 +61,7 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [googleSigninReady, setGoogleSigninReady] = useState(false);
+  const [appleSigninReady, setAppleSigninReady] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -171,6 +173,28 @@ export default function AuthScreen() {
     handleGoogleAuthSuccess(res.authentication as GoogleAuthentication);
   }, [response]);
 
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    let isMounted = true;
+
+    void AppleAuthentication.isAvailableAsync()
+      .then((isAvailable) => {
+        if (isMounted) {
+          setAppleSigninReady(isAvailable);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAppleSigninReady(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const isValidEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -257,6 +281,61 @@ export default function AuthScreen() {
     } catch (error) {
       const errorMessage = getErrorMessage(error as CaughtError);
       Alert.alert("Error", errorMessage);
+    }
+  };
+
+  const handleApplePress = async () => {
+    if (isLoading || Platform.OS !== "ios") return;
+
+    if (!appleSigninReady) {
+      Alert.alert(
+        "Apple Sign In no disponible",
+        "Este build de iOS no tiene Sign in with Apple disponible todavia. Recompila la app en iOS y prueba en un dispositivo o simulador con sesion de Apple activa."
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error("No se obtuvo identityToken de Apple.");
+      }
+
+      const authResponse = await appleLogin({
+        identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode || undefined,
+        user: credential.user,
+        email: credential.email || undefined,
+        fullName: credential.fullName
+          ? {
+              givenName: credential.fullName.givenName,
+              familyName: credential.fullName.familyName,
+            }
+          : undefined,
+      });
+
+      setAuth(authResponse.user, authResponse.tokens);
+      void Promise.all([
+        prefetchExerciseCatalog({ force: true }),
+        prefetchProductCatalog({ force: true, pageSize: 24 }),
+      ]);
+      setWelcomeMessage(`Hola ${authResponse.user.name}`);
+    } catch (error: any) {
+      if (error?.code === "ERR_REQUEST_CANCELED") return;
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al conectar con Apple";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -367,6 +446,10 @@ export default function AuthScreen() {
 
   const isGoogleButtonDisabled =
     isLoading || (Platform.OS === "ios" && !request);
+  const showGoogleLogin = true;
+  const isAppleButtonDisabled = isLoading;
+  const showAppleLogin = Platform.OS === "ios";
+  const showSocialLogin = showGoogleLogin || showAppleLogin;
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
@@ -651,57 +734,98 @@ export default function AuthScreen() {
                   )}
                 </TouchableOpacity>
 
-                <View style={styles.divider}>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: theme.border },
-                    ]}
-                  />
-                  <Text
-                    style={[styles.dividerText, { color: theme.textSecondary }]}
-                  >
-                    O continúa con
-                  </Text>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: theme.border },
-                    ]}
-                  />
-                </View>
+                {showSocialLogin && (
+                  <>
+                    <View style={styles.divider}>
+                      <View
+                        style={[
+                          styles.dividerLine,
+                          { backgroundColor: theme.border },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.dividerText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        O continúa con
+                      </Text>
+                      <View
+                        style={[
+                          styles.dividerLine,
+                          { backgroundColor: theme.border },
+                        ]}
+                      />
+                    </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.googleButton,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.06)"
-                        : "#FFFFFF",
-                      borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E7EB",
-                    },
-                    isGoogleButtonDisabled && styles.disabledButton,
-                  ]}
-                  onPress={handleGooglePress}
-                  disabled={isGoogleButtonDisabled}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.googleIconContainer}>
-                    <Image
-                      source={require("../../../../assets/google-logo.png")}
-                      style={styles.googleIcon}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.googleButtonText,
-                      { color: isDark ? "#F9FAFB" : "#1F2937" },
-                    ]}
-                  >
-                    Continuar con Google
-                  </Text>
-                </TouchableOpacity>
+                    {showAppleLogin && (
+                      <TouchableOpacity
+                        style={[
+                          styles.appleButton,
+                          {
+                            backgroundColor: isDark ? "#FFFFFF" : "#111827",
+                            borderColor: isDark ? "#E5E7EB" : "#111827",
+                          },
+                          isAppleButtonDisabled && styles.disabledButton,
+                        ]}
+                        onPress={handleApplePress}
+                        disabled={isAppleButtonDisabled}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="logo-apple"
+                          size={20}
+                          color={isDark ? "#111827" : "#FFFFFF"}
+                        />
+                        <Text
+                          style={[
+                            styles.appleButtonText,
+                            { color: isDark ? "#111827" : "#FFFFFF" },
+                          ]}
+                        >
+                          Continuar con Apple
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {showGoogleLogin && (
+                      <TouchableOpacity
+                        style={[
+                          styles.googleButton,
+                          {
+                            backgroundColor: isDark
+                              ? "rgba(255,255,255,0.06)"
+                              : "#FFFFFF",
+                            borderColor: isDark
+                              ? "rgba(255,255,255,0.1)"
+                              : "#E5E7EB",
+                          },
+                          isGoogleButtonDisabled && styles.disabledButton,
+                        ]}
+                        onPress={handleGooglePress}
+                        disabled={isGoogleButtonDisabled}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.googleIconContainer}>
+                          <Image
+                            source={require("../../../../assets/google-logo.png")}
+                            style={styles.googleIcon}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.googleButtonText,
+                            { color: isDark ? "#F9FAFB" : "#1F2937" },
+                          ]}
+                        >
+                          Continuar con Google
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
               </View>
 
               <View style={styles.footer}>
@@ -845,6 +969,17 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: "500" },
+  appleButton: {
+    width: "100%",
+    height: 52,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -871,6 +1006,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   googleIcon: { width: 20, height: 20 },
+  appleButtonText: { fontSize: 15, fontWeight: "600" },
   googleButtonText: { fontSize: 15, fontWeight: "600" },
   footer: {
     flexDirection: "row",

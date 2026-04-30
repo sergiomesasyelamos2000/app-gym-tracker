@@ -34,6 +34,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
 import {
+  deleteAccount as deleteAccountService,
   logout as logoutService,
   updateUserProfile as updateUserProfileService,
 } from "../features/login/services/authService";
@@ -48,6 +49,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedEmail, setEditedEmail] = useState("");
   const [editedPicture, setEditedPicture] = useState<string | undefined>(
@@ -66,6 +68,9 @@ export default function ProfileScreen() {
   // Subscription store
   const subscription = useSubscriptionStore((state) => state.subscription);
   const isPremium = useSubscriptionStore((state) => state.isPremium);
+  const clearSubscription = useSubscriptionStore(
+    (state) => state.clearSubscription
+  );
 
   // Notification settings from store
   const restTimerNotificationsEnabled = useNotificationSettingsStore(
@@ -281,6 +286,51 @@ export default function ProfileScreen() {
               await logout();
               setIsLoggingOut(false);
             }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    if (!user?.id || isDeletingAccount) return;
+
+    Alert.alert(
+      "Eliminar cuenta",
+      "Esta acción eliminará permanentemente tu cuenta y tus datos asociados. No se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Continuar",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Confirmación final",
+              "¿Seguro que quieres eliminar tu cuenta de EvoFit permanentemente?",
+              [
+                { text: "No", style: "cancel" },
+                {
+                  text: "Eliminar cuenta",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      setIsDeletingAccount(true);
+                      await deleteAccountService(user.id);
+                      clearSubscription();
+                      await logout();
+                    } catch (error) {
+                      console.error("Error deleting account:", error);
+                      Alert.alert(
+                        "Error",
+                        "No se pudo eliminar la cuenta. Inténtalo de nuevo."
+                      );
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -743,6 +793,30 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
             CUENTA
           </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.error + "25",
+                marginBottom: 12,
+              },
+            ]}
+            onPress={handleDeleteAccount}
+            disabled={isDeletingAccount}
+          >
+            <View style={styles.logoutContent}>
+              {isDeletingAccount ? (
+                <ActivityIndicator size="small" color={theme.error} />
+              ) : (
+                <Trash2 color={theme.error} size={20} />
+              )}
+              <Text style={[styles.logoutText, { color: theme.error }]}>
+                {isDeletingAccount ? "Eliminando cuenta..." : "Eliminar cuenta"}
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[

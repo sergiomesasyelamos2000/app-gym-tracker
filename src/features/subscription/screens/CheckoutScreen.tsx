@@ -6,6 +6,7 @@ import {
   Alert,
   Text,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import {
@@ -42,6 +43,7 @@ export function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const { setSubscription } = useSubscriptionStore();
+  const isIos = Platform.OS === "ios";
 
   const openStatusScreen = (success: boolean) => {
     const state = navigation.getState() as any;
@@ -213,6 +215,22 @@ export function CheckoutScreen() {
     );
   }
 
+  if (isIos) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.verifyingContainer}>
+          <Text style={styles.verifyingText}>Pago no disponible en iOS</Text>
+          <Text style={styles.verifyingSubtext}>
+            Esta versión no permite completar compras Premium en iPhone o iPad.
+          </Text>
+          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+            <Text style={styles.backButtonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -301,5 +319,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     textAlign: "center",
+  },
+  backButton: {
+    marginTop: 20,
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  backButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

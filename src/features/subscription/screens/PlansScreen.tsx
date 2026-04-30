@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,11 +26,20 @@ export function PlansScreen() {
   const { subscription } = useSubscription();
   const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(false);
+  const isIos = Platform.OS === "ios";
 
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     if (planId === SubscriptionPlan.FREE) {
       // User wants to stay on free plan
       navigation.goBack();
+      return;
+    }
+
+    if (isIos) {
+      Alert.alert(
+        "Premium no disponible en iPhone o iPad",
+        "Las compras de Premium están temporalmente desactivadas en iOS mientras actualizamos el sistema de pago de la App Store."
+      );
       return;
     }
 
@@ -99,6 +109,31 @@ export function PlansScreen() {
           </View>
         )}
 
+        {isIos && (
+          <View
+            style={[
+              styles.noticeCard,
+              {
+                backgroundColor: isDark
+                  ? "rgba(245, 158, 11, 0.12)"
+                  : "#fffbeb",
+                borderColor: theme.warning,
+              },
+            ]}
+          >
+            <Text style={[styles.noticeTitle, { color: theme.text }]}>
+              Premium temporalmente desactivado en iOS
+            </Text>
+            <Text
+              style={[styles.noticeText, { color: theme.textSecondary }]}
+            >
+              Las compras dentro de esta app para iPhone y iPad no están
+              disponibles en esta versión mientras completamos la integración
+              con App Store.
+            </Text>
+          </View>
+        )}
+
         {/* Plan Cards */}
         {plans.map((plan) => (
           <PlanCard
@@ -106,7 +141,7 @@ export function PlansScreen() {
             plan={plan}
             onSelect={handleSelectPlan}
             isCurrentPlan={subscription?.plan === plan.id}
-            disabled={loading}
+            disabled={loading || (isIos && plan.id !== SubscriptionPlan.FREE)}
           />
         ))}
 
@@ -186,6 +221,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#10b981",
+  },
+  noticeCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 16,
+  },
+  noticeTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  noticeText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   loadingOverlay: {
     position: "absolute",

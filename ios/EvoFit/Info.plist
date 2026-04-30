@@ -59,11 +59,11 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your camera</string>
+	<string>EvoFit necesita acceso a la cámara para que puedas hacer fotos de comidas y registrarlas en tu seguimiento nutricional.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
+	<string>EvoFit solicita acceso al micrófono solo cuando grabas contenido multimedia que lo requiera dentro de la app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your photos</string>
+	<string>EvoFit necesita acceso a tu fototeca para que puedas elegir una imagen de perfil o subir una foto de comida para analizarla y registrarla en tu diario nutricional.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

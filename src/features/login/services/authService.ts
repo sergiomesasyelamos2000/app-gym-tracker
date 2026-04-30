@@ -22,6 +22,17 @@ import {
 } from "@sergiomesasyelamos2000/shared";
 import { apiFetch } from "../../../api/client";
 
+export interface AppleLoginRequestDto {
+  identityToken: string;
+  authorizationCode?: string;
+  user?: string;
+  email?: string;
+  fullName?: {
+    givenName?: string | null;
+    familyName?: string | null;
+  };
+}
+
 /**
  * Login with email and password
  */
@@ -66,6 +77,18 @@ export async function googleLogin(
 ): Promise<AuthResponseDto> {
   const payload: GoogleLoginRequestDto = { idToken };
   return await apiFetch<AuthResponseDto>("auth/google/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Authenticate with Apple identity token (native iOS Sign in with Apple)
+ */
+export async function appleLogin(
+  payload: AppleLoginRequestDto
+): Promise<AuthResponseDto> {
+  return await apiFetch<AuthResponseDto>("auth/apple/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -142,6 +165,15 @@ export async function updateUserProfile(
   return await apiFetch<UserResponseDto>(`auth/users/${userId}`, {
     method: "PUT",
     body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Permanently delete the authenticated user's account
+ */
+export async function deleteAccount(userId: string): Promise<void> {
+  await apiFetch<void>(`auth/users/${userId}`, {
+    method: "DELETE",
   });
 }
 
