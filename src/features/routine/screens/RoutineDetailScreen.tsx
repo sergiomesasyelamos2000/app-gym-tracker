@@ -1129,6 +1129,34 @@ export default function RoutineDetailScreen() {
     }
   }, [activeNotificationId]);
 
+  const syncRestTimerFromIntent = useCallback(
+    async (deltaSeconds: number, endTimestampMs?: number | null) => {
+      if (!endTimestampMs || endTimestampMs <= Date.now()) {
+        await handleCancelRestTimer(false);
+        return;
+      }
+
+      const newTime = Math.max(
+        0,
+        Math.ceil((endTimestampMs - Date.now()) / 1000)
+      );
+
+      setRestTimeRemaining(newTime);
+      setTotalRestTime((prev) => Math.max(newTime, Math.max(0, prev + deltaSeconds)));
+      setRestTimerEndTime(endTimestampMs);
+      restTimerEndTimeRef.current = endTimestampMs;
+
+      if (restTimerNotificationsEnabled) {
+        const notificationId = await notificationService.startRestTimer(
+          newTime,
+          currentExerciseName
+        );
+        setActiveNotificationId(notificationId);
+      }
+    },
+    [currentExerciseName, handleCancelRestTimer, restTimerNotificationsEnabled]
+  );
+
   const mapRoutineExercises = (
     data: RoutineResponseDto
   ): ExerciseRequestDto[] => {
@@ -1297,25 +1325,25 @@ export default function RoutineDetailScreen() {
 
   useEffect(() => {
     const unsubscribe = subscribeToRestTimerIntents(
-      async ({ action, delta }) => {
+      async ({ action, delta, endTimestampMs }) => {
         switch (action) {
           case "add":
-            await applyRestTimerDelta(delta, true);
+            await syncRestTimerFromIntent(delta, endTimestampMs);
             break;
 
           case "subtract":
-            await applyRestTimerDelta(delta, true);
+            await syncRestTimerFromIntent(delta, endTimestampMs);
             break;
 
           case "skip":
-            await handleCancelRestTimer(true);
+            await handleCancelRestTimer(false);
             break;
         }
       }
     );
 
     return unsubscribe;
-  }, [applyRestTimerDelta, handleCancelRestTimer]);
+  }, [handleCancelRestTimer, syncRestTimerFromIntent]);
 
   const isSmallDevice = width < 360;
   const loadingTextMaxWidth = Math.min(width * 0.8, 360);

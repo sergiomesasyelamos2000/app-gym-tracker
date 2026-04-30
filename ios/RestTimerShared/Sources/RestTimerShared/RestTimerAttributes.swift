@@ -5,12 +5,14 @@ public enum RestTimerLiveActivityShared {
   public static let appGroupIdentifier = "group.com.smy862.app.shared"
   public static let currentActivityIdKey = "restTimer.currentActivityId"
   public static let currentStartDateKey = "restTimer.currentStartDate"
+  public static let currentEndDateKey = "restTimer.currentEndDate"
   public static let currentExerciseNameKey = "restTimer.currentExerciseName"
   public static let currentExerciseImageKey = "restTimer.currentExerciseImage"
   public static let currentNextSetSummaryKey = "restTimer.currentNextSetSummary"
   public static let pendingIntentActionKey = "restTimer.pendingIntent.action"
   public static let pendingIntentDeltaKey = "restTimer.pendingIntent.delta"
   public static let pendingIntentSequenceKey = "restTimer.pendingIntent.sequence"
+  public static let pendingIntentEndTimestampMsKey = "restTimer.pendingIntent.endTimestampMs"
   public static let pendingIntentNotificationName = "group.com.smy862.app.shared.restTimer.intent"
 }
 

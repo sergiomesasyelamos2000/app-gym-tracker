@@ -13,6 +13,7 @@ type IntentAction = "add" | "subtract" | "skip";
 export interface RestTimerIntentEvent {
   action: IntentAction;
   delta: number; // segundos; 0 cuando action === "skip"
+  endTimestampMs?: number;
 }
 
 let _intentEmitter: NativeEventEmitter | null = null;

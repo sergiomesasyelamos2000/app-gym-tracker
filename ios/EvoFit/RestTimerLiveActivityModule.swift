@@ -8,6 +8,7 @@ final class RestTimerLiveActivity: NSObject {
   private let sharedDefaults = UserDefaults(suiteName: RestTimerLiveActivityShared.appGroupIdentifier)
   private var currentActivityId: String?
   private var currentStartDate: Date?
+  private var currentEndDate: Date?
   private var currentExerciseName: String?
   private var currentExerciseImageFileName: String?
   private var currentNextSetSummary: String?
@@ -48,6 +49,7 @@ final class RestTimerLiveActivity: NSObject {
   private func persistState() {
     sharedDefaults?.set(currentActivityId, forKey: RestTimerLiveActivityShared.currentActivityIdKey)
     sharedDefaults?.set(currentStartDate?.timeIntervalSince1970, forKey: RestTimerLiveActivityShared.currentStartDateKey)
+    sharedDefaults?.set(currentEndDate?.timeIntervalSince1970, forKey: RestTimerLiveActivityShared.currentEndDateKey)
     sharedDefaults?.set(currentExerciseName, forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
     sharedDefaults?.set(currentExerciseImageFileName, forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
     sharedDefaults?.set(currentNextSetSummary, forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
@@ -56,6 +58,7 @@ final class RestTimerLiveActivity: NSObject {
   private func clearPersistedState() {
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentActivityIdKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentStartDateKey)
+    sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentEndDateKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
@@ -69,6 +72,11 @@ final class RestTimerLiveActivity: NSObject {
     if currentStartDate == nil,
        let timestamp = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentStartDateKey) as? Double {
       currentStartDate = Date(timeIntervalSince1970: timestamp)
+    }
+
+    if currentEndDate == nil,
+       let timestamp = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentEndDateKey) as? Double {
+      currentEndDate = Date(timeIntervalSince1970: timestamp)
     }
 
     if currentExerciseName == nil {
@@ -176,6 +184,7 @@ final class RestTimerLiveActivity: NSObject {
         let activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
         currentActivityId = activity.id
         currentStartDate = now
+        currentEndDate = safeEndDate
         currentExerciseName = exercise
         currentExerciseImageFileName = exerciseImageFileName
         currentNextSetSummary = nextSetSummaryValue
@@ -230,6 +239,7 @@ final class RestTimerLiveActivity: NSObject {
       )
       await activity.update(content)
       currentActivityId = activity.id
+      currentEndDate = safeEndDate
       persistState()
     }
   }
@@ -251,6 +261,7 @@ final class RestTimerLiveActivity: NSObject {
 
       currentActivityId = nil
       currentStartDate = nil
+      currentEndDate = nil
       currentExerciseName = nil
       currentExerciseImageFileName = nil
       currentNextSetSummary = nil
@@ -344,11 +355,18 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
     let delta = sharedDefaults?.integer(
       forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey
     ) ?? 0
+    let endTimestampMs = sharedDefaults?.object(
+      forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey
+    ) as? Double
 
     lastHandledIntentSequence = sequence
     sendEvent(
       withName: "onRestTimerIntent",
-      body: ["action": action, "delta": delta]
+      body: [
+        "action": action,
+        "delta": delta,
+        "endTimestampMs": endTimestampMs as Any
+      ]
     )
   }
 }
