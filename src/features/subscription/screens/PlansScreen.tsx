@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PlanCard } from "../components/PlanCard";
 import { useSubscription } from "../hooks/useSubscription";
+import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
   SubscriptionPlan,
@@ -27,6 +28,15 @@ export function PlansScreen() {
   const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const isIos = Platform.OS === "ios";
+  const {
+    purchasePlan,
+    restoreApplePurchases,
+    openAppleSubscriptionManagement,
+    hasConfiguration: hasAppleIapConfiguration,
+    connected: appleStoreConnected,
+    loading: appleLoading,
+    productsLoaded,
+  } = useAppleIapCheckout();
 
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     if (planId === SubscriptionPlan.FREE) {
@@ -36,10 +46,7 @@ export function PlansScreen() {
     }
 
     if (isIos) {
-      Alert.alert(
-        "Premium no disponible en iPhone o iPad",
-        "Las compras de Premium están temporalmente desactivadas en iOS mientras actualizamos el sistema de pago de la App Store."
-      );
+      await purchasePlan(planId);
       return;
     }
 
@@ -122,15 +129,34 @@ export function PlansScreen() {
             ]}
           >
             <Text style={[styles.noticeTitle, { color: theme.text }]}>
-              Premium temporalmente desactivado en iOS
+              Compras con App Store
             </Text>
             <Text
               style={[styles.noticeText, { color: theme.textSecondary }]}
             >
-              Las compras dentro de esta app para iPhone y iPad no están
-              disponibles en esta versión mientras completamos la integración
-              con App Store.
+              En iPhone y iPad, Premium se compra dentro de la App Store.
+              {hasAppleIapConfiguration
+                ? appleStoreConnected
+                  ? productsLoaded
+                    ? " Los planes se cargan desde StoreKit y se compran dentro de la App Store. Si ya compraste Premium, puedes restaurar tus compras."
+                    : " Cargando productos desde la App Store..."
+                  : " Esperando conexion con la App Store..."
+                : " Faltan los product IDs de Apple en la configuracion del build."}
             </Text>
+            <Text
+              style={[styles.noticeAction, { color: theme.primary }]}
+              onPress={restoreApplePurchases}
+            >
+              Restaurar compras
+            </Text>
+            {appleStoreConnected && hasAppleIapConfiguration && (
+              <Text
+                style={[styles.noticeAction, { color: theme.primary }]}
+                onPress={openAppleSubscriptionManagement}
+              >
+                Gestionar suscripciones
+              </Text>
+            )}
           </View>
         )}
 
@@ -141,12 +167,12 @@ export function PlansScreen() {
             plan={plan}
             onSelect={handleSelectPlan}
             isCurrentPlan={subscription?.plan === plan.id}
-            disabled={loading || (isIos && plan.id !== SubscriptionPlan.FREE)}
+            disabled={loading || appleLoading}
           />
         ))}
 
         {/* Loading Overlay */}
-        {loading && (
+        {(loading || appleLoading) && (
           <View
             style={[
               styles.loadingOverlay,
@@ -159,7 +185,7 @@ export function PlansScreen() {
           >
             <ActivityIndicator size="large" color={theme.primary} />
             <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Creando sesión de pago...
+              {isIos ? "Preparando compra..." : "Creando sesión de pago..."}
             </Text>
           </View>
         )}
@@ -237,6 +263,11 @@ const styles = StyleSheet.create({
   noticeText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  noticeAction: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: "700",
   },
   loadingOverlay: {
     position: "absolute",

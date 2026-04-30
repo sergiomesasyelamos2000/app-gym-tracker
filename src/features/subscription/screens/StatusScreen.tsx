@@ -20,6 +20,7 @@ import {
   CheckCircle,
 } from "lucide-react-native";
 import { useSubscription } from "../hooks/useSubscription";
+import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
 import { FeatureList } from "../components/FeatureList";
 import { UpgradeButton } from "../components/UpgradeButton";
 import {
@@ -47,6 +48,11 @@ export function StatusScreen() {
   const { success } = route.params || {};
   const { theme, isDark } = useTheme();
   const isIos = Platform.OS === "ios";
+  const {
+    restoreApplePurchases,
+    openAppleSubscriptionManagement,
+    loading: appleIapLoading,
+  } = useAppleIapCheckout();
 
   const {
     subscription,
@@ -129,14 +135,6 @@ export function StatusScreen() {
   };
 
   const handleChangePlan = () => {
-    if (isIos) {
-      Alert.alert(
-        "Premium no disponible en iPhone o iPad",
-        "Las compras y la gestión de suscripciones externas están desactivadas en iOS en esta versión."
-      );
-      return;
-    }
-
     navigation.navigate("PlansScreen");
   };
 
@@ -328,7 +326,7 @@ export function StatusScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
-            {!isPremium && !isIos && (
+            {!isPremium && (
               <UpgradeButton
                 onPress={handleChangePlan}
                 variant="primary"
@@ -436,14 +434,70 @@ export function StatusScreen() {
                 ]}
               >
                 <Text style={[styles.iosNoticeText, { color: theme.text }]}>
-                  La compra y gestión de Premium no están disponibles en iOS en
-                  esta versión.
+                  Las compras de Premium en iPhone y iPad se hacen con App
+                  Store. Las renovaciones, cancelaciones y reembolsos se
+                  gestionan desde Apple.
                 </Text>
               </View>
             )}
+
+            {isIos && isPremium && subscription.plan !== SubscriptionPlan.LIFETIME && (
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.buttonSecondary,
+                  {
+                    backgroundColor: isDark
+                      ? theme.backgroundSecondary
+                      : "#f3f4f6",
+                  },
+                ]}
+                onPress={openAppleSubscriptionManagement}
+                disabled={actionLoading || appleIapLoading}
+              >
+                <Text
+                  style={[styles.buttonTextSecondary, { color: theme.text }]}
+                >
+                  Gestionar en App Store
+                </Text>
+                <ArrowRight size={20} color={theme.text} />
+              </TouchableOpacity>
+            )}
+
+            {isIos && (
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.buttonOutline,
+                  { borderColor: theme.border },
+                ]}
+                onPress={restoreApplePurchases}
+                disabled={actionLoading || appleIapLoading}
+              >
+                <Text style={[styles.buttonTextOutline, { color: theme.text }]}>
+                  Restaurar compras
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {isIos && isPremium && (
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.buttonOutline,
+                  { borderColor: theme.border },
+                ]}
+                onPress={handleChangePlan}
+                disabled={actionLoading || appleIapLoading}
+              >
+                <Text style={[styles.buttonTextOutline, { color: theme.text }]}>
+                  Ver todos los planes
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {actionLoading && (
+          {(actionLoading || appleIapLoading) && (
             <View
               style={[
                 styles.actionLoadingOverlay,
