@@ -53,6 +53,7 @@ final class RestTimerLiveActivity: NSObject {
     sharedDefaults?.set(currentExerciseName, forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
     sharedDefaults?.set(currentExerciseImageFileName, forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
     sharedDefaults?.set(currentNextSetSummary, forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
+    sharedDefaults?.synchronize()
   }
 
   private func clearPersistedState() {
@@ -62,6 +63,7 @@ final class RestTimerLiveActivity: NSObject {
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
     sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
+    sharedDefaults?.synchronize()
   }
 
   private func restorePersistedStateIfNeeded() {
@@ -294,26 +296,34 @@ final class RestTimerLiveActivity: NSObject {
 class RestTimerLiveActivityModule: RCTEventEmitter {
   private let sharedDefaults = UserDefaults(suiteName: RestTimerLiveActivityShared.appGroupIdentifier)
   private var hasListeners = false
-  private var lastHandledIntentSequence = 0
-    
+  // FIX: Inicializar en -1 para que CUALQUIER intent pendiente (sequence >= 0)
+  // sea procesado cuando startObserving() se llame, incluso si llegó antes
+  // de que React montara el listener (app abierta desde background por el intent).
+  private var lastHandledIntentSequence = -1
+
   override init() {
     super.init()
     registerIntentObserver()
-    lastHandledIntentSequence = sharedDefaults?.integer(
-      forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey
-    ) ?? 0
+    // FIX ELIMINADO: No leer lastHandledIntentSequence desde UserDefaults en init().
+    // El bug original: si el intent llegaba con sequence=1 mientras la app estaba
+    // suspendida, al despertar init() leía sequence=1 y lo guardaba como
+    // lastHandledIntentSequence=1. Luego startObserving() comparaba 1 > 1 = false
+    // y descartaba el intent silenciosamente.
+    // Con -1, startObserving() siempre procesa el intent pendiente más reciente.
   }
 
   override func supportedEvents() -> [String]! {
     return ["onRestTimerIntent"]
   }
-    
+
   override static func requiresMainQueueSetup() -> Bool {
     return true
   }
 
   override func startObserving() {
     hasListeners = true
+    // Intentar emitir inmediatamente. Si hay un intent pendiente que llegó
+    // mientras la app estaba suspendida, se procesa aquí.
     emitPendingIntentIfNeeded()
   }
 
@@ -357,6 +367,11 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
 
   private func emitPendingIntentIfNeeded() {
     guard hasListeners else { return }
+
+    // Forzar lectura fresca desde disco (importante cuando la app se despierta
+    // desde background y el App Group puede tener datos más nuevos que el caché)
+    sharedDefaults?.synchronize()
+
     let sequence = sharedDefaults?.integer(
       forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey
     ) ?? 0

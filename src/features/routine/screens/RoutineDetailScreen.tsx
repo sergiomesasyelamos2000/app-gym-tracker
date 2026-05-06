@@ -448,7 +448,8 @@ export default function RoutineDetailScreen() {
       return;
     }
 
-    const normalizedInitialExercises = normalizeExercisesImage(initialExercises);
+    const normalizedInitialExercises =
+      normalizeExercisesImage(initialExercises);
     setExercises(normalizedInitialExercises);
 
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
@@ -469,7 +470,13 @@ export default function RoutineDetailScreen() {
     setSets(initialSets);
     setRoutineTitle(sessionTitle || routine?.title || "Nueva rutina");
     setIsExercisesLoading(false);
-  }, [initialExercises, hasInitializedFromStore, routine?.title, sessionTitle, sessionView]);
+  }, [
+    initialExercises,
+    hasInitializedFromStore,
+    routine?.title,
+    sessionTitle,
+    sessionView,
+  ]);
 
   useEffect(() => {
     if (hasInitializedFromStore || initialExercises?.length || !routineData) {
@@ -588,17 +595,19 @@ export default function RoutineDetailScreen() {
         const set = rawSet as SetWithPreviousAssisted;
 
         return {
-        ...set,
-        previousWeight:
-          typeof set.previousWeight === "number" ? set.previousWeight : set.weight,
-        previousReps:
-          typeof set.previousReps === "number"
-            ? set.previousReps
-            : set.reps || set.repsMin,
-        previousAssistedReps:
-          typeof set.previousAssistedReps === "number"
-            ? set.previousAssistedReps
-            : set.assistedReps,
+          ...set,
+          previousWeight:
+            typeof set.previousWeight === "number"
+              ? set.previousWeight
+              : set.weight,
+          previousReps:
+            typeof set.previousReps === "number"
+              ? set.previousReps
+              : set.reps || set.repsMin,
+          previousAssistedReps:
+            typeof set.previousAssistedReps === "number"
+              ? set.previousAssistedReps
+              : set.assistedReps,
         };
       });
     });
@@ -721,7 +730,11 @@ export default function RoutineDetailScreen() {
     if (!liveState) return false;
 
     const endTimestampMs = liveState.endTimestampMs;
-    if (!liveState.isActive || !endTimestampMs || endTimestampMs <= Date.now()) {
+    if (
+      !liveState.isActive ||
+      !endTimestampMs ||
+      endTimestampMs <= Date.now()
+    ) {
       if (restTimerEndTimeRef.current) {
         if (countdownRef.current) clearInterval(countdownRef.current);
         if (activeNotificationId) {
@@ -766,7 +779,11 @@ export default function RoutineDetailScreen() {
     }
 
     return true;
-  }, [activeNotificationId, currentExerciseName, restTimerNotificationsEnabled]);
+  }, [
+    activeNotificationId,
+    currentExerciseName,
+    restTimerNotificationsEnabled,
+  ]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
@@ -852,7 +869,9 @@ export default function RoutineDetailScreen() {
           assistedReps: 0,
           completed: false,
           previousWeight:
-            typeof set.previousWeight === "number" ? set.previousWeight : set.weight,
+            typeof set.previousWeight === "number"
+              ? set.previousWeight
+              : set.weight,
           previousReps:
             typeof set.previousReps === "number"
               ? set.previousReps
@@ -1177,21 +1196,24 @@ export default function RoutineDetailScreen() {
     await applyRestTimerDelta(-15, true);
   }, [applyRestTimerDelta]);
 
-  const handleCancelRestTimer = useCallback(async (syncNativeLiveActivity = true) => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    if (activeNotificationId) {
-      await notificationService.cancelRestTimer(activeNotificationId);
-      setActiveNotificationId(null);
-    }
-    setRestTimerEndTime(null);
-    restTimerEndTimeRef.current = null;
-    setShowRestToast(false);
-    setCurrentExerciseImageUrl(null);
-    setCurrentNextSetSummary(null);
-    if (syncNativeLiveActivity) {
-      endRestTimerLive();
-    }
-  }, [activeNotificationId]);
+  const handleCancelRestTimer = useCallback(
+    async (syncNativeLiveActivity = true) => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (activeNotificationId) {
+        await notificationService.cancelRestTimer(activeNotificationId);
+        setActiveNotificationId(null);
+      }
+      setRestTimerEndTime(null);
+      restTimerEndTimeRef.current = null;
+      setShowRestToast(false);
+      setCurrentExerciseImageUrl(null);
+      setCurrentNextSetSummary(null);
+      if (syncNativeLiveActivity) {
+        endRestTimerLive();
+      }
+    },
+    [activeNotificationId]
+  );
 
   const syncRestTimerFromIntent = useCallback(
     async (deltaSeconds: number, endTimestampMs?: number | null) => {
@@ -1206,9 +1228,30 @@ export default function RoutineDetailScreen() {
       );
 
       setRestTimeRemaining(newTime);
-      setTotalRestTime((prev) => Math.max(newTime, Math.max(0, prev + deltaSeconds)));
+      setTotalRestTime((prev) =>
+        Math.max(newTime, Math.max(0, prev + deltaSeconds))
+      );
       setRestTimerEndTime(endTimestampMs);
       restTimerEndTimeRef.current = endTimestampMs;
+
+      // FIX: reiniciar el countdown para que no pise el nuevo tiempo.
+      // Sin esto, el setInterval anterior decrementa "prev - 1" en el siguiente
+      // tick y sobreescribe el valor recién actualizado.
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+      countdownRef.current = setInterval(() => {
+        setRestTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownRef.current!);
+            setShowRestToast(false);
+            setActiveNotificationId(null);
+            endRestTimerLive();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
       if (restTimerNotificationsEnabled) {
         const notificationId = await notificationService.startRestTimer(

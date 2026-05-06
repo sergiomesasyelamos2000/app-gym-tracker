@@ -13,6 +13,8 @@ private enum RestTimerIntentAction {
     defaults?.set(delta, forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey)
     defaults?.set(endTimestampMs, forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey)
     defaults?.set(nextSequence, forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey)
+    // Forzar sincronización inmediata al App Group antes de que la app lea
+    defaults?.synchronize()
 
     CFNotificationCenterPostNotification(
       CFNotificationCenterGetDarwinNotifyCenter(),
@@ -59,6 +61,7 @@ private enum RestTimerIntentAction {
       defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
       defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
       defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
+      defaults?.synchronize()
       return
     }
 
@@ -70,13 +73,17 @@ private enum RestTimerIntentAction {
       nextSetSummary: nextSetSummary
     )
     defaults?.set(nextEndDate.timeIntervalSince1970, forKey: RestTimerLiveActivityShared.currentEndDateKey)
+    defaults?.synchronize()
     await activity.update(ActivityContent(state: nextState, staleDate: nextEndDate))
   }
 }
 
 @available(iOS 17.0, *)
 struct AddRestTimeIntent: LiveActivityIntent {
-  static var openAppWhenRun = false
+  // FIX: openAppWhenRun = true para que iOS despierte la app principal.
+  // Con false, el intent actualiza el widget pero la app nunca recibe
+  // la notificación Darwin porque su proceso está suspendido.
+  static var openAppWhenRun = true
   static var title: LocalizedStringResource = "Añadir tiempo"
 
   func perform() async throws -> some IntentResult {
@@ -91,7 +98,7 @@ struct AddRestTimeIntent: LiveActivityIntent {
 
 @available(iOS 17.0, *)
 struct SubtractRestTimeIntent: LiveActivityIntent {
-  static var openAppWhenRun = false
+  static var openAppWhenRun = true
   static var title: LocalizedStringResource = "Restar tiempo"
 
   func perform() async throws -> some IntentResult {
@@ -106,7 +113,7 @@ struct SubtractRestTimeIntent: LiveActivityIntent {
 
 @available(iOS 17.0, *)
 struct SkipRestTimeIntent: LiveActivityIntent {
-  static var openAppWhenRun = false
+  static var openAppWhenRun = true
   static var title: LocalizedStringResource = "Omitir"
 
   func perform() async throws -> some IntentResult {
