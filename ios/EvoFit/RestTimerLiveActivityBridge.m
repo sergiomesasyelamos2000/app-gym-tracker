@@ -14,6 +14,9 @@ RCT_EXTERN_METHOD(updateRestTimer:(nonnull NSNumber *)remainingSeconds
 
 RCT_EXTERN_METHOD(endRestTimer)
 
+RCT_EXTERN_METHOD(getCurrentRestTimerState:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
 
 #import <React/RCTEventEmitter.h>

@@ -44,6 +44,7 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
 import {
   endRestTimerLive,
+  getCurrentRestTimerLiveState,
   startRestTimerLive,
   subscribeToRestTimerIntents,
   updateRestTimerLive,
@@ -713,33 +714,91 @@ export default function RoutineDetailScreen() {
     }
   }, [showRestToast, slideAnim]);
 
+  const syncRestTimerFromNativeState = useCallback(async () => {
+    if (Platform.OS !== "ios") return false;
+
+    const liveState = await getCurrentRestTimerLiveState();
+    if (!liveState) return false;
+
+    const endTimestampMs = liveState.endTimestampMs;
+    if (!liveState.isActive || !endTimestampMs || endTimestampMs <= Date.now()) {
+      if (restTimerEndTimeRef.current) {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        if (activeNotificationId) {
+          await notificationService.cancelRestTimer(activeNotificationId);
+          setActiveNotificationId(null);
+        }
+        setRestTimerEndTime(null);
+        restTimerEndTimeRef.current = null;
+        setShowRestToast(false);
+        setRestTimeRemaining(0);
+        setCurrentExerciseImageUrl(null);
+        setCurrentNextSetSummary(null);
+      }
+      return true;
+    }
+
+    const newTime = Math.max(
+      0,
+      Math.ceil((endTimestampMs - Date.now()) / 1000)
+    );
+
+    setShowRestToast(true);
+    setRestTimeRemaining(newTime);
+    setTotalRestTime((prev) => Math.max(newTime, prev || newTime));
+    setRestTimerEndTime(endTimestampMs);
+    restTimerEndTimeRef.current = endTimestampMs;
+
+    if (liveState.exerciseName) {
+      setCurrentExerciseName(liveState.exerciseName);
+    }
+
+    if (liveState.nextSetSummary) {
+      setCurrentNextSetSummary(liveState.nextSetSummary);
+    }
+
+    if (restTimerNotificationsEnabled) {
+      const notificationId = await notificationService.startRestTimer(
+        newTime,
+        liveState.exerciseName || currentExerciseName
+      );
+      setActiveNotificationId(notificationId);
+    }
+
+    return true;
+  }, [activeNotificationId, currentExerciseName, restTimerNotificationsEnabled]);
+
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        if (started && !isSaving) {
-          syncDurationFromStartTime();
-        }
+        void (async () => {
+          const syncedFromNative = await syncRestTimerFromNativeState();
 
-        const endTime = restTimerEndTimeRef.current;
-        if (endTime) {
-          const now = Date.now();
-          const remaining = Math.ceil((endTime - now) / 1000);
-
-          if (remaining <= 0) {
-            // Time has passed
-            setShowRestToast(false);
-            setActiveNotificationId(null);
-            setRestTimerEndTime(null);
-            restTimerEndTimeRef.current = null;
-            setRestTimeRemaining(0);
-            endRestTimerLive();
-            if (countdownRef.current) clearInterval(countdownRef.current);
-          } else {
-            // Update remaining time
-            setRestTimeRemaining(remaining);
-            updateRestTimerLive(remaining, currentExerciseName);
+          if (started && !isSaving) {
+            syncDurationFromStartTime();
           }
-        }
+
+          const endTime = restTimerEndTimeRef.current;
+          if (endTime) {
+            const now = Date.now();
+            const remaining = Math.ceil((endTime - now) / 1000);
+
+            if (remaining <= 0) {
+              // Time has passed
+              setShowRestToast(false);
+              setActiveNotificationId(null);
+              setRestTimerEndTime(null);
+              restTimerEndTimeRef.current = null;
+              setRestTimeRemaining(0);
+              endRestTimerLive();
+              if (countdownRef.current) clearInterval(countdownRef.current);
+            } else if (!syncedFromNative) {
+              // Update remaining time
+              setRestTimeRemaining(remaining);
+              updateRestTimerLive(remaining, currentExerciseName);
+            }
+          }
+        })();
       }
     });
 
@@ -766,7 +825,12 @@ export default function RoutineDetailScreen() {
     isSaving,
     syncDurationFromStartTime,
     currentExerciseName,
+    syncRestTimerFromNativeState,
   ]);
+
+  useEffect(() => {
+    void syncRestTimerFromNativeState();
+  }, [syncRestTimerFromNativeState]);
 
   const handleStartRoutine = () => {
     if (isSaving) return;

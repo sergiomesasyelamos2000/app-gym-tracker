@@ -47,6 +47,12 @@ jest.mock("expo-asset", () => ({
 }));
 
 jest.mock("expo-constants", () => ({
+  expoConfig: {
+    extra: {},
+  },
+  easConfig: {
+    projectId: "test-project-id",
+  },
   manifest: {
     extra: {},
   },

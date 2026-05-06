@@ -11,6 +11,9 @@
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "ios": {
@@ -34,6 +37,9 @@
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
     },
@@ -44,6 +50,9 @@
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "ios": {

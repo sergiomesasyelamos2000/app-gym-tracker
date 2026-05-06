@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 const LOCAL_IP = "192.168.1.133";
@@ -45,18 +46,45 @@ const RESOLVED_API_URL =
 
 const getAssetBaseUrl = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");
 
+const expoExtra = Constants.expoConfig?.extra as
+  | {
+      appleIap?: {
+        monthlyProductId?: string;
+        yearlyProductId?: string;
+        lifetimeProductId?: string;
+      };
+    }
+  | undefined;
+
+const getExpoPublicEnv = (value?: string, fallback?: string) =>
+  value || fallback || "";
+
 export const ENV = {
   API_URL: RESOLVED_API_URL,
-  GOOGLE_CLIENT_ID_IOS: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || "",
-  GOOGLE_CLIENT_ID_ANDROID:
-    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || "",
-  GOOGLE_CLIENT_ID_WEB: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || "",
+  GOOGLE_CLIENT_ID_IOS: getExpoPublicEnv(
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS
+  ),
+  GOOGLE_CLIENT_ID_ANDROID: getExpoPublicEnv(
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID
+  ),
+  GOOGLE_CLIENT_ID_WEB: getExpoPublicEnv(
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB
+  ),
   APPLE_IAP_MONTHLY_PRODUCT_ID:
-    process.env.EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID || "",
+    getExpoPublicEnv(
+      process.env.EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID,
+      expoExtra?.appleIap?.monthlyProductId
+    ),
   APPLE_IAP_YEARLY_PRODUCT_ID:
-    process.env.EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID || "",
+    getExpoPublicEnv(
+      process.env.EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID,
+      expoExtra?.appleIap?.yearlyProductId
+    ),
   APPLE_IAP_LIFETIME_PRODUCT_ID:
-    process.env.EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID || "",
+    getExpoPublicEnv(
+      process.env.EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID,
+      expoExtra?.appleIap?.lifetimeProductId
+    ),
 };
 
 export const ENV_ASSETS = {

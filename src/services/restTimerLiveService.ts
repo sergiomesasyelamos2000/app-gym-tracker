@@ -16,6 +16,14 @@ export interface RestTimerIntentEvent {
   endTimestampMs?: number;
 }
 
+export interface RestTimerLiveState {
+  isActive: boolean;
+  endTimestampMs?: number;
+  exerciseName?: string | null;
+  imageFileName?: string | null;
+  nextSetSummary?: string | null;
+}
+
 let _intentEmitter: NativeEventEmitter | null = null;
 
 const getEmitter = (): NativeEventEmitter | null => {
@@ -95,6 +103,20 @@ export const endRestTimerLive = async () => {
     console.warn("RestTimerLive end failed", error);
   }
 };
+
+export const getCurrentRestTimerLiveState =
+  async (): Promise<RestTimerLiveState | null> => {
+    if (Platform.OS !== "ios" || !IOSModule?.getCurrentRestTimerState) {
+      return null;
+    }
+
+    try {
+      return (await IOSModule.getCurrentRestTimerState()) as RestTimerLiveState;
+    } catch (error) {
+      console.warn("RestTimerLive state sync failed", error);
+      return null;
+    }
+  };
 
 /**
  * Suscríbete a los intents de la pantalla bloqueada.

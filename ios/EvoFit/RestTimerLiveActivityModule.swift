@@ -268,6 +268,26 @@ final class RestTimerLiveActivity: NSObject {
       clearPersistedState()
     }
   }
+
+  @objc(getCurrentRestTimerState:rejecter:)
+  func getCurrentRestTimerState(
+    _ resolve: RCTPromiseResolveBlock,
+    rejecter reject: RCTPromiseRejectBlock
+  ) {
+    restorePersistedStateIfNeeded()
+
+    let now = Date()
+    let endDate = currentEndDate
+    let isActive = endDate.map { $0 > now } ?? false
+
+    resolve([
+      "isActive": isActive,
+      "endTimestampMs": endDate.map { $0.timeIntervalSince1970 * 1000 } as Any,
+      "exerciseName": currentExerciseName as Any,
+      "imageFileName": currentExerciseImageFileName as Any,
+      "nextSetSummary": currentNextSetSummary as Any
+    ])
+  }
 }
 
 @objc(RestTimerLiveActivityModule)
