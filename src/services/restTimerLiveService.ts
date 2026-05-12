@@ -1,58 +1,80 @@
 import {
+  AppState,
   DeviceEventEmitter,
+  Linking,
   NativeEventEmitter,
   NativeModules,
   Platform,
 } from "react-native";
 
+const IOSLiveActivity = NativeModules.RestTimerLiveActivity;
+const IOSIntentModule = NativeModules.RestTimerLiveActivityModule;
 const AndroidModule = NativeModules.RestTimerNotification;
-const IOSModule = NativeModules.RestTimerLiveActivity;
 
-type IntentAction = "add" | "subtract" | "skip";
+export type IntentAction = "add" | "subtract" | "skip";
 
 export interface RestTimerIntentEvent {
   action: IntentAction;
-  delta: number; // segundos; 0 cuando action === "skip"
-  endTimestampMs?: number;
+  delta: number;
+  endTimestampMs?: number | null;
+  source?: "intent" | "url";
 }
 
 export interface RestTimerLiveState {
   isActive: boolean;
-  endTimestampMs?: number;
+  endTimestampMs?: number | null;
   exerciseName?: string | null;
   imageFileName?: string | null;
   nextSetSummary?: string | null;
 }
 
-let _intentEmitter: NativeEventEmitter | null = null;
-
+// Singleton del emitter — se crea una sola vez
+let _emitter: NativeEventEmitter | null = null;
 const getEmitter = (): NativeEventEmitter | null => {
   if (Platform.OS !== "ios") return null;
-  if (!_intentEmitter && NativeModules.RestTimerLiveActivityModule) {
-    _intentEmitter = new NativeEventEmitter(
-      NativeModules.RestTimerLiveActivityModule
-    );
+  if (!_emitter && IOSIntentModule) {
+    _emitter = new NativeEventEmitter(IOSIntentModule);
   }
-  return _intentEmitter;
+  return _emitter;
 };
 
 const getModule = () => {
   if (Platform.OS === "android") return AndroidModule;
-  if (Platform.OS === "ios") return IOSModule;
+  if (Platform.OS === "ios") return IOSLiveActivity;
   return null;
 };
+
+// Hace poll explícito al módulo nativo para que emita
+// cualquier intent pendiente en UserDefaults.
+const pollNativeIntent = () => {
+  if (Platform.OS !== "ios" || !IOSIntentModule?.pollPendingIntent) return;
+  IOSIntentModule.pollPendingIntent().catch(() => {});
+};
+
+const parseRestTimerActionURL = (url: string): RestTimerIntentEvent | null => {
+  const match = url.match(
+    /^com\.smy862\.app:\/\/rest-timer\/(add|subtract|skip)(?:[/?#].*)?$/
+  );
+  if (!match) return null;
+
+  const action = match[1] as IntentAction;
+  return {
+    action,
+    delta: action === "add" ? 15 : action === "subtract" ? -15 : 0,
+    source: "url",
+  };
+};
+
+// MARK: - API pública
 
 export const startRestTimerLive = async (
   totalSeconds: number,
   exerciseName?: string,
   imageUrl?: string | null,
   nextSetSummary?: string | null
-) => {
+): Promise<void> => {
   const module = getModule();
-  if (!module) {
-    console.warn("[RestTimerLive] native module not available");
-    return;
-  }
+  if (!module) return;
   try {
     const endsAtMs = Date.now() + Math.max(0, Math.floor(totalSeconds)) * 1000;
     await module.startRestTimer(
@@ -61,8 +83,8 @@ export const startRestTimerLive = async (
       imageUrl ?? null,
       nextSetSummary ?? null
     );
-  } catch (error) {
-    console.warn("RestTimerLive start failed", error);
+  } catch (e) {
+    console.warn("[RestTimerLive] startRestTimer failed", e);
   }
 };
 
@@ -71,12 +93,9 @@ export const updateRestTimerLive = async (
   exerciseName?: string,
   imageUrl?: string | null,
   nextSetSummary?: string | null
-) => {
+): Promise<void> => {
   const module = getModule();
-  if (!module) {
-    console.warn("[RestTimerLive] native module not available");
-    return;
-  }
+  if (!module) return;
   try {
     const endsAtMs =
       Date.now() + Math.max(0, Math.floor(remainingSeconds)) * 1000;
@@ -86,56 +105,96 @@ export const updateRestTimerLive = async (
       imageUrl ?? null,
       nextSetSummary ?? null
     );
-  } catch (error) {
-    console.warn("RestTimerLive update failed", error);
+  } catch (e) {
+    console.warn("[RestTimerLive] updateRestTimer failed", e);
   }
 };
 
-export const endRestTimerLive = async () => {
+export const endRestTimerLive = async (): Promise<void> => {
   const module = getModule();
-  if (!module) {
-    console.warn("[RestTimerLive] native module not available");
-    return;
-  }
+  if (!module) return;
   try {
     await module.endRestTimer();
-  } catch (error) {
-    console.warn("RestTimerLive end failed", error);
+  } catch (e) {
+    console.warn("[RestTimerLive] endRestTimer failed", e);
   }
 };
 
 export const getCurrentRestTimerLiveState =
   async (): Promise<RestTimerLiveState | null> => {
-    if (Platform.OS !== "ios" || !IOSModule?.getCurrentRestTimerState) {
+    if (Platform.OS !== "ios" || !IOSLiveActivity?.getCurrentRestTimerState) {
       return null;
     }
-
     try {
-      return (await IOSModule.getCurrentRestTimerState()) as RestTimerLiveState;
-    } catch (error) {
-      console.warn("RestTimerLive state sync failed", error);
+      return (await IOSLiveActivity.getCurrentRestTimerState()) as RestTimerLiveState;
+    } catch (e) {
+      console.warn("[RestTimerLive] getCurrentRestTimerState failed", e);
       return null;
     }
   };
 
 /**
- * Suscríbete a los intents de la pantalla bloqueada.
- * Devuelve una función de limpieza — llámala en el useEffect cleanup.
+ * Suscríbete a los intents del Live Activity.
+ *
+ * Estrategia de recepción (iOS):
+ *  1. El intent escribe en UserDefaults y abre la app (openAppWhenRun=true).
+ *  2. UIApplication.didBecomeActiveNotification (Swift) hace poll automático.
+ *  3. AppState 'active' (JS) llama a pollNativeIntent() como red de seguridad.
+ *  4. pollPendingIntent() al montar el listener, por si había un intent previo.
+ *
+ * Devuelve la función de limpieza para useEffect.
  */
 export const subscribeToRestTimerIntents = (
   handler: (event: RestTimerIntentEvent) => void
 ): (() => void) => {
   if (Platform.OS === "android") {
-    const subscription = DeviceEventEmitter.addListener(
-      "onRestTimerIntent",
-      handler
-    );
-    return () => subscription.remove();
+    const sub = DeviceEventEmitter.addListener("onRestTimerIntent", handler);
+    return () => sub.remove();
   }
 
   const emitter = getEmitter();
-  if (!emitter) return () => {};
+  let lastHandledURL: string | null = null;
+  let lastHandledURLAt = 0;
 
-  const subscription = emitter.addListener("onRestTimerIntent", handler);
-  return () => subscription.remove();
+  const handleURL = (url: string | null | undefined) => {
+    if (!url) return;
+
+    const event = parseRestTimerActionURL(url);
+    if (!event) return;
+
+    const now = Date.now();
+    if (url === lastHandledURL && now - lastHandledURLAt < 750) return;
+
+    lastHandledURL = url;
+    lastHandledURLAt = now;
+    console.log("[RestTimerIntent] received URL", url);
+    handler(event);
+  };
+
+  const eventSub = emitter?.addListener("onRestTimerIntent", (raw) => {
+    console.log("[RestTimerIntent] received", raw);
+    handler({ ...(raw as RestTimerIntentEvent), source: "intent" });
+  });
+
+  const urlSub = Linking.addEventListener("url", ({ url }) => handleURL(url));
+  Linking.getInitialURL()
+    .then(handleURL)
+    .catch(() => {});
+
+  // 2. Poll inmediato al montar (intent previo al mount del listener)
+  pollNativeIntent();
+
+  // 3. Poll cada vez que la app vuelve a foreground
+  const appStateSub = AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      console.log("[RestTimerIntent] AppState active → poll");
+      pollNativeIntent();
+    }
+  });
+
+  return () => {
+    eventSub?.remove();
+    urlSub.remove();
+    appStateSub.remove();
+  };
 };

@@ -2,7 +2,6 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 import UIKit
-import AppIntents
 import RestTimerShared
 
 // MARK: - Design tokens (morado EvoFit)
@@ -67,11 +66,14 @@ private struct RemainingTimeText: View {
     }
 }
 
-@available(iOSApplicationExtension 17.0, *)
 private struct EvoActionButtons: View {
+    private func actionURL(_ action: String) -> URL {
+        URL(string: "com.smy862.app://rest-timer/\(action)")!
+    }
+
     var body: some View {
         HStack(spacing: 6) {
-            Button(intent: SubtractRestTimeIntent()) {
+            Link(destination: actionURL("subtract")) {
                 Text("−15s")
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
@@ -80,7 +82,7 @@ private struct EvoActionButtons: View {
             }
             .buttonStyle(EvoSecondaryButtonStyle())
 
-            Button(intent: AddRestTimeIntent()) {
+            Link(destination: actionURL("add")) {
                 Text("+15s")
                     .font(.system(size: 13, weight: .bold))
                     .lineLimit(1)
@@ -89,7 +91,7 @@ private struct EvoActionButtons: View {
             }
             .buttonStyle(EvoPrimaryButtonStyle())
 
-            Button(intent: SkipRestTimeIntent()) {
+            Link(destination: actionURL("skip")) {
                 Text("Omitir")
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
@@ -196,9 +198,7 @@ struct RestTimerLiveActivityView: View {
 
             EvoProgressBar(interval: interval)
 
-            if #available(iOSApplicationExtension 17.0, *) {
-                EvoActionButtons()
-            }
+            EvoActionButtons()
         }
         .padding(.top, 16)
         .padding(.horizontal, 16)
@@ -267,12 +267,10 @@ struct RestTimerLiveActivity: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    if #available(iOSApplicationExtension 17.0, *) {
-                        EvoActionButtons()
-                            .padding(.horizontal, 12)
-                            .padding(.top, 8)
-                            .padding(.bottom, 12)
-                    }
+                    EvoActionButtons()
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                        .padding(.bottom, 12)
                 }
 
             } compactLeading: {

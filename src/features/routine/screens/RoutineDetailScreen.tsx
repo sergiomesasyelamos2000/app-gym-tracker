@@ -1432,25 +1432,38 @@ export default function RoutineDetailScreen() {
 
   useEffect(() => {
     const unsubscribe = subscribeToRestTimerIntents(
-      async ({ action, delta, endTimestampMs }) => {
+      async ({ action, delta, endTimestampMs, source }) => {
         switch (action) {
           case "add":
-            await syncRestTimerFromIntent(delta, endTimestampMs);
+            if (source === "url") {
+              await handleAddRestTime();
+            } else {
+              await syncRestTimerFromIntent(delta, endTimestampMs);
+            }
             break;
 
           case "subtract":
-            await syncRestTimerFromIntent(delta, endTimestampMs);
+            if (source === "url") {
+              await handleSubtractRestTime();
+            } else {
+              await syncRestTimerFromIntent(delta, endTimestampMs);
+            }
             break;
 
           case "skip":
-            await handleCancelRestTimer(false);
+            await handleCancelRestTimer(source !== "intent");
             break;
         }
       }
     );
 
     return unsubscribe;
-  }, [handleCancelRestTimer, syncRestTimerFromIntent]);
+  }, [
+    handleAddRestTime,
+    handleCancelRestTimer,
+    handleSubtractRestTime,
+    syncRestTimerFromIntent,
+  ]);
 
   const isSmallDevice = width < 360;
   const loadingTextMaxWidth = Math.min(width * 0.8, 360);

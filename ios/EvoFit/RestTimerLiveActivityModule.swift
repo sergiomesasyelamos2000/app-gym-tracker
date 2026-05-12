@@ -2,6 +2,9 @@ import Foundation
 import ActivityKit
 import React
 import RestTimerShared
+import UIKit
+
+// MARK: - RestTimerLiveActivity (módulo nativo para start/update/end)
 
 @objc(RestTimerLiveActivity)
 final class RestTimerLiveActivity: NSObject {
@@ -14,18 +17,14 @@ final class RestTimerLiveActivity: NSObject {
   private var currentNextSetSummary: String?
 
   @objc
-  static func requiresMainQueueSetup() -> Bool {
-    false
-  }
+  static func requiresMainQueueSetup() -> Bool { false }
 
   @available(iOS 16.2, *)
   private func resolveActivity() -> Activity<RestTimerAttributes>? {
     restorePersistedStateIfNeeded()
-
     if let currentActivityId {
       return Activity<RestTimerAttributes>.activities.first(where: { $0.id == currentActivityId })
     }
-
     return Activity<RestTimerAttributes>.activities.first
   }
 
@@ -42,7 +41,6 @@ final class RestTimerLiveActivity: NSObject {
       exerciseImageFileName: exerciseImageFileName,
       nextSetSummary: nextSetSummary
     )
-
     return ActivityContent(state: state, staleDate: endDate)
   }
 
@@ -70,25 +68,20 @@ final class RestTimerLiveActivity: NSObject {
     if currentActivityId == nil {
       currentActivityId = sharedDefaults?.string(forKey: RestTimerLiveActivityShared.currentActivityIdKey)
     }
-
     if currentStartDate == nil,
-       let timestamp = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentStartDateKey) as? Double {
-      currentStartDate = Date(timeIntervalSince1970: timestamp)
+       let ts = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentStartDateKey) as? Double {
+      currentStartDate = Date(timeIntervalSince1970: ts)
     }
-
     if currentEndDate == nil,
-       let timestamp = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentEndDateKey) as? Double {
-      currentEndDate = Date(timeIntervalSince1970: timestamp)
+       let ts = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.currentEndDateKey) as? Double {
+      currentEndDate = Date(timeIntervalSince1970: ts)
     }
-
     if currentExerciseName == nil {
       currentExerciseName = sharedDefaults?.string(forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
     }
-
     if currentExerciseImageFileName == nil {
       currentExerciseImageFileName = sharedDefaults?.string(forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
     }
-
     if currentNextSetSummary == nil {
       currentNextSetSummary = sharedDefaults?.string(forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
     }
@@ -101,16 +94,9 @@ final class RestTimerLiveActivity: NSObject {
   }
 
   private func storeSharedImage(from imageUrl: String?) async -> String? {
-    guard let imageUrl else {
-      return currentExerciseImageFileName
-    }
-
-    let trimmedImageUrl = imageUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard trimmedImageUrl.isEmpty == false else {
-      return currentExerciseImageFileName
-    }
-
+    guard let imageUrl else { return currentExerciseImageFileName }
+    let trimmed = imageUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return currentExerciseImageFileName }
     guard let containerURL = sharedContainerURL() else { return nil }
 
     let fileName = "rest-timer-exercise-image.jpg"
@@ -118,23 +104,21 @@ final class RestTimerLiveActivity: NSObject {
 
     do {
       let imageData: Data
-
-      if trimmedImageUrl.hasPrefix("data:image"), let commaIndex = trimmedImageUrl.firstIndex(of: ",") {
-        let base64 = String(trimmedImageUrl[trimmedImageUrl.index(after: commaIndex)...])
+      if trimmed.hasPrefix("data:image"), let commaIndex = trimmed.firstIndex(of: ",") {
+        let base64 = String(trimmed[trimmed.index(after: commaIndex)...])
         guard let decoded = Data(base64Encoded: base64) else { return nil }
         imageData = decoded
-      } else if trimmedImageUrl.hasPrefix("http://") || trimmedImageUrl.hasPrefix("https://") {
-        guard let remoteURL = URL(string: trimmedImageUrl) else { return nil }
-        let (downloadedData, _) = try await URLSession.shared.data(from: remoteURL)
-        imageData = downloadedData
-      } else if trimmedImageUrl.hasPrefix("file://"), let fileURL = URL(string: trimmedImageUrl) {
+      } else if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
+        guard let remoteURL = URL(string: trimmed) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: remoteURL)
+        imageData = data
+      } else if trimmed.hasPrefix("file://"), let fileURL = URL(string: trimmed) {
         imageData = try Data(contentsOf: fileURL)
-      } else if let decoded = Data(base64Encoded: trimmedImageUrl) {
+      } else if let decoded = Data(base64Encoded: trimmed) {
         imageData = decoded
       } else {
         return currentExerciseImageFileName
       }
-
       try imageData.write(to: destinationURL, options: .atomic)
       return fileName
     } catch {
@@ -151,52 +135,42 @@ final class RestTimerLiveActivity: NSObject {
     nextSetSummary: NSString?
   ) {
     guard #available(iOS 16.2, *) else { return }
-
     Task {
-      if ActivityAuthorizationInfo().areActivitiesEnabled == false {
-        print("[LiveActivity] activities disabled in system settings")
+      guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        print("[LiveActivity] activities disabled")
         return
       }
-
-      if let existingActivity = resolveActivity() {
-        let finalContent = buildContent(
-          endDate: Date(),
-          exerciseName: currentExerciseName,
-          exerciseImageFileName: currentExerciseImageFileName,
-          nextSetSummary: currentNextSetSummary
-        )
-        await existingActivity.end(finalContent, dismissalPolicy: .immediate)
+      if let existing = resolveActivity() {
+        let content = buildContent(endDate: Date(), exerciseName: currentExerciseName,
+                                   exerciseImageFileName: currentExerciseImageFileName,
+                                   nextSetSummary: currentNextSetSummary)
+        await existing.end(content, dismissalPolicy: .immediate)
       }
 
       let now = Date()
-      let endDate = Date(timeIntervalSince1970: endTimestampMs.doubleValue / 1000)
-      let safeEndDate = max(endDate, now.addingTimeInterval(1))
+      let endDate = max(Date(timeIntervalSince1970: endTimestampMs.doubleValue / 1000),
+                        now.addingTimeInterval(1))
       let exercise = exerciseName as String?
-      let exerciseImageFileName = await storeSharedImage(from: imageUrl as String?)
-      let nextSetSummaryValue = nextSetSummary as String?
+      let imageFileName = await storeSharedImage(from: imageUrl as String?)
+      let nextSet = nextSetSummary as String?
       let attributes = RestTimerAttributes(startDate: now)
 
       do {
-        let content = buildContent(
-          endDate: safeEndDate,
-          exerciseName: exercise,
-          exerciseImageFileName: exerciseImageFileName,
-          nextSetSummary: nextSetSummaryValue
-        )
+        let content = buildContent(endDate: endDate, exerciseName: exercise,
+                                   exerciseImageFileName: imageFileName, nextSetSummary: nextSet)
         let activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
         currentActivityId = activity.id
         currentStartDate = now
-        currentEndDate = safeEndDate
+        currentEndDate = endDate
         currentExerciseName = exercise
-        currentExerciseImageFileName = exerciseImageFileName
-        currentNextSetSummary = nextSetSummaryValue
+        currentExerciseImageFileName = imageFileName
+        currentNextSetSummary = nextSet
         persistState()
       } catch {
-        print("[LiveActivity] failed to start activity: \(error)")
+        print("[LiveActivity] failed to start: \(error)")
       }
     }
   }
-
 
   @objc
   func updateRestTimer(
@@ -206,42 +180,25 @@ final class RestTimerLiveActivity: NSObject {
     nextSetSummary: NSString?
   ) {
     guard #available(iOS 16.2, *) else { return }
-
     Task {
       guard let activity = resolveActivity() else {
-        print("[LiveActivity] update ignored because there is no active activity")
+        print("[LiveActivity] update ignored: no active activity")
         return
       }
-
       let now = Date()
-      let endDate = Date(timeIntervalSince1970: endTimestampMs.doubleValue / 1000)
-      let safeEndDate = max(endDate, now)
+      let endDate = max(Date(timeIntervalSince1970: endTimestampMs.doubleValue / 1000), now)
 
-      if currentStartDate == nil {
-        currentStartDate = activity.attributes.startDate
-      }
+      if currentStartDate == nil { currentStartDate = activity.attributes.startDate }
+      if let exerciseName { currentExerciseName = exerciseName as String }
+      if imageUrl != nil { currentExerciseImageFileName = await storeSharedImage(from: imageUrl as String?) }
+      if let nextSetSummary { currentNextSetSummary = nextSetSummary as String }
 
-      if let exerciseName {
-        currentExerciseName = exerciseName as String
-      }
-
-      if imageUrl != nil {
-        currentExerciseImageFileName = await storeSharedImage(from: imageUrl as String?)
-      }
-
-      if let nextSetSummary {
-        currentNextSetSummary = nextSetSummary as String
-      }
-
-      let content = buildContent(
-        endDate: safeEndDate,
-        exerciseName: currentExerciseName,
-        exerciseImageFileName: currentExerciseImageFileName,
-        nextSetSummary: currentNextSetSummary
-      )
+      let content = buildContent(endDate: endDate, exerciseName: currentExerciseName,
+                                 exerciseImageFileName: currentExerciseImageFileName,
+                                 nextSetSummary: currentNextSetSummary)
       await activity.update(content)
       currentActivityId = activity.id
-      currentEndDate = safeEndDate
+      currentEndDate = endDate
       persistState()
     }
   }
@@ -249,42 +206,26 @@ final class RestTimerLiveActivity: NSObject {
   @objc
   func endRestTimer() {
     guard #available(iOS 16.2, *) else { return }
-
     Task {
       guard let activity = resolveActivity() else { return }
-
-      let content = buildContent(
-        endDate: Date(),
-        exerciseName: currentExerciseName,
-        exerciseImageFileName: currentExerciseImageFileName,
-        nextSetSummary: currentNextSetSummary
-      )
+      let content = buildContent(endDate: Date(), exerciseName: currentExerciseName,
+                                 exerciseImageFileName: currentExerciseImageFileName,
+                                 nextSetSummary: currentNextSetSummary)
       await activity.end(content, dismissalPolicy: .immediate)
-
-      currentActivityId = nil
-      currentStartDate = nil
-      currentEndDate = nil
-      currentExerciseName = nil
-      currentExerciseImageFileName = nil
-      currentNextSetSummary = nil
+      currentActivityId = nil; currentStartDate = nil; currentEndDate = nil
+      currentExerciseName = nil; currentExerciseImageFileName = nil; currentNextSetSummary = nil
       clearPersistedState()
     }
   }
 
   @objc(getCurrentRestTimerState:rejecter:)
-  func getCurrentRestTimerState(
-    _ resolve: RCTPromiseResolveBlock,
-    rejecter reject: RCTPromiseRejectBlock
-  ) {
+  func getCurrentRestTimerState(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     restorePersistedStateIfNeeded()
-
     let now = Date()
-    let endDate = currentEndDate
-    let isActive = endDate.map { $0 > now } ?? false
-
+    let isActive = currentEndDate.map { $0 > now } ?? false
     resolve([
       "isActive": isActive,
-      "endTimestampMs": endDate.map { $0.timeIntervalSince1970 * 1000 } as Any,
+      "endTimestampMs": currentEndDate.map { $0.timeIntervalSince1970 * 1000 } as Any,
       "exerciseName": currentExerciseName as Any,
       "imageFileName": currentExerciseImageFileName as Any,
       "nextSetSummary": currentNextSetSummary as Any
@@ -292,116 +233,104 @@ final class RestTimerLiveActivity: NSObject {
   }
 }
 
+// MARK: - RestTimerLiveActivityModule (event emitter para intents)
+
 @objc(RestTimerLiveActivityModule)
 class RestTimerLiveActivityModule: RCTEventEmitter {
   private let sharedDefaults = UserDefaults(suiteName: RestTimerLiveActivityShared.appGroupIdentifier)
   private var hasListeners = false
-  // FIX: Inicializar en -1 para que CUALQUIER intent pendiente (sequence >= 0)
-  // sea procesado cuando startObserving() se llame, incluso si llegó antes
-  // de que React montara el listener (app abierta desde background por el intent).
   private var lastHandledIntentSequence = -1
+  private var appActiveObserver: NSObjectProtocol?
 
   override init() {
     super.init()
-    registerIntentObserver()
-    // FIX ELIMINADO: No leer lastHandledIntentSequence desde UserDefaults en init().
-    // El bug original: si el intent llegaba con sequence=1 mientras la app estaba
-    // suspendida, al despertar init() leía sequence=1 y lo guardaba como
-    // lastHandledIntentSequence=1. Luego startObserving() comparaba 1 > 1 = false
-    // y descartaba el intent silenciosamente.
-    // Con -1, startObserving() siempre procesa el intent pendiente más reciente.
+    // Observar didBecomeActive en lugar de Darwin notifications.
+    // Cuando la app se abre por un intent (openAppWhenRun=true),
+    // este observer se dispara DESPUÉS de que el intent escribió en UserDefaults.
+    appActiveObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      print("[IntentModule] didBecomeActive → poll")
+      self?.emitPendingIntentIfNeeded()
+    }
+  }
+
+  deinit {
+    if let obs = appActiveObserver {
+      NotificationCenter.default.removeObserver(obs)
+    }
   }
 
   override func supportedEvents() -> [String]! {
-    return ["onRestTimerIntent"]
+    ["onRestTimerIntent"]
   }
 
-  override static func requiresMainQueueSetup() -> Bool {
-    return true
-  }
+  override static func requiresMainQueueSetup() -> Bool { true }
 
   override func startObserving() {
+    print("[IntentModule] startObserving")
     hasListeners = true
-    // Intentar emitir inmediatamente. Si hay un intent pendiente que llegó
-    // mientras la app estaba suspendida, se procesa aquí.
     emitPendingIntentIfNeeded()
   }
 
   override func stopObserving() {
+    print("[IntentModule] stopObserving")
     hasListeners = false
   }
 
-  deinit {
-    CFNotificationCenterRemoveObserver(
-      CFNotificationCenterGetDarwinNotifyCenter(),
-      Unmanaged.passUnretained(self).toOpaque(),
-      nil,
-      nil
-    )
+  // Llamado explícitamente desde JS como seguro de malla extra
+  @objc(pollPendingIntent:rejecter:)
+  func pollPendingIntent(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    print("[IntentModule] pollPendingIntent called from JS")
+    emitPendingIntentIfNeeded()
+    resolve(nil)
   }
 
   @objc
-  func supportedEventsList(
-    _ resolve: RCTPromiseResolveBlock,
-    rejecter reject: RCTPromiseRejectBlock
-  ) {
+  func supportedEventsList(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     resolve(supportedEvents())
   }
 
-  private func registerIntentObserver() {
-    CFNotificationCenterAddObserver(
-      CFNotificationCenterGetDarwinNotifyCenter(),
-      Unmanaged.passUnretained(self).toOpaque(),
-      { _, observer, _, _, _ in
-        guard let observer else { return }
-        let module = Unmanaged<RestTimerLiveActivityModule>
-          .fromOpaque(observer)
-          .takeUnretainedValue()
-        module.emitPendingIntentIfNeeded()
-      },
-      RestTimerLiveActivityShared.pendingIntentNotificationName as CFString,
-      nil,
-      .deliverImmediately
-    )
-  }
-
   private func emitPendingIntentIfNeeded() {
-    guard hasListeners else { return }
-
-    // Forzar lectura fresca desde disco (importante cuando la app se despierta
-    // desde background y el App Group puede tener datos más nuevos que el caché)
-    sharedDefaults?.synchronize()
-
-    let sequence = sharedDefaults?.integer(
-      forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey
-    ) ?? 0
-
-    guard sequence > lastHandledIntentSequence else {
+    guard hasListeners else {
+      print("[IntentModule] skip: no listeners yet")
       return
     }
 
-    guard let action = sharedDefaults?.string(
-      forKey: RestTimerLiveActivityShared.pendingIntentActionKey
-    ) else {
+    sharedDefaults?.synchronize()
+
+    let sequence = sharedDefaults?.integer(forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey) ?? 0
+    print("[IntentModule] poll → sequence=\(sequence) lastHandled=\(lastHandledIntentSequence)")
+
+    guard sequence > lastHandledIntentSequence else {
+      print("[IntentModule] skip: no new intent")
+      return
+    }
+
+    guard let action = sharedDefaults?.string(forKey: RestTimerLiveActivityShared.pendingIntentActionKey) else {
+      print("[IntentModule] skip: action missing in UserDefaults")
       lastHandledIntentSequence = sequence
       return
     }
 
-    let delta = sharedDefaults?.integer(
-      forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey
-    ) ?? 0
-    let endTimestampMs = sharedDefaults?.object(
-      forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey
-    ) as? Double
+    let delta = sharedDefaults?.integer(forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey) ?? 0
+    let endTimestampMs = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey) as? Double
 
+    print("[IntentModule] EMIT action=\(action) delta=\(delta) endTs=\(String(describing: endTimestampMs))")
     lastHandledIntentSequence = sequence
-    sendEvent(
-      withName: "onRestTimerIntent",
-      body: [
-        "action": action,
-        "delta": delta,
-        "endTimestampMs": endTimestampMs as Any
-      ]
-    )
+
+    // Evita reemitir un intent viejo si el bridge se recrea más tarde.
+    sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentActionKey)
+    sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey)
+    sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey)
+    sharedDefaults?.synchronize()
+
+    sendEvent(withName: "onRestTimerIntent", body: [
+      "action": action,
+      "delta": delta,
+      "endTimestampMs": endTimestampMs as Any
+    ])
   }
 }
