@@ -131,6 +131,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
   </body>
 </html>`;
 
+    // DESPUÉS:
     return (
       <View
         style={[
@@ -165,6 +166,17 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
             }
           }}
         />
+        {/* Área táctil que cubre todo el media */}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => {
+            webViewRef.current?.injectJavaScript(
+              "window.__togglePlayback && window.__togglePlayback(); true;"
+            );
+          }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Botón de control en esquina */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => {
@@ -182,6 +194,8 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
             backgroundColor: "rgba(0,0,0,0.55)",
             alignItems: "center",
             justifyContent: "center",
+            // Asegura que queda por encima del área táctil
+            zIndex: 10,
           }}
         >
           <Icon
@@ -233,6 +247,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
     </body>
   </html>`;
 
+    // DESPUÉS:
     return (
       <View style={[style, { position: "relative", overflow: "hidden" }]}>
         <WebView
@@ -258,6 +273,17 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
             }
           }}
         />
+        {/* Área táctil que cubre todo el gif */}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => {
+            gifWebViewRef.current?.injectJavaScript(
+              "window.__togglePlayback && window.__togglePlayback(); true;"
+            );
+          }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Botón de control en esquina */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => {
@@ -275,6 +301,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
             backgroundColor: "rgba(0,0,0,0.55)",
             alignItems: "center",
             justifyContent: "center",
+            zIndex: 10,
           }}
         >
           <Icon
