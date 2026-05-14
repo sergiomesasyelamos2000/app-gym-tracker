@@ -43,6 +43,7 @@ import uuid from "react-native-uuid";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
 import {
+  consumeAppTerminatedAt,
   endRestTimerLive,
   getCurrentRestTimerLiveState,
   startRestTimerLive,
@@ -195,6 +196,10 @@ export default function RoutineDetailScreen() {
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingTerminationAt, setPendingTerminationAt] = useState<
+    number | null
+  >(null);
+  const hasConsumedTerminationMarkerRef = useRef(false);
   const MIN_WORKOUT_DURATION = 300; // 5 minutos
   const targetRoutineId = routineData?.id ?? routineId;
 
@@ -216,6 +221,45 @@ export default function RoutineDetailScreen() {
     () => allSets.filter((s) => s.completed).length,
     [allSets]
   );
+
+  useEffect(() => {
+    if (hasConsumedTerminationMarkerRef.current) return;
+    hasConsumedTerminationMarkerRef.current = true;
+
+    consumeAppTerminatedAt().then((terminatedAt) => {
+      if (!terminatedAt) return;
+      setPendingTerminationAt(terminatedAt);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pendingTerminationAt || !workoutInProgress || workoutInProgress.pausedAt) {
+      return;
+    }
+
+    const durationAtTermination = Math.max(
+      workoutInProgress.duration,
+      Math.floor((pendingTerminationAt - workoutInProgress.startedAt) / 1000)
+    );
+
+    patchWorkoutInProgress({
+      duration: durationAtTermination,
+      pausedAt: pendingTerminationAt,
+    });
+    void notificationService.cancelAllRestTimers();
+    endRestTimerLive();
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setRestTimerEndTime(null);
+    restTimerEndTimeRef.current = null;
+    setShowRestToast(false);
+    setRestTimeRemaining(0);
+    setActiveNotificationId(null);
+    setPendingTerminationAt(null);
+  }, [
+    pendingTerminationAt,
+    workoutInProgress,
+    patchWorkoutInProgress,
+  ]);
 
   const handleExitSessionView = useCallback(() => {
     if (!sessionView) return;
@@ -427,8 +471,20 @@ export default function RoutineDetailScreen() {
     setRoutineTitle(workoutInProgress.routineTitle);
     setExercises(workoutInProgress.exercises);
     setSets(sortSetsMapByOrder(workoutInProgress.sets));
-    setDuration(workoutInProgress.duration);
-    workoutStartTimeRef.current = workoutInProgress.startedAt;
+    const isPaused = typeof workoutInProgress.pausedAt === "number";
+    const restoredDuration = Math.max(0, workoutInProgress.duration);
+    const restoredStartedAt = isPaused
+      ? Date.now() - restoredDuration * 1000
+      : workoutInProgress.startedAt;
+
+    setDuration(restoredDuration);
+    workoutStartTimeRef.current = restoredStartedAt;
+    if (isPaused) {
+      patchWorkoutInProgress({
+        startedAt: restoredStartedAt,
+        pausedAt: undefined,
+      });
+    }
     setStarted(true);
     setHasInitializedFromStore(true);
     setIsExercisesLoading(false);
@@ -441,6 +497,7 @@ export default function RoutineDetailScreen() {
     hasInitializedFromStore,
     targetRoutineId,
     navigation,
+    patchWorkoutInProgress,
   ]);
 
   useEffect(() => {

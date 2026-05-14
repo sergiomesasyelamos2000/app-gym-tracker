@@ -32,4 +32,7 @@ RCT_EXTERN_METHOD(pollPendingIntent:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(supportedEventsList:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(consumeAppTerminatedAt:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

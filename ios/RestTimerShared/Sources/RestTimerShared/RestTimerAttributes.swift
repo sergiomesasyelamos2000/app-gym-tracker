@@ -14,6 +14,7 @@ public enum RestTimerLiveActivityShared {
   public static let pendingIntentSequenceKey = "restTimer.pendingIntent.sequence"
   public static let pendingIntentEndTimestampMsKey = "restTimer.pendingIntent.endTimestampMs"
   public static let pendingIntentNotificationName = "group.com.smy862.app.shared.restTimer.intent"
+  public static let appTerminatedAtKey = "restTimer.appTerminatedAt"
 }
 
 public struct RestTimerAttributes: ActivityAttributes {

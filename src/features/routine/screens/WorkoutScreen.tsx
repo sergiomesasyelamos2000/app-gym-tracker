@@ -31,6 +31,8 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useShallow } from "zustand/react/shallow";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
+import { notificationService } from "../../../services/notificationService";
 import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 import {
   deleteRoutine,
@@ -59,17 +61,51 @@ export default function WorkoutScreen() {
     useState<RoutineResponseDto | null>(null);
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const { workoutInProgress, clearWorkoutInProgress } =
+  const { workoutInProgress, clearWorkoutInProgress, patchWorkoutInProgress } =
     useWorkoutInProgressStore(
       useShallow((state) => ({
         workoutInProgress: state.workoutInProgress,
         clearWorkoutInProgress: state.clearWorkoutInProgress,
+        patchWorkoutInProgress: state.patchWorkoutInProgress,
       }))
     );
   const [showWorkoutBanner, setShowWorkoutBanner] = useState(false);
   const prefetchedRoutineIdsRef = useRef<Set<string>>(new Set());
+  const [pendingTerminationAt, setPendingTerminationAt] = useState<
+    number | null
+  >(null);
+  const hasConsumedTerminationMarkerRef = useRef(false);
 
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  useEffect(() => {
+    if (hasConsumedTerminationMarkerRef.current) return;
+    hasConsumedTerminationMarkerRef.current = true;
+
+    consumeAppTerminatedAt().then((terminatedAt) => {
+      if (!terminatedAt) return;
+      setPendingTerminationAt(terminatedAt);
+    });
+  }, []);
+
+  useEffect(() => {
+    const terminatedAt = pendingTerminationAt;
+    if (!terminatedAt || !workoutInProgress || workoutInProgress.pausedAt) {
+      return;
+    }
+
+    const durationAtTermination = Math.max(
+      workoutInProgress.duration,
+      Math.floor((terminatedAt - workoutInProgress.startedAt) / 1000)
+    );
+
+    patchWorkoutInProgress({
+      duration: durationAtTermination,
+      pausedAt: terminatedAt,
+    });
+    void notificationService.cancelAllRestTimers();
+    setPendingTerminationAt(null);
+  }, [pendingTerminationAt, workoutInProgress, patchWorkoutInProgress]);
 
   // Elimina el useFocusEffect existente y reemplázalo con:
   useEffect(() => {

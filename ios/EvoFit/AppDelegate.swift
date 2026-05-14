@@ -1,6 +1,9 @@
 import Expo
 import React
 import ReactAppDependencyProvider
+import ActivityKit
+import RestTimerShared
+import UserNotifications
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -49,6 +52,58 @@ public class AppDelegate: ExpoAppDelegate {
   ) -> Bool {
     let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
     return super.application(application, continue: userActivity, restorationHandler: restorationHandler) || result
+  }
+
+  public override func applicationWillTerminate(_ application: UIApplication) {
+    markForcedTerminationAndCancelRestTimer()
+    super.applicationWillTerminate(application)
+  }
+
+  private func markForcedTerminationAndCancelRestTimer() {
+    let defaults = UserDefaults(suiteName: RestTimerLiveActivityShared.appGroupIdentifier)
+    let terminatedAt = Date()
+
+    defaults?.set(terminatedAt.timeIntervalSince1970 * 1000, forKey: RestTimerLiveActivityShared.appTerminatedAtKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentActivityIdKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentStartDateKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentEndDateKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseNameKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentExerciseImageKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.currentNextSetSummaryKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentActionKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentDeltaKey)
+    defaults?.removeObject(forKey: RestTimerLiveActivityShared.pendingIntentEndTimestampMsKey)
+    defaults?.synchronize()
+
+    UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+      let restTimerIds = requests
+        .map(\.identifier)
+        .filter { $0.hasPrefix("rest-timer-") }
+      guard !restTimerIds.isEmpty else { return }
+      UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: restTimerIds)
+      UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: restTimerIds)
+    }
+
+    guard #available(iOS 16.2, *) else { return }
+
+    let activities = Activity<RestTimerAttributes>.activities
+    guard !activities.isEmpty else { return }
+
+    let group = DispatchGroup()
+    for activity in activities {
+      group.enter()
+      Task.detached {
+        let finalState = RestTimerAttributes.ContentState(
+          endDate: terminatedAt,
+          exerciseName: activity.content.state.exerciseName,
+          exerciseImageFileName: activity.content.state.exerciseImageFileName,
+          nextSetSummary: activity.content.state.nextSetSummary
+        )
+        await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
+        group.leave()
+      }
+    }
+    _ = group.wait(timeout: .now() + 1.5)
   }
 }
 

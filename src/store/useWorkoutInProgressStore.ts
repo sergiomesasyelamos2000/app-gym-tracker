@@ -15,6 +15,7 @@ export interface WorkoutInProgress {
   exercises: ExerciseRequestDto[];
   sets: { [exerciseId: string]: SetRequestDto[] };
   startedAt: number;
+  pausedAt?: number;
 }
 
 type WorkoutInProgressUpdater =

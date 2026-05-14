@@ -293,6 +293,19 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
     resolve(supportedEvents())
   }
 
+  @objc(consumeAppTerminatedAt:rejecter:)
+  func consumeAppTerminatedAt(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    sharedDefaults?.synchronize()
+    let terminatedAt = sharedDefaults?.object(forKey: RestTimerLiveActivityShared.appTerminatedAtKey) as? Double
+    sharedDefaults?.removeObject(forKey: RestTimerLiveActivityShared.appTerminatedAtKey)
+    sharedDefaults?.synchronize()
+    if let terminatedAt {
+      resolve(terminatedAt)
+    } else {
+      resolve(NSNull())
+    }
+  }
+
   private func emitPendingIntentIfNeeded() {
     guard hasListeners else {
       print("[IntentModule] skip: no listeners yet")

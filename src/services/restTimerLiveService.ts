@@ -133,6 +133,20 @@ export const getCurrentRestTimerLiveState =
     }
   };
 
+export const consumeAppTerminatedAt = async (): Promise<number | null> => {
+  if (Platform.OS !== "ios" || !IOSIntentModule?.consumeAppTerminatedAt) {
+    return null;
+  }
+
+  try {
+    const value = await IOSIntentModule.consumeAppTerminatedAt();
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  } catch (e) {
+    console.warn("[RestTimerLive] consumeAppTerminatedAt failed", e);
+    return null;
+  }
+};
+
 /**
  * Suscríbete a los intents del Live Activity.
  *
