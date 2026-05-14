@@ -11,19 +11,19 @@
 		1D654098C0CDB6CECFC65FD1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 83319E837FFF00283C069B90 /* PrivacyInfo.xcprivacy */; };
 		20035E442F7D05EB008BA6E9 /* RestTimerShared in Frameworks */ = {isa = PBXBuildFile; productRef = 20035E432F7D05EB008BA6E9 /* RestTimerShared */; };
 		20035E462F7D076B008BA6E9 /* RestTimerShared in Frameworks */ = {isa = PBXBuildFile; productRef = 20035E452F7D076B008BA6E9 /* RestTimerShared */; };
-		20035E4A2F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */; };
+		20035E4A2F7D1751008BA6E9 /* RestTimerLiveActivityBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 20035E472F7D1751008BA6E9 /* RestTimerLiveActivityBridge.m */; };
 		2014C02D2F7C0FB3005F41CB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2014BFDA2F7C0D52005F41CB /* WidgetKit.framework */; };
 		2014C02E2F7C0FB3005F41CB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2014BFDC2F7C0D53005F41CB /* SwiftUI.framework */; };
 		2014C03F2F7C0FB7005F41CB /* RestTimerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */; };
-		RESTLA1F7C0FB3005F41CB /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA3F7C0FB3005F41CB /* RestTimerLiveActivity.swift */; };
-		RESTLA2F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
-		RESTLA5F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
+		201B0A9D2F7D2C9100D4F1AB /* RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201B0A9C2F7D2C9100D4F1AB /* RestTimerLiveActivityModule.swift */; };
 		2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321635CB9EA91FAB23C38495 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		73D98A287213000F29F6FABC /* libPods-EvoFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		RESTLA1F7C0FB3005F41CB /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA3F7C0FB3005F41CB /* RestTimerLiveActivity.swift */; };
+		RESTLA2F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
+		RESTLA5F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,13 +61,11 @@
 		13B07F961A680F5B00A75B9A /* EvoFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvoFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = EvoFit/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = EvoFit/Info.plist; sourceTree = "<group>"; };
-		20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EvoFit/RestTimerLiveActivityBridge.m; sourceTree = "<group>"; };
+		20035E472F7D1751008BA6E9 /* RestTimerLiveActivityBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EvoFit/RestTimerLiveActivityBridge.m; sourceTree = "<group>"; };
 		2014BFDA2F7C0D52005F41CB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		2014BFDC2F7C0D53005F41CB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		2014C02C2F7C0FB3005F41CB /* RestTimerLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RestTimerLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvoFit/RestTimerLiveActivityModule.swift; sourceTree = "<group>"; };
-		RESTLA3F7C0FB3005F41CB /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivity.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
-		RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivityIntents.swift; path = RestTimerLiveActivityIntents.swift; sourceTree = "<group>"; };
+		201B0A9C2F7D2C9100D4F1AB /* RestTimerLiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvoFit/RestTimerLiveActivityModule.swift; sourceTree = "<group>"; };
 		321635CB9EA91FAB23C38495 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-EvoFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		5007370640F880E3FDD8341D /* Pods-EvoFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvoFit.release.xcconfig"; path = "Target Support Files/Pods-EvoFit/Pods-EvoFit.release.xcconfig"; sourceTree = "<group>"; };
 		83319E837FFF00283C069B90 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = EvoFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -78,13 +76,9 @@
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = EvoFit/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "EvoFit-Bridging-Header.h"; path = "EvoFit/EvoFit-Bridging-Header.h"; sourceTree = "<group>"; };
 		F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-EvoFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		RESTLA3F7C0FB3005F41CB /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivity.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivityIntents.swift; path = RestTimerLiveActivityIntents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
@@ -114,7 +108,7 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */,
-				201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */,
+				201B0A9C2F7D2C9100D4F1AB /* RestTimerLiveActivityModule.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -171,7 +165,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				20035E472F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m */,
+				20035E472F7D1751008BA6E9 /* RestTimerLiveActivityBridge.m */,
 				13B07FAE1A68108700A75B9A /* EvoFit */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				2014BFDE2F7C0D53005F41CB /* RestTimerLiveActivity */,
@@ -368,13 +362,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -413,13 +403,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-EvoFit/Pods-EvoFit-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -435,8 +421,8 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */,
-				20035E4A2F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m in Sources */,
-				201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */,
+				20035E4A2F7D1751008BA6E9 /* RestTimerLiveActivityBridge.m in Sources */,
+				201B0A9D2F7D2C9100D4F1AB /* RestTimerLiveActivityModule.swift in Sources */,
 				RESTLA5F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

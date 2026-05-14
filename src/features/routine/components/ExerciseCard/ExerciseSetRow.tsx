@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { TrendingUp, Trophy, Zap } from "lucide-react-native";
-import React, { memo, useCallback, useRef } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -114,7 +114,6 @@ const ExerciseSetRow = ({
       ? { inputAccessoryViewID: GLOBAL_KEYBOARD_ACCESSORY_ID }
       : {};
 
-  // Usar el custom hook para la lógica
   const {
     localWeight,
     localReps,
@@ -136,12 +135,9 @@ const ExerciseSetRow = ({
     previousMark,
   });
 
-  // Animación al completar set
   const handleToggleWithAnimation = useCallback(() => {
-    // Lighter haptic for snappier feedback.
     void Haptics.selectionAsync();
 
-    // Animación de escala
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 1.05,
@@ -174,18 +170,16 @@ const ExerciseSetRow = ({
     }
   }, [recordType, item.completed]);
 
-  // Flash animation for PR
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (recordType && item.completed) {
-      // Trigger flash
       flashAnim.setValue(0);
       Animated.sequence([
         Animated.timing(flashAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: false, // backgroundColor doesn't support native driver
+          useNativeDriver: false,
         }),
         Animated.timing(flashAnim, {
           toValue: 0,
@@ -199,10 +193,11 @@ const ExerciseSetRow = ({
   const backgroundColor = flashAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [
-      item.completed ? (isDark ? "#14532D" : "#DCFCE7") : "transparent", // Stronger green for completed rows
-      "#FFD70040", // Gold with opacity for flash
+      item.completed ? (isDark ? "#14532D" : "#DCFCE7") : "transparent",
+      "#FFD70040",
     ],
   });
+
   const completedCheckColor = isDark ? "#4ADE80" : "#16A34A";
   const [isSetTypeModalVisible, setIsSetTypeModalVisible] =
     React.useState(false);
@@ -212,52 +207,34 @@ const ExerciseSetRow = ({
     (item as SetRequestDto & { setType?: SetTypeValue }).setType
   );
   const setTypeIcon = getSetTypeIcon(setType);
+
   const previousWeightPlaceholder =
     previousMark?.match(/^\s*([\d.,]+)/)?.[1]?.replace(",", ".") || "0";
   const previousMainMark =
     previousMark?.replace(/\s*\(A:\d+\)\s*$/i, "").trim() || "-";
   const previousAssistedMark = previousMark?.match(/\(A:(\d+)\)/i)?.[1];
+
   const rangePlaceholder =
     repsType === "range"
       ? `${
           item.repsMin && item.repsMin > 0
             ? item.repsMin
             : item.reps && item.reps > 0
-              ? item.reps
-              : 0
+            ? item.reps
+            : 0
         }-${
           item.repsMax && item.repsMax > 0
             ? item.repsMax
             : item.reps && item.reps > 0
-              ? item.reps
-              : 0
+            ? item.reps
+            : 0
         }`
       : "0";
-  const repsDisplayValue = localReps || (repsType === "range" ? rangePlaceholder : "0");
-  const repsColumnFlex =
-    repsType === "range"
-      ? repsDisplayValue.length <= 3
-        ? isSmallScreen
-          ? 1.55
-          : 1.8
-        : repsDisplayValue.length <= 5
-          ? isSmallScreen
-            ? 1.9
-            : 2.25
-          : isSmallScreen
-            ? COLUMN_FLEX.small.repsRange
-            : COLUMN_FLEX.normal.repsRange
-      : repsDisplayValue.length <= 1
-        ? isSmallScreen
-          ? 0.95
-          : 1.1
-        : repsDisplayValue.length <= 2
-          ? isSmallScreen
-            ? 1.1
-            : 1.3
-          : isSmallScreen
-            ? COLUMN_FLEX.small.reps
-            : COLUMN_FLEX.normal.reps;
+
+  // Ancho fijo para el input de reps — suficiente para 2 dígitos sin cortar,
+  // sin crecer desmesuradamente. El rango usa más espacio por el guión.
+  const repsInputWidth =
+    repsType === "range" ? (isSmallScreen ? 72 : 84) : isSmallScreen ? 52 : 60;
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -311,12 +288,14 @@ const ExerciseSetRow = ({
         getCompletedRowStyle(theme, item.completed ?? false),
         {
           transform: [{ scale: scaleAnim }],
-          paddingHorizontal: isSmallScreen ? 8 : 12,
+          // ← Reducido: antes 8/12, ahora 6/8
+          paddingHorizontal: isSmallScreen ? 6 : 8,
           paddingVertical: isSmallScreen ? 10 : 14,
-          backgroundColor: backgroundColor, // Apply animated background
+          backgroundColor: backgroundColor,
         },
       ]}
     >
+      {/* Serie */}
       <View
         style={{
           flex: isSmallScreen
@@ -352,9 +331,7 @@ const ExerciseSetRow = ({
             <View
               style={[
                 styles.setTypeBadge,
-                {
-                  backgroundColor: getSetTypeColor(setType),
-                },
+                { backgroundColor: getSetTypeColor(setType) },
               ]}
             >
               <Icon name={setTypeIcon} size={11} color="#FFFFFF" />
@@ -362,7 +339,8 @@ const ExerciseSetRow = ({
           ) : null}
         </TouchableOpacity>
       </View>
-      {/* Marca anterior - Ahora es clickable */}
+
+      {/* Marca anterior */}
       {started && (
         <View
           style={{
@@ -402,9 +380,7 @@ const ExerciseSetRow = ({
                 <Text
                   style={[
                     styles.previousAssistedMark,
-                    {
-                      color: theme.textTertiary,
-                    },
+                    { color: theme.textTertiary },
                   ]}
                   numberOfLines={1}
                 >
@@ -415,13 +391,14 @@ const ExerciseSetRow = ({
           </TouchableOpacity>
         </View>
       )}
+
       {/* Peso */}
       <View
         style={{
           flex: isSmallScreen
             ? COLUMN_FLEX.small.weight
             : COLUMN_FLEX.normal.weight,
-          marginHorizontal: 2,
+          marginHorizontal: 1, // ← antes 2
         }}
       >
         <TextInput
@@ -449,13 +426,15 @@ const ExerciseSetRow = ({
           accessibilityHint="Introduce el peso levantado"
         />
       </View>
+
       {/* Repeticiones */}
       {started ? (
-        // En modo entrenamiento, SIEMPRE mostrar un solo input de reps (como Hevy)
+        // Modo entrenamiento: input único con ancho fijo
         <View
           style={{
-            flex: repsColumnFlex,
-            marginHorizontal: 2,
+            marginHorizontal: 1, // ← antes 2
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <TextInput
@@ -467,14 +446,7 @@ const ExerciseSetRow = ({
                 color: theme.text,
                 borderWidth: isDark ? 1 : 0,
                 borderColor: theme.border,
-                paddingHorizontal:
-                  repsType === "range"
-                    ? isSmallScreen
-                      ? 6
-                      : 8
-                    : isSmallScreen
-                      ? 9
-                      : 12,
+                paddingHorizontal: isSmallScreen ? 6 : 8,
                 paddingVertical: isSmallScreen ? 9 : 12,
                 fontSize: RFValue(
                   repsType === "range"
@@ -482,10 +454,12 @@ const ExerciseSetRow = ({
                       ? 12
                       : 14
                     : isSmallScreen
-                      ? 14
-                      : 16
+                    ? 14
+                    : 16
                 ),
                 minHeight: isSmallScreen ? 44 : 48,
+                width: repsInputWidth,
+                textAlign: "center",
               },
             ]}
             keyboardType="numeric"
@@ -500,13 +474,13 @@ const ExerciseSetRow = ({
           />
         </View>
       ) : repsType === "range" ? (
-        // En modo edición, mostrar rango si corresponde
+        // Modo edición — rango
         <View
           style={{
             flex: isSmallScreen
               ? COLUMN_FLEX.small.repsRange
               : COLUMN_FLEX.normal.repsRange,
-            marginHorizontal: 2,
+            marginHorizontal: 1, // ← antes 2
           }}
         >
           <View
@@ -537,12 +511,10 @@ const ExerciseSetRow = ({
               value={localRepsMin}
               selectTextOnFocus
               placeholder={
-                started
-                  ? item.repsMin && item.repsMin > 0
-                    ? item.repsMin.toString()
-                    : item.reps && item.reps > 0
-                    ? item.reps.toString()
-                    : "0"
+                item.repsMin && item.repsMin > 0
+                  ? item.repsMin.toString()
+                  : item.reps && item.reps > 0
+                  ? item.reps.toString()
                   : "0"
               }
               placeholderTextColor={theme.textTertiary}
@@ -577,12 +549,10 @@ const ExerciseSetRow = ({
               value={localRepsMax}
               selectTextOnFocus
               placeholder={
-                started
-                  ? item.repsMax && item.repsMax > 0
-                    ? item.repsMax.toString()
-                    : item.reps && item.reps > 0
-                    ? item.reps.toString()
-                    : "0"
+                item.repsMax && item.repsMax > 0
+                  ? item.repsMax.toString()
+                  : item.reps && item.reps > 0
+                  ? item.reps.toString()
                   : "0"
               }
               placeholderTextColor={theme.textTertiary}
@@ -593,12 +563,12 @@ const ExerciseSetRow = ({
           </View>
         </View>
       ) : (
+        // Modo edición — reps simples, ancho fijo
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.reps
-              : COLUMN_FLEX.normal.reps,
-            marginHorizontal: 2,
+            marginHorizontal: 1, // ← antes 2
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <TextInput
@@ -607,14 +577,16 @@ const ExerciseSetRow = ({
               styles.input,
               {
                 backgroundColor: theme.inputBackground,
-              color: theme.text,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-              padding: isSmallScreen ? 9 : 12,
-              fontSize: RFValue(isSmallScreen ? 14 : 16),
-              minHeight: isSmallScreen ? 44 : 48,
-            },
-          ]}
+                color: theme.text,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: theme.border,
+                padding: isSmallScreen ? 9 : 12,
+                fontSize: RFValue(isSmallScreen ? 14 : 16),
+                minHeight: isSmallScreen ? 44 : 48,
+                width: repsInputWidth,
+                textAlign: "center",
+              },
+            ]}
             keyboardType="numeric"
             value={localReps}
             selectTextOnFocus
@@ -627,13 +599,14 @@ const ExerciseSetRow = ({
           />
         </View>
       )}
+
       {/* Repeticiones asistidas */}
       <View
         style={{
           flex: isSmallScreen
             ? COLUMN_FLEX.small.assisted
             : COLUMN_FLEX.normal.assisted,
-          marginHorizontal: 2,
+          marginHorizontal: 1, // ← antes 2
         }}
       >
         <TextInput
@@ -661,6 +634,7 @@ const ExerciseSetRow = ({
           accessibilityHint="Introduce cuántas repeticiones fueron asistidas"
         />
       </View>
+
       {/* Check */}
       {!readonly && (
         <View
@@ -695,7 +669,7 @@ const ExerciseSetRow = ({
       {recordType && item.completed && (
         <Animated.View
           style={{
-            marginLeft: isSmallScreen ? 4 : 8,
+            marginLeft: isSmallScreen ? 2 : 4, // ← antes 4/8
             transform: [{ scale: iconScale }],
           }}
           accessibilityLabel="Récord personal"
@@ -712,6 +686,7 @@ const ExerciseSetRow = ({
         </Animated.View>
       )}
 
+      {/* Modal tipo de serie */}
       <Modal
         visible={isSetTypeModalVisible}
         transparent
@@ -783,7 +758,6 @@ const ExerciseSetRow = ({
                             <View style={styles.modalTypeDot} />
                           )}
                         </View>
-
                         <View style={styles.modalTextBlock}>
                           <View style={styles.modalTitleRow}>
                             <Text
@@ -827,7 +801,6 @@ const ExerciseSetRow = ({
   );
 };
 
-// Comparador personalizado para React.memo
 const arePropsEqual = (prevProps: Props, nextProps: Props) => {
   return (
     prevProps.item.id === nextProps.item.id &&

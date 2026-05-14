@@ -196,51 +196,94 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
 
   // Use giftUrl/gifUrl if available (animated GIF)
   if (gifUrl) {
+    const gifWebViewRef = React.useRef<WebView>(null);
+
+    const gifHtml = `<!doctype html>
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+      <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      </style>
+    </head>
+    <body>
+      <img id="gif" src="${gifUrl}" />
+      <script>
+        let paused = false;
+        const originalSrc = "${gifUrl}";
+        function sendState() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ paused: paused }));
+          }
+        }
+        window.__togglePlayback = function() {
+          const img = document.getElementById('gif');
+          if (paused) {
+            img.src = originalSrc;
+            paused = false;
+          } else {
+            img.src = '';
+            paused = true;
+          }
+          sendState();
+        };
+        sendState();
+      </script>
+    </body>
+  </html>`;
+
     return (
-      <TouchableOpacity
-        activeOpacity={0.95}
-        onPress={() => {
-          if (!canPauseGif) return;
-          setIsPaused((prev) => !prev);
-        }}
-        disabled={!canPauseGif}
-      >
-        {isPaused && staticFallbackUrl ? (
-          <CachedExerciseImage
-            imageUrl={staticFallbackUrl}
-            style={style}
-            onLoadEnd={onLoadEnd}
+      <View style={[style, { position: "relative", overflow: "hidden" }]}>
+        <WebView
+          ref={gifWebViewRef}
+          source={{ html: gifHtml }}
+          style={StyleSheet.absoluteFillObject}
+          originWhitelist={["*"]}
+          scrollEnabled={false}
+          bounces={false}
+          overScrollMode="never"
+          androidLayerType="hardware"
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          onLoadEnd={onLoadEnd}
+          onMessage={(event) => {
+            try {
+              const payload = JSON.parse(event.nativeEvent.data);
+              if (typeof payload?.paused === "boolean") {
+                setIsPaused(payload.paused);
+              }
+            } catch {
+              // no-op
+            }
+          }}
+        />
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => {
+            gifWebViewRef.current?.injectJavaScript(
+              "window.__togglePlayback && window.__togglePlayback(); true;"
+            );
+          }}
+          style={{
+            position: "absolute",
+            right: 8,
+            bottom: 8,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            name={isPaused ? "play-arrow" : "pause"}
+            size={RFValue(14)}
+            color="#fff"
           />
-        ) : (
-          <Image
-            source={{ uri: gifUrl }}
-            style={style}
-            resizeMode="cover"
-            onLoadEnd={onLoadEnd}
-          />
-        )}
-        {canPauseGif && (
-          <View
-            style={{
-              position: "absolute",
-              right: 8,
-              bottom: 8,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 999,
-              backgroundColor: "rgba(0,0,0,0.55)",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon
-              name={isPaused ? "play-arrow" : "pause"}
-              size={RFValue(12)}
-              color="#fff"
-            />
-          </View>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   }
 
