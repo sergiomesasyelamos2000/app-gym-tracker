@@ -854,16 +854,14 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const giftUrl = (exercise as { giftUrl?: string }).giftUrl;
   const hasMedia = Boolean(
     exercise.videoUrl?.trim() ||
-      exercise.gifUrl?.trim() ||
+      exercise.giftUrl?.trim() ||
       giftUrl?.trim() ||
       exercise.imageUrl?.trim()
   );
   const [mediaLoading, setMediaLoading] = useState(hasMedia);
   const [refreshing, setRefreshing] = useState(false);
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
-  const mediaLabel = exercise.videoUrl?.trim()
-    ? "video"
-    : "imagen";
+  const mediaLabel = exercise.videoUrl?.trim() ? "video" : "imagen";
   const loadingMessage = loading
     ? "Cargando histórico..."
     : mediaLoading
@@ -922,7 +920,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   }, [
     exercise.id,
     exercise.videoUrl,
-    exercise.gifUrl,
+    exercise.giftUrl,
     giftUrl,
     exercise.imageUrl,
     hasMedia,
