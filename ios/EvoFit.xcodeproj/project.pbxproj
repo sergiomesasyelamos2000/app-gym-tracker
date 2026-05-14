@@ -18,6 +18,7 @@
 		201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201B0A9C2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift */; };
 		RESTLA1F7C0FB3005F41CB /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA3F7C0FB3005F41CB /* RestTimerLiveActivity.swift */; };
 		RESTLA2F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
+		RESTLA5F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTLA4F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift */; };
 		2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 321635CB9EA91FAB23C38495 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		73D98A287213000F29F6FABC /* libPods-EvoFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F7A162557FAF080983E3CA06 /* libPods-EvoFit.a */; };
@@ -436,6 +437,7 @@
 				2E5ADB7EEB1CCE25780043BB /* ExpoModulesProvider.swift in Sources */,
 				20035E4A2F7D1751008BA6E9 /* EvoFit/RestTimerLiveActivityBridge.m in Sources */,
 				201B0A9D2F7D2C9100D4F1AB /* EvoFit/RestTimerLiveActivityModule.swift in Sources */,
+				RESTLA5F7C0FB3005F41CB /* RestTimerLiveActivityIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

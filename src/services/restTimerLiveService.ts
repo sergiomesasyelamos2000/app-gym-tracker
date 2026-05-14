@@ -137,8 +137,9 @@ export const getCurrentRestTimerLiveState =
  * Suscríbete a los intents del Live Activity.
  *
  * Estrategia de recepción (iOS):
- *  1. El intent escribe en UserDefaults y abre la app (openAppWhenRun=true).
- *  2. UIApplication.didBecomeActiveNotification (Swift) hace poll automático.
+ *  1. El intent escribe en UserDefaults sin abrir la app.
+ *  2. UIApplication.didBecomeActiveNotification (Swift) hace poll automático
+ *     cuando el usuario vuelve a la app más tarde.
  *  3. AppState 'active' (JS) llama a pollNativeIntent() como red de seguridad.
  *  4. pollPendingIntent() al montar el listener, por si había un intent previo.
  *

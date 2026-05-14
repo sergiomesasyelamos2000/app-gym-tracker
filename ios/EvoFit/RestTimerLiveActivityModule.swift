@@ -245,8 +245,8 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
   override init() {
     super.init()
     // Observar didBecomeActive en lugar de Darwin notifications.
-    // Cuando la app se abre por un intent (openAppWhenRun=true),
-    // este observer se dispara DESPUÉS de que el intent escribió en UserDefaults.
+    // Los intents ya no abren la app; este observer sincroniza cambios pendientes
+    // cuando el usuario vuelve a la app más tarde.
     appActiveObserver = NotificationCenter.default.addObserver(
       forName: UIApplication.didBecomeActiveNotification,
       object: nil,

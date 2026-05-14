@@ -5,15 +5,13 @@ import RestTimerShared
 
 // MARK: - Helpers compartidos
 
-@available(iOS 17.2, *)
+@available(iOS 17.0, *)
 private enum RestTimerIntentAction {
   struct UpdateResult {
     let endTimestampMs: Double
   }
 
-  // Escribe en UserDefaults. La app lo leerá al activarse via didBecomeActive.
-  // Ya NO usamos CFNotificationCenter porque la app no está escuchando
-  // mientras está suspendida, y la notificación Darwin se pierde.
+  // Escribe en UserDefaults para que la app sincronice el estado cuando vuelva a abrirse.
   static func publishIntent(_ action: String, delta: Int, endTimestampMs: Double) {
     let defaults = UserDefaults(suiteName: RestTimerLiveActivityShared.appGroupIdentifier)
     let nextSequence = (defaults?.integer(forKey: RestTimerLiveActivityShared.pendingIntentSequenceKey) ?? 0) + 1
@@ -103,10 +101,10 @@ private enum RestTimerIntentAction {
 
 // MARK: - Intents
 
-@available(iOS 17.2, *)
+@available(iOS 17.0, *)
 struct AddRestTimeIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Añadir +15s"
-  static var openAppWhenRun: Bool = true
+  static var openAppWhenRun: Bool = false
   static var authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
   func perform() async throws -> some IntentResult {
@@ -117,10 +115,10 @@ struct AddRestTimeIntent: LiveActivityIntent {
   }
 }
 
-@available(iOS 17.2, *)
+@available(iOS 17.0, *)
 struct SubtractRestTimeIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Restar -15s"
-  static var openAppWhenRun: Bool = true
+  static var openAppWhenRun: Bool = false
   static var authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
   func perform() async throws -> some IntentResult {
@@ -131,10 +129,10 @@ struct SubtractRestTimeIntent: LiveActivityIntent {
   }
 }
 
-@available(iOS 17.2, *)
+@available(iOS 17.0, *)
 struct SkipRestTimeIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Omitir"
-  static var openAppWhenRun: Bool = true
+  static var openAppWhenRun: Bool = false
   static var authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
   func perform() async throws -> some IntentResult {

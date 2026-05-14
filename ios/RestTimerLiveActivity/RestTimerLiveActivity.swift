@@ -67,39 +67,51 @@ private struct RemainingTimeText: View {
 }
 
 private struct EvoActionButtons: View {
-    private func actionURL(_ action: String) -> URL {
-        URL(string: "com.smy862.app://rest-timer/\(action)")!
-    }
-
     var body: some View {
         HStack(spacing: 6) {
-            Link(destination: actionURL("subtract")) {
-                Text("−15s")
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(EvoSecondaryButtonStyle())
+            if #available(iOSApplicationExtension 17.0, *) {
+                Button(intent: SubtractRestTimeIntent()) {
+                    actionLabel("−15s", weight: .semibold)
+                }
+                .buttonStyle(EvoSecondaryButtonStyle())
 
-            Link(destination: actionURL("add")) {
-                Text("+15s")
-                    .font(.system(size: 13, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(EvoPrimaryButtonStyle())
+                Button(intent: AddRestTimeIntent()) {
+                    actionLabel("+15s", weight: .bold)
+                }
+                .buttonStyle(EvoPrimaryButtonStyle())
 
-            Link(destination: actionURL("skip")) {
-                Text("Omitir")
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
+                Button(intent: SkipRestTimeIntent()) {
+                    actionLabel("Omitir", weight: .semibold)
+                }
+                .buttonStyle(EvoDestructiveButtonStyle())
+            } else {
+                actionLabel("−15s", weight: .semibold)
+                    .padding(.vertical, 8)
+                    .background(Color.evoSurface)
+                    .foregroundStyle(Color.evoLabel.opacity(0.85))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                actionLabel("+15s", weight: .bold)
+                    .padding(.vertical, 8)
+                    .background(Color.evoAccent)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                actionLabel("Omitir", weight: .semibold)
+                    .padding(.vertical, 8)
+                    .background(Color.evoRed.opacity(0.18))
+                    .foregroundStyle(Color.evoRed)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
-            .buttonStyle(EvoDestructiveButtonStyle())
         }
+    }
+
+    private func actionLabel(_ title: String, weight: Font.Weight) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: weight))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .frame(maxWidth: .infinity)
     }
 }
 
