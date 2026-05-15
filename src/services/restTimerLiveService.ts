@@ -46,7 +46,7 @@ const getModule = () => {
 
 // Hace poll explícito al módulo nativo para que emita
 // cualquier intent pendiente en UserDefaults.
-const pollNativeIntent = () => {
+export const pollNativeIntent = () => {
   if (Platform.OS !== "ios" || !IOSIntentModule?.pollPendingIntent) return;
   IOSIntentModule.pollPendingIntent().catch(() => {});
 };

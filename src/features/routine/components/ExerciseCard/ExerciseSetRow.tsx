@@ -231,10 +231,22 @@ const ExerciseSetRow = ({
         }`
       : "0";
 
-  // Ancho fijo para el input de reps — suficiente para 2 dígitos sin cortar,
-  // sin crecer desmesuradamente. El rango usa más espacio por el guión.
+  // Ancho fijo para el input de reps en modo edición.
   const repsInputWidth =
     repsType === "range" ? (isSmallScreen ? 72 : 84) : isSmallScreen ? 52 : 60;
+
+  // Ancho dinámico para el input de reps en modo entrenamiento:
+  // se ajusta al número de caracteres del valor introducido.
+  const startedRepsWidth = (() => {
+    if (repsType === "range") return isSmallScreen ? 72 : 84;
+    const displayVal = localReps || rangePlaceholder || "0";
+    const len = Math.max(1, displayVal.length);
+    const perChar = isSmallScreen ? 10 : 12;
+    const basePad = isSmallScreen ? 20 : 24;
+    const minW = isSmallScreen ? 36 : 42;
+    const maxW = isSmallScreen ? 70 : 80;
+    return Math.max(minW, Math.min(maxW, len * perChar + basePad));
+  })();
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -458,7 +470,7 @@ const ExerciseSetRow = ({
                     : 16
                 ),
                 minHeight: isSmallScreen ? 44 : 48,
-                width: repsInputWidth,
+                width: startedRepsWidth,
                 textAlign: "center",
               },
             ]}

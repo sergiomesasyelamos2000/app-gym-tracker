@@ -46,6 +46,7 @@ import {
   consumeAppTerminatedAt,
   endRestTimerLive,
   getCurrentRestTimerLiveState,
+  pollNativeIntent,
   startRestTimerLive,
   subscribeToRestTimerIntents,
   updateRestTimerLive,
@@ -1521,6 +1522,19 @@ export default function RoutineDetailScreen() {
     handleSubtractRestTime,
     syncRestTimerFromIntent,
   ]);
+
+  // Poll para intents del Live Activity mientras el toast está visible.
+  // Necesario porque si la app ya está en foreground, ni didBecomeActive
+  // ni AppState change se disparan, y el intent no llega a JS.
+  useEffect(() => {
+    if (!showRestToast || Platform.OS !== "ios") return;
+
+    const pollInterval = setInterval(() => {
+      pollNativeIntent();
+    }, 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [showRestToast]);
 
   const isSmallDevice = width < 360;
   const loadingTextMaxWidth = Math.min(width * 0.8, 360);

@@ -79,10 +79,14 @@ const CustomToast = ({
 
   const handleAddTime = async () => {
     if (onAddTime) {
-      if (Platform.OS === "ios") {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        if (Platform.OS === "ios") {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      } catch (_) {
+        // Haptics may fail silently; don't block action.
       }
       onAddTime();
     }
@@ -90,10 +94,14 @@ const CustomToast = ({
 
   const handleSubtractTime = async () => {
     if (onSubtractTime) {
-      if (Platform.OS === "ios") {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        if (Platform.OS === "ios") {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      } catch (_) {
+        // Haptics may fail silently; don't block action.
       }
       onSubtractTime();
     }
@@ -101,12 +109,16 @@ const CustomToast = ({
 
   const handleCancel = async () => {
     if (onCancel) {
-      if (Platform.OS === "ios") {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning
-        );
-      } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      try {
+        if (Platform.OS === "ios") {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Warning
+          );
+        } else {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }
+      } catch (_) {
+        // Haptics may fail silently; don't block cancel.
       }
       onCancel();
     }
