@@ -67,11 +67,19 @@ const AI_DATA_SHARING_DETAILS = [
     dataShared:
       "Imagen subida por el usuario y metadatos técnicos mínimos del archivo, como el tipo de imagen.",
   },
+  {
+    title: "Generación de planes nutricionales",
+    provider: "Google Gemini y Groq",
+    description:
+      "Cuando generas un plan nutricional con IA, EvoFit envía un resumen de tu perfil y preferencias para crear un plan de comidas personalizado.",
+    dataShared:
+      "Objetivos de calorías y macros, preferencias alimentarias, restricciones, nivel de actividad, frecuencia de entrenamiento e identificador interno de usuario.",
+  },
 ];
 
 const NON_SHARED_WITH_AI = [
   "Contraseña, tokens de autenticación y datos de pago no se envían a proveedores de IA.",
-  "Nombre y email no se incluyen en las solicitudes de IA para el chat o el análisis de fotos, salvo que el usuario los escriba manualmente en su mensaje o aparezcan en una imagen subida.",
+  "Nombre y email no se incluyen en las solicitudes de IA para el chat, el análisis de fotos o la generación de planes, salvo que el usuario los escriba manualmente en su mensaje o aparezcan en una imagen subida.",
 ];
 
 export default function ProfileScreen() {
@@ -99,6 +107,9 @@ export default function ProfileScreen() {
   // Subscription store
   const subscription = useSubscriptionStore((state) => state.subscription);
   const isPremium = useSubscriptionStore((state) => state.isPremium);
+  const clearNutritionData = useNutritionStore(
+    (state) => state.clearNutritionData
+  );
   const clearSubscription = useSubscriptionStore(
     (state) => state.clearSubscription
   );
@@ -359,6 +370,7 @@ export default function ProfileScreen() {
                       setIsDeletingAccount(true);
                       await deleteAccountService(user.id);
                       clearSubscription();
+                      clearNutritionData();
                       await logout();
                     } catch (error) {
                       console.error("Error deleting account:", error);
@@ -1121,8 +1133,8 @@ export default function ProfileScreen() {
                   ]}
                 >
                   EvoFit utiliza proveedores externos de IA para el chat de
-                  nutrición y entrenamiento, y para el análisis de fotos de
-                  comida.
+                  nutrición y entrenamiento, el análisis de fotos de comida y la
+                  generación de planes nutricionales.
                 </Text>
                 <Text
                   style={[

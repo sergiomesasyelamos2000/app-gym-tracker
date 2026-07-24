@@ -216,15 +216,36 @@ export function CheckoutScreen() {
   }
 
   if (isIos) {
+    const goToApplePlans = () => {
+      const state = navigation.getState() as { routeNames?: string[] } | undefined;
+      const routeNames = state?.routeNames || [];
+
+      if (routeNames.includes("PlansScreen")) {
+        navigation.dispatch(StackActions.replace("PlansScreen"));
+        return;
+      }
+
+      navigation.navigate("SubscriptionStack" as never, {
+        screen: "PlansScreen",
+      } as never);
+    };
+
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.verifyingContainer}>
-          <Text style={styles.verifyingText}>Pago no disponible en iOS</Text>
+          <Text style={styles.verifyingText}>Compra con App Store</Text>
           <Text style={styles.verifyingSubtext}>
-            Esta versión no permite completar compras Premium en iPhone o iPad.
+            En iPhone y iPad, Premium se compra con In-App Purchase de la App
+            Store. El checkout web no está disponible en iOS.
           </Text>
-          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-            <Text style={styles.backButtonText}>Volver</Text>
+          <TouchableOpacity style={styles.backButton} onPress={goToApplePlans}>
+            <Text style={styles.backButtonText}>Ver planes de App Store</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.secondaryBackButtonText}>Volver</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -329,6 +350,16 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  secondaryBackButton: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  secondaryBackButtonText: {
+    color: "#6b7280",
     fontSize: 15,
     fontWeight: "600",
   },

@@ -61,9 +61,9 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>EvoFit necesita acceso a la camara para que puedas hacer fotos de comidas, estimar calorías y macronutrientes y guardarlas en tu diario nutricional.</string>
+    <string>EvoFit necesita acceso a la cámara para escanear códigos de barras de productos alimenticios y para fotografiar comidas, estimar calorías y macronutrientes, y guardarlas en tu diario nutricional.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>EvoFit solicita acceso al microfono solo cuando grabas contenido multimedia que lo requiera dentro de la app.</string>
+    <string>EvoFit solicita acceso al micrófono solo cuando grabas contenido multimedia que lo requiera dentro de la app.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>EvoFit necesita acceso a tu fototeca para que puedas, por ejemplo, elegir una foto para tu perfil o subir una imagen de una comida para estimar calorías y macronutrientes y guardarla en tu diario nutricional.</string>
     <key>NSSupportsLiveActivities</key>

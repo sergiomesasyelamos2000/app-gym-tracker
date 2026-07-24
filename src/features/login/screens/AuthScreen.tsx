@@ -447,8 +447,7 @@ export default function AuthScreen() {
   const isGoogleButtonDisabled =
     isLoading || (Platform.OS === "ios" && !request);
   const showGoogleLogin = true;
-  const isAppleButtonDisabled = isLoading;
-  const showAppleLogin = Platform.OS === "ios";
+  const showAppleLogin = Platform.OS === "ios" && appleSigninReady;
   const showSocialLogin = showGoogleLogin || showAppleLogin;
 
   return (
@@ -760,33 +759,30 @@ export default function AuthScreen() {
                     </View>
 
                     {showAppleLogin && (
-                      <TouchableOpacity
+                      <View
                         style={[
-                          styles.appleButton,
-                          {
-                            backgroundColor: isDark ? "#FFFFFF" : "#111827",
-                            borderColor: isDark ? "#E5E7EB" : "#111827",
-                          },
-                          isAppleButtonDisabled && styles.disabledButton,
+                          styles.appleButtonContainer,
+                          isLoading && styles.disabledButton,
                         ]}
-                        onPress={handleApplePress}
-                        disabled={isAppleButtonDisabled}
-                        activeOpacity={0.7}
+                        pointerEvents={isLoading ? "none" : "auto"}
                       >
-                        <Ionicons
-                          name="logo-apple"
-                          size={20}
-                          color={isDark ? "#111827" : "#FFFFFF"}
+                        <AppleAuthentication.AppleAuthenticationButton
+                          buttonType={
+                            AppleAuthentication.AppleAuthenticationButtonType
+                              .CONTINUE
+                          }
+                          buttonStyle={
+                            isDark
+                              ? AppleAuthentication
+                                  .AppleAuthenticationButtonStyle.WHITE
+                              : AppleAuthentication
+                                  .AppleAuthenticationButtonStyle.BLACK
+                          }
+                          cornerRadius={12}
+                          style={styles.appleNativeButton}
+                          onPress={handleApplePress}
                         />
-                        <Text
-                          style={[
-                            styles.appleButtonText,
-                            { color: isDark ? "#111827" : "#FFFFFF" },
-                          ]}
-                        >
-                          Continuar con Apple
-                        </Text>
-                      </TouchableOpacity>
+                      </View>
                     )}
 
                     {showGoogleLogin && (
@@ -969,16 +965,13 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: "500" },
-  appleButton: {
+  appleButtonContainer: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  appleNativeButton: {
     width: "100%",
     height: 52,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
   },
   googleButton: {
     flexDirection: "row",
@@ -1006,7 +999,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   googleIcon: { width: 20, height: 20 },
-  appleButtonText: { fontSize: 15, fontWeight: "600" },
   googleButtonText: { fontSize: 15, fontWeight: "600" },
   footer: {
     flexDirection: "row",
