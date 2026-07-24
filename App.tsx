@@ -36,6 +36,8 @@ LogBox.ignoreLogs([
   "expo-notifications: Android Push notifications",
   "expo-notifications functionality is not fully supported",
   "[Reanimated] Reduced motion setting is enabled",
+  "Default FirebaseApp is not initialized",
+  "fcm-credentials",
 ]);
 
 const toastConfig = {
@@ -76,18 +78,15 @@ function AppContent() {
     }
 
     const setupNotifications = async () => {
-      // Register for push notifications
-      const token =
-        await notificationService.registerForPushNotificationsAsync();
       const setPermissionsGranted =
         useNotificationSettingsStore.getState().setPermissionsGranted;
 
-      if (token) {
-        setPermissionsGranted(true);
-        // TODO: Send token to backend when user is logged in
-      } else {
-        setPermissionsGranted(false);
-      }
+      // Local notifications (rest timer) only need OS permission, not FCM.
+      const hasPermissions = await notificationService.requestPermissions();
+      setPermissionsGranted(hasPermissions);
+
+      // Remote Expo push is optional and requires Firebase/FCM on Android.
+      await notificationService.registerForPushNotificationsAsync();
 
       // Check if app was opened from a notification (cold start)
       const lastNotificationResponse =

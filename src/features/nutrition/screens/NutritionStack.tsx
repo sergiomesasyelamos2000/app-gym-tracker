@@ -21,6 +21,9 @@ import ProductSelectionScreen from "./ProductSelectionScreen";
 import SettingsScreen from "./SettingsScreen";
 import ShoppingListScreen from "./ShoppingListScreen";
 import UserProfileSetupScreen from "./UserProfileSetupScreen";
+import NutritionPlansListScreen from "./NutritionPlansListScreen";
+import NutritionPlanDetailScreen from "./NutritionPlanDetailScreen";
+import GenerateNutritionPlanScreen from "./GenerateNutritionPlanScreen";
 
 export type NutritionStackParamList = {
   MacrosScreen: undefined;
@@ -77,6 +80,9 @@ export type NutritionStackParamList = {
         currentProducts?: MealProduct[];
       }
     | undefined;
+  NutritionPlansListScreen: undefined;
+  NutritionPlanDetailScreen: { planId: string };
+  GenerateNutritionPlanScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<NutritionStackParamList>();
@@ -157,6 +163,22 @@ export default function NutritionStack() {
       <Stack.Screen
         name="ProductSelectionScreen"
         component={ProductSelectionScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="NutritionPlansListScreen"
+        component={NutritionPlansListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="NutritionPlanDetailScreen"
+        component={NutritionPlanDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GenerateNutritionPlanScreen"
+        component={GenerateNutritionPlanScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

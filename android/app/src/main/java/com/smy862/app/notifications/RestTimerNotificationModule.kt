@@ -37,11 +37,6 @@ class RestTimerNotificationModule(
     internal const val ACTION_SUBTRACT = "com.smy862.app.rest.SUBTRACT"
     internal const val ACTION_SKIP = "com.smy862.app.rest.SKIP"
 
-    private var timer: CountDownTimer? = null
-    private var endAtMs: Long = 0
-    private var exerciseName: String? = null
-    private var nextSetSummary: String? = null
-    private var exerciseBitmap: Bitmap? = null
     private var moduleInstance: RestTimerNotificationModule? = null
 
     internal fun handleAction(context: Context, action: String) {
@@ -57,6 +52,13 @@ class RestTimerNotificationModule(
       }
     }
   }
+
+  // Estado mutable movido a nivel de instancia para evitar el conflicto de shadowing
+  private var timer: CountDownTimer? = null
+  private var endAtMs: Long = 0
+  private var exerciseName: String? = null
+  private var nextSetSummary: String? = null
+  private var exerciseBitmap: Bitmap? = null
 
   override fun getName(): String = "RestTimerNotification"
 

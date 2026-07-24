@@ -416,7 +416,10 @@ class NotificationService {
   }
 
   /**
-   * Register for push notifications and return the token
+   * Register for remote Expo push notifications and return the token.
+   * Local notifications (rest timer, reminders) do not require this.
+   * On Android, Expo push needs a valid Firebase/FCM setup
+   * (google-services.json + EAS FCM credentials).
    */
   async registerForPushNotificationsAsync(): Promise<string | null> {
     if (!areNotificationsAvailable) {
@@ -449,7 +452,23 @@ class NotificationService {
       const token = tokenData.data;
       return token;
     } catch (error) {
-      // Gracefully handle the error if it still occurs
+      const message = error instanceof Error ? error.message : String(error);
+      const isMissingFcm =
+        /FirebaseApp is not initialized/i.test(message) ||
+        /fcm-credentials/i.test(message) ||
+        /Default FirebaseApp/i.test(message);
+
+      // Expected in local Android builds without real FCM credentials.
+      // Do not treat this as a hard failure: local notifications still work.
+      if (isMissingFcm) {
+        if (__DEV__) {
+          console.warn(
+            "[Notifications] Push remoto no disponible: falta configurar FCM/Firebase (google-services.json + credenciales EAS). Las notificaciones locales siguen funcionando."
+          );
+        }
+        return null;
+      }
+
       console.error("Error getting push token:", error);
       return null;
     }

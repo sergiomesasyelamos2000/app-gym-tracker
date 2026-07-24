@@ -992,6 +992,16 @@ export default function MacrosScreen({ navigation }: Props) {
               >
                 <Ionicons name="cart-outline" size={24} color={theme.primary} />
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("NutritionPlansListScreen")}
+                style={styles.iconButton}
+              >
+                <Ionicons
+                  name="sparkles-outline"
+                  size={24}
+                  color={theme.primary}
+                />
+              </TouchableOpacity>
             </View>
           </View>
 

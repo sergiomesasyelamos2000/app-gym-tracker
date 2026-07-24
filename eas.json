@@ -53,7 +53,8 @@
         "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly",
         "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly",
         "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "NODE_BINARY": "/usr/local/bin/node"
       },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.0"
