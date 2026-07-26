@@ -18,6 +18,10 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 prepare_react_native_project!
 
 target 'EvoFit' do
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'RecaptchaInterop', :modular_headers => true
+  pod 'AppCheckCore', '11.2.0'
+
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
@@ -50,22 +54,40 @@ target 'EvoFit' do
 end
 
 post_install do |installer|
+# >>> withIosPodFixes
   react_native_post_install(installer, :mac_catalyst_enabled => false)
-  
+
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
       config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
     end
-  end
-  
-  # Fix ZXingObjC Xcode 26 crash
-  installer.pods_project.targets.each do |target|
+
+    # Xcode 26: ZXingObjC (expo-camera barcode) can crash the build system.
     if target.name.start_with?('ZXingObjC')
       target.build_configurations.each do |config|
         config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
         config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+        config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '0'
+        config.build_settings['SWIFT_COMPILATION_MODE'] = 'singlefile'
       end
     end
   end
+
+  # Xcode 26: fmt consteval can break React Native pods.
+  fmt_base = File.join(installer.sandbox.root, 'fmt', 'include', 'fmt', 'base.h')
+  if File.exist?(fmt_base)
+    content = File.read(fmt_base)
+    unless content.include?('Xcode 26 workaround')
+      patched = content.gsub(
+        /^(#elif defined\(__cpp_consteval\)\n#  define FMT_USE_CONSTEVAL) 1/,
+        "// Xcode 26 workaround: disable consteval\n\\1 0"
+      )
+      if patched != content
+        File.chmod(0644, fmt_base)
+        File.write(fmt_base, patched)
+      end
+    end
+  end
+# <<< withIosPodFixes
 end

@@ -66,7 +66,29 @@
           "recordAudioAndroid": true
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "extraPods": [
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              },
+              {
+                "name": "AppCheckCore",
+                "version": "11.2.0"
+              }
+            ]
+          }
+        }
+      ],
       "./plugins/withRestTimerLiveActivity",
+      "./plugins/withIosPodFixes",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

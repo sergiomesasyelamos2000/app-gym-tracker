@@ -1,0 +1,6 @@
+# Force LF for shell/env files used by Xcode/EAS (CRLF breaks bash on macOS)
+*.sh text eol=lf
+.xcode.env text eol=lf
+ios/.xcode.env text eol=lf
+Podfile text eol=lf
+*.rb text eol=lf

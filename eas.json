@@ -17,7 +17,7 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.0"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "android": {
         "buildType": "apk",
@@ -31,7 +31,7 @@
         "credentialsSource": "remote"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.0"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
@@ -53,11 +53,10 @@
         "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly",
         "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly",
         "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-        "NODE_BINARY": "/usr/local/bin/node"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.0"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "android": {
         "buildType": "apk",
