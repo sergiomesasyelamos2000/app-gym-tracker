@@ -8,7 +8,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -34,6 +33,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ExerciseRequestDto, SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../components/CachedExerciseImage";
+import LiveClock from "../components/LiveClock";
 import { useTheme } from "../contexts/ThemeContext";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
@@ -245,6 +245,24 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<WorkoutStackParamList>
 >;
 
+const MOTIVATIONAL_QUOTES = [
+  "El único límite es tu mente",
+  "Cada repetición te acerca a tu meta",
+  "La disciplina supera al talento",
+  "Hoy es un buen día para ser mejor",
+  "Tu cuerpo puede lograr lo que tu mente cree",
+] as const;
+
+const pickMotivationalQuote = () =>
+  MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+
+const getGreetingForDate = (date: Date): string => {
+  const currentHour = date.getHours();
+  if (currentHour < 12) return "¡Buenos días! ☀️";
+  if (currentHour < 20) return "¡Buenas tardes! 🌤️";
+  return "¡Buenas noches! 🌙";
+};
+
 export default function HomeScreen() {
   const [sessions, setSessions] = useState<SessionWithTotals[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
@@ -253,8 +271,10 @@ export default function HomeScreen() {
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
     new Set()
   );
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [motivationalQuote, setMotivationalQuote] = useState<string>("");
+  const [greeting, setGreeting] = useState(() => getGreetingForDate(new Date()));
+  const [motivationalQuote, setMotivationalQuote] = useState(
+    () => pickMotivationalQuote()
+  );
   const { theme, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const welcomeMessage = useAuthStore((state) => state.welcomeMessage);
@@ -284,55 +304,24 @@ export default function HomeScreen() {
     }).start();
   }, []);
 
-  // Actualizar hora en tiempo real según el reloj del sistema
-  useEffect(() => {
-    const updateCurrentTime = () => {
-      setCurrentTime(new Date());
-    };
+  // Greeting only needs period-of-day checks — not a 1Hz clock on HomeScreen.
+  useFocusEffect(
+    useCallback(() => {
+      const syncGreeting = () => {
+        const nextGreeting = getGreetingForDate(new Date());
+        setGreeting((prev) => {
+          if (prev !== nextGreeting) {
+            setMotivationalQuote(pickMotivationalQuote());
+          }
+          return nextGreeting;
+        });
+      };
 
-    updateCurrentTime();
-    const timer = setInterval(updateCurrentTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Período del día (solo cambia cuando el saludo debe cambiar)
-  const dayPeriod = useMemo(() => {
-    const currentHour = currentTime.getHours();
-    if (currentHour < 12) return "morning";
-    if (currentHour < 20) return "afternoon";
-    return "night";
-  }, [currentTime]);
-
-  // Saludo según período del día
-  const greeting = useMemo(() => {
-    switch (dayPeriod) {
-      case "morning":
-        return "¡Buenos días! ☀️";
-      case "afternoon":
-        return "¡Buenas tardes! 🌤️";
-      case "night":
-        return "¡Buenas noches! 🌙";
-      default:
-        return "¡Hola! 👋";
-    }
-  }, [dayPeriod]);
-
-  // Generar quote motivacional
-  const generateMotivationalQuote = useCallback(() => {
-    const quotes = [
-      "El único límite es tu mente",
-      "Cada repetición te acerca a tu meta",
-      "La disciplina supera al talento",
-      "Hoy es un buen día para ser mejor",
-      "Tu cuerpo puede lograr lo que tu mente cree",
-    ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
-  }, []);
-
-  // Actualizar quote solo cuando cambia el saludo
-  useEffect(() => {
-    setMotivationalQuote(generateMotivationalQuote());
-  }, [greeting, generateMotivationalQuote]);
+      syncGreeting();
+      const timer = setInterval(syncGreeting, 60_000);
+      return () => clearInterval(timer);
+    }, [])
+  );
 
   useEffect(() => {
     if (!initialLoading && welcomeMessage) {
@@ -340,12 +329,6 @@ export default function HomeScreen() {
       clearWelcomeMessage();
     }
   }, [initialLoading, welcomeMessage, clearWelcomeMessage]);
-
-  // Formato de hora sin segundos
-  const formattedTime = currentTime.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
   // Cargar datos
   const fetchData = useCallback(async () => {
@@ -757,16 +740,11 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={styles.headerSubtitle}>{motivationalQuote}</Text>
               </View>
-              <View style={styles.timeContainer}>
-                <Text style={styles.currentTime}>{formattedTime}</Text>
-                <Text style={styles.currentDate}>
-                  {currentTime.toLocaleDateString("es-ES", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </Text>
-              </View>
+              <LiveClock
+                containerStyle={styles.timeContainer}
+                timeStyle={styles.currentTime}
+                dateStyle={styles.currentDate}
+              />
             </View>
 
             {/* Quick Stats Overview */}

@@ -47,7 +47,7 @@ class RestTimerNotificationModule(
         ACTION_SUBTRACT -> instance.applyDelta(-15)
         ACTION_SKIP -> {
           instance.endRestTimer()
-          instance.emitIntentEvent("skip", 0)
+          instance.emitIntentEvent("skip", 0, 0)
         }
       }
     }
@@ -75,9 +75,20 @@ class RestTimerNotificationModule(
   ) {
     this.exerciseName = exerciseName?.takeIf { it.isNotBlank() }
     this.nextSetSummary = nextSetSummary?.takeIf { it.isNotBlank() }
-    this.exerciseBitmap = loadBitmap(imageUrl)
+    // Start countdown immediately with the shared absolute end time; load image after.
     endAtMs = endTimestampMs.toLong()
     startOrRestartTimer()
+    Thread {
+      val bitmap = loadBitmap(imageUrl)
+      if (bitmap != null && endAtMs == endTimestampMs.toLong()) {
+        exerciseBitmap = bitmap
+        reactContext.runOnUiQueueThread {
+          if (endAtMs == endTimestampMs.toLong()) {
+            updateNotification(max(0L, endAtMs - System.currentTimeMillis()))
+          }
+        }
+      }
+    }.start()
   }
 
   @ReactMethod
@@ -91,13 +102,23 @@ class RestTimerNotificationModule(
     if (!exerciseName.isNullOrBlank()) {
       this.exerciseName = exerciseName
     }
-    if (imageUrl != null) {
-      this.exerciseBitmap = loadBitmap(imageUrl)
-    }
     if (nextSetSummary != null) {
       this.nextSetSummary = nextSetSummary.takeIf { it.isNotBlank() }
     }
     startOrRestartTimer()
+    if (imageUrl != null) {
+      Thread {
+        val bitmap = loadBitmap(imageUrl)
+        if (bitmap != null && endAtMs == endTimestampMs.toLong()) {
+          exerciseBitmap = bitmap
+          reactContext.runOnUiQueueThread {
+            if (endAtMs == endTimestampMs.toLong()) {
+              updateNotification(max(0L, endAtMs - System.currentTimeMillis()))
+            }
+          }
+        }
+      }.start()
+    }
   }
 
   @ReactMethod
@@ -119,7 +140,8 @@ class RestTimerNotificationModule(
 
     emitIntentEvent(
       if (deltaSeconds > 0) "add" else "subtract",
-      deltaSeconds
+      deltaSeconds,
+      endAtMs
     )
   }
 
@@ -277,10 +299,11 @@ class RestTimerNotificationModule(
     }
   }
 
-  private fun emitIntentEvent(action: String, delta: Int) {
+  private fun emitIntentEvent(action: String, delta: Int, endTimestampMs: Long) {
     val params = Arguments.createMap().apply {
       putString("action", action)
       putInt("delta", delta)
+      putDouble("endTimestampMs", endTimestampMs.toDouble())
     }
     reactContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)

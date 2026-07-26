@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  AppState,
   Platform,
   StyleSheet,
   Text,
@@ -16,6 +17,67 @@ type Props = {
   completedSets: number;
   records: number;
   onFinish?: () => void;
+};
+
+type LiveProps = {
+  getStartTime: () => number;
+  timerPaused?: boolean;
+  volume: number;
+  completedSets: number;
+  records: number;
+  onFinish?: () => void;
+  /** Samples duration into a parent ref without causing parent re-renders. */
+  onDurationSample?: (seconds: number) => void;
+};
+
+/**
+ * Owns the 1s workout clock so the parent screen does not re-render every tick.
+ */
+export const LiveRoutineMetrics: React.FC<LiveProps> = ({
+  getStartTime,
+  timerPaused = false,
+  volume,
+  completedSets,
+  records,
+  onFinish,
+  onDurationSample,
+}) => {
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const sample = () => {
+      const nextDuration = Math.max(
+        0,
+        Math.floor((Date.now() - getStartTime()) / 1000)
+      );
+      setDuration(nextDuration);
+      onDurationSample?.(nextDuration);
+    };
+
+    sample();
+
+    if (timerPaused) return;
+
+    const interval = setInterval(sample, 1000);
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") sample();
+    });
+
+    return () => {
+      clearInterval(interval);
+      appStateSub.remove();
+    };
+  }, [getStartTime, timerPaused, onDurationSample]);
+
+  return (
+    <RoutineMetrics
+      duration={duration}
+      volume={volume}
+      completedSets={completedSets}
+      records={records}
+      onFinish={onFinish}
+    />
+  );
 };
 
 export const RoutineMetrics: React.FC<Props> = ({

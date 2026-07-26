@@ -836,4 +836,40 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ExerciseCard;
+const areExerciseCardPropsEqual = (
+  prev: Props,
+  next: Props
+): boolean => {
+  if (prev.readonly !== next.readonly) return false;
+  if (prev.started !== next.started) return false;
+  if (prev.compact !== next.compact) return false;
+  if (prev.isDragging !== next.isDragging) return false;
+  if (prev.showOptions !== next.showOptions) return false;
+  if (prev.supersetWith !== next.supersetWith) return false;
+  if (prev.supersetExerciseName !== next.supersetExerciseName) return false;
+  if (prev.previousSessions !== next.previousSessions) return false;
+  if (prev.availableExercises !== next.availableExercises) return false;
+
+  if (prev.exercise !== next.exercise) {
+    if (
+      prev.exercise.id !== next.exercise.id ||
+      prev.exercise.name !== next.exercise.name ||
+      prev.exercise.restSeconds !== next.exercise.restSeconds ||
+      prev.exercise.notes !== next.exercise.notes ||
+      prev.exercise.imageUrl !== next.exercise.imageUrl ||
+      prev.exercise.supersetWith !== next.exercise.supersetWith ||
+      prev.exercise.weightUnit !== next.exercise.weightUnit ||
+      prev.exercise.repsType !== next.exercise.repsType
+    ) {
+      return false;
+    }
+  }
+
+  if (!areSetsEqual(prev.initialSets, next.initialSets)) return false;
+
+  // Callback identity is ignored: parents pass stable or per-render closures
+  // that always close over the same functional setState updaters.
+  return true;
+};
+
+export default React.memo(ExerciseCard, areExerciseCardPropsEqual);

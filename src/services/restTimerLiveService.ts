@@ -68,7 +68,7 @@ const parseRestTimerActionURL = (url: string): RestTimerIntentEvent | null => {
 // MARK: - API pública
 
 export const startRestTimerLive = async (
-  totalSeconds: number,
+  endTimestampMs: number,
   exerciseName?: string,
   imageUrl?: string | null,
   nextSetSummary?: string | null
@@ -76,9 +76,8 @@ export const startRestTimerLive = async (
   const module = getModule();
   if (!module) return;
   try {
-    const endsAtMs = Date.now() + Math.max(0, Math.floor(totalSeconds)) * 1000;
     await module.startRestTimer(
-      endsAtMs,
+      endTimestampMs,
       exerciseName ?? null,
       imageUrl ?? null,
       nextSetSummary ?? null
@@ -89,7 +88,7 @@ export const startRestTimerLive = async (
 };
 
 export const updateRestTimerLive = async (
-  remainingSeconds: number,
+  endTimestampMs: number,
   exerciseName?: string,
   imageUrl?: string | null,
   nextSetSummary?: string | null
@@ -97,10 +96,8 @@ export const updateRestTimerLive = async (
   const module = getModule();
   if (!module) return;
   try {
-    const endsAtMs =
-      Date.now() + Math.max(0, Math.floor(remainingSeconds)) * 1000;
     await module.updateRestTimer(
-      endsAtMs,
+      endTimestampMs,
       exerciseName ?? null,
       imageUrl ?? null,
       nextSetSummary ?? null

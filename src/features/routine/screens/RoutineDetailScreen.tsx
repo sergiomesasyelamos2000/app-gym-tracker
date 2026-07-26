@@ -59,14 +59,18 @@ import {
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import { useRecordsStore } from "../../../store/useRecordsStore";
-import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
+import {
+  flushWorkoutInProgressPersist,
+  useWorkoutInProgressStore,
+  type WorkoutInProgress,
+} from "../../../store/useWorkoutInProgressStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import CustomToast from "../../../ui/CustomToast";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import UndoSnackbar from "../components/ExerciseCard/UndoSnackbar";
 import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
-import { RoutineMetrics } from "../components/RoutineMetrics";
+import { LiveRoutineMetrics } from "../components/RoutineMetrics";
 import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
 import {
   findAllRoutineSessions,
@@ -78,6 +82,7 @@ import {
   normalizeExercisesImage,
 } from "../utils/normalizeExerciseImage";
 import { WorkoutStackParamList } from "./WorkoutStack";
+import { useShallow } from "zustand/react/shallow";
 
 type RoutineDetailRouteProp = RouteProp<WorkoutStackParamList, "RoutineDetail">;
 type SetWithPreviousAssisted = SetRequestDto & {
@@ -147,7 +152,6 @@ export default function RoutineDetailScreen() {
     Boolean(sessionView || routineId || routine?.id)
   );
   const [started, setStarted] = useState(false);
-  const [duration, setDuration] = useState(0);
   const [exercisesState, setExercises] = useState<ExerciseRequestDto[]>([]);
   const [sets, setSets] = useState<{ [exerciseId: string]: SetRequestDto[] }>(
     {}
@@ -160,6 +164,7 @@ export default function RoutineDetailScreen() {
   const [currentExerciseName, setCurrentExerciseName] = useState<
     string | undefined
   >();
+  const currentExerciseNameRef = useRef<string | undefined>(undefined);
   const [currentExerciseImageUrl, setCurrentExerciseImageUrl] = useState<
     string | null | undefined
   >();
@@ -188,11 +193,32 @@ export default function RoutineDetailScreen() {
     null
   );
 
-  const handleShowUndoSnackbar = (message: string, onUndo: () => void) => {
-    setUndoMessage(message);
-    setOnUndoCallback(() => onUndo);
-    setShowUndoSnackbar(true);
-  };
+  const handleShowUndoSnackbar = useCallback(
+    (message: string, onUndo: () => void) => {
+      setUndoMessage(message);
+      setOnUndoCallback(() => onUndo);
+      setShowUndoSnackbar(true);
+    },
+    []
+  );
+
+  const handleChangeSetsForExercise = useCallback(
+    (exerciseId: string, updatedSets: SetRequestDto[]) => {
+      setSets((prev) => ({ ...prev, [exerciseId]: updatedSets }));
+    },
+    []
+  );
+
+  const handleChangeExercise = useCallback(
+    (updatedExercise: ExerciseRequestDto) => {
+      setExercises((prev) =>
+        prev.map((ex) =>
+          ex.id === updatedExercise.id ? updatedExercise : ex
+        )
+      );
+    },
+    []
+  );
 
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
@@ -209,8 +235,14 @@ export default function RoutineDetailScreen() {
     setWorkoutInProgress,
     patchWorkoutInProgress,
     clearWorkoutInProgress,
-    updateWorkoutProgress,
-  } = useWorkoutInProgressStore();
+  } = useWorkoutInProgressStore(
+    useShallow((state) => ({
+      workoutInProgress: state.workoutInProgress,
+      setWorkoutInProgress: state.setWorkoutInProgress,
+      patchWorkoutInProgress: state.patchWorkoutInProgress,
+      clearWorkoutInProgress: state.clearWorkoutInProgress,
+    }))
+  );
   const hasMatchingWorkoutInProgress =
     !!workoutInProgress &&
     !!targetRoutineId &&
@@ -354,12 +386,47 @@ export default function RoutineDetailScreen() {
   }, [navigation, sessionView]);
 
   useEffect(() => {
-    durationRef.current = duration;
-  }, [duration]);
-
-  useEffect(() => {
     restTimeRemainingRef.current = restTimeRemaining;
   }, [restTimeRemaining]);
+
+  useEffect(() => {
+    currentExerciseNameRef.current = currentExerciseName;
+  }, [currentExerciseName]);
+
+  const clearRestCountdownInterval = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  }, []);
+
+  /** Tick from absolute end time so UI stays in sync with the notification. */
+  const startRestCountdownInterval = useCallback(() => {
+    clearRestCountdownInterval();
+    countdownRef.current = setInterval(() => {
+      const endTime = restTimerEndTimeRef.current;
+      if (!endTime) {
+        clearRestCountdownInterval();
+        return;
+      }
+
+      // floor matches Android Chronometer MM:SS better than ceil
+      const remaining = Math.max(
+        0,
+        Math.floor((endTime - Date.now()) / 1000)
+      );
+      setRestTimeRemaining(remaining);
+
+      if (remaining <= 0) {
+        clearRestCountdownInterval();
+        setShowRestToast(false);
+        setActiveNotificationId(null);
+        setRestTimerEndTime(null);
+        restTimerEndTimeRef.current = null;
+        endRestTimerLive();
+      }
+    }, 250);
+  }, [clearRestCountdownInterval]);
 
   const getWorkoutStartTime = useCallback(() => {
     if (workoutStartTimeRef.current) {
@@ -376,14 +443,43 @@ export default function RoutineDetailScreen() {
     return inferredStartTime;
   }, [workoutInProgress?.startedAt]);
 
-  const syncDurationFromStartTime = useCallback(() => {
-    const startTime = getWorkoutStartTime();
-    const nextDuration = Math.max(
-      0,
-      Math.floor((Date.now() - startTime) / 1000)
-    );
-    setDuration(nextDuration);
-  }, [getWorkoutStartTime]);
+  const handleDurationSample = useCallback((seconds: number) => {
+    durationRef.current = seconds;
+  }, []);
+
+  const persistWorkoutSnapshot = useCallback(
+    async (options?: { flush?: boolean; includeDuration?: boolean }) => {
+      if (!started) return;
+
+      const partial: Partial<WorkoutInProgress> = {
+        volume,
+        completedSets,
+        exercises: exercisesState.map((ex) => ({
+          ...ex,
+          sets: sets[ex.id] || [],
+        })),
+        sets,
+      };
+
+      if (options?.includeDuration !== false) {
+        partial.duration = durationRef.current;
+      }
+
+      patchWorkoutInProgress(partial);
+
+      if (options?.flush) {
+        await flushWorkoutInProgressPersist();
+      }
+    },
+    [
+      started,
+      volume,
+      completedSets,
+      exercisesState,
+      sets,
+      patchWorkoutInProgress,
+    ]
+  );
 
   // Calculate records achieved in this session
   const allRecords = useRecordsStore((state) => state.records);
@@ -478,7 +574,7 @@ export default function RoutineDetailScreen() {
       ? Date.now() - restoredDuration * 1000
       : workoutInProgress.startedAt;
 
-    setDuration(restoredDuration);
+    durationRef.current = restoredDuration;
     workoutStartTimeRef.current = restoredStartedAt;
     if (isPaused) {
       patchWorkoutInProgress({
@@ -604,6 +700,7 @@ export default function RoutineDetailScreen() {
       sets: setsMap,
       startedAt: Date.now(),
     });
+    void flushWorkoutInProgressPersist();
   }, [
     sessionView,
     start,
@@ -612,13 +709,6 @@ export default function RoutineDetailScreen() {
     hasMatchingWorkoutInProgress,
     setWorkoutInProgress,
   ]);
-
-  useEffect(() => {
-    if (!started || showShortWorkoutModal || isSaving) return;
-    syncDurationFromStartTime();
-    const interval = setInterval(syncDurationFromStartTime, 1000);
-    return () => clearInterval(interval);
-  }, [started, showShortWorkoutModal, isSaving, syncDurationFromStartTime]);
 
   useEffect(() => {
     if (!started) {
@@ -691,38 +781,31 @@ export default function RoutineDetailScreen() {
     loadSessions();
   }, []);
 
+  // Persist sets/exercises when they change — not on every duration tick.
   useEffect(() => {
     if (!started) return;
-
-    patchWorkoutInProgress({
-      duration,
-      volume,
-      completedSets,
-      exercises: exercisesState.map((ex) => ({
-        ...ex,
-        sets: sets[ex.id] || [],
-      })),
-      sets,
-    });
+    void persistWorkoutSnapshot({ includeDuration: false });
   }, [
     started,
-    duration,
     volume,
     completedSets,
     sets,
     exercisesState,
-    patchWorkoutInProgress,
+    persistWorkoutSnapshot,
   ]);
 
+  // Flush duration + snapshot when app goes to background.
   useEffect(() => {
     if (!started) return;
 
-    const interval = setInterval(() => {
-      updateWorkoutProgress({ duration, volume, completedSets });
-    }, 5000);
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "background" || nextAppState === "inactive") {
+        void persistWorkoutSnapshot({ flush: true, includeDuration: true });
+      }
+    });
 
-    return () => clearInterval(interval);
-  }, [started, duration, volume, completedSets, updateWorkoutProgress]);
+    return () => subscription.remove();
+  }, [started, persistWorkoutSnapshot]);
 
   useEffect(() => {
     const parent = (navigation as any).getParent?.();
@@ -811,7 +894,7 @@ export default function RoutineDetailScreen() {
 
     const newTime = Math.max(
       0,
-      Math.ceil((endTimestampMs - Date.now()) / 1000)
+      Math.floor((endTimestampMs - Date.now()) / 1000)
     );
 
     setShowRestToast(true);
@@ -819,6 +902,7 @@ export default function RoutineDetailScreen() {
     setTotalRestTime((prev) => Math.max(newTime, prev || newTime));
     setRestTimerEndTime(endTimestampMs);
     restTimerEndTimeRef.current = endTimestampMs;
+    startRestCountdownInterval();
 
     if (liveState.exerciseName) {
       setCurrentExerciseName(liveState.exerciseName);
@@ -831,7 +915,8 @@ export default function RoutineDetailScreen() {
     if (restTimerNotificationsEnabled) {
       const notificationId = await notificationService.startRestTimer(
         newTime,
-        liveState.exerciseName || currentExerciseName
+        liveState.exerciseName || currentExerciseName,
+        endTimestampMs
       );
       setActiveNotificationId(notificationId);
     }
@@ -841,6 +926,7 @@ export default function RoutineDetailScreen() {
     activeNotificationId,
     currentExerciseName,
     restTimerNotificationsEnabled,
+    startRestCountdownInterval,
   ]);
 
   useEffect(() => {
@@ -850,13 +936,18 @@ export default function RoutineDetailScreen() {
           const syncedFromNative = await syncRestTimerFromNativeState();
 
           if (started && !isSaving) {
-            syncDurationFromStartTime();
+            // LiveRoutineMetrics resamples on AppState active; keep durationRef warm.
+            const startTime = getWorkoutStartTime();
+            durationRef.current = Math.max(
+              0,
+              Math.floor((Date.now() - startTime) / 1000)
+            );
           }
 
           const endTime = restTimerEndTimeRef.current;
           if (endTime) {
             const now = Date.now();
-            const remaining = Math.ceil((endTime - now) / 1000);
+            const remaining = Math.floor((endTime - now) / 1000);
 
             if (remaining <= 0) {
               // Time has passed
@@ -868,38 +959,25 @@ export default function RoutineDetailScreen() {
               endRestTimerLive();
               if (countdownRef.current) clearInterval(countdownRef.current);
             } else if (!syncedFromNative) {
-              // Update remaining time
-              setRestTimeRemaining(remaining);
-              updateRestTimerLive(remaining, currentExerciseName);
+              // Update remaining time from the shared absolute end timestamp.
+              setRestTimeRemaining(Math.max(0, remaining));
+              updateRestTimerLive(endTime, currentExerciseNameRef.current);
             }
           }
         })();
       }
     });
 
+    // Do NOT clear the rest countdown here. This effect re-runs when workout
+    // metadata changes (e.g. currentExerciseName on timer start), and clearing
+    // the interval freezes the toast while the Android notification keeps ticking.
     return () => {
       subscription.remove();
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-      const parent = (navigation as any).getParent?.();
-      if (parent?.setOptions) {
-        parent.setOptions({
-          tabBarStyle: {
-            backgroundColor: theme.tabBarBackground,
-            borderTopColor: theme.tabBarBorder,
-            borderTopWidth: 1,
-          },
-        });
-      }
     };
   }, [
-    navigation,
-    theme,
     started,
     isSaving,
-    syncDurationFromStartTime,
-    currentExerciseName,
+    getWorkoutStartTime,
     syncRestTimerFromNativeState,
   ]);
 
@@ -946,7 +1024,7 @@ export default function RoutineDetailScreen() {
 
     const startedAt = Date.now();
     workoutStartTimeRef.current = startedAt;
-    setDuration(0);
+    durationRef.current = 0;
 
     setWorkoutInProgress({
       routineId: routineData?.id || (routineId ?? (uuid.v4() as string)),
@@ -961,6 +1039,7 @@ export default function RoutineDetailScreen() {
       sets: initialSets,
       startedAt,
     });
+    void flushWorkoutInProgressPersist();
 
     setStarted(true);
   };
@@ -1044,9 +1123,10 @@ export default function RoutineDetailScreen() {
   const handleFinishAndSaveRoutine = async () => {
     if (isSaving) return;
     // Freeze the current duration before showing modal
-    setFrozenDuration(duration);
+    const currentDuration = durationRef.current;
+    setFrozenDuration(currentDuration);
 
-    if (duration < MIN_WORKOUT_DURATION) {
+    if (currentDuration < MIN_WORKOUT_DURATION) {
       setShowShortWorkoutModal(true);
       return;
     }
@@ -1161,43 +1241,28 @@ export default function RoutineDetailScreen() {
     setRestTimerEndTime(endTime);
     restTimerEndTimeRef.current = endTime;
     setCurrentExerciseName(exerciseName);
+    currentExerciseNameRef.current = exerciseName;
     setCurrentExerciseImageUrl(imageUrl);
     setCurrentNextSetSummary(resolvedUpcomingSummary);
     setShowRestToast(true);
-    startRestTimerLive(
-      restSeconds,
+
+    // Single absolute end time shared by toast, live notification, and completion push.
+    void startRestTimerLive(
+      endTime,
       exerciseName,
       imageUrl,
       resolvedUpcomingSummary
     );
+    startRestCountdownInterval();
 
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-    }
-
-    // Start push notification timer only if enabled in settings
     if (restTimerNotificationsEnabled) {
-      // startRestTimer now handles cancellation of previous timers internally
       const notificationId = await notificationService.startRestTimer(
         restSeconds,
-        exerciseName
+        exerciseName,
+        endTime
       );
       setActiveNotificationId(notificationId);
     }
-
-    // Keep the visual toast timer
-    countdownRef.current = setInterval(() => {
-      setRestTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownRef.current!);
-          setShowRestToast(false);
-          setActiveNotificationId(null);
-          endRestTimerLive();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const applyRestTimerDelta = useCallback(
@@ -1205,7 +1270,7 @@ export default function RoutineDetailScreen() {
       const currentRemaining = restTimerEndTimeRef.current
         ? Math.max(
             0,
-            Math.ceil((restTimerEndTimeRef.current - Date.now()) / 1000)
+            Math.floor((restTimerEndTimeRef.current - Date.now()) / 1000)
           )
         : restTimeRemainingRef.current;
       const newTime = Math.max(0, currentRemaining + deltaSeconds);
@@ -1220,10 +1285,11 @@ export default function RoutineDetailScreen() {
       const endTime = Date.now() + newTime * 1000;
       setRestTimerEndTime(endTime);
       restTimerEndTimeRef.current = endTime;
+      startRestCountdownInterval();
 
       if (syncNativeLiveActivity) {
         await updateRestTimerLive(
-          newTime,
+          endTime,
           currentExerciseName,
           currentExerciseImageUrl,
           currentNextSetSummary
@@ -1233,7 +1299,8 @@ export default function RoutineDetailScreen() {
       if (restTimerNotificationsEnabled) {
         const notificationId = await notificationService.startRestTimer(
           newTime,
-          currentExerciseName
+          currentExerciseName,
+          endTime
         );
         setActiveNotificationId(notificationId);
       }
@@ -1243,6 +1310,7 @@ export default function RoutineDetailScreen() {
       currentExerciseImageUrl,
       currentNextSetSummary,
       restTimerNotificationsEnabled,
+      startRestCountdownInterval,
     ]
   );
 
@@ -1256,7 +1324,7 @@ export default function RoutineDetailScreen() {
 
   const handleCancelRestTimer = useCallback(
     async (syncNativeLiveActivity = true) => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
+      clearRestCountdownInterval();
       if (activeNotificationId) {
         await notificationService.cancelRestTimer(activeNotificationId);
         setActiveNotificationId(null);
@@ -1270,56 +1338,75 @@ export default function RoutineDetailScreen() {
         endRestTimerLive();
       }
     },
-    [activeNotificationId]
+    [activeNotificationId, clearRestCountdownInterval]
   );
 
   const syncRestTimerFromIntent = useCallback(
     async (deltaSeconds: number, endTimestampMs?: number | null) => {
-      if (!endTimestampMs || endTimestampMs <= Date.now()) {
+      // Android native already applied the delta; sync toast to its end time.
+      // If endTimestampMs is missing, apply the delta locally (iOS URL path).
+      const resolvedEndMs =
+        typeof endTimestampMs === "number" && Number.isFinite(endTimestampMs)
+          ? endTimestampMs
+          : Date.now() +
+            Math.max(
+              0,
+              (restTimerEndTimeRef.current
+                ? Math.floor(
+                    (restTimerEndTimeRef.current - Date.now()) / 1000
+                  )
+                : restTimeRemainingRef.current) + deltaSeconds
+            ) *
+              1000;
+
+      if (resolvedEndMs <= Date.now()) {
         await handleCancelRestTimer(false);
         return;
       }
 
       const newTime = Math.max(
         0,
-        Math.ceil((endTimestampMs - Date.now()) / 1000)
+        Math.floor((resolvedEndMs - Date.now()) / 1000)
       );
 
       setRestTimeRemaining(newTime);
       setTotalRestTime((prev) =>
         Math.max(newTime, Math.max(0, prev + deltaSeconds))
       );
-      setRestTimerEndTime(endTimestampMs);
-      restTimerEndTimeRef.current = endTimestampMs;
+      setRestTimerEndTime(resolvedEndMs);
+      restTimerEndTimeRef.current = resolvedEndMs;
+      startRestCountdownInterval();
 
-      // FIX: reiniciar el countdown para que no pise el nuevo tiempo.
-      // Sin esto, el setInterval anterior decrementa "prev - 1" en el siguiente
-      // tick y sobreescribe el valor recién actualizado.
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
+      // Native already updated on Android intents; only push live update when
+      // the end time came from JS (no native endTimestampMs).
+      if (
+        !(typeof endTimestampMs === "number" && Number.isFinite(endTimestampMs))
+      ) {
+        await updateRestTimerLive(
+          resolvedEndMs,
+          currentExerciseName,
+          currentExerciseImageUrl,
+          currentNextSetSummary
+        );
       }
-      countdownRef.current = setInterval(() => {
-        setRestTimeRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownRef.current!);
-            setShowRestToast(false);
-            setActiveNotificationId(null);
-            endRestTimerLive();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
 
       if (restTimerNotificationsEnabled) {
         const notificationId = await notificationService.startRestTimer(
           newTime,
-          currentExerciseName
+          currentExerciseName,
+          resolvedEndMs
         );
         setActiveNotificationId(notificationId);
       }
     },
-    [currentExerciseName, handleCancelRestTimer, restTimerNotificationsEnabled]
+    [
+      currentExerciseName,
+      currentExerciseImageUrl,
+      currentNextSetSummary,
+      handleCancelRestTimer,
+      restTimerNotificationsEnabled,
+      startRestCountdownInterval,
+    ]
   );
 
   const mapRoutineExercises = (
@@ -1386,7 +1473,7 @@ export default function RoutineDetailScreen() {
     );
 
     return {
-      totalTime: duration,
+      totalTime: frozenDuration || durationRef.current,
       totalWeight: volume,
       completedSets,
       exercises: exercisesState.map((exercise) => ({
@@ -1445,7 +1532,6 @@ export default function RoutineDetailScreen() {
 
   const renderExerciseCard = useCallback(
     ({ item }: { item: ExerciseRequestDto }) => {
-      // 🔥 Buscar el nombre del ejercicio con el que hace superserie
       const supersetExercise = item.supersetWith
         ? exercisesState.find((ex) => ex.id === item.supersetWith)
         : null;
@@ -1455,24 +1541,18 @@ export default function RoutineDetailScreen() {
           exercise={item}
           initialSets={sets[item.id] || []}
           onChangeSets={(updatedSets) =>
-            setSets((prev) => ({ ...prev, [item.id]: updatedSets }))
+            handleChangeSetsForExercise(item.id, updatedSets)
           }
-          onChangeExercise={(updatedExercise) =>
-            setExercises((prev) =>
-              prev.map((ex) =>
-                ex.id === updatedExercise.id ? updatedExercise : ex
-              )
-            )
-          }
+          onChangeExercise={handleChangeExercise}
           readonly={Boolean(sessionView || (readonly && !started))}
           started={started}
           onStartRestTimer={handleStartRestTimer}
           onCancelRestTimer={handleCancelRestTimer}
           onShowUndoSnackbar={handleShowUndoSnackbar}
           showOptions={false}
-          supersetWith={item.supersetWith} // 🔥 PASAR PROP
-          supersetExerciseName={supersetExercise?.name} // 🔥 PASAR PROP
-          previousSessions={previousSessions} // For record detection
+          supersetWith={item.supersetWith}
+          supersetExerciseName={supersetExercise?.name}
+          previousSessions={previousSessions}
         />
       );
     },
@@ -1485,6 +1565,9 @@ export default function RoutineDetailScreen() {
       sets,
       handleStartRestTimer,
       handleCancelRestTimer,
+      handleShowUndoSnackbar,
+      handleChangeSetsForExercise,
+      handleChangeExercise,
     ]
   );
 
@@ -1574,11 +1657,13 @@ export default function RoutineDetailScreen() {
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
       {started && (
-        <RoutineMetrics
-          duration={duration}
+        <LiveRoutineMetrics
+          getStartTime={getWorkoutStartTime}
+          timerPaused={showShortWorkoutModal || isSaving}
           volume={volume}
           completedSets={completedSets}
           records={sessionRecordsCount}
+          onDurationSample={handleDurationSample}
           onFinish={() => {
             if (isSaving) return;
             handleFinishAndSaveRoutine();

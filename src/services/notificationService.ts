@@ -105,11 +105,13 @@ class NotificationService {
   }
 
   /**
-   * Start rest timer with notification
+   * Start rest timer with completion notification anchored to an absolute end time.
+   * Prefer endTimestampMs so toast / live notification / completion stay aligned.
    */
   async startRestTimer(
     restSeconds: number,
-    exerciseName?: string
+    exerciseName?: string,
+    endTimestampMs?: number
   ): Promise<string | null> {
     if (!areNotificationsAvailable) {
       return null;
@@ -127,6 +129,14 @@ class NotificationService {
 
       const timerId = `rest-timer-${Date.now()}`;
       const isAppInForeground = currentAppState === "active";
+      const resolvedEndMs =
+        typeof endTimestampMs === "number" && Number.isFinite(endTimestampMs)
+          ? endTimestampMs
+          : Date.now() + Math.max(0, restSeconds) * 1000;
+      const remainingSeconds = Math.max(
+        1,
+        Math.ceil((resolvedEndMs - Date.now()) / 1000)
+      );
 
       // Schedule notification
       const notificationId = await Notifications.scheduleNotificationAsync({
@@ -148,13 +158,13 @@ class NotificationService {
             exerciseName,
             timerId,
             isAppInForeground,
+            endTimestampMs: resolvedEndMs,
           },
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: restSeconds,
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(resolvedEndMs),
           channelId: Platform.OS === "android" ? "rest-timer" : undefined,
-          repeats: false,
         },
         identifier: timerId,
       });
@@ -170,7 +180,7 @@ class NotificationService {
             // Ignore dismissal errors
           }
           this.autoDismissTimers.delete(timerId);
-        }, (restSeconds + 2) * 1000); // Dismiss 2 seconds after notification fires
+        }, (remainingSeconds + 2) * 1000); // Dismiss 2 seconds after notification fires
 
         this.autoDismissTimers.set(timerId, dismissTimer);
       }
