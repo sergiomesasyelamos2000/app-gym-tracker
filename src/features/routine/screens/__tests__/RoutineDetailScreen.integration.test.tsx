@@ -60,20 +60,6 @@ jest.mock("react-native-uuid", () => ({
   v4: () => "test-uuid",
 }));
 
-jest.mock(
-  "expo-av",
-  () => ({
-    Audio: {
-      Sound: {
-        createAsync: jest.fn().mockResolvedValue({
-          sound: { playAsync: jest.fn(), unloadAsync: jest.fn() },
-        }),
-      },
-    },
-  }),
-  { virtual: true },
-);
-
 // Mock Child Components
 // Path MUST be ../../ because we are in src/features/routine/screens/__tests__
 jest.mock("../../components/ExerciseCard/ExerciseCard", () => {

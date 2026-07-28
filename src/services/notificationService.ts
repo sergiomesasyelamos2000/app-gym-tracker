@@ -148,6 +148,10 @@ class NotificationService {
           sound: "default", // Explicitly use default
           priority: Notifications.AndroidNotificationPriority.MAX,
           vibrate: [0, 250, 250, 250],
+          // iOS 15+: better delivery when Focus modes are on (not Critical Alerts).
+          ...(Platform.OS === "ios" && {
+            interruptionLevel: "timeSensitive",
+          }),
           ...(Platform.OS === "android" && {
             categoryIdentifier: "rest-complete",
             badge: 1,

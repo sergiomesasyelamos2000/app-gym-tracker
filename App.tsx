@@ -10,6 +10,10 @@ import { RootNavigator } from "./src/navigation";
 import "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 import { notificationService } from "./src/services/notificationService";
+import {
+  isRestCompleteNotification,
+  playRestCompleteFeedback,
+} from "./src/services/restTimerFeedback";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ToastConfigParams } from "react-native-toast-message";
@@ -101,7 +105,11 @@ function AppContent() {
     // Listener for notifications received while app is in foreground
     const notificationListener = Notifications?.addNotificationReceivedListener(
       (notification: any) => {
-        console.log("Notification received in foreground:", notification);
+        const data = notification?.request?.content?.data;
+        if (isRestCompleteNotification(data)) {
+          // Haptic only; sound is the OS default from the notification itself.
+          void playRestCompleteFeedback();
+        }
       }
     );
 

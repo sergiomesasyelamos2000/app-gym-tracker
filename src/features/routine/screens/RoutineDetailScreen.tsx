@@ -30,7 +30,6 @@ import {
   FlatList,
   Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -42,12 +41,16 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
+import { playRestCompleteFeedback } from "../../../services/restTimerFeedback";
 import {
   consumeAppTerminatedAt,
   endRestTimerLive,
@@ -591,6 +594,7 @@ export default function RoutineDetailScreen() {
         setRestTimerEndTime(null);
         restTimerEndTimeRef.current = null;
         endRestTimerLive();
+        void playRestCompleteFeedback();
       }
     }, 250);
   }, [clearRestCountdownInterval]);
@@ -1035,28 +1039,19 @@ export default function RoutineDetailScreen() {
     if (Platform.OS !== "ios") return false;
 
     const liveState = await getCurrentRestTimerLiveState();
+    // Module missing or no state — never clear the in-app toast from this path.
     if (!liveState) return false;
 
     const endTimestampMs = liveState.endTimestampMs;
+    // Live Activity inactive/expired must not hide the JS banner. The in-app
+    // countdown + scheduled notification own the timer when Live Activity fails
+    // or is not present in the binary.
     if (
       !liveState.isActive ||
       !endTimestampMs ||
       endTimestampMs <= Date.now()
     ) {
-      if (restTimerEndTimeRef.current) {
-        if (countdownRef.current) clearInterval(countdownRef.current);
-        if (activeNotificationId) {
-          await notificationService.cancelRestTimer(activeNotificationId);
-          setActiveNotificationId(null);
-        }
-        setRestTimerEndTime(null);
-        restTimerEndTimeRef.current = null;
-        setShowRestToast(false);
-        setRestTimeRemaining(0);
-        setCurrentExerciseImageUrl(null);
-        setCurrentNextSetSummary(null);
-      }
-      return true;
+      return false;
     }
 
     const newTime = Math.max(
@@ -1090,7 +1085,6 @@ export default function RoutineDetailScreen() {
 
     return true;
   }, [
-    activeNotificationId,
     currentExerciseName,
     restTimerNotificationsEnabled,
     startRestCountdownInterval,
@@ -1125,6 +1119,7 @@ export default function RoutineDetailScreen() {
               setRestTimeRemaining(0);
               endRestTimerLive();
               if (countdownRef.current) clearInterval(countdownRef.current);
+              void playRestCompleteFeedback();
             } else if (!syncedFromNative) {
               // Update remaining time from the shared absolute end timestamp.
               setRestTimeRemaining(Math.max(0, remaining));
@@ -1879,6 +1874,7 @@ export default function RoutineDetailScreen() {
 
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
       {started && (
@@ -1985,11 +1981,14 @@ export default function RoutineDetailScreen() {
 
       {showRestToast && (
         <Animated.View
+          pointerEvents="box-none"
           style={[
             styles.toastContainer,
-            Platform.OS === "android"
-              ? { bottom: Math.max(insets.bottom, 12) }
-              : null,
+            {
+              bottom: Math.max(insets.bottom, 12) + 8,
+              elevation: 24,
+              zIndex: 9999,
+            },
             { transform: [{ translateY: slideAnim }] },
           ]}
         >
@@ -1998,7 +1997,10 @@ export default function RoutineDetailScreen() {
               minutes: Math.floor(restTimeRemaining / 60),
               seconds: restTimeRemaining % 60,
             })}
-            progress={restTimeRemaining / totalRestTime}
+            text2={currentExerciseName}
+            progress={
+              totalRestTime > 0 ? restTimeRemaining / totalRestTime : 0
+            }
             onCancel={handleCancelRestTimer}
             onAddTime={handleAddRestTime}
             onSubtractTime={handleSubtractRestTime}
@@ -2081,7 +2083,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 9999,
   },
   savingOverlay: {
     ...StyleSheet.absoluteFillObject,

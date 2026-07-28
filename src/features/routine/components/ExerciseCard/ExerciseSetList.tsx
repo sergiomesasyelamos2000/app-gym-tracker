@@ -119,7 +119,9 @@ const ExerciseSetList = ({
   const { theme, isDark } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
-  const [showColumnInfoModal, setShowColumnInfoModal] = useState(false);
+  const [selectedColumnInfo, setSelectedColumnInfo] = useState<
+    "serie" | "anterior" | "weight" | "reps" | "asis" | "check" | null
+  >(null);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(300)).current;
@@ -502,99 +504,172 @@ const ExerciseSetList = ({
     </Modal>
   );
 
-  const columnInfoItems = [
-    {
-      title: "SERIE",
+  const columnInfoByKey = {
+    serie: {
+      title: "Serie",
+      subtitle: "SERIE",
+      icon: "format-list-numbered" as const,
       description: "Número de la serie en el ejercicio.",
     },
-    ...(started
-      ? [
-          {
-            title: "ANTERIOR",
-            description:
-              "Peso y repeticiones de la última vez que hiciste esta serie.",
-          },
-        ]
-      : []),
-    {
-      title: weightUnit.toUpperCase(),
+    anterior: {
+      title: "Anterior",
+      subtitle: "ANTERIOR",
+      icon: "history" as const,
+      description:
+        "Peso y repeticiones de la última vez que hiciste esta serie.",
+    },
+    weight: {
+      title: "Peso",
+      subtitle: weightUnit.toUpperCase(),
+      icon: "fitness-center" as const,
       description: "Peso usado en esta serie.",
     },
-    {
+    reps: {
       title: started
-        ? "REPS"
+        ? "Repeticiones"
         : repsType === "reps"
-        ? "REPS"
-        : "RANGO",
+        ? "Repeticiones"
+        : "Rango",
+      subtitle: started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO",
+      icon: "repeat" as const,
       description: started
         ? "Repeticiones completadas en esta serie."
         : repsType === "reps"
         ? "Número objetivo de repeticiones por serie."
         : "Rango objetivo de repeticiones (mínimo–máximo).",
     },
-    {
-      title: "ASIS",
+    asis: {
+      title: "Asistidas",
+      subtitle: "ASIS",
+      icon: "accessibility" as const,
       description:
         "Repeticiones asistidas: las que completaste con ayuda (partner, máquina o bandas).",
     },
-    ...(!readonly
-      ? [
-          {
-            title: "✓",
-            description: "Marca la serie como completada.",
-          },
-        ]
-      : []),
-  ];
+    check: {
+      title: "Completada",
+      subtitle: "✓",
+      icon: "check-circle" as const,
+      description: "Marca la serie como completada.",
+    },
+  };
 
-  const ColumnInfoModal = () => (
-    <Modal
-      visible={showColumnInfoModal}
-      transparent={true}
-      animationType="none"
-      onRequestClose={() => closeModal(() => setShowColumnInfoModal(false))}
-      onShow={openModal}
-      statusBarTranslucent={Platform.OS === "android"}
-    >
-      <TouchableWithoutFeedback
-        onPress={() => closeModal(() => setShowColumnInfoModal(false))}
+  const openColumnInfo = (
+    key: "serie" | "anterior" | "weight" | "reps" | "asis" | "check"
+  ) => {
+    setSelectedColumnInfo(key);
+  };
+
+  const closeColumnInfo = () => {
+    closeModal(() => setSelectedColumnInfo(null));
+  };
+
+  const ColumnInfoModal = () => {
+    const info = selectedColumnInfo
+      ? columnInfoByKey[selectedColumnInfo]
+      : null;
+
+    return (
+      <Modal
+        visible={Boolean(selectedColumnInfo)}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeColumnInfo}
+        onShow={openModal}
+        statusBarTranslucent={Platform.OS === "android"}
       >
-        <Animated.View
-          style={[modalStyles.overlay, { opacity: overlayOpacity }]}
-        >
-          <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                modalStyles.content,
-                { transform: [{ translateY: modalTranslateY }] },
-              ]}
-            >
-              <View style={modalStyles.handle} />
-              <Text style={modalStyles.title}>Qué significa cada columna</Text>
+        <TouchableWithoutFeedback onPress={closeColumnInfo}>
+          <Animated.View
+            style={[modalStyles.overlay, { opacity: overlayOpacity }]}
+          >
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  modalStyles.content,
+                  styles.columnInfoSheet,
+                  { transform: [{ translateY: modalTranslateY }] },
+                ]}
+              >
+                <View style={modalStyles.handle} />
 
-              {columnInfoItems.map((item) => (
-                <View key={item.title} style={styles.columnInfoRow}>
-                  <Text
-                    style={[styles.columnInfoTitle, { color: theme.primary }]}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.columnInfoDescription,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {item.description}
-                  </Text>
-                </View>
-              ))}
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
+                {info ? (
+                  <>
+                    <View style={styles.columnInfoHeader}>
+                      <View
+                        style={[
+                          styles.columnInfoIconWrap,
+                          { backgroundColor: theme.primary + "18" },
+                        ]}
+                      >
+                        <Icon
+                          name={info.icon}
+                          size={28}
+                          color={theme.primary}
+                        />
+                      </View>
+                      <View style={styles.columnInfoHeaderText}>
+                        <Text
+                          style={[
+                            styles.columnInfoEyebrow,
+                            { color: theme.textTertiary },
+                          ]}
+                        >
+                          {info.subtitle}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.columnInfoTitle,
+                            { color: theme.text },
+                          ]}
+                        >
+                          {info.title}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.columnInfoCard,
+                        {
+                          backgroundColor: theme.backgroundSecondary,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                    >
+                      <Icon
+                        name="info-outline"
+                        size={18}
+                        color={theme.info}
+                        style={styles.columnInfoCardIcon}
+                      />
+                      <Text
+                        style={[
+                          styles.columnInfoDescription,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {info.description}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.columnInfoButton,
+                        { backgroundColor: theme.primary },
+                      ]}
+                      onPress={closeColumnInfo}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.columnInfoButtonText}>Entendido</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : null}
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
 
   return (
     <>
@@ -618,7 +693,7 @@ const ExerciseSetList = ({
             alignItems: "center",
             justifyContent: "center",
           }}
-          onPress={() => setShowColumnInfoModal(true)}
+          onPress={() => openColumnInfo("serie")}
           hitSlop={6}
         >
           <Text
@@ -646,7 +721,7 @@ const ExerciseSetList = ({
               alignItems: "center",
               justifyContent: "center",
             }}
-            onPress={() => setShowColumnInfoModal(true)}
+            onPress={() => openColumnInfo("anterior")}
             hitSlop={6}
           >
             <Text
@@ -678,7 +753,7 @@ const ExerciseSetList = ({
         >
           <View style={styles.columnHeader}>
             <TouchableOpacity
-              onPress={() => setShowColumnInfoModal(true)}
+              onPress={() => openColumnInfo("weight")}
               hitSlop={6}
             >
               <Text
@@ -727,7 +802,7 @@ const ExerciseSetList = ({
         >
           <View style={styles.columnHeader}>
             <TouchableOpacity
-              onPress={() => setShowColumnInfoModal(true)}
+              onPress={() => openColumnInfo("reps")}
               hitSlop={6}
             >
               <Text
@@ -769,7 +844,7 @@ const ExerciseSetList = ({
             alignItems: "center",
             justifyContent: "center",
           }}
-          onPress={() => setShowColumnInfoModal(true)}
+          onPress={() => openColumnInfo("asis")}
           hitSlop={6}
         >
           <Text
@@ -797,7 +872,7 @@ const ExerciseSetList = ({
               alignItems: "center",
               justifyContent: "center",
             }}
-            onPress={() => setShowColumnInfoModal(true)}
+            onPress={() => openColumnInfo("check")}
             hitSlop={6}
           >
             <Icon
@@ -865,20 +940,64 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  columnInfoRow: {
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,0,0,0.08)",
+  columnInfoSheet: {
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  columnInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 16,
+  },
+  columnInfoIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  columnInfoHeaderText: {
+    flex: 1,
+  },
+  columnInfoEyebrow: {
+    fontSize: RFValue(11),
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 2,
+    textTransform: "uppercase",
   },
   columnInfoTitle: {
-    fontSize: RFValue(13),
+    fontSize: RFValue(18),
     fontWeight: "700",
-    marginBottom: 4,
+  },
+  columnInfoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 18,
+  },
+  columnInfoCardIcon: {
+    marginTop: 1,
   },
   columnInfoDescription: {
-    fontSize: RFValue(12),
-    lineHeight: RFValue(17),
+    flex: 1,
+    fontSize: RFValue(13),
+    lineHeight: RFValue(19),
+  },
+  columnInfoButton: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  columnInfoButtonText: {
+    color: "#fff",
+    fontSize: RFValue(14),
+    fontWeight: "700",
   },
 });
 
