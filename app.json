@@ -94,7 +94,8 @@
     "extra": {
       "eas": {
         "projectId": "59890898-088b-402b-bc22-b15ec51d1c17"
-      }
+      },
+      "enableAndroidPush": false
     },
     "owner": "smy862"
   }

@@ -13,6 +13,27 @@ const areNotificationsAvailable = !!Notifications;
 
 // Track app state globally
 let currentAppState: AppStateStatus = AppState.currentState;
+let hasLoggedFcmWarning = false;
+
+/**
+ * Android remote Expo push requires a real Firebase/FCM setup
+ * (google-services.json + EAS FCM credentials + google-services Gradle plugin).
+ * Local builds use a stub google-services.json; keep push off until
+ * extra.enableAndroidPush is explicitly set to true for production.
+ */
+function isAndroidPushEnabled(): boolean {
+  return Constants.expoConfig?.extra?.enableAndroidPush === true;
+}
+
+function shouldAttemptRemotePush(): boolean {
+  if (Platform.OS === "ios") {
+    return true;
+  }
+  if (Platform.OS === "android") {
+    return isAndroidPushEnabled();
+  }
+  return false;
+}
 
 // Listen to app state changes
 AppState.addEventListener("change", (nextAppState) => {
@@ -433,13 +454,19 @@ class NotificationService {
    * Register for remote Expo push notifications and return the token.
    * Local notifications (rest timer, reminders) do not require this.
    * On Android, Expo push needs a valid Firebase/FCM setup
-   * (google-services.json + EAS FCM credentials).
+   * (google-services.json + EAS FCM credentials) and extra.enableAndroidPush=true.
    */
   async registerForPushNotificationsAsync(): Promise<string | null> {
     if (!areNotificationsAvailable) {
       return null;
     }
     if (Platform.OS === "web") {
+      return null;
+    }
+
+    // Skip Android remote push until FCM is intentionally enabled.
+    // Avoids FirebaseApp-not-initialized console spam on local stub builds.
+    if (!shouldAttemptRemotePush()) {
       return null;
     }
 
@@ -472,10 +499,11 @@ class NotificationService {
         /fcm-credentials/i.test(message) ||
         /Default FirebaseApp/i.test(message);
 
-      // Expected in local Android builds without real FCM credentials.
+      // Expected in Android builds without real FCM credentials.
       // Do not treat this as a hard failure: local notifications still work.
       if (isMissingFcm) {
-        if (__DEV__) {
+        if (__DEV__ && !hasLoggedFcmWarning) {
+          hasLoggedFcmWarning = true;
           console.warn(
             "[Notifications] Push remoto no disponible: falta configurar FCM/Firebase (google-services.json + credenciales EAS). Las notificaciones locales siguen funcionando."
           );
