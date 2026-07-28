@@ -36,6 +36,7 @@ import {
   getErrorStatusCode,
 } from "../../../types";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
+import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import { DailyCalorieChart } from "../components/DailyCalorieChart";
 import { MacroDistributionChart } from "../components/MacroDistributionChart";
 import * as nutritionService from "../services/nutritionService";
@@ -1016,6 +1017,8 @@ export default function MacrosScreen({ navigation }: Props) {
           protein={{ current: totals.protein, target: goals.protein }}
           fat={{ current: totals.fat, target: goals.fat }}
         />
+
+        <HealthDisclaimerCard variant="compact" style={{ marginHorizontal: 16 }} />
 
         <View style={styles.diarySection}>
           <Text style={styles.sectionTitle}>Diario de Alimentos</Text>

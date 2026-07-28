@@ -11,6 +11,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PlanCard } from "../components/PlanCard";
+import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 import { useSubscription } from "../hooks/useSubscription";
 import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -138,16 +139,10 @@ export function PlansScreen() {
               {hasAppleIapConfiguration
                 ? appleStoreConnected
                   ? productsLoaded
-                    ? " Los planes se cargan desde StoreKit y se compran dentro de la App Store. Si ya compraste Premium, puedes restaurar tus compras."
+                    ? " Los planes se cargan desde StoreKit y se compran dentro de la App Store."
                     : " Cargando productos desde la App Store..."
                   : " Esperando conexion con la App Store..."
                 : " Faltan los product IDs de Apple en la configuracion del build."}
-            </Text>
-            <Text
-              style={[styles.noticeAction, { color: theme.primary }]}
-              onPress={restoreApplePurchases}
-            >
-              Restaurar compras
             </Text>
             {appleStoreConnected && hasAppleIapConfiguration && (
               <Text
@@ -191,14 +186,10 @@ export function PlansScreen() {
         )}
 
         {/* Footer */}
-        <View style={styles.footer}>
-          {/* <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-            Todos los planes incluyen garantía de devolución de 7 días
-          </Text>
-          <Text style={[styles.footerSubtext, { color: theme.textTertiary }]}>
-            Cancela cuando quieras • Pago seguro con Stripe
-          </Text> */}
-        </View>
+        <SubscriptionLegalFooter
+          onRestorePurchases={restoreApplePurchases}
+          restoreDisabled={appleLoading}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -283,21 +274,5 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: "#6b7280",
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    alignItems: "center",
-  },
-  footerText: {
-    fontSize: 14,
-    color: "#374151",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  footerSubtext: {
-    fontSize: 12,
-    color: "#9ca3af",
-    textAlign: "center",
   },
 });

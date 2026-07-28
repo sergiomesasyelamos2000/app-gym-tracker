@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 import type { RecognizeFoodResponseDto } from "@sergiomesasyelamos2000/shared";
@@ -6,6 +6,8 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import type { Message } from "../../../store/useChatStore";
 import { isExportableContent } from "../../../utils/exportUtils";
 import { withOpacity } from "../../../utils/themeStyles";
+import { HEALTH_DISCLAIMER } from "../../common/constants/healthDisclaimer";
+import { HealthSourcesModal } from "../../common/components/HealthSourcesModal";
 import { ExportButton } from "./ExportButton";
 
 type Props = {
@@ -20,6 +22,7 @@ const MessageBubbleComponent: React.FC<Props> = ({
   onAddRecognizedFood,
 }) => {
   const { theme } = useTheme();
+  const [healthSourcesVisible, setHealthSourcesVisible] = useState(false);
   const isUser = message.sender === "user";
   const isBot = message.sender === "bot";
   const isFoodAnalysis = message.type === "food-analysis";
@@ -83,6 +86,17 @@ const MessageBubbleComponent: React.FC<Props> = ({
                 </TouchableOpacity>
               </View>
             ))}
+            <View style={styles.aiEstimateRow}>
+              <Text style={[styles.aiEstimateText, { color: theme.textSecondary }]}>
+                {HEALTH_DISCLAIMER.aiEstimate}{" "}
+              </Text>
+              <Text
+                style={[styles.aiEstimateLink, { color: theme.primary }]}
+                onPress={() => setHealthSourcesVisible(true)}
+              >
+                Fuentes
+              </Text>
+            </View>
           </View>
         );
       }
@@ -246,20 +260,27 @@ const MessageBubbleComponent: React.FC<Props> = ({
   };
 
   return (
-    <View
-      style={[
-        styles.messageBubble,
-        isUser
-          ? { backgroundColor: theme.primary, alignSelf: "flex-end" }
-          : { backgroundColor: theme.card, alignSelf: "flex-start" },
-      ]}
-    >
-      {renderContent()}
+    <>
+      <View
+        style={[
+          styles.messageBubble,
+          isUser
+            ? { backgroundColor: theme.primary, alignSelf: "flex-end" }
+            : { backgroundColor: theme.card, alignSelf: "flex-start" },
+        ]}
+      >
+        {renderContent()}
 
-      {isBot && !isFoodAnalysis && isExportableContent(message.text) && (
-        <ExportButton content={message.text} title="Plan de Nutrición" />
-      )}
-    </View>
+        {isBot && !isFoodAnalysis && isExportableContent(message.text) && (
+          <ExportButton content={message.text} title="Plan de Nutrición" />
+        )}
+      </View>
+
+      <HealthSourcesModal
+        visible={healthSourcesVisible}
+        onClose={() => setHealthSourcesVisible(false)}
+      />
+    </>
   );
 };
 
@@ -337,6 +358,21 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 12,
+  },
+  aiEstimateRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  aiEstimateText: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  aiEstimateLink: {
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 16,
   },
 });
 

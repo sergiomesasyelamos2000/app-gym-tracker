@@ -17,6 +17,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import * as nutritionPlansService from "../services/nutritionPlansService";
 import { NutritionStackParamList } from "./NutritionStack";
 
@@ -95,6 +96,8 @@ export default function GenerateNutritionPlanScreen({ navigation }: Props) {
             Crearemos un plan estructurado según tu perfil, macros y rutina de
             entrenamiento. El proceso puede tardar hasta un minuto.
           </Text>
+
+          <HealthDisclaimerCard variant="compact" style={{ marginHorizontal: 0 }} />
 
           <Text style={styles.label}>Duración del plan</Text>
           <View style={styles.durationRow}>

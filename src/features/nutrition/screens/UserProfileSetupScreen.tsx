@@ -27,9 +27,11 @@ import {
 import { useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import {
   calculateMacroGoals,
   getEstimatedTimeToGoal,
+  getRecommendedWeightChangeRange,
 } from "../../../utils/macroCalculator";
 import { createUserProfile } from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -537,11 +539,16 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
             </Text>
             <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
               {weightGoal === "lose"
-                ? "Pérdida de peso recomendada: 0.5 kg/semana"
+                ? `Pérdida de peso recomendada: ${getRecommendedWeightChangeRange("lose").recommended} kg/semana`
                 : weightGoal === "gain"
-                ? "Ganancia de peso recomendada: 0.35 kg/semana"
+                ? `Ganancia de peso recomendada: ${getRecommendedWeightChangeRange("gain").recommended} kg/semana`
                 : "Mantener peso actual"}
             </Text>
+            <HealthDisclaimerCard
+              variant="inline"
+              weightGoal={weightGoal}
+              style={{ marginHorizontal: 0 }}
+            />
             {weightGoal === "maintain" ? (
               <View
                 style={[

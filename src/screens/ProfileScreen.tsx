@@ -10,6 +10,7 @@ import {
   Crown,
   Download,
   ExternalLink,
+  HeartPulse,
   LogOut,
   Moon,
   Shield,
@@ -33,7 +34,6 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
@@ -47,8 +47,12 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useNotificationSettingsStore } from "../store/useNotificationSettingsStore";
 import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
-
-const PRIVACY_POLICY_URL = "https://evofitofficial.lovable.app/privacy";
+import { HealthSourcesModal } from "../features/common/components/HealthSourcesModal";
+import {
+  PRIVACY_POLICY_URL,
+  TERMS_OF_USE_URL,
+} from "../features/common/constants/legalUrls";
+import { openExternalUrl } from "../features/common/utils/openExternalUrl";
 
 const AI_DATA_SHARING_DETAILS = [
   {
@@ -87,6 +91,8 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+  const [isHealthSourcesModalVisible, setIsHealthSourcesModalVisible] =
+    useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -257,16 +263,11 @@ export default function ProfileScreen() {
     navigation.navigate("ExportData");
   };
 
-  const handleOpenPrivacyPolicy = async () => {
-    try {
-      await Linking.openURL(PRIVACY_POLICY_URL);
-    } catch (error) {
-      Alert.alert(
-        "No se pudo abrir la política",
-        "Inténtalo de nuevo en unos segundos."
-      );
-    }
-  };
+  const handleOpenPrivacyPolicy = () =>
+    openExternalUrl(PRIVACY_POLICY_URL, "No se pudo abrir la política");
+
+  const handleOpenTermsOfUse = () =>
+    openExternalUrl(TERMS_OF_USE_URL, "No se pudo abrir los términos");
 
   const handleClearCache = () => {
     Alert.alert(
@@ -846,6 +847,38 @@ export default function ProfileScreen() {
                 styles.settingRowBorder,
                 { borderBottomColor: theme.divider },
               ]}
+              onPress={() => setIsHealthSourcesModalVisible(true)}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.success + "20" },
+                ]}
+              >
+                <HeartPulse color={theme.success} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Información de salud
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Aviso legal y fuentes de recomendaciones nutricionales
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
               onPress={() => setIsPrivacyModalVisible(true)}
             >
               <View
@@ -873,7 +906,11 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.settingRow}
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
               onPress={handleOpenPrivacyPolicy}
             >
               <View
@@ -895,6 +932,34 @@ export default function ProfileScreen() {
                   ]}
                 >
                   Consulta la política completa en la web oficial
+                </Text>
+              </View>
+              <ChevronRight color={theme.textTertiary} size={20} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={handleOpenTermsOfUse}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.primary + "20" },
+                ]}
+              >
+                <ExternalLink color={theme.primary} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Términos de uso
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Consulta los términos completos en la web oficial
                 </Text>
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />
@@ -1250,6 +1315,11 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <HealthSourcesModal
+        visible={isHealthSourcesModalVisible}
+        onClose={() => setIsHealthSourcesModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

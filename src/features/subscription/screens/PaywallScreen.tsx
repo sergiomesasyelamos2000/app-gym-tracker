@@ -11,6 +11,7 @@ import {
 import { Crown, X, Check } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BaseNavigation } from "../../../types";
+import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 
 interface PaywallScreenProps {
   visible: boolean;
@@ -136,11 +137,7 @@ export function PaywallScreen({
           </View>
 
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Garantía de devolución de 7 días • Cancela cuando quieras
-            </Text>
-          </View>
+          <SubscriptionLegalFooter />
         </ScrollView>
       </View>
     </Modal>
@@ -309,14 +306,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#6b7280",
-  },
-  footer: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  footerText: {
-    fontSize: 12,
-    color: "#9ca3af",
-    textAlign: "center",
   },
 });

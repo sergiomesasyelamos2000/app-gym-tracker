@@ -28,6 +28,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../contexts/ThemeContext";
+import { HealthDisclaimerCard } from "../features/common/components/HealthDisclaimerCard";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
 import ImageModal from "../features/common/components/ImageModal";
@@ -523,6 +524,11 @@ export default function NutritionScreen() {
             </View>
           </View>
         </View>
+
+        <HealthDisclaimerCard
+          variant="compact"
+          style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4 }}
+        />
 
         {/* Banner de uso de IA para usuarios gratuitos */}
         {!usageLoading && !isPremium && remainingCalls !== null && (

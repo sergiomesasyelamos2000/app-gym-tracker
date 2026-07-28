@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import MacroSummary from "../components/plans/MacroSummary";
 import PlanDaySection from "../components/plans/PlanDaySection";
 import * as nutritionPlansService from "../services/nutritionPlansService";
@@ -166,6 +167,8 @@ export default function NutritionPlanDetailScreen({ route, navigation }: Props) 
       ) : null}
 
       <ScrollView contentContainerStyle={styles.content}>
+        <HealthDisclaimerCard variant="compact" style={{ marginHorizontal: 0 }} />
+
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <View style={{ flex: 1 }}>

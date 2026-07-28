@@ -36,6 +36,7 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
+import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 
 type StatusScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
@@ -515,7 +516,16 @@ export function StatusScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.textTertiary }]}>
+          <SubscriptionLegalFooter
+            onRestorePurchases={restoreApplePurchases}
+            restoreDisabled={actionLoading || appleIapLoading}
+          />
+          <Text
+            style={[
+              styles.footerText,
+              { color: theme.textTertiary, marginTop: 16 },
+            ]}
+          >
             ¿Preguntas? Contáctanos en evofit.support@gmail.com
           </Text>
         </View>

@@ -19,6 +19,7 @@ import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import PlanCard from "../components/plans/PlanCard";
 import * as nutritionPlansService from "../services/nutritionPlansService";
 import { sortPlansByRecent } from "../utils/planHelpers";
@@ -106,6 +107,7 @@ export default function NutritionPlansListScreen({ navigation }: Props) {
       <Text style={styles.emptySubtitle}>
         Genera tu primer plan personalizado con IA según tu perfil y entrenamiento.
       </Text>
+      <HealthDisclaimerCard variant="compact" style={{ marginHorizontal: 0, width: "100%" }} />
       <TouchableOpacity style={styles.emptyButton} onPress={handleGeneratePress}>
         <Ionicons name="sparkles-outline" size={18} color="#fff" />
         <Text style={styles.emptyButtonText}>Generar plan con IA</Text>
