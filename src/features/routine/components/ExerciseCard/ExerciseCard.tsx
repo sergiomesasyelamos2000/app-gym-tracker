@@ -183,7 +183,7 @@ interface Props {
   onCancelRestTimer?: () => void;
   onShowUndoSnackbar?: (message: string, onUndo: () => void) => void;
   compact?: boolean;
-  onLongPress?: () => void;
+  onTitleLongPress?: () => void;
   isDragging?: boolean;
   onReorder?: () => void;
   onReplace?: () => void;
@@ -208,7 +208,7 @@ const ExerciseCard = ({
   onCancelRestTimer,
   onShowUndoSnackbar,
   compact = false,
-  onLongPress,
+  onTitleLongPress,
   isDragging = false,
   onReorder,
   onReplace,
@@ -670,12 +670,7 @@ const ExerciseCard = ({
         }}
       />
 
-      <TouchableOpacity
-        onLongPress={onLongPress}
-        delayLongPress={500}
-        activeOpacity={0.9}
-        disabled={readonly}
-      >
+      <View>
         {/* 🔥 TAG DE SUPERSERIE */}
         {supersetWith && supersetExerciseName && (
           <View
@@ -733,6 +728,7 @@ const ExerciseCard = ({
           availableExercises={availableExercises}
           showOptions={showOptions}
           hasSuperset={!!supersetWith}
+          onTitleLongPress={onTitleLongPress}
         />
 
         <ExerciseNotes notes={notes} onChange={setNotes} readonly={readonly} />
@@ -785,7 +781,7 @@ const ExerciseCard = ({
             </Animated.View>
           </View>
         )}
-      </TouchableOpacity>
+      </View>
     </Card>
   );
 };

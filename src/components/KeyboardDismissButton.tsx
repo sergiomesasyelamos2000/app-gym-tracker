@@ -1,8 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   Keyboard,
-  KeyboardEvent,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -11,14 +9,19 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
+import {
+  useKeyboardHeight,
+  useRestToastKeyboardActive,
+} from "../hooks/useKeyboardHeight";
 
 export const GLOBAL_KEYBOARD_ACCESSORY_ID = "global-keyboard-dismiss-accessory";
 
 export default function KeyboardDismissButton() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [visible, setVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardHeight = useKeyboardHeight();
+  const restToastKeyboardActive = useRestToastKeyboardActive();
+
   const handleDismissKeyboard = () => {
     const state = TextInput.State as unknown as {
       currentlyFocusedInput?: () => { blur?: () => void } | null;
@@ -27,57 +30,32 @@ export default function KeyboardDismissButton() {
     const focusedInput = state.currentlyFocusedInput?.();
     focusedInput?.blur?.();
 
-    setVisible(false);
-    setKeyboardHeight(0);
     Keyboard.dismiss();
     requestAnimationFrame(() => Keyboard.dismiss());
     setTimeout(() => Keyboard.dismiss(), 60);
   };
 
-  useEffect(() => {
-    const onShow = (event: KeyboardEvent) => {
-      setKeyboardHeight(event.endCoordinates?.height || 0);
-      setVisible(true);
-    };
+  const containerStyle = useMemo(() => {
+    const metricsHeight = Keyboard.metrics?.()?.height ?? 0;
+    const effectiveKeyboardHeight = Math.max(
+      0,
+      keyboardHeight || metricsHeight
+    );
 
-    const onHide = () => {
-      setVisible(false);
-      setKeyboardHeight(0);
-    };
+    const bottomOffset =
+      effectiveKeyboardHeight > 0
+        ? effectiveKeyboardHeight + 8
+        : Math.max(insets.bottom + 8, 12);
 
-    const showSub = Keyboard.addListener("keyboardDidShow", onShow);
-    const hideSub = Keyboard.addListener("keyboardDidHide", onHide);
+    return [
+      styles.container,
+      {
+        bottom: bottomOffset,
+      },
+    ];
+  }, [insets.bottom, keyboardHeight]);
 
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const containerStyle = useMemo(
-    () => {
-      const keyboardMetricsHeight = Keyboard.metrics?.()?.height ?? 0;
-      const effectiveKeyboardHeight = Math.max(
-        0,
-        keyboardHeight || keyboardMetricsHeight
-      );
-
-      const bottomOffset =
-        Platform.OS === "ios"
-          ? Math.max(insets.bottom + 8, effectiveKeyboardHeight + 8)
-          : 12;
-
-      return [
-        styles.container,
-        {
-          bottom: bottomOffset,
-        },
-      ];
-    },
-    [insets.bottom, keyboardHeight]
-  );
-
-  if (!visible) return null;
+  if (keyboardHeight <= 0 || restToastKeyboardActive) return null;
 
   return (
     <View style={containerStyle} pointerEvents="box-none">

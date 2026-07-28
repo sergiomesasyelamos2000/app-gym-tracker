@@ -591,7 +591,7 @@ export default function RoutineEditScreen() {
             )
           );
         }}
-        onLongPress={() => handleExerciseLongPress(drag)}
+        onTitleLongPress={() => handleExerciseLongPress(drag)}
         isDragging={isActive}
         onReorder={handleReorderFromHeader}
         onReplace={() => handleReplaceExercise(item.id)}

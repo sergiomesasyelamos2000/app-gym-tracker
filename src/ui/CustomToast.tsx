@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { Theme, useTheme } from "../contexts/ThemeContext";
 
 interface CustomToastProps {
@@ -20,6 +21,7 @@ interface CustomToastProps {
   onCancel?: () => void;
   onAddTime?: () => void;
   onSubtractTime?: () => void;
+  onDismissKeyboard?: () => void;
 }
 
 const CustomToast = ({
@@ -29,6 +31,7 @@ const CustomToast = ({
   onCancel,
   onAddTime,
   onSubtractTime,
+  onDismissKeyboard,
 }: CustomToastProps) => {
   const { theme, isDark } = useTheme();
   const styles = React.useMemo(
@@ -208,15 +211,30 @@ const CustomToast = ({
               → handleCancelRestTimer en RoutineDetailScreen
               → limpia countdownRef, cancela notificación, llama endRestTimerLive().
           */}
-          {onCancel && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancel}
-              accessibilityLabel="Omitir descanso"
-              activeOpacity={0.85}
-            >
-              <Text style={styles.cancelButtonText}>Omitir</Text>
-            </TouchableOpacity>
+          {(onCancel || onDismissKeyboard) && (
+            <View style={styles.cancelRow}>
+              {onCancel && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={handleCancel}
+                  accessibilityLabel="Omitir descanso"
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.cancelButtonText}>Omitir</Text>
+                </TouchableOpacity>
+              )}
+              {onDismissKeyboard && (
+                <TouchableOpacity
+                  style={styles.keyboardDismissButton}
+                  onPress={onDismissKeyboard}
+                  accessibilityLabel="Ocultar teclado"
+                  accessibilityRole="button"
+                  activeOpacity={0.85}
+                >
+                  <Icon name="keyboard-hide" size={18} color={theme.text} />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
       </View>
@@ -323,6 +341,11 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     },
     // FIX: cancelButton redimensionado para acomodar el texto "Omitir"
     // en lugar del símbolo "X" que requería solo 32x32px
+    cancelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
     cancelButton: {
       backgroundColor: isDark ? "#2A3047" : `${theme.primary}22`,
       borderRadius: 11,
@@ -337,6 +360,16 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       color: theme.textSecondary,
       fontWeight: "700",
       fontSize: 13,
+    },
+    keyboardDismissButton: {
+      backgroundColor: isDark ? "#2A3047" : `${theme.primary}22`,
+      borderRadius: 11,
+      width: 34,
+      height: 34,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: isDark ? "#3B4565" : `${theme.primary}45`,
     },
     progressBarContainer: {
       width: "100%",

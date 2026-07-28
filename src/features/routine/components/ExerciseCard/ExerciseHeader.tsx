@@ -28,6 +28,7 @@ interface Props {
   availableExercises?: ExerciseRequestDto[];
   showOptions?: boolean;
   hasSuperset?: boolean;
+  onTitleLongPress?: () => void;
 }
 
 const ExerciseHeader = ({
@@ -41,6 +42,7 @@ const ExerciseHeader = ({
   availableExercises = [],
   showOptions = false,
   hasSuperset = false,
+  onTitleLongPress,
 }: Props) => {
   const navigation = useNavigation<BaseNavigation>();
   const { theme } = useTheme();
@@ -50,7 +52,7 @@ const ExerciseHeader = ({
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const handleImagePress = () => {
+  const handleOpenExerciseDetail = () => {
     navigation.navigate("ExerciseDetail", { exercise });
   };
 
@@ -103,14 +105,20 @@ const ExerciseHeader = ({
   return (
     <>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8}>
+        <TouchableOpacity onPress={handleOpenExerciseDetail} activeOpacity={0.8}>
           <CachedExerciseImage
             imageUrl={exercise.imageUrl}
             style={styles.exerciseImage}
           />
         </TouchableOpacity>
 
-        <View style={styles.titleContainer}>
+        <TouchableOpacity
+          style={styles.titleContainer}
+          onPress={handleOpenExerciseDetail}
+          onLongPress={onTitleLongPress}
+          delayLongPress={500}
+          activeOpacity={0.7}
+        >
           <Text
             style={[styles.title, { color: theme.text }]}
             numberOfLines={3}
@@ -118,7 +126,7 @@ const ExerciseHeader = ({
           >
             {exercise.name}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {/* 🔥 CAMBIO: Solo mostrar si showOptions es true Y no es readonly */}
         {showOptions && !readonly && (

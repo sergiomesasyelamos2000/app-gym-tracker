@@ -28,6 +28,7 @@ import {
   Animated,
   AppState,
   FlatList,
+  Keyboard,
   Modal,
   Platform,
   StyleSheet,
@@ -75,6 +76,10 @@ import {
 } from "../../../store/useWorkoutInProgressStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import CustomToast from "../../../ui/CustomToast";
+import {
+  setRestToastKeyboardActive,
+  useKeyboardHeight,
+} from "../../../hooks/useKeyboardHeight";
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import UndoSnackbar from "../components/ExerciseCard/UndoSnackbar";
 import { formatTime } from "../components/ExerciseCard/helpers";
@@ -130,6 +135,7 @@ export default function RoutineDetailScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
   const route = useRoute<RoutineDetailRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
   const {
@@ -241,6 +247,14 @@ export default function RoutineDetailScreen() {
     setReorderFromButton(true);
     setTempExercisesOrder(exercisesState);
   }, [exercisesState]);
+
+  const handleExerciseLongPress = useCallback((drag: () => void) => {
+    setReorderMode(true);
+    setReorderFromButton(false);
+    setTimeout(() => {
+      drag();
+    }, 100);
+  }, []);
 
   const handleConfirmReorder = useCallback(() => {
     setExercises(tempExercisesOrder);
@@ -1757,6 +1771,12 @@ export default function RoutineDetailScreen() {
           onCancelRestTimer={handleCancelRestTimer}
           onShowUndoSnackbar={handleShowUndoSnackbar}
           showOptions={started && !sessionView}
+          onTitleLongPress={
+            started && !sessionView && drag
+              ? () => handleExerciseLongPress(drag)
+              : undefined
+          }
+          isDragging={Boolean(isActive)}
           onReorder={handleReorderFromHeader}
           onReplace={() => handleReplaceExercise(item.id)}
           onDelete={() => handleDeleteExercise(item.id)}
@@ -1783,6 +1803,7 @@ export default function RoutineDetailScreen() {
       handleShowUndoSnackbar,
       handleChangeSetsForExercise,
       handleChangeExercise,
+      handleExerciseLongPress,
       handleReorderFromHeader,
       handleReplaceExercise,
       handleDeleteExercise,
@@ -1838,6 +1859,20 @@ export default function RoutineDetailScreen() {
 
     return () => clearInterval(pollInterval);
   }, [showRestToast]);
+
+  // Hide floating keyboard-dismiss while rest toast sits above the keyboard.
+  useEffect(() => {
+    const active = showRestToast && keyboardHeight > 0;
+    setRestToastKeyboardActive(active);
+    return () => {
+      setRestToastKeyboardActive(false);
+    };
+  }, [showRestToast, keyboardHeight]);
+
+  const toastBottom =
+    keyboardHeight > 0
+      ? keyboardHeight + 8
+      : Math.max(insets.bottom, 12) + 8;
 
   const isSmallDevice = width < 360;
   const loadingTextMaxWidth = Math.min(width * 0.8, 360);
@@ -1916,11 +1951,12 @@ export default function RoutineDetailScreen() {
         </View>
       )}
 
-      {reorderMode ? (
+      {(started && !sessionView) || reorderMode ? (
         <DraggableFlatList
           data={reorderFromButton ? tempExercisesOrder : exercisesState}
           keyExtractor={(item) => item.id}
           onDragEnd={({ data }) => handleReorderComplete(data)}
+          activationDistance={0}
           ListHeaderComponent={
             <RoutineHeader
               routineTitle={routineTitle}
@@ -1985,7 +2021,7 @@ export default function RoutineDetailScreen() {
           style={[
             styles.toastContainer,
             {
-              bottom: Math.max(insets.bottom, 12) + 8,
+              bottom: toastBottom,
               elevation: 24,
               zIndex: 9999,
             },
@@ -2004,6 +2040,13 @@ export default function RoutineDetailScreen() {
             onCancel={handleCancelRestTimer}
             onAddTime={handleAddRestTime}
             onSubtractTime={handleSubtractRestTime}
+            onDismissKeyboard={
+              keyboardHeight > 0
+                ? () => {
+                    Keyboard.dismiss();
+                  }
+                : undefined
+            }
           />
         </Animated.View>
       )}
