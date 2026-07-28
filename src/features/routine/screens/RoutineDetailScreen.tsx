@@ -37,9 +37,15 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
 import {
@@ -131,6 +137,8 @@ export default function RoutineDetailScreen() {
     sessionView,
     sessionTitle,
     sessionDateLabel,
+    replaceExerciseId,
+    replacementExercise,
   } = route.params;
 
   // Notification settings
@@ -157,6 +165,11 @@ export default function RoutineDetailScreen() {
     {}
   );
   const [hasInitializedFromStore, setHasInitializedFromStore] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reorderFromButton, setReorderFromButton] = useState(false);
+  const [tempExercisesOrder, setTempExercisesOrder] = useState<
+    ExerciseRequestDto[]
+  >([]);
 
   const [showRestToast, setShowRestToast] = useState(false);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
@@ -219,6 +232,160 @@ export default function RoutineDetailScreen() {
     },
     []
   );
+
+  const handleReorderFromHeader = useCallback(() => {
+    setReorderMode(true);
+    setReorderFromButton(true);
+    setTempExercisesOrder(exercisesState);
+  }, [exercisesState]);
+
+  const handleConfirmReorder = useCallback(() => {
+    setExercises(tempExercisesOrder);
+    setReorderMode(false);
+    setReorderFromButton(false);
+    setTempExercisesOrder([]);
+  }, [tempExercisesOrder]);
+
+  const handleReorderComplete = useCallback(
+    (data: ExerciseRequestDto[]) => {
+      if (reorderFromButton) {
+        setTempExercisesOrder(data);
+      } else {
+        setExercises(data);
+        setReorderMode(false);
+      }
+    },
+    [reorderFromButton]
+  );
+
+  const handleDeleteExercise = useCallback((exerciseId: string) => {
+    const exerciseName =
+      exercisesState.find((ex) => ex.id === exerciseId)?.name ||
+      "este ejercicio";
+
+    Alert.alert(
+      "Eliminar ejercicio",
+      `¿Estás seguro de que deseas eliminar "${exerciseName}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => {
+            setExercises((prev) => {
+              const removed = prev.find((ex) => ex.id === exerciseId);
+              const partnerId = removed?.supersetWith;
+              return prev
+                .filter((ex) => ex.id !== exerciseId)
+                .map((ex) =>
+                  partnerId && ex.id === partnerId
+                    ? { ...ex, supersetWith: undefined }
+                    : ex
+                );
+            });
+            setSets((prev) => {
+              const next = { ...prev };
+              delete next[exerciseId];
+              return next;
+            });
+          },
+        },
+      ]
+    );
+  }, [exercisesState]);
+
+  const handleAddSuperset = useCallback(
+    (exerciseId: string, targetExerciseId: string) => {
+      setExercises((prev) =>
+        prev.map((ex) => {
+          if (ex.id === exerciseId) {
+            return { ...ex, supersetWith: targetExerciseId };
+          }
+          if (ex.id === targetExerciseId) {
+            return { ...ex, supersetWith: exerciseId };
+          }
+          return ex;
+        })
+      );
+      Alert.alert(
+        "Superserie creada",
+        "Los ejercicios se han vinculado correctamente"
+      );
+    },
+    []
+  );
+
+  const handleRemoveSuperset = useCallback((exerciseId: string) => {
+    setExercises((prev) => {
+      const partnerId = prev.find((ex) => ex.id === exerciseId)?.supersetWith;
+      return prev.map((ex) => {
+        if (ex.id === exerciseId || (partnerId && ex.id === partnerId)) {
+          return { ...ex, supersetWith: undefined };
+        }
+        return ex;
+      });
+    });
+  }, []);
+
+  const handleReplaceExercise = useCallback(
+    (exerciseId: string) => {
+      const draftExercises = exercisesState.map((exercise) => ({
+        ...exercise,
+        sets: sortSetsByOrder(sets[exercise.id] || []),
+      }));
+
+      navigation.navigate("ExerciseList", {
+        routineId: routineData?.id ?? routineId ?? "workout-in-progress",
+        singleSelection: true,
+        mode: "replaceExercise",
+        replaceExerciseId: exerciseId,
+        draftTitle: routineTitle,
+        draftExercises,
+        returnTo: "RoutineDetail",
+      });
+    },
+    [exercisesState, sets, navigation, routineData?.id, routineId, routineTitle]
+  );
+
+  // Apply exercise replacement returning from ExerciseList during an active workout
+  useEffect(() => {
+    if (!replaceExerciseId || !replacementExercise || !started) return;
+
+    const normalizedReplacement = normalizeExerciseImage(replacementExercise);
+    const oldId = replaceExerciseId;
+
+    setExercises((prev) =>
+      prev.map((ex) => {
+        if (ex.id === oldId) {
+          return {
+            ...normalizedReplacement,
+            restTime: ex.restTime,
+            weightUnit: ex.weightUnit,
+            repsType: ex.repsType,
+            notes: ex.notes,
+            order: ex.order,
+            supersetWith: ex.supersetWith,
+          };
+        }
+        if (ex.supersetWith === oldId) {
+          return { ...ex, supersetWith: normalizedReplacement.id };
+        }
+        return ex;
+      })
+    );
+
+    setSets((prev) => {
+      const next = { ...prev };
+      next[normalizedReplacement.id] = prev[oldId] || [];
+      delete next[oldId];
+      return next;
+    });
+
+    navigation.setParams({
+      replaceExerciseId: undefined,
+      replacementExercise: undefined,
+    });
+  }, [replaceExerciseId, replacementExercise, started, navigation]);
 
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
@@ -1531,7 +1698,52 @@ export default function RoutineDetailScreen() {
   };
 
   const renderExerciseCard = useCallback(
-    ({ item }: { item: ExerciseRequestDto }) => {
+    ({
+      item,
+      drag,
+      isActive,
+    }: {
+      item: ExerciseRequestDto;
+      drag?: () => void;
+      isActive?: boolean;
+    }) => {
+      if (reorderMode) {
+        return (
+          <ScaleDecorator>
+            <TouchableOpacity
+              onLongPress={drag}
+              disabled={isActive}
+              style={{
+                opacity: isActive ? 0.9 : 1,
+                marginBottom: 12,
+              }}
+            >
+              <View
+                style={[
+                  styles.reorderCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Icon name="drag-indicator" size={24} color={theme.textTertiary} />
+                <CachedExerciseImage
+                  imageUrl={item.imageUrl}
+                  style={styles.reorderImage}
+                />
+                <Text
+                  style={[styles.reorderName, { color: theme.text }]}
+                  numberOfLines={2}
+                >
+                  {item.name}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScaleDecorator>
+        );
+      }
+
       const supersetExercise = item.supersetWith
         ? exercisesState.find((ex) => ex.id === item.supersetWith)
         : null;
@@ -1549,7 +1761,13 @@ export default function RoutineDetailScreen() {
           onStartRestTimer={handleStartRestTimer}
           onCancelRestTimer={handleCancelRestTimer}
           onShowUndoSnackbar={handleShowUndoSnackbar}
-          showOptions={false}
+          showOptions={started && !sessionView}
+          onReorder={handleReorderFromHeader}
+          onReplace={() => handleReplaceExercise(item.id)}
+          onDelete={() => handleDeleteExercise(item.id)}
+          onAddSuperset={(targetId) => handleAddSuperset(item.id, targetId)}
+          onRemoveSuperset={() => handleRemoveSuperset(item.id)}
+          availableExercises={exercisesState}
           supersetWith={item.supersetWith}
           supersetExerciseName={supersetExercise?.name}
           previousSessions={previousSessions}
@@ -1563,11 +1781,18 @@ export default function RoutineDetailScreen() {
       started,
       sessionView,
       sets,
+      reorderMode,
+      theme,
       handleStartRestTimer,
       handleCancelRestTimer,
       handleShowUndoSnackbar,
       handleChangeSetsForExercise,
       handleChangeExercise,
+      handleReorderFromHeader,
+      handleReplaceExercise,
+      handleDeleteExercise,
+      handleAddSuperset,
+      handleRemoveSuperset,
     ]
   );
 
@@ -1671,30 +1896,82 @@ export default function RoutineDetailScreen() {
         />
       )}
 
-      <FlatList
-        data={exercisesState}
-        scrollEnabled={!isSaving}
-        keyExtractor={(item) => item.id}
-        initialNumToRender={4}
-        maxToRenderPerBatch={5}
-        windowSize={7}
-        removeClippedSubviews
-        ListHeaderComponent={
-          <RoutineHeader
-            routineTitle={routineTitle}
-            subtitle={sessionView ? sessionDateLabel : undefined}
-            started={started}
-            routineId={routineData?.id}
-            onStart={handleStartRoutine}
-            onEdit={goToEditRoutine}
-            onChangeTitle={setRoutineTitle}
-            readonly={readonly}
-            hideActions={Boolean(sessionView)}
-          />
-        }
-        renderItem={renderExerciseCard}
-        contentContainerStyle={{ paddingTop: started ? 80 : 0, padding: 16 }}
-      />
+      {reorderMode && reorderFromButton && (
+        <View
+          style={[
+            styles.reorderBar,
+            {
+              backgroundColor: theme.card,
+              borderBottomColor: theme.border,
+              top: started ? 72 : 0,
+            },
+          ]}
+        >
+          <Text style={[styles.reorderHintText, { color: theme.textSecondary }]}>
+            Arrastra para reordenar
+          </Text>
+          <TouchableOpacity
+            style={[styles.reorderDoneButton, { backgroundColor: theme.primary }]}
+            onPress={handleConfirmReorder}
+          >
+            <Icon name="check" size={18} color="#fff" />
+            <Text style={styles.reorderDoneText}>Listo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {reorderMode ? (
+        <DraggableFlatList
+          data={reorderFromButton ? tempExercisesOrder : exercisesState}
+          keyExtractor={(item) => item.id}
+          onDragEnd={({ data }) => handleReorderComplete(data)}
+          ListHeaderComponent={
+            <RoutineHeader
+              routineTitle={routineTitle}
+              subtitle={sessionView ? sessionDateLabel : undefined}
+              started={started}
+              routineId={routineData?.id}
+              onStart={handleStartRoutine}
+              onEdit={goToEditRoutine}
+              onChangeTitle={setRoutineTitle}
+              readonly={readonly}
+              hideActions={Boolean(sessionView) || reorderMode}
+            />
+          }
+          renderItem={({ item, drag, isActive }: RenderItemParams<ExerciseRequestDto>) =>
+            renderExerciseCard({ item, drag, isActive })
+          }
+          contentContainerStyle={{
+            paddingTop: started ? (reorderFromButton ? 130 : 80) : 0,
+            padding: 16,
+          }}
+        />
+      ) : (
+        <FlatList
+          data={exercisesState}
+          scrollEnabled={!isSaving}
+          keyExtractor={(item) => item.id}
+          initialNumToRender={4}
+          maxToRenderPerBatch={5}
+          windowSize={7}
+          removeClippedSubviews
+          ListHeaderComponent={
+            <RoutineHeader
+              routineTitle={routineTitle}
+              subtitle={sessionView ? sessionDateLabel : undefined}
+              started={started}
+              routineId={routineData?.id}
+              onStart={handleStartRoutine}
+              onEdit={goToEditRoutine}
+              onChangeTitle={setRoutineTitle}
+              readonly={readonly}
+              hideActions={Boolean(sessionView)}
+            />
+          }
+          renderItem={({ item }) => renderExerciseCard({ item })}
+          contentContainerStyle={{ paddingTop: started ? 80 : 0, padding: 16 }}
+        />
+      )}
 
       {!sessionView && !routineData?.id && !started && (
         <TouchableOpacity
@@ -1815,6 +2092,54 @@ const styles = StyleSheet.create({
   },
   savingText: {
     marginTop: 12,
+    fontSize: RFValue(14),
+    fontWeight: "600",
+  },
+  reorderBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  reorderHintText: {
+    fontSize: RFValue(12),
+    flex: 1,
+    marginRight: 12,
+  },
+  reorderDoneButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  reorderDoneText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: RFValue(13),
+  },
+  reorderCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  reorderImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+  },
+  reorderName: {
+    flex: 1,
     fontSize: RFValue(14),
     fontWeight: "600",
   },

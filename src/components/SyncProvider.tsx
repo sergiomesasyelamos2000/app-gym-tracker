@@ -84,12 +84,16 @@ export function SyncProvider({ children }: SyncProviderProps) {
     setPendingOpsCount(count);
   };
 
-  // Animate sync banner in/out
+  // Solo mostrar banner cuando hay cambios pendientes reales (no en cada auto-sync vacío)
+  const hasPendingWork =
+    pendingOpsCount > 0 || pendingOperations > 0;
+  const shouldShowSyncBanner =
+    hasPendingWork && (isSyncing || isSyncingNow);
+
   useEffect(() => {
-    if (isSyncing || isSyncingNow) {
+    if (shouldShowSyncBanner) {
       setShowSyncBanner(true);
 
-      // Fade in and slide down
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -104,7 +108,6 @@ export function SyncProvider({ children }: SyncProviderProps) {
         }),
       ]).start();
 
-      // Start spinning animation
       Animated.loop(
         Animated.timing(spinValue, {
           toValue: 1,
@@ -113,7 +116,6 @@ export function SyncProvider({ children }: SyncProviderProps) {
         })
       ).start();
     } else {
-      // Fade out and slide up
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -130,7 +132,7 @@ export function SyncProvider({ children }: SyncProviderProps) {
         spinValue.setValue(0);
       });
     }
-  }, [isSyncing, isSyncingNow]);
+  }, [shouldShowSyncBanner]);
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],

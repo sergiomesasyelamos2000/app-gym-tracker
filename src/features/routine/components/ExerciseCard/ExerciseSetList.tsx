@@ -119,6 +119,7 @@ const ExerciseSetList = ({
   const { theme, isDark } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
+  const [showColumnInfoModal, setShowColumnInfoModal] = useState(false);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(300)).current;
@@ -501,6 +502,100 @@ const ExerciseSetList = ({
     </Modal>
   );
 
+  const columnInfoItems = [
+    {
+      title: "SERIE",
+      description: "Número de la serie en el ejercicio.",
+    },
+    ...(started
+      ? [
+          {
+            title: "ANTERIOR",
+            description:
+              "Peso y repeticiones de la última vez que hiciste esta serie.",
+          },
+        ]
+      : []),
+    {
+      title: weightUnit.toUpperCase(),
+      description: "Peso usado en esta serie.",
+    },
+    {
+      title: started
+        ? "REPS"
+        : repsType === "reps"
+        ? "REPS"
+        : "RANGO",
+      description: started
+        ? "Repeticiones completadas en esta serie."
+        : repsType === "reps"
+        ? "Número objetivo de repeticiones por serie."
+        : "Rango objetivo de repeticiones (mínimo–máximo).",
+    },
+    {
+      title: "ASIS",
+      description:
+        "Repeticiones asistidas: las que completaste con ayuda (partner, máquina o bandas).",
+    },
+    ...(!readonly
+      ? [
+          {
+            title: "✓",
+            description: "Marca la serie como completada.",
+          },
+        ]
+      : []),
+  ];
+
+  const ColumnInfoModal = () => (
+    <Modal
+      visible={showColumnInfoModal}
+      transparent={true}
+      animationType="none"
+      onRequestClose={() => closeModal(() => setShowColumnInfoModal(false))}
+      onShow={openModal}
+      statusBarTranslucent={Platform.OS === "android"}
+    >
+      <TouchableWithoutFeedback
+        onPress={() => closeModal(() => setShowColumnInfoModal(false))}
+      >
+        <Animated.View
+          style={[modalStyles.overlay, { opacity: overlayOpacity }]}
+        >
+          <TouchableWithoutFeedback>
+            <Animated.View
+              style={[
+                modalStyles.content,
+                { transform: [{ translateY: modalTranslateY }] },
+              ]}
+            >
+              <View style={modalStyles.handle} />
+              <Text style={modalStyles.title}>Qué significa cada columna</Text>
+
+              {columnInfoItems.map((item) => (
+                <View key={item.title} style={styles.columnInfoRow}>
+                  <Text
+                    style={[styles.columnInfoTitle, { color: theme.primary }]}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.columnInfoDescription,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
+                </View>
+              ))}
+            </Animated.View>
+          </TouchableWithoutFeedback>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
   return (
     <>
       <View
@@ -515,7 +610,7 @@ const ExerciseSetList = ({
           },
         ]}
       >
-        <View
+        <TouchableOpacity
           style={{
             flex: isSmallScreen
               ? COLUMN_FLEX.small.serie
@@ -523,6 +618,8 @@ const ExerciseSetList = ({
             alignItems: "center",
             justifyContent: "center",
           }}
+          onPress={() => setShowColumnInfoModal(true)}
+          hitSlop={6}
         >
           <Text
             style={[
@@ -538,10 +635,10 @@ const ExerciseSetList = ({
           >
             SERIE
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {started && (
-          <View
+          <TouchableOpacity
             style={{
               flex: isSmallScreen
                 ? COLUMN_FLEX.small.anterior
@@ -549,6 +646,8 @@ const ExerciseSetList = ({
               alignItems: "center",
               justifyContent: "center",
             }}
+            onPress={() => setShowColumnInfoModal(true)}
+            hitSlop={6}
           >
             <Text
               style={[
@@ -564,7 +663,7 @@ const ExerciseSetList = ({
             >
               ANTERIOR
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
 
         <View
@@ -577,33 +676,39 @@ const ExerciseSetList = ({
             justifyContent: "center",
           }}
         >
-          <TouchableOpacity
-            style={styles.columnHeader}
-            onPress={() => !readonly && !started && setShowWeightModal(true)}
-            disabled={readonly || started}
-          >
-            <Text
-              style={[
-                styles.columnTitle,
-                {
-                  color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 8 : 10),
-                },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
+          <View style={styles.columnHeader}>
+            <TouchableOpacity
+              onPress={() => setShowColumnInfoModal(true)}
+              hitSlop={6}
             >
-              {weightUnit.toUpperCase()}
-            </Text>
+              <Text
+                style={[
+                  styles.columnTitle,
+                  {
+                    color: theme.textSecondary,
+                    fontSize: RFValue(isSmallScreen ? 8 : 10),
+                  },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                {weightUnit.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
             {!readonly && !started && (
-              <Icon
-                name="arrow-drop-down"
-                size={isSmallScreen ? 12 : 14}
-                color={theme.textTertiary}
-              />
+              <TouchableOpacity
+                onPress={() => setShowWeightModal(true)}
+                hitSlop={6}
+              >
+                <Icon
+                  name="arrow-drop-down"
+                  size={isSmallScreen ? 12 : 14}
+                  color={theme.textTertiary}
+                />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
 
         <View
@@ -620,36 +725,42 @@ const ExerciseSetList = ({
             justifyContent: "center",
           }}
         >
-          <TouchableOpacity
-            style={styles.columnHeader}
-            onPress={() => !readonly && !started && setShowRepsModal(true)}
-            disabled={readonly || started}
-          >
-            <Text
-              style={[
-                styles.columnTitle,
-                {
-                  color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 8 : 10),
-                },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
+          <View style={styles.columnHeader}>
+            <TouchableOpacity
+              onPress={() => setShowColumnInfoModal(true)}
+              hitSlop={6}
             >
-              {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO"}
-            </Text>
+              <Text
+                style={[
+                  styles.columnTitle,
+                  {
+                    color: theme.textSecondary,
+                    fontSize: RFValue(isSmallScreen ? 8 : 10),
+                  },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO"}
+              </Text>
+            </TouchableOpacity>
             {!readonly && !started && (
-              <Icon
-                name="arrow-drop-down"
-                size={isSmallScreen ? 12 : 14}
-                color={theme.textTertiary}
-              />
+              <TouchableOpacity
+                onPress={() => setShowRepsModal(true)}
+                hitSlop={6}
+              >
+                <Icon
+                  name="arrow-drop-down"
+                  size={isSmallScreen ? 12 : 14}
+                  color={theme.textTertiary}
+                />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
 
-        <View
+        <TouchableOpacity
           style={{
             flex: isSmallScreen
               ? COLUMN_FLEX.small.assisted
@@ -658,6 +769,8 @@ const ExerciseSetList = ({
             alignItems: "center",
             justifyContent: "center",
           }}
+          onPress={() => setShowColumnInfoModal(true)}
+          hitSlop={6}
         >
           <Text
             style={[
@@ -673,10 +786,10 @@ const ExerciseSetList = ({
           >
             ASIS
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {!readonly && (
-          <View
+          <TouchableOpacity
             style={{
               flex: isSmallScreen
                 ? COLUMN_FLEX.small.check
@@ -684,13 +797,15 @@ const ExerciseSetList = ({
               alignItems: "center",
               justifyContent: "center",
             }}
+            onPress={() => setShowColumnInfoModal(true)}
+            hitSlop={6}
           >
             <Icon
               name="done"
               size={isSmallScreen ? 16 : 18}
               color={theme.primary}
             />
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -708,6 +823,7 @@ const ExerciseSetList = ({
 
       <WeightModal />
       <RepsModal />
+      <ColumnInfoModal />
     </>
   );
 };
@@ -748,6 +864,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  columnInfoRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+  },
+  columnInfoTitle: {
+    fontSize: RFValue(13),
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  columnInfoDescription: {
+    fontSize: RFValue(12),
+    lineHeight: RFValue(17),
   },
 });
 

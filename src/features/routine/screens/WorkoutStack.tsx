@@ -23,6 +23,8 @@ export type WorkoutStackParamList = {
     sessionView?: boolean;
     sessionTitle?: string;
     sessionDateLabel?: string;
+    replaceExerciseId?: string;
+    replacementExercise?: ExerciseRequestDto;
   };
   ExerciseList: {
     routineId?: string;
@@ -31,6 +33,7 @@ export type WorkoutStackParamList = {
     replaceExerciseId?: string;
     draftTitle?: string;
     draftExercises?: ExerciseRequestDto[];
+    returnTo?: "RoutineEdit" | "RoutineDetail";
   };
   RoutineEdit: {
     id: string;

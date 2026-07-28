@@ -5,7 +5,7 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -114,6 +114,23 @@ const COMMON_MUSCLE_PATTERNS = [
   "gemelo",
 ];
 
+/** Body-part labels ↔ target muscle names used in the exercise catalog. */
+const MUSCLE_ALIAS_GROUPS: string[][] = [
+  ["pecho", "chest", "pectorales", "pecs"],
+  ["espalda", "back", "dorsales", "lats"],
+  ["hombros", "hombro", "shoulders", "shoulder", "deltoides", "delts"],
+  ["cintura", "waist", "abdominales", "abs", "core", "abdominal"],
+  ["gluteos", "glutes", "glute", "caderas", "hips"],
+  ["pantorrillas", "calves", "calf", "gemelo", "gemelos"],
+  ["antebrazos", "forearms"],
+  ["trapecios", "traps"],
+  ["isquiotibiales", "hamstrings", "isquio"],
+  ["cuadriceps", "quadriceps"],
+  ["biceps"],
+  ["triceps"],
+  ["cuello", "neck"],
+];
+
 const normalizeSearchText = (value: string) =>
   value
     .toLowerCase()
@@ -141,6 +158,40 @@ const matchesToken = (value: string, expected: string) => {
   );
 };
 
+const getMuscleAliasKeys = (name: string): string[] => {
+  const key = toFilterKey(name);
+  if (!key) return [];
+
+  const aliases = new Set<string>([key]);
+  for (const group of MUSCLE_ALIAS_GROUPS) {
+    const normalizedGroup = group.map(toFilterKey).filter(Boolean);
+    const belongs = normalizedGroup.some(
+      (alias) => alias === key || matchesToken(alias, key)
+    );
+    if (belongs) {
+      normalizedGroup.forEach((alias) => aliases.add(alias));
+    }
+  }
+  return Array.from(aliases);
+};
+
+const exerciseMatchesMuscle = (
+  exercise: ExerciseListItem,
+  selectedName: string
+) => {
+  const exerciseMuscles = [
+    ...(exercise.targetMuscles || []),
+    ...(exercise.secondaryMuscles || []),
+    ...(exercise.bodyParts || []),
+  ];
+  if (exerciseMuscles.length === 0) return false;
+
+  const selectedAliases = getMuscleAliasKeys(selectedName);
+  return exerciseMuscles.some((value) =>
+    selectedAliases.some((alias) => matchesToken(value, alias))
+  );
+};
+
 export default function ExerciseList() {
   const { theme } = useTheme();
   const route = useRoute<ExerciseListRouteProp>();
@@ -153,6 +204,7 @@ export default function ExerciseList() {
     singleSelection = false,
     draftTitle,
     draftExercises,
+    returnTo = "RoutineEdit",
   } = route.params || {};
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -178,6 +230,7 @@ export default function ExerciseList() {
   const [allExercises, setAllExercises] = useState<ExerciseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const listRef = useRef<FlatList<ExerciseListItem>>(null);
 
   const consumePendingCreatedExercise = useExerciseSelectionStore(
     (state) => state.consumePendingCreatedExercise
@@ -478,9 +531,7 @@ export default function ExerciseList() {
         const matchesMuscle =
           selectedMuscleNames.length === 0 ||
           selectedMuscleNames.some((selectedMuscleName) =>
-            (exercise.targetMuscles || []).some((value) =>
-              matchesToken(value, selectedMuscleName)
-            )
+            exerciseMatchesMuscle(exercise, selectedMuscleName)
           );
 
         return {
@@ -511,6 +562,15 @@ export default function ExerciseList() {
     selectedMuscleNames,
   ]);
 
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [searchQuery, selectedMuscleIds, selectedEquipmentIds]);
+
+  const clearSearchQuery = () => {
+    setSearchQuery("");
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
   const handleSelectExercise = (exercise: ExerciseRequestDto) => {
     const normalizedExercise = normalizeExerciseImage(exercise);
 
@@ -529,17 +589,29 @@ export default function ExerciseList() {
     if (selectedExercises.length === 0) return;
 
     if (mode === "replaceExercise" && routineId && replaceExerciseId) {
-      navigation.navigate({
-        name: "RoutineEdit",
-        params: {
-          id: routineId,
-          title: draftTitle,
-          exercises: draftExercises,
-          replaceExerciseId,
-          replacementExercise: selectedExercises[0],
-        },
-        merge: true,
-      });
+      if (returnTo === "RoutineDetail") {
+        navigation.navigate({
+          name: "RoutineDetail",
+          params: {
+            routineId,
+            replaceExerciseId,
+            replacementExercise: selectedExercises[0],
+          },
+          merge: true,
+        });
+      } else {
+        navigation.navigate({
+          name: "RoutineEdit",
+          params: {
+            id: routineId,
+            title: draftTitle,
+            exercises: draftExercises,
+            replaceExerciseId,
+            replacementExercise: selectedExercises[0],
+          },
+          merge: true,
+        });
+      }
       clearSelectionContext();
       return;
     }
@@ -659,7 +731,7 @@ export default function ExerciseList() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   style={styles.clearSearchButton}
-                  onPress={() => setSearchQuery("")}
+                  onPress={clearSearchQuery}
                   accessibilityRole="button"
                   accessibilityLabel="Limpiar busqueda"
                 >
@@ -878,8 +950,10 @@ export default function ExerciseList() {
 
           <View style={styles.listContainer}>
             <FlatList
+              ref={listRef}
               data={filteredExercises}
               keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <ExerciseItem
                   item={item}

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
+  PanResponder,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,14 +17,37 @@ interface Props {
   onDismiss: () => void;
 }
 
+const DISMISS_DISTANCE = 40;
+const DISMISS_VELOCITY = 0.5;
+
 const UndoSnackbar = ({ visible, message, onUndo, onDismiss }: Props) => {
   const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const onDismissRef = useRef(onDismiss);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  onDismissRef.current = onDismiss;
+
+  const clearAutoDismissTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const startAutoDismissTimer = () => {
+    clearAutoDismissTimer();
+    timerRef.current = setTimeout(() => {
+      onDismissRef.current();
+    }, 4000);
+  };
 
   useEffect(() => {
     if (visible) {
-      // Slide in with fade
+      translateY.setValue(100);
+      opacity.setValue(0);
+
       Animated.parallel([
         Animated.spring(translateY, {
           toValue: 0,
@@ -38,34 +62,75 @@ const UndoSnackbar = ({ visible, message, onUndo, onDismiss }: Props) => {
         }),
       ]).start();
 
-      // Auto dismiss after 4 seconds
-      const timer = setTimeout(() => {
-        onDismiss();
-      }, 4000);
+      startAutoDismissTimer();
 
-      return () => clearTimeout(timer);
-    } else {
-      // Slide out with fade
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 100,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      return undefined;
+      return () => clearAutoDismissTimer();
     }
+
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 100,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    return undefined;
   }, [visible]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          gestureState.dy > 4 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderGrant: () => {
+          clearAutoDismissTimer();
+        },
+        onPanResponderMove: (_, gestureState) => {
+          if (gestureState.dy > 0) {
+            translateY.setValue(gestureState.dy);
+          }
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (
+            gestureState.dy > DISMISS_DISTANCE ||
+            gestureState.vy > DISMISS_VELOCITY
+          ) {
+            onDismissRef.current();
+            return;
+          }
+
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 10,
+          }).start();
+          startAutoDismissTimer();
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 10,
+          }).start();
+          startAutoDismissTimer();
+        },
+      }),
+    [translateY]
+  );
 
   if (!visible) return null;
 
   return (
     <Animated.View
+      {...panResponder.panHandlers}
       style={[
         styles.container,
         {

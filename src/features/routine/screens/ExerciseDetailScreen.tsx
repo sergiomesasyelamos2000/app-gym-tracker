@@ -109,10 +109,21 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
     <style>
       html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
       video { width: 100%; height: 100%; object-fit: cover; }
+      /* Oculta el play nativo grande del WebView; solo usamos el botón RN */
+      video::-webkit-media-controls { display: none !important; }
+      video::-webkit-media-controls-enclosure { display: none !important; }
+      video::-webkit-media-controls-start-playback-button {
+        display: none !important;
+        -webkit-appearance: none;
+        opacity: 0;
+        pointer-events: none;
+        width: 0;
+        height: 0;
+      }
     </style>
   </head>
   <body>
-    <video id="exerciseVideo" src="${videoUrl}" playsinline webkit-playsinline muted loop autoplay></video>
+    <video id="exerciseVideo" src="${videoUrl}" playsinline webkit-playsinline muted loop autoplay controlslist="nodownload nofullscreen noremoteplayback" disablepictureinpicture></video>
     <script>
       const video = document.getElementById('exerciseVideo');
       function sendPausedState() {
@@ -126,6 +137,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
       };
       video.addEventListener('play', sendPausedState);
       video.addEventListener('pause', sendPausedState);
+      video.addEventListener('loadeddata', sendPausedState);
       sendPausedState();
     </script>
   </body>
@@ -154,6 +166,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
           androidLayerType="hardware"
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
+          pointerEvents="none"
           onLoadEnd={onLoadEnd}
           onMessage={(event) => {
             try {
@@ -261,6 +274,7 @@ const ExerciseImage = ({ exercise, style, onLoadEnd }: ExerciseImageProps) => {
           androidLayerType="hardware"
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
+          pointerEvents="none"
           onLoadEnd={onLoadEnd}
           onMessage={(event) => {
             try {
@@ -931,12 +945,8 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const [mediaLoading, setMediaLoading] = useState(hasMedia);
   const [refreshing, setRefreshing] = useState(false);
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
-  const mediaLabel = exercise.videoUrl?.trim() ? "video" : "imagen";
-  const loadingMessage = loading
-    ? "Cargando histórico..."
-    : mediaLoading
-    ? `Cargando ${mediaLabel}...`
-    : "";
+  const isScreenLoading = loading || mediaLoading;
+  const loadingMessage = "Cargando...";
 
   // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
@@ -1071,7 +1081,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {(loading || mediaLoading) && (
+      {isScreenLoading && (
         <View style={styles.loadingOverlay} pointerEvents="auto">
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>{loadingMessage}</Text>
@@ -1082,10 +1092,11 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={refreshing && !isScreenLoading}
             onRefresh={onRefresh}
             colors={[theme.primary]}
             tintColor={theme.primary}
+            enabled={!isScreenLoading}
           />
         }
         showsVerticalScrollIndicator={false}
