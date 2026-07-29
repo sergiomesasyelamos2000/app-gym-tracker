@@ -96,7 +96,7 @@ export default function NutritionStack() {
       screenOptions={{
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.text,
-        contentStyle: { backgroundColor: theme.background },
+        contentStyle: { backgroundColor: theme.backgroundSecondary },
         headerShadowVisible: false,
       }}
     >

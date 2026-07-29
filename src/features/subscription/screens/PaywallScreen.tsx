@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import { Crown, X, Check } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BaseNavigation } from "../../../types";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { withOpacity } from "../../../utils/themeStyles";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 
 interface PaywallScreenProps {
@@ -29,6 +31,8 @@ export function PaywallScreen({
   message,
 }: PaywallScreenProps) {
   const navigation = useNavigation<BaseNavigation>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handleUpgrade = () => {
     onClose();
@@ -60,14 +64,13 @@ export function PaywallScreen({
       statusBarTranslucent={Platform.OS === "android"}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            <Crown size={24} color="#f59e0b" />
+            <Crown size={24} color={theme.warning} />
             <Text style={styles.headerTitle}>Premium</Text>
           </View>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <X size={24} color="#6b7280" />
+            <X size={24} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -76,16 +79,14 @@ export function PaywallScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section */}
           <View style={styles.hero}>
             <View style={styles.iconContainer}>
-              <Crown size={64} color="#f59e0b" />
+              <Crown size={64} color={theme.warning} />
             </View>
             <Text style={styles.title}>{title || defaultTitle}</Text>
             <Text style={styles.message}>{message || defaultMessage}</Text>
           </View>
 
-          {/* Feature Context */}
           {feature && (
             <View style={styles.featureContext}>
               <Text style={styles.featureContextText}>
@@ -95,18 +96,20 @@ export function PaywallScreen({
             </View>
           )}
 
-          {/* Features List */}
           <View style={styles.featuresContainer}>
             <Text style={styles.featuresTitle}>Premium incluye:</Text>
             {premiumFeatures.map((feat, index) => (
               <View key={index} style={styles.featureRow}>
-                <Check size={20} color="#10b981" style={styles.checkIcon} />
+                <Check
+                  size={20}
+                  color={theme.success}
+                  style={styles.checkIcon}
+                />
                 <Text style={styles.featureText}>{feat}</Text>
               </View>
             ))}
           </View>
 
-          {/* Pricing Preview */}
           <View style={styles.pricingPreview}>
             <View style={styles.pricingOption}>
               <Text style={styles.pricingLabel}>Mensual</Text>
@@ -120,14 +123,17 @@ export function PaywallScreen({
             </View>
           </View>
 
-          {/* CTA Buttons */}
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.upgradeButton}
               onPress={handleUpgrade}
               activeOpacity={0.8}
             >
-              <Crown size={20} color="#ffffff" style={styles.buttonIcon} />
+              <Crown
+                size={20}
+                color={theme.onPrimary}
+                style={styles.buttonIcon}
+              />
               <Text style={styles.upgradeButtonText}>Actualizar a Premium</Text>
             </TouchableOpacity>
 
@@ -136,7 +142,6 @@ export function PaywallScreen({
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
           <SubscriptionLegalFooter />
         </ScrollView>
       </View>
@@ -144,167 +149,168 @@ export function PaywallScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTitle: {
-    marginLeft: 8,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  hero: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 24,
-  },
-  iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#fef3c7",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  message: {
-    fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  featureContext: {
-    marginHorizontal: 24,
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: "#eff6ff",
-    borderRadius: 12,
-  },
-  featureContextText: {
-    fontSize: 14,
-    color: "#1e40af",
-    textAlign: "center",
-  },
-  featureName: {
-    fontWeight: "600",
-  },
-  featuresContainer: {
-    marginHorizontal: 24,
-    marginBottom: 24,
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 16,
-  },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  checkIcon: {
-    marginRight: 12,
-  },
-  featureText: {
-    fontSize: 15,
-    color: "#374151",
-    flex: 1,
-  },
-  pricingPreview: {
-    flexDirection: "row",
-    marginHorizontal: 24,
-    marginBottom: 24,
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    padding: 16,
-  },
-  pricingOption: {
-    flex: 1,
-    alignItems: "center",
-  },
-  pricingDivider: {
-    width: 1,
-    backgroundColor: "#e5e7eb",
-    marginHorizontal: 16,
-  },
-  pricingLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#6b7280",
-    marginBottom: 4,
-  },
-  pricingPrice: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  pricingSavings: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#10b981",
-  },
-  actions: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  upgradeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f59e0b",
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  upgradeButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  laterButton: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  laterButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6b7280",
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    headerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    headerTitle: {
+      marginLeft: 8,
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.text,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 32,
+    },
+    hero: {
+      alignItems: "center",
+      paddingHorizontal: 24,
+      paddingTop: 32,
+      paddingBottom: 24,
+    },
+    iconContainer: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: withOpacity(theme.warning, 18),
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: theme.text,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    message: {
+      fontSize: 16,
+      color: theme.textSecondary,
+      textAlign: "center",
+      lineHeight: 24,
+    },
+    featureContext: {
+      marginHorizontal: 24,
+      marginBottom: 24,
+      padding: 16,
+      backgroundColor: theme.selection,
+      borderRadius: 12,
+    },
+    featureContextText: {
+      fontSize: 14,
+      color: theme.info,
+      textAlign: "center",
+    },
+    featureName: {
+      fontWeight: "600",
+    },
+    featuresContainer: {
+      marginHorizontal: 24,
+      marginBottom: 24,
+    },
+    featuresTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    featureRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    checkIcon: {
+      marginRight: 12,
+    },
+    featureText: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      flex: 1,
+    },
+    pricingPreview: {
+      flexDirection: "row",
+      marginHorizontal: 24,
+      marginBottom: 24,
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 16,
+    },
+    pricingOption: {
+      flex: 1,
+      alignItems: "center",
+    },
+    pricingDivider: {
+      width: 1,
+      backgroundColor: theme.divider,
+      marginHorizontal: 16,
+    },
+    pricingLabel: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: theme.textSecondary,
+      marginBottom: 4,
+    },
+    pricingPrice: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.text,
+    },
+    pricingSavings: {
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "600",
+      color: theme.success,
+    },
+    actions: {
+      paddingHorizontal: 24,
+      marginBottom: 16,
+    },
+    upgradeButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    buttonIcon: {
+      marginRight: 8,
+    },
+    upgradeButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.onPrimary,
+    },
+    laterButton: {
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    laterButtonText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: theme.textSecondary,
+    },
+  });

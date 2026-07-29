@@ -598,7 +598,7 @@ const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
     },
     periodButtonTextActive: {
-      color: "#ffffff",
+      color: theme.onPrimary,
     },
     rangeText: {
       marginBottom: 14,

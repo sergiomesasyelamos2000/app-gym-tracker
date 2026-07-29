@@ -1652,7 +1652,8 @@ const createStyles = (theme: Theme) =>
         ? RFValue(9)
         : RFValue(10),
       fontWeight: "600",
-      color: "#E0D7F5",
+      color: theme.onPrimary,
+      opacity: 0.85,
       marginBottom: 2,
     },
     weightValue: {
@@ -1662,7 +1663,7 @@ const createStyles = (theme: Theme) =>
         ? RFValue(13)
         : RFValue(14),
       fontWeight: "bold",
-      color: "#FFFFFF",
+      color: theme.onPrimary,
     },
     historyStats: {
       flexDirection: "row",

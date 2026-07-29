@@ -1,30 +1,6 @@
 // themeStyles.ts - Utilidades de estilos globales para temas
 import { ViewStyle, TextStyle } from "react-native";
-
-interface Theme {
-  primary: string;
-  primaryLight: string;
-  primaryDark: string;
-  background: string;
-  backgroundSecondary: string;
-  card: string;
-  text: string;
-  textSecondary: string;
-  textTertiary: string;
-  border: string;
-  divider: string;
-  inputBackground: string;
-  inputBorder: string;
-  success: string;
-  error: string;
-  warning: string;
-  info: string;
-  shadowColor: string;
-  tabBarBackground: string;
-  tabBarBorder: string;
-  tabBarActive: string;
-  tabBarInactive: string;
-}
+import type { Theme } from "../contexts/ThemeContext";
 
 /**
  * Obtiene un color semi-transparente a partir de un color base
@@ -32,20 +8,22 @@ interface Theme {
  * @param opacity Opacidad (0-100)
  */
 export const withOpacity = (color: string, opacity: number): string => {
-  // Convertir opacidad de 0-100 a hex (0-255)
+  if (color.startsWith("rgba") || color.startsWith("rgb")) {
+    return color;
+  }
   const alpha = Math.round((opacity / 100) * 255)
     .toString(16)
     .padStart(2, "0");
-  return `${color}${alpha}`;
+  const base = color.length === 9 ? color.slice(0, 7) : color;
+  return `${base}${alpha}`;
 };
 
-/**
- * Estilos comunes para cards
- */
 export const getCardStyle = (theme: Theme): ViewStyle => ({
   backgroundColor: theme.card,
   borderRadius: 16,
   padding: 16,
+  borderWidth: 1,
+  borderColor: theme.border,
   shadowColor: theme.shadowColor,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
@@ -53,22 +31,14 @@ export const getCardStyle = (theme: Theme): ViewStyle => ({
   elevation: 4,
 });
 
-/**
- * Estilos comunes para inputs
- */
 export const getInputStyle = (theme: Theme): ViewStyle => ({
   backgroundColor: theme.inputBackground,
   borderWidth: 1,
   borderColor: theme.inputBorder,
   borderRadius: 12,
   padding: 12,
-  // fontSize is not valid for ViewStyle, so it has been removed
-  // color property removed as it is not valid for ViewStyle
 });
 
-/**
- * Estilos comunes para botones primarios
- */
 export const getPrimaryButtonStyle = (theme: Theme): ViewStyle => ({
   backgroundColor: theme.primary,
   borderRadius: 12,
@@ -78,9 +48,12 @@ export const getPrimaryButtonStyle = (theme: Theme): ViewStyle => ({
   justifyContent: "center",
 });
 
-/**
- * Estilos comunes para botones secundarios
- */
+export const getPrimaryButtonTextStyle = (theme: Theme): TextStyle => ({
+  color: theme.onPrimary,
+  fontSize: 16,
+  fontWeight: "700",
+});
+
 export const getSecondaryButtonStyle = (theme: Theme): ViewStyle => ({
   backgroundColor: theme.backgroundSecondary,
   borderWidth: 1,
@@ -92,21 +65,52 @@ export const getSecondaryButtonStyle = (theme: Theme): ViewStyle => ({
   justifyContent: "center",
 });
 
-/**
- * Estilos comunes para modales
- */
+export const getSecondaryButtonTextStyle = (theme: Theme): TextStyle => ({
+  color: theme.text,
+  fontSize: 16,
+  fontWeight: "600",
+});
+
+export const getGhostButtonStyle = (theme: Theme): ViewStyle => ({
+  backgroundColor: "transparent",
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+export const getDestructiveButtonStyle = (theme: Theme): ViewStyle => ({
+  backgroundColor: theme.destructive,
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+export const getDestructiveButtonTextStyle = (theme: Theme): TextStyle => ({
+  color: theme.onDestructive,
+  fontSize: 16,
+  fontWeight: "700",
+});
+
+export const getOverlayStyle = (theme: Theme): ViewStyle => ({
+  flex: 1,
+  backgroundColor: theme.overlay,
+  justifyContent: "flex-end",
+});
+
 export const getModalStyle = (theme: Theme) => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: withOpacity("#000000", 50),
-    justifyContent: "flex-end",
-  } as ViewStyle,
+  overlay: getOverlayStyle(theme),
   content: {
-    backgroundColor: theme.card,
+    backgroundColor: theme.surfaceElevated,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: theme.border,
   } as ViewStyle,
   handle: {
     width: 40,
@@ -125,18 +129,12 @@ export const getModalStyle = (theme: Theme) => ({
   } as TextStyle,
 });
 
-/**
- * Estilos para dividers
- */
 export const getDividerStyle = (theme: Theme): ViewStyle => ({
   height: 1,
   backgroundColor: theme.divider,
   marginVertical: 12,
 });
 
-/**
- * Estilos para textos
- */
 export const getTextStyles = (theme: Theme) => ({
   primary: {
     color: theme.text,
@@ -162,9 +160,6 @@ export const getTextStyles = (theme: Theme) => ({
   } as TextStyle,
 });
 
-/**
- * Obtiene el color de estado apropiado según el tipo
- */
 export const getStatusColor = (
   theme: Theme,
   status: "success" | "error" | "warning" | "info"
@@ -183,9 +178,6 @@ export const getStatusColor = (
   }
 };
 
-/**
- * Estilos para listas
- */
 export const getListStyles = (theme: Theme) => ({
   container: {
     backgroundColor: theme.background,
@@ -205,16 +197,11 @@ export const getListStyles = (theme: Theme) => ({
   } as ViewStyle,
 });
 
-/**
- * Estilos para chips/tags
- */
 export const getChipStyle = (
   theme: Theme,
   selected: boolean = false
 ): ViewStyle => ({
-  backgroundColor: selected
-    ? withOpacity(theme.primary, 20)
-    : theme.backgroundSecondary,
+  backgroundColor: selected ? theme.selection : theme.backgroundSecondary,
   borderWidth: 1,
   borderColor: selected ? withOpacity(theme.primary, 40) : theme.border,
   borderRadius: 20,
@@ -224,9 +211,6 @@ export const getChipStyle = (
   alignItems: "center",
 });
 
-/**
- * Estilos para opciones seleccionables (usado en modales de configuración)
- */
 export const getOptionStyle = (theme: Theme, selected: boolean = false) => ({
   container: {
     flexDirection: "row",
@@ -235,9 +219,7 @@ export const getOptionStyle = (theme: Theme, selected: boolean = false) => ({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: selected
-      ? withOpacity(theme.primary, 10)
-      : theme.backgroundSecondary,
+    backgroundColor: selected ? theme.selection : theme.backgroundSecondary,
     borderWidth: 2,
     borderColor: selected ? theme.primary : "transparent",
   } as ViewStyle,
@@ -257,9 +239,6 @@ export const getOptionStyle = (theme: Theme, selected: boolean = false) => ({
   } as ViewStyle,
 });
 
-/**
- * Estilos para rows completadas (ejercicios, tareas)
- */
 export const getCompletedRowStyle = (
   theme: Theme,
   completed: boolean
@@ -272,9 +251,6 @@ export const getCompletedRowStyle = (
   borderColor: completed ? withOpacity(theme.success, 30) : "transparent",
 });
 
-/**
- * Estilos para contenedores de columnas/headers de tablas
- */
 export const getTableHeaderStyle = (theme: Theme): ViewStyle => ({
   backgroundColor: theme.backgroundSecondary,
   paddingVertical: 8,
@@ -283,14 +259,8 @@ export const getTableHeaderStyle = (theme: Theme): ViewStyle => ({
   marginBottom: 12,
 });
 
-/**
- * Estilos para botones de acción destructiva (eliminar, cancelar)
- */
-export const getDestructiveButtonStyle = (theme: Theme): ViewStyle => ({
-  backgroundColor: theme.error,
-  borderRadius: 12,
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  alignItems: "center",
-  justifyContent: "center",
+export const getSelectionStyle = (theme: Theme, selected: boolean): ViewStyle => ({
+  backgroundColor: selected ? theme.selection : theme.card,
+  borderColor: selected ? theme.primary : theme.border,
+  borderWidth: 1,
 });

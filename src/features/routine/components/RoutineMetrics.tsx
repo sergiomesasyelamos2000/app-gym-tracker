@@ -180,6 +180,7 @@ export const RoutineMetrics: React.FC<Props> = ({
         <Text
           style={[
             styles.finishButtonText,
+            { color: theme.onPrimary },
             isSmallScreen && styles.finishButtonTextSmall,
           ]}
         >
@@ -266,7 +267,6 @@ const styles = StyleSheet.create({
   finishButtonText: {
     fontSize: RFValue(13),
     fontWeight: "700",
-    color: "#FFFFFF",
     letterSpacing: 0.2,
   },
   finishButtonTextSmall: {

@@ -3,6 +3,7 @@ import { Alert, Platform } from "react-native";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import {
   deepLinkToSubscriptions,
+  ErrorCode,
   getReceiptDataIOS,
   requestReceiptRefreshIOS,
   useIAP,
@@ -22,6 +23,62 @@ import { getErrorMessage } from "../../../types";
 import type { BaseNavigation } from "../../../types";
 
 const isIos = Platform.OS === "ios";
+
+const getErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== "object") return undefined;
+  if (!("code" in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+};
+
+const isUserCancelledPurchase = (error: unknown): boolean => {
+  const code = getErrorCode(error);
+  if (code === ErrorCode.UserCancelled || code === "user-cancelled") {
+    return true;
+  }
+
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("user cancelled") ||
+    message.includes("user canceled") ||
+    message.includes("cancelled the purchase") ||
+    message.includes("canceled the purchase")
+  );
+};
+
+const getApplePurchaseErrorMessage = (error: unknown): string => {
+  const code = getErrorCode(error);
+
+  switch (code) {
+    case ErrorCode.NetworkError:
+    case "network-error":
+      return "Comprueba tu conexion e intentalo de nuevo.";
+    case ErrorCode.ItemUnavailable:
+    case ErrorCode.SkuNotFound:
+    case "item-unavailable":
+    case "sku-not-found":
+      return "Este plan no esta disponible ahora mismo.";
+    case ErrorCode.AlreadyOwned:
+    case ErrorCode.DuplicatePurchase:
+    case "already-owned":
+    case "duplicate-purchase":
+      return "Ya tienes este plan. Prueba a restaurar compras.";
+    case ErrorCode.BillingUnavailable:
+    case ErrorCode.IapNotAvailable:
+    case "billing-unavailable":
+    case "iap-not-available":
+      return "Las compras no estan disponibles en este dispositivo.";
+    case ErrorCode.ServiceError:
+    case ErrorCode.ServiceTimeout:
+    case ErrorCode.RemoteError:
+    case "service-error":
+    case "service-timeout":
+    case "remote-error":
+      return "La App Store no responde ahora mismo. Intentalo de nuevo en unos segundos.";
+    default:
+      return "No se pudo completar la compra. Intentalo de nuevo.";
+  }
+};
 
 export function useAppleIapCheckout() {
   const navigation = useNavigation<BaseNavigation>();
@@ -110,17 +167,27 @@ export function useAppleIapCheckout() {
     },
     onPurchaseError: (error) => {
       setLoading(false);
+
+      // User closed the App Store sheet — not an error for the user.
+      if (isUserCancelledPurchase(error)) {
+        return;
+      }
+
       Alert.alert(
-        "Error en la compra",
-        error.message || "No se pudo completar la compra."
+        "No se pudo completar la compra",
+        getApplePurchaseErrorMessage(error)
       );
     },
     onError: (error) => {
       setLoading(false);
+
+      if (isUserCancelledPurchase(error)) {
+        return;
+      }
+
       Alert.alert(
-        "Error",
-        getErrorMessage(error) ||
-          "No se pudo conectar con la App Store en este momento."
+        "No se pudo conectar con la App Store",
+        "Intentalo de nuevo en unos segundos."
       );
     },
   });
@@ -222,12 +289,9 @@ export function useAppleIapCheckout() {
         type: plan === SubscriptionPlan.LIFETIME ? "in-app" : "subs",
       });
     } catch (error) {
+      // Purchase outcome is handled by onPurchaseError / onPurchaseSuccess.
+      // Avoid a second Alert when the sheet is cancelled or the listener already fired.
       setLoading(false);
-      Alert.alert(
-        "Error",
-        getErrorMessage(error) ||
-          "No se pudo iniciar la compra en la App Store."
-      );
     }
   };
 
@@ -252,9 +316,13 @@ export function useAppleIapCheckout() {
         "Hemos sincronizado tu suscripcion desde la App Store."
       );
     } catch (error) {
+      if (isUserCancelledPurchase(error)) {
+        return;
+      }
+
       Alert.alert(
         "No se pudieron restaurar las compras",
-        getErrorMessage(error) || "Intentalo de nuevo en unos segundos."
+        "Intentalo de nuevo en unos segundos."
       );
     } finally {
       setLoading(false);

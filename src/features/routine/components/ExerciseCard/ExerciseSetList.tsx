@@ -376,7 +376,7 @@ const ExerciseSetList = ({
                 </View>
                 {weightUnit === "kg" && (
                   <View style={getOptionStyle(theme, true).checkCircle}>
-                    <Icon name="check" size={16} color="#fff" />
+                    <Icon name="check" size={16} color={theme.onPrimary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -406,7 +406,7 @@ const ExerciseSetList = ({
                 </View>
                 {weightUnit === "lbs" && (
                   <View style={getOptionStyle(theme, true).checkCircle}>
-                    <Icon name="check" size={16} color="#fff" />
+                    <Icon name="check" size={16} color={theme.onPrimary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -463,7 +463,7 @@ const ExerciseSetList = ({
                 </View>
                 {repsType === "reps" && (
                   <View style={getOptionStyle(theme, true).checkCircle}>
-                    <Icon name="check" size={16} color="#fff" />
+                    <Icon name="check" size={16} color={theme.onPrimary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -493,7 +493,7 @@ const ExerciseSetList = ({
                 </View>
                 {repsType === "range" && (
                   <View style={getOptionStyle(theme, true).checkCircle}>
-                    <Icon name="check" size={16} color="#fff" />
+                    <Icon name="check" size={16} color={theme.onPrimary} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -659,7 +659,14 @@ const ExerciseSetList = ({
                       onPress={closeColumnInfo}
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.columnInfoButtonText}>Entendido</Text>
+                      <Text
+                        style={[
+                          styles.columnInfoButtonText,
+                          { color: theme.onPrimary },
+                        ]}
+                      >
+                        Entendido
+                      </Text>
                     </TouchableOpacity>
                   </>
                 ) : null}
@@ -995,7 +1002,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   columnInfoButtonText: {
-    color: "#fff",
     fontSize: RFValue(14),
     fontWeight: "700",
   },

@@ -155,8 +155,8 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleThemeChange = async (value: boolean) => {
-    await setThemeMode(value ? "dark" : "light");
+  const handleThemeModeSelect = async (mode: "light" | "dark" | "auto") => {
+    await setThemeMode(mode);
   };
 
   const openEditProfileModal = () => {
@@ -462,6 +462,13 @@ export default function ProfileScreen() {
           <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
             {user.email}
           </Text>
+          {user.email?.toLowerCase().endsWith("@privaterelay.appleid.com") ? (
+            <Text
+              style={[styles.userEmailHint, { color: theme.textTertiary }]}
+            >
+              Correo oculto de Apple
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             style={[
@@ -677,45 +684,93 @@ export default function ProfileScreen() {
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            {/* Dark Mode */}
+            {/* Appearance */}
             <View
               style={[
                 styles.settingRow,
                 styles.settingRowBorder,
-                { borderBottomColor: theme.divider },
+                {
+                  borderBottomColor: theme.divider,
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  paddingVertical: 14,
+                },
               ]}
             >
-              <View
-                style={[
-                  styles.settingIconContainer,
-                  { backgroundColor: theme.primaryLight + "20" },
-                ]}
-              >
-                <Moon color={theme.primary} size={20} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Modo Oscuro
-                </Text>
-                <Text
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
                   style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
+                    styles.settingIconContainer,
+                    { backgroundColor: theme.primaryLight + "20" },
                   ]}
                 >
-                  {themeMode === "auto"
-                    ? "Automático (Sistema)"
-                    : isDark
-                    ? "Activado"
-                    : "Desactivado"}
-                </Text>
+                  <Moon color={theme.primary} size={20} />
+                </View>
+                <View style={styles.settingContent}>
+                  <Text style={[styles.settingTitle, { color: theme.text }]}>
+                    Apariencia
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {themeMode === "auto"
+                      ? "Sistema (recomendado)"
+                      : themeMode === "dark"
+                        ? "Oscuro"
+                        : "Claro"}
+                  </Text>
+                </View>
               </View>
-              <Switch
-                value={isDark}
-                onValueChange={handleThemeChange}
-                trackColor={{ false: theme.border, true: theme.primaryLight }}
-                thumbColor={isDark ? theme.primary : theme.inputBackground}
-              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginTop: 12,
+                  marginLeft: 52,
+                  gap: 8,
+                }}
+              >
+                {(
+                  [
+                    { mode: "auto" as const, label: "Sistema" },
+                    { mode: "light" as const, label: "Claro" },
+                    { mode: "dark" as const, label: "Oscuro" },
+                  ] as const
+                ).map(({ mode, label }) => {
+                  const selected = themeMode === mode;
+                  return (
+                    <TouchableOpacity
+                      key={mode}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      onPress={() => void handleThemeModeSelect(mode)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 10,
+                        alignItems: "center",
+                        backgroundColor: selected
+                          ? theme.selection
+                          : theme.backgroundSecondary,
+                        borderWidth: 1,
+                        borderColor: selected ? theme.primary : theme.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: selected ? "700" : "500",
+                          color: selected ? theme.primary : theme.textSecondary,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Rest Timer Notifications */}
@@ -1138,9 +1193,11 @@ export default function ProfileScreen() {
                 disabled={isSavingProfile}
               >
                 {isSavingProfile ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={theme.onPrimary} />
                 ) : (
-                  <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                  <Text
+                    style={[styles.modalButtonText, { color: theme.onPrimary }]}
+                  >
                     Guardar
                   </Text>
                 )}
@@ -1307,7 +1364,7 @@ export default function ProfileScreen() {
                 style={[styles.modalButton, { backgroundColor: theme.primary }]}
                 onPress={handleOpenPrivacyPolicy}
               >
-                <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                <Text style={[styles.modalButtonText, { color: theme.onPrimary }]}>
                   Ver política
                 </Text>
               </TouchableOpacity>
@@ -1382,6 +1439,10 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 16,
+    marginBottom: 4,
+  },
+  userEmailHint: {
+    fontSize: 12,
     marginBottom: 12,
   },
   editProfileButton: {

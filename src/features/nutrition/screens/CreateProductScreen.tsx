@@ -297,13 +297,13 @@ export default function CreateProductScreen() {
                     style={styles.imageActionButton}
                     onPress={handlePickImage}
                   >
-                    <Ionicons name="camera" size={RFValue(18)} color="#FFF" />
+                    <Ionicons name="camera" size={RFValue(18)} color={theme.onPrimary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.imageActionButton, styles.deleteImageButton]}
                     onPress={handleRemoveImage}
                   >
-                    <Ionicons name="trash" size={RFValue(18)} color="#FFF" />
+                    <Ionicons name="trash" size={RFValue(18)} color={theme.onDestructive} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -557,10 +557,10 @@ export default function CreateProductScreen() {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={theme.onPrimary} />
             ) : (
               <>
-                <Ionicons name="add-circle" size={RFValue(22)} color="#FFF" />
+                <Ionicons name="add-circle" size={RFValue(22)} color={theme.onPrimary} />
                 <Text style={styles.saveButtonText}>Crear Producto</Text>
               </>
             )}
@@ -830,7 +830,7 @@ const createStyles = (theme: Theme) =>
     saveButtonText: {
       fontSize: RFValue(16),
       fontWeight: "700",
-      color: "#FFF",
+      color: theme.onPrimary,
     },
     bottomPadding: {
       height: 32,

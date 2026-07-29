@@ -55,7 +55,9 @@ export const RoutineHeader: React.FC<Props> = ({
                 style={[styles.startButton, { backgroundColor: theme.primary }]}
                 onPress={onStart}
               >
-                <Text style={styles.startButtonText}>Iniciar</Text>
+                <Text style={[styles.startButtonText, { color: theme.onPrimary }]}>
+                  Iniciar
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -99,7 +101,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(26),
     fontWeight: "bold",
-    color: "#222",
     marginBottom: 8,
     textAlign: "center",
     letterSpacing: 0.5,
@@ -117,7 +118,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   startButton: {
-    backgroundColor: "#6C3BAA",
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 20,
@@ -125,13 +125,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   startButtonText: {
-    color: "#fff",
     fontSize: RFValue(15),
     fontWeight: "bold",
     letterSpacing: 0.5,
   },
   editButton: {
-    backgroundColor: "#EDEAF6",
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 20,
@@ -142,22 +140,18 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   editButtonText: {
-    color: "#6C3BAA",
     fontWeight: "bold",
     fontSize: RFValue(15),
     letterSpacing: 0.5,
   },
   inputContainer: { marginTop: 12, alignItems: "center" },
   titleInput: {
-    backgroundColor: "#fff",
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
     elevation: 2,
     fontSize: RFValue(16),
-    color: "#333",
     width: "95%",
     borderWidth: 1,
-    borderColor: "#EDEAF6",
   },
 });

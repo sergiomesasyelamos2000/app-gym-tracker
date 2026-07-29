@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import KeyboardDismissButton from "../components/KeyboardDismissButton";
+import { useTheme } from "../contexts/ThemeContext";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
 import { prefetchProductCatalog } from "../features/nutrition/services/nutritionService";
@@ -26,6 +27,7 @@ import { useSubscriptionStore } from "../store/useSubscriptionStore";
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
+  const { theme } = useTheme();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const fetchSubscription = useSubscriptionStore(
@@ -96,8 +98,13 @@ export const RootNavigator = () => {
   // Show loading screen while checking auth state
   if (isInitializing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C3BAA" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.backgroundSecondary },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -157,6 +164,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
   },
 });

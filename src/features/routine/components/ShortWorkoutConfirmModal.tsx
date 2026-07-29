@@ -75,7 +75,9 @@ export const ShortWorkoutConfirmModal = ({
               style={[styles.button, { backgroundColor: theme.primary }]}
               onPress={onContinue}
             >
-              <Text style={styles.buttonTextPrimary}>Continuar entrenando</Text>
+              <Text style={[styles.buttonTextPrimary, { color: theme.onPrimary }]}>
+                Continuar entrenando
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -165,7 +167,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonTextPrimary: {
-    color: "#FFFFFF",
     fontSize: RFValue(14),
     fontWeight: "600",
   },

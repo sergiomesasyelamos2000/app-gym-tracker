@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { BaseNavigation } from "../../../types/common";
 import {
   Alert,
@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { withOpacity } from "../../../utils/themeStyles";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 
 interface SettingItem {
@@ -28,11 +30,12 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const navigation = useNavigation<BaseNavigation>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isProfileComplete = useNutritionStore(
     (state) => state.isProfileComplete
   );
 
-  const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [weeklyReminders, setWeeklyReminders] = useState(true);
   const [metricUnits, setMetricUnits] = useState(true);
@@ -53,6 +56,18 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleOpenAppearance = () => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.navigate("Perfil");
+      return;
+    }
+    Alert.alert(
+      "Apariencia",
+      "Cambia el tema claro/oscuro en Perfil → Apariencia."
+    );
+  };
+
   const handleExportData = () => {
     Alert.alert("Export Data", "Export your nutrition data as CSV or JSON", [
       { text: "Cancel", style: "cancel" },
@@ -71,7 +86,6 @@ export default function SettingsScreen() {
           text: "Clear",
           style: "destructive",
           onPress: () => {
-            // Clear cache logic
             Alert.alert("Success", "Cache cleared successfully");
           },
         },
@@ -86,7 +100,6 @@ export default function SettingsScreen() {
         text: "Logout",
         style: "destructive",
         onPress: () => {
-          // Logout logic
           console.log("User logged out");
         },
       },
@@ -95,13 +108,12 @@ export default function SettingsScreen() {
 
   const generalSettings: SettingItem[] = [
     {
-      id: "dark-mode",
-      title: "Dark Mode",
-      subtitle: "Enable dark theme",
+      id: "appearance",
+      title: "Apariencia",
+      subtitle: "Tema claro/oscuro en Perfil → Apariencia",
       icon: "moon",
-      type: "toggle",
-      value: darkMode,
-      onValueChange: setDarkMode,
+      type: "navigate",
+      onPress: handleOpenAppearance,
     },
     {
       id: "notifications",
@@ -171,7 +183,7 @@ export default function SettingsScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.settingIconContainer}>
-        <Ionicons name={item.icon} size={RFValue(20)} color="#6C3BAA" />
+        <Ionicons name={item.icon} size={RFValue(20)} color={theme.primary} />
       </View>
 
       <View style={styles.settingContent}>
@@ -185,13 +197,20 @@ export default function SettingsScreen() {
         <Switch
           value={item.value}
           onValueChange={item.onValueChange}
-          trackColor={{ false: "#D0D0D0", true: "#9F7AC9" }}
-          thumbColor={item.value ? "#6C3BAA" : "#F4F3F4"}
+          trackColor={{
+            false: theme.border,
+            true: withOpacity(theme.primary, 55),
+          }}
+          thumbColor={item.value ? theme.primary : theme.surfaceElevated}
         />
       )}
 
       {item.type === "navigate" && (
-        <Ionicons name="chevron-forward" size={RFValue(20)} color="#999" />
+        <Ionicons
+          name="chevron-forward"
+          size={RFValue(20)}
+          color={theme.textTertiary}
+        />
       )}
     </TouchableOpacity>
   );
@@ -203,7 +222,11 @@ export default function SettingsScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={RFValue(24)} color="#333" />
+          <Ionicons
+            name="arrow-back"
+            size={RFValue(24)}
+            color={theme.text}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.headerRight} />
@@ -245,7 +268,11 @@ export default function SettingsScreen() {
                   styles.logoutIconContainer,
                 ]}
               >
-                <Ionicons name="log-out" size={RFValue(20)} color="#E74C3C" />
+                <Ionicons
+                  name="log-out"
+                  size={RFValue(20)}
+                  color={theme.destructive}
+                />
               </View>
               <View style={styles.settingContent}>
                 <Text style={[styles.settingTitle, styles.logoutText]}>
@@ -257,10 +284,10 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.aboutSection}>
-          <Text style={styles.aboutTitle}>Gym Tracker</Text>
+          <Text style={styles.aboutTitle}>EvoFit</Text>
           <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           <Text style={styles.aboutCopyright}>
-            2024 Gym Tracker. All rights reserved.
+            2024 EvoFit. All rights reserved.
           </Text>
         </View>
       </ScrollView>
@@ -268,114 +295,117 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: RFValue(18),
-    fontWeight: "600",
-    color: "#333",
-  },
-  headerRight: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: RFValue(13),
-    fontWeight: "600",
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginHorizontal: 16,
-    marginBottom: 8,
-  },
-  settingsGroup: {
-    backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  settingIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#F5EFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  settingContent: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: RFValue(15),
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 2,
-  },
-  settingSubtitle: {
-    fontSize: RFValue(12),
-    color: "#666",
-  },
-  logoutButton: {
-    borderBottomWidth: 0,
-  },
-  logoutIconContainer: {
-    backgroundColor: "#FFEBEE",
-  },
-  logoutText: {
-    color: "#E74C3C",
-  },
-  aboutSection: {
-    alignItems: "center",
-    paddingVertical: 32,
-    marginTop: 24,
-  },
-  aboutTitle: {
-    fontSize: RFValue(16),
-    fontWeight: "600",
-    color: "#6C3BAA",
-    marginBottom: 4,
-  },
-  aboutVersion: {
-    fontSize: RFValue(13),
-    color: "#666",
-    marginBottom: 8,
-  },
-  aboutCopyright: {
-    fontSize: RFValue(11),
-    color: "#999",
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backButton: {
+      padding: 8,
+    },
+    headerTitle: {
+      fontSize: RFValue(18),
+      fontWeight: "600",
+      color: theme.text,
+    },
+    headerRight: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+    },
+    section: {
+      marginTop: 24,
+    },
+    sectionTitle: {
+      fontSize: RFValue(13),
+      fontWeight: "600",
+      color: theme.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginHorizontal: 16,
+      marginBottom: 8,
+    },
+    settingsGroup: {
+      backgroundColor: theme.card,
+      marginHorizontal: 16,
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: theme.border,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    settingItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.divider,
+    },
+    settingIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: withOpacity(theme.primary, 12),
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    settingContent: {
+      flex: 1,
+    },
+    settingTitle: {
+      fontSize: RFValue(15),
+      fontWeight: "500",
+      color: theme.text,
+      marginBottom: 2,
+    },
+    settingSubtitle: {
+      fontSize: RFValue(12),
+      color: theme.textSecondary,
+    },
+    logoutButton: {
+      borderBottomWidth: 0,
+    },
+    logoutIconContainer: {
+      backgroundColor: withOpacity(theme.destructive, 12),
+    },
+    logoutText: {
+      color: theme.destructive,
+    },
+    aboutSection: {
+      alignItems: "center",
+      paddingVertical: 32,
+      marginTop: 24,
+    },
+    aboutTitle: {
+      fontSize: RFValue(16),
+      fontWeight: "600",
+      color: theme.primary,
+      marginBottom: 4,
+    },
+    aboutVersion: {
+      fontSize: RFValue(13),
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    aboutCopyright: {
+      fontSize: RFValue(11),
+      color: theme.textTertiary,
+    },
+  });

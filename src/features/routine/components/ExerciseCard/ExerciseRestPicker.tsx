@@ -444,7 +444,7 @@ const ExerciseRestPicker = ({
                 ]}
                 onPress={handleTimeConfirm}
               >
-                <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                <Text style={[styles.modalButtonText, { color: theme.onPrimary }]}>
                   Confirmar
                 </Text>
               </TouchableOpacity>

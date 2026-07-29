@@ -259,14 +259,14 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     toastContainer: {
-      backgroundColor: isDark ? "#181B27" : theme.card,
+      backgroundColor: theme.surfaceElevated,
       borderRadius: 18,
       padding: 14,
       alignSelf: "center",
       borderWidth: 1,
-      borderColor: isDark ? "#2A2F43" : `${theme.primary}44`,
+      borderColor: isDark ? theme.border : `${theme.primary}44`,
       elevation: 10,
-      shadowColor: "#000",
+      shadowColor: theme.shadowColor,
       shadowOpacity: isDark ? 0.35 : 0.14,
       shadowOffset: { width: 0, height: 10 },
       shadowRadius: 14,

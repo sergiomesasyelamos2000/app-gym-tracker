@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -27,6 +27,7 @@ import { SubscriptionPlan } from "@sergiomesasyelamos2000/shared";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 
 type CheckoutScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
@@ -39,6 +40,8 @@ export function CheckoutScreen() {
   const params = route.params;
   const webViewRef = useRef<WebView>(null);
   const hasStartedVerificationRef = useRef(false);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
@@ -123,10 +126,8 @@ export function CheckoutScreen() {
     const urlParams = new URLSearchParams(queryString);
     const sessionIdFromUrl = urlParams.get("session_id");
     const hasSuccessSignal =
-      url.includes("/subscription/success") ||
-      Boolean(sessionIdFromUrl);
+      url.includes("/subscription/success") || Boolean(sessionIdFromUrl);
 
-    // Check if success URL
     if (hasSuccessSignal && !hasStartedVerificationRef.current) {
       hasStartedVerificationRef.current = true;
       setVerifying(true);
@@ -167,7 +168,6 @@ export function CheckoutScreen() {
       }
     }
 
-    // Check if cancel URL
     if (url.includes("/subscription/cancel")) {
       Alert.alert("Pago Cancelado", "Has cancelado el proceso de pago.", [
         { text: "OK", onPress: () => navigation.goBack() },
@@ -193,7 +193,6 @@ export function CheckoutScreen() {
   const handleShouldStartLoadWithRequest = (request: any) => {
     const requestUrl = request?.url || "";
 
-    // iOS can try to open about:srcdoc externally, which is not needed here.
     if (requestUrl.startsWith("about:srcdoc")) {
       return false;
     }
@@ -205,7 +204,7 @@ export function CheckoutScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.verifyingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.verifyingText}>Verificando pago...</Text>
           <Text style={styles.verifyingSubtext}>
             Por favor espera mientras confirmamos tu compra
@@ -217,7 +216,9 @@ export function CheckoutScreen() {
 
   if (isIos) {
     const goToApplePlans = () => {
-      const state = navigation.getState() as { routeNames?: string[] } | undefined;
+      const state = navigation.getState() as
+        | { routeNames?: string[] }
+        | undefined;
       const routeNames = state?.routeNames || [];
 
       if (routeNames.includes("PlansScreen")) {
@@ -254,16 +255,14 @@ export function CheckoutScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
-          <X size={24} color="#374151" />
+          <X size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pago Seguro</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* WebView */}
       <WebView
         ref={webViewRef}
         source={{ uri: params.checkoutUrl }}
@@ -278,89 +277,89 @@ export function CheckoutScreen() {
         thirdPartyCookiesEnabled
       />
 
-      {/* Loading Indicator */}
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  closeButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  webView: {
-    flex: 1,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  verifyingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  verifyingText: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  verifyingSubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-  backButton: {
-    marginTop: 20,
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  backButtonText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  secondaryBackButton: {
-    marginTop: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  secondaryBackButtonText: {
-    color: "#6b7280",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    closeButton: {
+      padding: 8,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.text,
+    },
+    webView: {
+      flex: 1,
+    },
+    loadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    verifyingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    verifyingText: {
+      marginTop: 16,
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.text,
+    },
+    verifyingSubtext: {
+      marginTop: 8,
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    backButton: {
+      marginTop: 20,
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+    },
+    backButtonText: {
+      color: theme.onPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    secondaryBackButton: {
+      marginTop: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+    },
+    secondaryBackButtonText: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });

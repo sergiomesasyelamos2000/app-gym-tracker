@@ -147,7 +147,9 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                   ]}
                   disabled={!newNoteText.trim()}
                 >
-                  <Text style={styles.saveButtonText}>Guardar</Text>
+                  <Text style={[styles.saveButtonText, { color: theme.onPrimary }]}>
+                    Guardar
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -245,7 +247,6 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: RFValue(13),
-    color: "#FFFFFF",
     fontWeight: "600",
   },
   addNoteButton: {

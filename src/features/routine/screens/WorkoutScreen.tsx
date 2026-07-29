@@ -509,7 +509,14 @@ export default function WorkoutScreen() {
                 onPress={handleResumeWorkout}
               >
                 <MaterialIcons name="play-arrow" size={18} color="#fff" />
-                <Text style={styles.resumeButtonText}>Reanudar</Text>
+                <Text
+                  style={[
+                    styles.resumeButtonText,
+                    { color: theme.onPrimary },
+                  ]}
+                >
+                  Reanudar
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -693,13 +700,14 @@ const createStyles = (theme: Theme) =>
     bannerTitle: {
       fontSize: RFValue(12),
       fontWeight: "600",
-      color: "rgba(255, 255, 255, 0.8)",
+      color: theme.onPrimary,
+      opacity: 0.8,
       marginBottom: 2,
     },
     bannerRoutineName: {
       fontSize: RFValue(15),
       fontWeight: "700",
-      color: "#FFFFFF",
+      color: theme.onPrimary,
     },
     bannerActions: {
       flexDirection: "row",
@@ -737,7 +745,6 @@ const createStyles = (theme: Theme) =>
       elevation: 4,
     },
     resumeButtonText: {
-      color: "#FFFFFF",
       fontSize: RFValue(13),
       fontWeight: "700",
     },

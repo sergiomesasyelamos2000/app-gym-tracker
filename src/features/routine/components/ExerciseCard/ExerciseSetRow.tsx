@@ -346,7 +346,7 @@ const ExerciseSetRow = ({
                 { backgroundColor: getSetTypeColor(setType) },
               ]}
             >
-              <Icon name={setTypeIcon} size={11} color="#FFFFFF" />
+              <Icon name={setTypeIcon} size={11} color={theme.onPrimary} />
             </View>
           ) : null}
         </TouchableOpacity>
@@ -715,7 +715,10 @@ const ExerciseSetRow = ({
           }
         >
           <Animated.View
-            style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+            style={[
+              styles.modalOverlay,
+              { opacity: overlayOpacity, backgroundColor: theme.overlay },
+            ]}
           >
             <TouchableWithoutFeedback>
               <Animated.View
@@ -747,7 +750,7 @@ const ExerciseSetRow = ({
                         {
                           borderColor: theme.border,
                           backgroundColor: isSelected
-                            ? `${theme.primary}14`
+                            ? theme.selection
                             : theme.card,
                         },
                       ]}
@@ -764,10 +767,15 @@ const ExerciseSetRow = ({
                             <Icon
                               name={option.icon}
                               size={14}
-                              color="#FFFFFF"
+                              color={theme.onPrimary}
                             />
                           ) : (
-                            <View style={styles.modalTypeDot} />
+                            <View
+                              style={[
+                                styles.modalTypeDot,
+                                { backgroundColor: theme.onPrimary },
+                              ]}
+                            />
                           )}
                         </View>
                         <View style={styles.modalTextBlock}>
@@ -888,7 +896,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "flex-end",
   },
   modalCard: {
@@ -941,7 +948,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
   },
   modalTextBlock: {
     flex: 1,

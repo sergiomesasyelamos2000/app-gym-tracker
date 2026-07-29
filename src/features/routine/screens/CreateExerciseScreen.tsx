@@ -280,13 +280,13 @@ export default function CreateExerciseScreen() {
             width: dimensions.width,
             height: dimensions.height,
             borderRadius: 12,
-            backgroundColor: "#fff",
+            backgroundColor: theme.card,
             padding: 6,
             justifyContent: "center",
             alignItems: "center",
             borderWidth: 1,
-            borderColor: "#E5E7EB",
-            shadowColor: "#000",
+            borderColor: theme.border,
+            shadowColor: theme.shadowColor,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.05,
             shadowRadius: 2,
@@ -406,7 +406,7 @@ export default function CreateExerciseScreen() {
                       </View>
                       {isSelected && (
                         <View style={styles.checkCircle}>
-                          <Icon name="check" size={16} color="#fff" />
+                          <Icon name="check" size={16} color={theme.onPrimary} />
                         </View>
                       )}
                     </TouchableOpacity>
@@ -459,14 +459,14 @@ export default function CreateExerciseScreen() {
                 <>
                   <Image source={{ uri: imageUri }} style={styles.image} />
                   <View style={styles.imageOverlay}>
-                    <Icon name="photo-camera" size={24} color="#fff" />
+                    <Icon name="photo-camera" size={24} color="#FFFFFF" />
                     <Text style={styles.imageOverlayText}>Cambiar imagen</Text>
                   </View>
                 </>
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <View style={styles.imagePlaceholderIcon}>
-                    <Icon name="add-a-photo" size={32} color="#6C3BAA" />
+                    <Icon name="add-a-photo" size={32} color={theme.primary} />
                   </View>
                   <Text style={styles.imagePlaceholderText}>
                     Toca para agregar una imagen
@@ -642,7 +642,7 @@ export default function CreateExerciseScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={theme.onPrimary} />
             ) : (
               <Text style={styles.saveButtonText}>Crear ejercicio</Text>
             )}
@@ -764,7 +764,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       gap: 8,
     },
     imageOverlayText: {
-      color: "#fff",
+      color: "#FFFFFF",
       fontWeight: "600",
       fontSize: RFValue(14),
     },
@@ -870,14 +870,14 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       elevation: 0,
     },
     saveButtonText: {
-      color: "#fff",
+      color: theme.onPrimary,
       fontSize: RFValue(16),
       fontWeight: "600",
     },
     modalOverlay: {
       flex: 1,
       justifyContent: "flex-end",
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: theme.overlay,
     },
     modalContent: {
       backgroundColor: theme.card,
@@ -957,7 +957,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       alignItems: "center",
     },
     modalConfirmText: {
-      color: "#fff",
+      color: theme.onPrimary,
       fontSize: RFValue(16),
       fontWeight: "600",
     },

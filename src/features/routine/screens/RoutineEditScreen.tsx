@@ -826,7 +826,7 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     doneButtonText: {
       fontSize: RFValue(14),
       fontWeight: "600",
-      color: "#FFFFFF",
+      color: theme.onPrimary,
     },
     reorderHint: {
       flexDirection: "row",

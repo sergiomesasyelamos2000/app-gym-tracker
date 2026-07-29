@@ -666,7 +666,7 @@ export default function MacrosScreen({ navigation }: Props) {
             <Ionicons
               name="arrow-forward"
               size={20}
-              color="#FFFFFF"
+              color={theme.onPrimary}
               style={{ marginRight: 8 }}
             />
             <Text style={styles.setupPromptButtonText}>
@@ -967,6 +967,12 @@ export default function MacrosScreen({ navigation }: Props) {
               <Text style={styles.headerDate}>{formatHeaderDate()}</Text>
             </View>
             <View style={styles.headerActions}>
+              <HealthDisclaimerCard
+                variant="icon"
+                iconColor={theme.primary}
+                iconSize={24}
+                style={styles.iconButton}
+              />
               <TouchableOpacity
                 onPress={() => setShowScanner(true)}
                 style={styles.iconButton}
@@ -1018,8 +1024,6 @@ export default function MacrosScreen({ navigation }: Props) {
           fat={{ current: totals.fat, target: goals.fat }}
         />
 
-        <HealthDisclaimerCard variant="compact" style={{ marginHorizontal: 16 }} />
-
         <View style={styles.diarySection}>
           <Text style={styles.sectionTitle}>Diario de Alimentos</Text>
           {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map(
@@ -1036,6 +1040,8 @@ export default function MacrosScreen({ navigation }: Props) {
             </Text>
           </View>
         )}
+
+        <HealthDisclaimerCard variant="footer" />
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -1144,7 +1150,7 @@ export default function MacrosScreen({ navigation }: Props) {
                   [selectedDate]: {
                     selected: true,
                     selectedColor: theme.primary,
-                    selectedTextColor: "#ffffff",
+                    selectedTextColor: theme.onPrimary,
                   },
                   [new Date().toISOString().split("T")[0]]: {
                     marked: true,
@@ -1193,12 +1199,12 @@ export default function MacrosScreen({ navigation }: Props) {
                   calendarBackground: theme.card,
                   textSectionTitleColor: theme.textSecondary,
                   selectedDayBackgroundColor: theme.primary,
-                  selectedDayTextColor: "#ffffff",
+                  selectedDayTextColor: theme.onPrimary,
                   todayTextColor: theme.primary,
                   dayTextColor: theme.text,
                   textDisabledColor: theme.textTertiary,
                   dotColor: theme.primary,
-                  selectedDotColor: "#ffffff",
+                  selectedDotColor: theme.onPrimary,
                   arrowColor: theme.primary,
                   monthTextColor: theme.text,
                   indicatorColor: theme.primary,
@@ -1248,7 +1254,7 @@ export default function MacrosScreen({ navigation }: Props) {
           style={styles.actionButton}
           onPress={handleDeleteSelected}
         >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Ionicons name="trash-outline" size={20} color={theme.onPrimary} />
           <Text style={styles.actionButtonText}>Eliminar</Text>
         </TouchableOpacity>
 
@@ -1258,9 +1264,9 @@ export default function MacrosScreen({ navigation }: Props) {
           disabled={duplicating}
         >
           {duplicating ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={theme.onPrimary} />
           ) : (
-            <Ionicons name="copy-outline" size={20} color="#fff" />
+            <Ionicons name="copy-outline" size={20} color={theme.onPrimary} />
           )}
           <Text style={styles.actionButtonText}>Duplicar</Text>
         </TouchableOpacity>
@@ -1273,7 +1279,7 @@ export default function MacrosScreen({ navigation }: Props) {
                 : "close-circle-outline"
             }
             size={20}
-            color="#fff"
+            color={theme.onPrimary}
           />
           <Text style={styles.actionButtonText}>
             {isAllNotEatenSelected ? "Comido" : "No comido"}
@@ -1281,7 +1287,7 @@ export default function MacrosScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={clearSelection}>
-          <Ionicons name="close" size={20} color="#fff" />
+          <Ionicons name="close" size={20} color={theme.onPrimary} />
           <Text style={styles.actionButtonText}>Cancelar</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -1294,7 +1300,7 @@ export default function MacrosScreen({ navigation }: Props) {
           style={styles.addButtonTouchable}
           onPress={() => navigation.navigate("ProductListScreen")}
         >
-          <Icon name="add" size={28} color="#fff" />
+          <Icon name="add" size={28} color={theme.onPrimary} />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
@@ -1383,7 +1389,7 @@ const createStyles = (theme: Theme) =>
     setupPromptButtonText: {
       fontSize: 16,
       fontWeight: "700",
-      color: "#FFFFFF",
+      color: theme.onPrimary,
     },
     setupPromptSkipButton: {
       paddingVertical: 12,
@@ -1516,7 +1522,7 @@ const createStyles = (theme: Theme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.backgroundSecondary,
     },
-    foodEntrySelected: { backgroundColor: "#F3E8FF" },
+    foodEntrySelected: { backgroundColor: theme.selection },
     foodEntryNotEaten: { opacity: 0.5 },
     foodEntryContent: {
       flex: 1,
@@ -1590,7 +1596,7 @@ const createStyles = (theme: Theme) =>
     actionButton: { alignItems: "center", flex: 1 },
     actionButtonText: {
       fontSize: 11,
-      color: "#fff",
+      color: theme.onPrimary,
       marginTop: 4,
       fontWeight: "600",
     },
@@ -1640,7 +1646,7 @@ const createStyles = (theme: Theme) =>
       marginHorizontal: 20,
       marginTop: 16,
       marginBottom: 8,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: theme.selection,
       borderRadius: 12,
     },
     todayButtonText: { fontSize: 16, fontWeight: "600", color: theme.primary },
@@ -1668,7 +1674,7 @@ const createStyles = (theme: Theme) =>
       borderRadius: 12,
       alignItems: "center",
     },
-    confirmButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+    confirmButtonText: { fontSize: 16, fontWeight: "700", color: theme.onPrimary },
     arrowButton: {
       padding: 8,
       borderRadius: 8,

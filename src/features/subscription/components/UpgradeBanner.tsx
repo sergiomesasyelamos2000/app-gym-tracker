@@ -4,6 +4,7 @@ import { Crown, ArrowRight } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSubscription } from '../hooks/useSubscription';
 import { BaseNavigation } from '../../../types';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface UpgradeBannerProps {
   message?: string;
@@ -12,7 +13,8 @@ interface UpgradeBannerProps {
 
 export function UpgradeBanner({ message, compact }: UpgradeBannerProps) {
   const navigation = useNavigation<BaseNavigation>();
-  const { isPremium, getDaysRemaining } = useSubscription();
+  const { isPremium } = useSubscription();
+  const { theme } = useTheme();
 
   // Don't show banner if user is premium
   if (isPremium) {
@@ -31,19 +33,26 @@ export function UpgradeBanner({ message, compact }: UpgradeBannerProps) {
 
   return (
     <TouchableOpacity
-      style={[styles.banner, compact && styles.bannerCompact]}
+      style={[
+        styles.banner,
+        compact && styles.bannerCompact,
+        {
+          backgroundColor: theme.warning,
+          shadowColor: theme.shadowColor,
+        },
+      ]}
       onPress={handlePress}
       activeOpacity={0.8}
     >
       <View style={styles.iconContainer}>
-        <Crown size={compact ? 20 : 24} color="#ffffff" />
+        <Crown size={compact ? 20 : 24} color="#FFFFFF" />
       </View>
       <View style={styles.content}>
         <Text style={[styles.message, compact && styles.messageCompact]}>
           {message || defaultMessage}
         </Text>
       </View>
-      <ArrowRight size={compact ? 16 : 20} color="#ffffff" style={styles.arrow} />
+      <ArrowRight size={compact ? 16 : 20} color="#FFFFFF" style={styles.arrow} />
     </TouchableOpacity>
   );
 }
@@ -52,13 +61,11 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f59e0b',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
     marginHorizontal: 16,
     marginVertical: 12,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -77,7 +84,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#FFFFFF',
     lineHeight: 20,
   },
   messageCompact: {

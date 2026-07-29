@@ -1,9 +1,10 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { SubscriptionPlan } from '@sergiomesasyelamos2000/shared';
-import { PlansScreen } from './PlansScreen';
-import { CheckoutScreen } from './CheckoutScreen';
-import { StatusScreen } from './StatusScreen';
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { SubscriptionPlan } from "@sergiomesasyelamos2000/shared";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { PlansScreen } from "./PlansScreen";
+import { CheckoutScreen } from "./CheckoutScreen";
+import { StatusScreen } from "./StatusScreen";
 
 export type SubscriptionStackParamList = {
   PlansScreen: undefined;
@@ -20,17 +21,23 @@ export type SubscriptionStackParamList = {
 const Stack = createNativeStackNavigator<SubscriptionStackParamList>();
 
 export function SubscriptionStack() {
+  const { theme } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: true,
         headerShadowVisible: false,
         headerStyle: {
-          backgroundColor: '#f9fafb',
+          backgroundColor: theme.backgroundSecondary,
         },
-        headerTintColor: '#111827',
+        headerTintColor: theme.text,
         headerTitleStyle: {
-          fontWeight: '600',
+          fontWeight: "600",
+          color: theme.text,
+        },
+        contentStyle: {
+          backgroundColor: theme.background,
         },
       }}
     >
@@ -38,7 +45,7 @@ export function SubscriptionStack() {
         name="PlansScreen"
         component={PlansScreen}
         options={{
-          title: 'Choose Your Plan',
+          title: "Choose Your Plan",
           headerShown: false,
         }}
       />
@@ -46,16 +53,16 @@ export function SubscriptionStack() {
         name="CheckoutScreen"
         component={CheckoutScreen}
         options={{
-          title: 'Checkout',
+          title: "Checkout",
           headerShown: false,
-          presentation: 'modal',
+          presentation: "modal",
         }}
       />
       <Stack.Screen
         name="StatusScreen"
         component={StatusScreen}
         options={{
-          title: 'Subscription Status',
+          title: "Subscription Status",
           headerShown: false,
         }}
       />

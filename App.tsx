@@ -1,6 +1,11 @@
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  DarkTheme as NavDarkTheme,
+  DefaultTheme as NavDefaultTheme,
+  NavigationContainer,
+  Theme as NavigationTheme,
+} from "@react-navigation/native";
 import Constants from "expo-constants";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { LogBox, Platform, StatusBar, TextInput } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -15,9 +20,13 @@ import {
   playRestCompleteFeedback,
 } from "./src/services/restTimerFeedback";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Provider as PaperProvider } from "react-native-paper";
+import {
+  MD3DarkTheme,
+  MD3LightTheme,
+  Provider as PaperProvider,
+} from "react-native-paper";
 import { ToastConfigParams } from "react-native-toast-message";
-import { ThemeProvider, useTheme } from "./src/contexts/ThemeContext";
+import { ThemeProvider, useTheme, type Theme } from "./src/contexts/ThemeContext";
 import { useNotificationSettingsStore } from "./src/store/useNotificationSettingsStore";
 import CustomToast from "./src/ui/CustomToast";
 import { SyncProvider } from "./src/components/SyncProvider";
@@ -56,8 +65,70 @@ const toastConfig = {
   ),
 };
 
+function buildNavigationTheme(theme: Theme, isDark: boolean): NavigationTheme {
+  const base = isDark ? NavDarkTheme : NavDefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: theme.primary,
+      background: theme.background,
+      card: theme.card,
+      text: theme.text,
+      border: theme.border,
+      notification: theme.error,
+    },
+  };
+}
+
+function buildPaperTheme(theme: Theme, isDark: boolean) {
+  const base = isDark ? MD3DarkTheme : MD3LightTheme;
+  return {
+    ...base,
+    dark: isDark,
+    colors: {
+      ...base.colors,
+      primary: theme.primary,
+      primaryContainer: theme.primaryLight,
+      secondary: theme.primaryDark,
+      background: theme.background,
+      surface: theme.surface,
+      surfaceVariant: theme.backgroundSecondary,
+      onPrimary: theme.onPrimary,
+      onSurface: theme.text,
+      onBackground: theme.text,
+      onSurfaceVariant: theme.textSecondary,
+      outline: theme.border,
+      error: theme.error,
+      elevation: {
+        ...base.colors.elevation,
+        level0: theme.background,
+        level1: theme.card,
+        level2: theme.surfaceElevated,
+        level3: theme.surfaceElevated,
+        level4: theme.surfaceElevated,
+        level5: theme.surfaceElevated,
+      },
+    },
+  };
+}
+
+function ThemedProviders({ children }: { children: React.ReactNode }) {
+  const { theme, isDark } = useTheme();
+  const paperTheme = useMemo(
+    () => buildPaperTheme(theme, isDark),
+    [theme, isDark]
+  );
+
+  return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
+}
+
 function AppContent() {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
+  const navigationTheme = useMemo(
+    () => buildNavigationTheme(theme, isDark),
+    [theme, isDark]
+  );
 
   useEffect(() => {
     if (Platform.OS !== "ios") return;
@@ -69,12 +140,13 @@ function AppContent() {
     TextInputAny.defaultProps = {
       ...TextInputAny.defaultProps,
       inputAccessoryViewID:
-        (TextInputAny.defaultProps?.inputAccessoryViewID as string | undefined) ??
-        GLOBAL_KEYBOARD_ACCESSORY_ID,
+        (TextInputAny.defaultProps?.inputAccessoryViewID as
+          | string
+          | undefined) ?? GLOBAL_KEYBOARD_ACCESSORY_ID,
+      keyboardAppearance: isDark ? "dark" : "light",
     };
-  }, []);
+  }, [isDark]);
 
-  // Initialize notification listeners
   useEffect(() => {
     if (!Notifications) {
       useNotificationSettingsStore.getState().setPermissionsGranted(false);
@@ -85,14 +157,11 @@ function AppContent() {
       const setPermissionsGranted =
         useNotificationSettingsStore.getState().setPermissionsGranted;
 
-      // Local notifications (rest timer) only need OS permission, not FCM.
       const hasPermissions = await notificationService.requestPermissions();
       setPermissionsGranted(hasPermissions);
 
-      // Remote Expo push is optional and requires Firebase/FCM on Android.
       await notificationService.registerForPushNotificationsAsync();
 
-      // Check if app was opened from a notification (cold start)
       const lastNotificationResponse =
         await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
@@ -102,22 +171,18 @@ function AppContent() {
 
     setupNotifications();
 
-    // Listener for notifications received while app is in foreground
     const notificationListener = Notifications?.addNotificationReceivedListener(
       (notification: any) => {
         const data = notification?.request?.content?.data;
         if (isRestCompleteNotification(data)) {
-          // Haptic only; sound is the OS default from the notification itself.
           void playRestCompleteFeedback();
         }
       }
     );
 
-    // Listener for when user taps on a notification
     const responseListener =
       Notifications?.addNotificationResponseReceivedListener((response: any) => {
         console.log("Notification response received:", response);
-        // You can add navigation logic here if needed
       });
 
     return () => {
@@ -128,7 +193,7 @@ function AppContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
+      <NavigationContainer theme={navigationTheme}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         <RootNavigator />
       </NavigationContainer>
@@ -140,13 +205,13 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <PaperProvider>
+      <ThemedProviders>
         <SafeAreaProvider>
           <SyncProvider>
             <AppContent />
           </SyncProvider>
         </SafeAreaProvider>
-      </PaperProvider>
+      </ThemedProviders>
     </ThemeProvider>
   );
 }

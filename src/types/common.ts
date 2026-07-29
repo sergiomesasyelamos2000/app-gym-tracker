@@ -2,34 +2,8 @@
  * Tipos comunes reutilizables en toda la aplicación
  */
 
-// ============= Theme Types =============
-
-/**
- * Tema de la aplicación
- */
-export interface AppTheme {
-  background: string;
-  primary: string;
-  secondary: string;
-  text: string;
-  textSecondary: string;
-  border: string;
-  card: string;
-  error: string;
-  success: string;
-  warning: string;
-  info: string;
-  [key: string]: string; // Permite propiedades adicionales
-}
-
-/**
- * Context de tema
- */
-export interface ThemeContext {
-  theme: AppTheme;
-  isDark: boolean;
-  toggleTheme?: () => void;
-}
+// Theme types live in contexts/ThemeContext.tsx (Theme, ThemeMode, useTheme).
+export type { Theme, ThemeMode } from "../contexts/ThemeContext";
 
 // ============= Navigation Types =============
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { PlanCard } from "../components/PlanCard";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 import { useSubscription } from "../hooks/useSubscription";
 import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
-import { useTheme } from "../../../contexts/ThemeContext";
+import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   SubscriptionPlan,
   PLAN_METADATA,
@@ -27,6 +27,7 @@ export function PlansScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const { subscription } = useSubscription();
   const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [loading, setLoading] = useState(false);
   const isIos = Platform.OS === "ios";
   const {
@@ -83,10 +84,7 @@ export function PlansScreen() {
   ];
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -94,10 +92,8 @@ export function PlansScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>
-            Elige tu Plan
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+          <Text style={styles.title}>Elige tu Plan</Text>
+          <Text style={styles.subtitle}>
             Desbloquea todas las funciones con Premium y lleva tu entrenamiento
             al siguiente nivel
           </Text>
@@ -106,12 +102,8 @@ export function PlansScreen() {
         {/* Current Plan Info */}
         {subscription && (
           <View style={styles.currentPlanContainer}>
-            <Text
-              style={[styles.currentPlanLabel, { color: theme.textSecondary }]}
-            >
-              Plan Actual:
-            </Text>
-            <Text style={[styles.currentPlanText, { color: theme.success }]}>
+            <Text style={styles.currentPlanLabel}>Plan Actual:</Text>
+            <Text style={styles.currentPlanText}>
               {PLAN_METADATA[subscription.plan].name}
             </Text>
           </View>
@@ -129,12 +121,8 @@ export function PlansScreen() {
               },
             ]}
           >
-            <Text style={[styles.noticeTitle, { color: theme.text }]}>
-              Compras con App Store
-            </Text>
-            <Text
-              style={[styles.noticeText, { color: theme.textSecondary }]}
-            >
+            <Text style={styles.noticeTitle}>Compras con App Store</Text>
+            <Text style={styles.noticeText}>
               En iPhone y iPad, Premium se compra dentro de la App Store.
               {hasAppleIapConfiguration
                 ? appleStoreConnected
@@ -146,7 +134,7 @@ export function PlansScreen() {
             </Text>
             {appleStoreConnected && hasAppleIapConfiguration && (
               <Text
-                style={[styles.noticeAction, { color: theme.primary }]}
+                style={styles.noticeAction}
                 onPress={openAppleSubscriptionManagement}
               >
                 Gestionar suscripciones
@@ -179,7 +167,7 @@ export function PlansScreen() {
             ]}
           >
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            <Text style={styles.loadingText}>
               {isIos ? "Preparando compra..." : "Creando sesión de pago..."}
             </Text>
           </View>
@@ -195,84 +183,87 @@ export function PlansScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    lineHeight: 24,
-  },
-  currentPlanContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  currentPlanLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginRight: 8,
-  },
-  currentPlanText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#10b981",
-  },
-  noticeCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 16,
-  },
-  noticeTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  noticeText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  noticeAction: {
-    marginTop: 10,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#6b7280",
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 32,
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 16,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: theme.textSecondary,
+      lineHeight: 24,
+    },
+    currentPlanContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      marginBottom: 8,
+    },
+    currentPlanLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginRight: 8,
+    },
+    currentPlanText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.success,
+    },
+    noticeCard: {
+      borderWidth: 1,
+      borderRadius: 16,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      padding: 16,
+    },
+    noticeTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    noticeText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      lineHeight: 20,
+    },
+    noticeAction: {
+      marginTop: 10,
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.primary,
+    },
+    loadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
+  });

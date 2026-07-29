@@ -31,8 +31,18 @@ import { ENV } from "../../../environments/environment";
 import { prefetchProductCatalog } from "../../nutrition/services/nutritionService";
 import { prefetchExerciseCatalog } from "../../../services/exerciseService";
 import { useAuthStore } from "../../../store/useAuthStore";
-import { appleLogin, googleLogin, login, register } from "../services/authService";
+import {
+  appleLogin,
+  googleLogin,
+  login,
+  register,
+  updateUserProfile,
+} from "../services/authService";
+import CompleteAppleProfileModal, {
+  needsAppleProfileCompletion,
+} from "../components/CompleteAppleProfileModal";
 import { CaughtError, getErrorMessage } from "../../../types";
+import type { UserResponseDto } from "@sergiomesasyelamos2000/shared";
 
 WebBrowser.maybeCompleteAuthSession();
 type AuthMode = "login" | "register";
@@ -72,12 +82,17 @@ export default function AuthScreen() {
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showAppleProfileModal, setShowAppleProfileModal] = useState(false);
+  const [appleProfileUser, setAppleProfileUser] =
+    useState<UserResponseDto | null>(null);
+  const [savingAppleProfile, setSavingAppleProfile] = useState(false);
   const { theme, isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   const setAuth = useAuthStore((state) => state.setAuth);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const setWelcomeMessage = useAuthStore((state) => state.setWelcomeMessage);
   const navigation = useNavigation();
 
@@ -328,6 +343,11 @@ export default function AuthScreen() {
         prefetchProductCatalog({ force: true, pageSize: 24 }),
       ]);
       setWelcomeMessage(`Hola ${authResponse.user.name}`);
+
+      if (needsAppleProfileCompletion(authResponse.user)) {
+        setAppleProfileUser(authResponse.user);
+        setShowAppleProfileModal(true);
+      }
     } catch (error: any) {
       if (error?.code === "ERR_REQUEST_CANCELED") return;
 
@@ -336,6 +356,35 @@ export default function AuthScreen() {
       Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveAppleProfile = async (data: {
+    name: string;
+    email?: string;
+  }) => {
+    if (!appleProfileUser?.id) return;
+
+    try {
+      setSavingAppleProfile(true);
+      const updates: { name: string; email?: string } = { name: data.name };
+      if (data.email) {
+        updates.email = data.email;
+      }
+
+      const updatedUser = await updateUserProfile(appleProfileUser.id, updates);
+      updateUser(updatedUser);
+      setWelcomeMessage(`Hola ${updatedUser.name}`);
+      setShowAppleProfileModal(false);
+      setAppleProfileUser(null);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error as CaughtError);
+      Alert.alert(
+        "Error",
+        errorMessage || "No se pudo guardar el perfil. Inténtalo de nuevo."
+      );
+    } finally {
+      setSavingAppleProfile(false);
     }
   };
 
@@ -725,9 +774,14 @@ export default function AuthScreen() {
                   activeOpacity={0.85}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator color={theme.onPrimary} size="small" />
                   ) : (
-                    <Text style={styles.primaryButtonText}>
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        { color: theme.onPrimary },
+                      ]}
+                    >
                       {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
                     </Text>
                   )}
@@ -842,6 +896,18 @@ export default function AuthScreen() {
           </SafeAreaView>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CompleteAppleProfileModal
+        visible={showAppleProfileModal}
+        initialName={appleProfileUser?.name}
+        initialEmail={appleProfileUser?.email}
+        saving={savingAppleProfile}
+        onClose={() => {
+          setShowAppleProfileModal(false);
+          setAppleProfileUser(null);
+        }}
+        onSave={handleSaveAppleProfile}
+      />
     </View>
   );
 }

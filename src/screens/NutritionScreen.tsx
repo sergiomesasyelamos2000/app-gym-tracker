@@ -522,13 +522,13 @@ export default function NutritionScreen() {
                 Tu asistente personalizado
               </Text>
             </View>
+            <HealthDisclaimerCard
+              variant="icon"
+              iconColor="#fff"
+              iconSize={26}
+            />
           </View>
         </View>
-
-        <HealthDisclaimerCard
-          variant="compact"
-          style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4 }}
-        />
 
         {/* Banner de uso de IA para usuarios gratuitos */}
         {!usageLoading && !isPremium && remainingCalls !== null && (
@@ -593,7 +593,10 @@ export default function NutritionScreen() {
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={renderEmptyComponent}
             ListFooterComponent={
-              loadingMessage ? <TypingIndicator theme={theme} /> : null
+              <>
+                {loadingMessage ? <TypingIndicator theme={theme} /> : null}
+                <HealthDisclaimerCard variant="footer" />
+              </>
             }
             maintainVisibleContentPosition={{
               minIndexForVisible: 0,

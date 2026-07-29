@@ -147,10 +147,13 @@ const UndoSnackbar = ({ visible, message, onUndo, onDismiss }: Props) => {
       </View>
       <TouchableOpacity
         onPress={onUndo}
-        style={[styles.undoButton, { backgroundColor: theme.primary }]}
+        style={[
+          styles.undoButton,
+          { backgroundColor: theme.primary, shadowColor: theme.shadowColor },
+        ]}
         activeOpacity={0.8}
       >
-        <Text style={styles.undoText}>DESHACER</Text>
+        <Text style={[styles.undoText, { color: theme.onPrimary }]}>DESHACER</Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -192,13 +195,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 10,
     elevation: 2,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
   undoText: {
-    color: "#fff",
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.5,

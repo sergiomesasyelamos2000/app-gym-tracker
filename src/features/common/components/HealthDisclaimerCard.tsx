@@ -11,21 +11,75 @@ import { openExternalUrl } from "../utils/openExternalUrl";
 import { HealthSourcesModal } from "./HealthSourcesModal";
 
 type Props = {
-  variant?: "compact" | "inline";
+  variant?: "compact" | "inline" | "icon" | "footer";
   weightGoal?: "lose" | "gain" | "maintain";
   style?: object;
+  iconColor?: string;
+  iconSize?: number;
 };
 
 export function HealthDisclaimerCard({
   variant = "compact",
   weightGoal = "maintain",
   style,
+  iconColor,
+  iconSize = 24,
 }: Props) {
   const { theme } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const inlineSourceIds = getInlineHealthSourceIds(weightGoal);
+
+  if (variant === "icon") {
+    return (
+      <>
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Aviso de salud y fuentes"
+          style={style}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={iconSize}
+            color={iconColor ?? theme.textSecondary}
+          />
+        </TouchableOpacity>
+
+        <HealthSourcesModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+      </>
+    );
+  }
+
+  if (variant === "footer") {
+    return (
+      <>
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={[styles.footer, style]}
+          accessibilityRole="button"
+          accessibilityLabel="Aviso de salud y fuentes"
+        >
+          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+            Información orientativa · No es consejo médico ·{" "}
+            <Text style={{ color: theme.primary, fontWeight: "600" }}>
+              Ver fuentes
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
+        <HealthSourcesModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -120,5 +174,15 @@ const createStyles = (theme: Theme) =>
       marginLeft: 28,
       fontSize: 13,
       fontWeight: "700",
+    },
+    footer: {
+      alignItems: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+    },
+    footerText: {
+      fontSize: 12,
+      lineHeight: 18,
+      textAlign: "center",
     },
   });
