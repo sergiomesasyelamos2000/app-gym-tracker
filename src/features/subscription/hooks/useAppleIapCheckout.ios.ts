@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Platform } from "react-native";
+import { Alert } from "react-native";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import {
   deepLinkToSubscriptions,
@@ -21,8 +21,6 @@ import {
 } from "../services/appleIapService";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation } from "../../../types";
-
-const isIos = Platform.OS === "ios";
 
 const getErrorCode = (error: unknown): string | undefined => {
   if (!error || typeof error !== "object") return undefined;
@@ -168,7 +166,6 @@ export function useAppleIapCheckout() {
     onPurchaseError: (error) => {
       setLoading(false);
 
-      // User closed the App Store sheet — not an error for the user.
       if (isUserCancelledPurchase(error)) {
         return;
       }
@@ -195,7 +192,7 @@ export function useAppleIapCheckout() {
   finishTransactionRef.current = finishTransaction;
 
   useEffect(() => {
-    if (!isIos || !connected || !hasAppleIapConfiguration()) {
+    if (!connected || !hasAppleIapConfiguration()) {
       setProductsLoaded(false);
       return;
     }
@@ -236,10 +233,6 @@ export function useAppleIapCheckout() {
   }, [connected, fetchProducts]);
 
   const purchasePlan = async (plan: SubscriptionPlan) => {
-    if (!isIos) {
-      throw new Error("Apple IAP solo esta disponible en iOS.");
-    }
-
     if (!user?.id) {
       Alert.alert("Error", "Debes iniciar sesion para comprar Premium.");
       return;
@@ -288,16 +281,12 @@ export function useAppleIapCheckout() {
         },
         type: plan === SubscriptionPlan.LIFETIME ? "in-app" : "subs",
       });
-    } catch (error) {
-      // Purchase outcome is handled by onPurchaseError / onPurchaseSuccess.
-      // Avoid a second Alert when the sheet is cancelled or the listener already fired.
+    } catch {
       setLoading(false);
     }
   };
 
   const restoreApplePurchases = async () => {
-    if (!isIos) return;
-
     setLoading(true);
     try {
       await restorePurchases({ alsoPublishToEventListenerIOS: true });
@@ -330,8 +319,6 @@ export function useAppleIapCheckout() {
   };
 
   const openAppleSubscriptionManagement = async () => {
-    if (!isIos) return;
-
     try {
       await deepLinkToSubscriptions();
     } catch (error) {
