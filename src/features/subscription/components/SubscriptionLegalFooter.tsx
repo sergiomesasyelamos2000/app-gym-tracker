@@ -74,7 +74,7 @@ export function SubscriptionLegalFooter({
           style={[styles.link, { color: theme.primary }]}
           onPress={() => openExternalUrl(TERMS_OF_USE_URL)}
         >
-          Términos de uso
+          Términos de uso (EULA)
         </Text>
       </View>
 
