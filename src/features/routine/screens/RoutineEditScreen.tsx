@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   SafeAreaView,
   StyleSheet,
@@ -36,6 +37,7 @@ import { getRoutineById } from "../services/routineService";
 import {
   normalizeExerciseImage,
   normalizeExercisesImage,
+  getStaticExerciseImageUrl,
 } from "../utils/normalizeExerciseImage";
 import { initializeSets } from "../utils/routineHelpers";
 import { WorkoutStackParamList } from "./WorkoutStack";
@@ -94,6 +96,8 @@ export default function RoutineEditScreen() {
   const activeFetchRequestRef = useRef(0);
   const hasBaseRoutineLoadedRef = useRef(false);
   const pendingAddExercisesRef = useRef<ExerciseRequestDto[]>([]);
+  const listRef = useRef<FlatList<ExerciseRequestDto>>(null);
+  const pendingScrollToExerciseIdRef = useRef<string | null>(null);
 
   const applyAddedExercises = useCallback((incoming: ExerciseRequestDto[]) => {
     if (!incoming.length) return;
@@ -104,6 +108,10 @@ export default function RoutineEditScreen() {
       const newExercises = incoming.filter(
         (ex) => !prev.some((p) => p.id === ex.id)
       );
+      if (newExercises.length > 0) {
+        // Scroll to the first newly appended exercise after the list re-renders.
+        pendingScrollToExerciseIdRef.current = newExercises[0].id;
+      }
       return [...prev, ...newExercises];
     });
 
@@ -117,6 +125,31 @@ export default function RoutineEditScreen() {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    const targetId = pendingScrollToExerciseIdRef.current;
+    if (!targetId) return;
+
+    const index = exercisesState.findIndex((exercise) => exercise.id === targetId);
+    if (index < 0) return;
+
+    pendingScrollToExerciseIdRef.current = null;
+
+    const timeoutId = setTimeout(() => {
+      try {
+        listRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0,
+        });
+      } catch {
+        // Variable-height cards can make scrollToIndex fail; end is where adds land.
+        listRef.current?.scrollToEnd({ animated: true });
+      }
+    }, 150);
+
+    return () => clearTimeout(timeoutId);
+  }, [exercisesState]);
 
   const handleTitleChange = useCallback((value: string) => {
     hasLocalEditsRef.current = true;
@@ -560,7 +593,7 @@ export default function RoutineEditScreen() {
               </View>
 
               <CachedExerciseImage
-                imageUrl={item.imageUrl}
+                imageUrl={getStaticExerciseImageUrl(item)}
                 style={styles.reorderImage}
               />
 
@@ -676,6 +709,7 @@ export default function RoutineEditScreen() {
 
         <View style={styles.listContainer}>
           <DraggableFlatList
+            ref={listRef}
             data={reorderFromButton ? tempExercisesOrder : exercisesState}
             keyExtractor={(item) => item.id}
             renderItem={renderExerciseCard}
@@ -686,8 +720,19 @@ export default function RoutineEditScreen() {
               handleReorderComplete(data);
               setIsDragging(false);
             }}
+            onScrollToIndexFailed={(info) => {
+              // Cards have variable height; approximate then fall back to the end
+              // where newly added exercises are appended.
+              listRef.current?.scrollToOffset({
+                offset: Math.max(0, info.averageItemLength * info.index),
+                animated: true,
+              });
+              setTimeout(() => {
+                listRef.current?.scrollToEnd({ animated: true });
+              }, 120);
+            }}
             contentContainerStyle={styles.listContent}
-            activationDistance={0}
+            activationDistance={16}
             dragHitSlop={{ left: 20, right: 20, top: 15, bottom: 15 }}
             showsVerticalScrollIndicator={true}
             ListFooterComponent={<View style={styles.listFooter} />}

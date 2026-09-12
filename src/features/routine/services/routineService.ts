@@ -178,6 +178,40 @@ export async function duplicateRoutine(id: string): Promise<void> {
   });
 }
 
+export async function reorderRoutines(routineIds: string[]): Promise<void> {
+  await apiFetch<void>("routines/reorder", {
+    method: "PUT",
+    body: JSON.stringify({ routineIds }),
+  });
+
+  // Keep offline cache aligned with the new server order.
+  try {
+    const cached = await AsyncStorage.getItem(ROUTINES_CACHE_KEY);
+    if (!cached) return;
+
+    const routines = JSON.parse(cached) as RoutineResponseDto[];
+    const byId = new Map(routines.map((routine) => [routine.id, routine]));
+    const ordered = routineIds
+      .map((id, index) => {
+        const routine = byId.get(id);
+        if (!routine) return null;
+        return { ...routine, sortOrder: index };
+      })
+      .filter((routine): routine is RoutineResponseDto => Boolean(routine));
+
+    // Append any cached routines missing from the reorder payload.
+    routines.forEach((routine) => {
+      if (!routineIds.includes(routine.id)) {
+        ordered.push(routine);
+      }
+    });
+
+    await AsyncStorage.setItem(ROUTINES_CACHE_KEY, JSON.stringify(ordered));
+  } catch (cacheError) {
+    console.error("[RoutineService] Failed to update reorder cache:", cacheError);
+  }
+}
+
 export async function deleteRoutine(id: string): Promise<void> {
   await apiFetch<void>(`routines/${id}`, {
     method: "DELETE",

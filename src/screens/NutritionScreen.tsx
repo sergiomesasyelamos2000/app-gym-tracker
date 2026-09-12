@@ -500,6 +500,25 @@ export default function NutritionScreen() {
     [theme]
   );
 
+  if (usageLoading) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: theme.backgroundSecondary },
+          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+        ]}
+      >
+        <View style={styles.fullScreenLoading}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.fullScreenLoadingText, { color: theme.text }]}>
+            Cargando nutrición...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       style={[
@@ -531,7 +550,7 @@ export default function NutritionScreen() {
         </View>
 
         {/* Banner de uso de IA para usuarios gratuitos */}
-        {!usageLoading && !isPremium && remainingCalls !== null && (
+        {!isPremium && remainingCalls !== null && (
           <TouchableOpacity
             style={[
               styles.usageBanner,
@@ -766,6 +785,16 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  fullScreenLoading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  fullScreenLoadingText: {
+    fontSize: 16,
+    fontWeight: "500",
   },
   header: {
     paddingHorizontal: 20,

@@ -16,6 +16,7 @@ import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../../contexts/ThemeContext";
 import { BaseNavigation } from "../../../../types";
+import { getStaticExerciseImageUrl } from "../../utils/normalizeExerciseImage";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -101,13 +102,14 @@ const ExerciseHeader = ({
   const filteredExercises = availableExercises.filter(
     (ex) => ex.id !== exercise.id
   );
+  const staticImageUrl = getStaticExerciseImageUrl(exercise);
 
   return (
     <>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleOpenExerciseDetail} activeOpacity={0.8}>
           <CachedExerciseImage
-            imageUrl={exercise.imageUrl}
+            imageUrl={staticImageUrl}
             style={styles.exerciseImage}
           />
         </TouchableOpacity>
@@ -287,7 +289,7 @@ const ExerciseHeader = ({
                     onPress={() => handleSelectSupersetExercise(item)}
                   >
                     <CachedExerciseImage
-                      imageUrl={item.imageUrl}
+                      imageUrl={getStaticExerciseImageUrl(item)}
                       style={[
                         styles.supersetImage,
                         { backgroundColor: theme.border },

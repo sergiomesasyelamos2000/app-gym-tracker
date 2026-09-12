@@ -33,12 +33,14 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ExerciseRequestDto, SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../components/CachedExerciseImage";
+import { getExerciseThumbnailUrl } from "../features/routine/utils/normalizeExerciseImage";
 import LiveClock from "../components/LiveClock";
 import { useTheme } from "../contexts/ThemeContext";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
   findAllRoutineSessions,
   getGlobalStats,
+  getRoutineById,
 } from "../features/routine/services/routineService";
 import type { GlobalStats } from "../features/routine/services/routineService";
 import { useResponsive } from "../hooks/useResponsive";
@@ -50,6 +52,7 @@ interface SessionExercise {
   name: string;
   imageUrl?: string;
   giftUrl?: string;
+  restSeconds?: string;
   sets: {
     weight: number;
     reps: number;
@@ -68,6 +71,7 @@ type RawSessionExercise = {
   giftUrl?: string;
   gifUrl?: string;
   image?: string;
+  restSeconds?: string;
   exercise?: {
     id?: string;
     name?: string;
@@ -75,6 +79,7 @@ type RawSessionExercise = {
     giftUrl?: string;
     gifUrl?: string;
     image?: string;
+    restSeconds?: string;
   };
   sets?: {
     weight?: number;
@@ -154,7 +159,7 @@ const normalizeSessionExercise = (
   exercise: RawSessionExercise,
   index: number
 ): SessionExercise => {
-  const imageUrl =
+  const rawImageUrl =
     exercise.imageUrl ||
     exercise.exercise?.imageUrl ||
     exercise.image ||
@@ -165,6 +170,11 @@ const normalizeSessionExercise = (
     exercise.gifUrl ||
     exercise.exercise?.giftUrl ||
     exercise.exercise?.gifUrl;
+
+  const thumbnail = getExerciseThumbnailUrl({
+    imageUrl: rawImageUrl,
+    giftUrl,
+  });
 
   return {
     exerciseId:
@@ -177,8 +187,10 @@ const normalizeSessionExercise = (
       exercise.exerciseName ||
       exercise.exercise?.name ||
       "Ejercicio",
-    imageUrl,
+    // Keep a displayable thumbnail URI for the summary (static preferred).
+    imageUrl: thumbnail.uri || rawImageUrl,
     giftUrl,
+    restSeconds: exercise.restSeconds || exercise.exercise?.restSeconds,
     sets: (exercise.sets || []).map((set) => ({
       weight: toSafeNumber(set.weight),
       reps: toSafeNumber(set.reps),
@@ -188,32 +200,33 @@ const normalizeSessionExercise = (
   };
 };
 
-const isExerciseFullyCompleted = (exercise: SessionExercise): boolean => {
-  const exerciseSets = exercise.sets || [];
-
-  return exerciseSets.length > 0 && exerciseSets.every((set) => set.completed);
-};
+const countCompletedSets = (exercise: SessionExercise): number =>
+  (exercise.sets || []).filter((set) => set.completed).length;
 
 const mapSessionExercisesToRoutineExercises = (
   exercises: SessionExercise[] = []
 ): ExerciseRequestDto[] =>
-  exercises.map((exercise, exerciseIndex) => ({
-    id: exercise.exerciseId || `session-exercise-${exerciseIndex}`,
-    name: exercise.name,
-    imageUrl: exercise.imageUrl,
-    giftUrl: exercise.giftUrl,
-    sets: (exercise.sets || []).map(
-      (set, setIndex): SetRequestDto => ({
-        id: `${exercise.exerciseId || `session-exercise-${exerciseIndex}`}-set-${setIndex + 1}`,
-        order: setIndex + 1,
-        weight: toSafeNumber(set.weight),
-        reps: toSafeNumber(set.reps),
-        completed: Boolean(set.completed),
-      })
-    ),
-    weightUnit: "kg",
-    repsType: "reps",
-  }));
+  exercises.map((exercise, exerciseIndex) => {
+    const thumbnail = getExerciseThumbnailUrl(exercise);
+    return {
+      id: exercise.exerciseId || `session-exercise-${exerciseIndex}`,
+      name: exercise.name,
+      imageUrl: thumbnail.uri || exercise.imageUrl,
+      giftUrl: exercise.giftUrl,
+      restSeconds: exercise.restSeconds,
+      sets: (exercise.sets || []).map(
+        (set, setIndex): SetRequestDto => ({
+          id: `${exercise.exerciseId || `session-exercise-${exerciseIndex}`}-set-${setIndex + 1}`,
+          order: setIndex + 1,
+          weight: toSafeNumber(set.weight),
+          reps: toSafeNumber(set.reps),
+          completed: Boolean(set.completed),
+        })
+      ),
+      weightUnit: "kg",
+      repsType: "reps",
+    };
+  });
 
 // Componente para mostrar la imagen del ejercicio con manejo de errores
 const ExerciseImage = ({
@@ -223,8 +236,14 @@ const ExerciseImage = ({
   exercise: SessionExercise;
   style: StyleProp<ImageStyle>;
 }) => {
-  // Always use static image in session history (avoid animated GIFs)
-  return <CachedExerciseImage imageUrl={exercise.imageUrl} style={style} />;
+  const thumbnail = getExerciseThumbnailUrl(exercise);
+  return (
+    <CachedExerciseImage
+      imageUrl={thumbnail.uri}
+      allowAnimated={thumbnail.allowAnimated}
+      style={style}
+    />
+  );
 };
 
 type BottomTabsParamList = {
@@ -346,33 +365,31 @@ export default function HomeScreen() {
 
       const sessionsWithTotals = sessionsData.map(
         (session): SessionWithTotals => {
-          const completedExercises: SessionExercise[] = (
+          const sessionExercises: SessionExercise[] = (
             (session.exercises as RawSessionExercise[] | undefined) || []
-          )
-            .map((exercise, index) => normalizeSessionExercise(exercise, index))
-            .filter(isExerciseFullyCompleted);
+          ).map((exercise, index) => normalizeSessionExercise(exercise, index));
 
           const calculatedWeight =
-            completedExercises.reduce(
+            sessionExercises.reduce(
               (sum: number, e) =>
                 sum +
-                (e.sets || []).reduce(
-                  (acc: number, s) =>
+                (e.sets || []).reduce((acc: number, s) => {
+                  if (!s.completed) return acc;
+                  return (
                     acc +
                     toSafeNumber((s as { weight?: unknown }).weight) *
-                      toSafeNumber((s as { reps?: unknown }).reps),
-                  0
-                ),
+                      toSafeNumber((s as { reps?: unknown }).reps)
+                  );
+                }, 0),
               0
             ) || 0;
 
           const totalReps =
-            completedExercises.reduce((sum: number, e) => {
-              const exerciseTotalReps = (e.sets || []).reduce(
-                (acc: number, s) =>
-                  acc + toSafeNumber((s as { reps?: unknown }).reps),
-                0
-              );
+            sessionExercises.reduce((sum: number, e) => {
+              const exerciseTotalReps = (e.sets || []).reduce((acc: number, s) => {
+                if (!s.completed) return acc;
+                return acc + toSafeNumber((s as { reps?: unknown }).reps);
+              }, 0);
               return sum + exerciseTotalReps;
             }, 0) || 0;
 
@@ -388,7 +405,7 @@ export default function HomeScreen() {
 
           return {
             ...session,
-            exercises: completedExercises,
+            exercises: sessionExercises,
             totalTime: sessionTotalTime,
             totalWeight: sessionTotalWeight || calculatedWeight,
             completedSets: sessionCompletedSets,
@@ -479,11 +496,34 @@ export default function HomeScreen() {
   }, []);
 
   const openSessionDetail = useCallback(
-    (session: SessionWithTotals) => {
+    async (session: SessionWithTotals) => {
+      let exercises = session.exercises || [];
+      const needsRestFallback = exercises.some((ex) => !ex.restSeconds);
+      const routineId = session.routine?.id;
+
+      if (needsRestFallback && routineId) {
+        try {
+          const routine = await getRoutineById(routineId);
+          const restByExerciseId = new Map(
+            (routine.routineExercises || []).map((re) => [
+              re.exercise?.id || re.id,
+              re.restSeconds,
+            ])
+          );
+          exercises = exercises.map((ex) => ({
+            ...ex,
+            restSeconds:
+              ex.restSeconds || restByExerciseId.get(ex.exerciseId) || undefined,
+          }));
+        } catch {
+          // Keep session exercises as-is if routine lookup fails.
+        }
+      }
+
       navigation.navigate("Entreno", {
         screen: "RoutineDetail",
         params: {
-          exercises: mapSessionExercisesToRoutineExercises(session.exercises),
+          exercises: mapSessionExercisesToRoutineExercises(exercises),
           sessionView: true,
           sessionTitle: formatSessionTitle(
             session.routine?.title,
@@ -616,10 +656,13 @@ export default function HomeScreen() {
               <Text
                 style={[styles.exercisesTitle, { color: theme.textSecondary }]}
               >
-                Ejercicios realizados:
+                Ejercicios:
               </Text>
               <View style={styles.exercisesList}>
-                {visibleExercises.map((exercise: SessionExercise) => (
+                {visibleExercises.map((exercise: SessionExercise) => {
+                  const completedSetsCount = countCompletedSets(exercise);
+                  const totalSetsCount = exercise.sets?.length || 0;
+                  return (
                   <View key={exercise.exerciseId} style={styles.exerciseItem}>
                     <ExerciseImage exercise={exercise} style={styles.exerciseImage} />
                     <View style={styles.exerciseInfo}>
@@ -632,11 +675,12 @@ export default function HomeScreen() {
                       <Text
                         style={[styles.exerciseSets, { color: theme.textSecondary }]}
                       >
-                        {exercise.sets?.length || 0} series
+                        {completedSetsCount}/{totalSetsCount} series
                       </Text>
                     </View>
                   </View>
-                ))}
+                  );
+                })}
                 {remainingExercises > 0 && !isExpanded && (
                   <TouchableOpacity
                     style={styles.moreExercises}

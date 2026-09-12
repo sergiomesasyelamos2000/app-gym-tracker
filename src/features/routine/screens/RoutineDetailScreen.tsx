@@ -94,6 +94,7 @@ import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import {
   normalizeExerciseImage,
   normalizeExercisesImage,
+  getStaticExerciseImageUrl,
 } from "../utils/normalizeExerciseImage";
 import { WorkoutStackParamList } from "./WorkoutStack";
 import { useShallow } from "zustand/react/shallow";
@@ -242,6 +243,10 @@ export default function RoutineDetailScreen() {
     []
   );
 
+  // Creation (!readonly) and active workout (started) both allow reorder;
+  // viewing an existing routine (readonly && !started) does not.
+  const canReorderExercises = !sessionView && (!readonly || started);
+
   const handleReorderFromHeader = useCallback(() => {
     setReorderMode(true);
     setReorderFromButton(true);
@@ -352,7 +357,10 @@ export default function RoutineDetailScreen() {
       }));
 
       navigation.navigate("ExerciseList", {
-        routineId: routineData?.id ?? routineId ?? "workout-in-progress",
+        // Omit fake ids during creation so merge does not treat this as an existing routine.
+        ...(routineData?.id || routineId
+          ? { routineId: routineData?.id ?? routineId }
+          : {}),
         singleSelection: true,
         mode: "replaceExercise",
         replaceExerciseId: exerciseId,
@@ -364,9 +372,11 @@ export default function RoutineDetailScreen() {
     [exercisesState, sets, navigation, routineData?.id, routineId, routineTitle]
   );
 
-  // Apply exercise replacement returning from ExerciseList during an active workout
+  // Apply exercise replacement returning from ExerciseList (active workout or creation)
   useEffect(() => {
-    if (!replaceExerciseId || !replacementExercise || !started) return;
+    if (!replaceExerciseId || !replacementExercise) return;
+    // View-only mode should never mutate exercises via replace params.
+    if (!started && readonly) return;
 
     const normalizedReplacement = normalizeExerciseImage(replacementExercise);
     const oldId = replaceExerciseId;
@@ -402,7 +412,7 @@ export default function RoutineDetailScreen() {
       replaceExerciseId: undefined,
       replacementExercise: undefined,
     });
-  }, [replaceExerciseId, replacementExercise, started, navigation]);
+  }, [replaceExerciseId, replacementExercise, started, readonly, navigation]);
 
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
   const [frozenDuration, setFrozenDuration] = useState(0);
@@ -751,7 +761,7 @@ export default function RoutineDetailScreen() {
     }
 
     setRoutineTitle(workoutInProgress.routineTitle);
-    setExercises(workoutInProgress.exercises);
+    setExercises(normalizeExercisesImage(workoutInProgress.exercises));
     setSets(sortSetsMapByOrder(workoutInProgress.sets));
     const isPaused = typeof workoutInProgress.pausedAt === "number";
     const restoredDuration = Math.max(0, workoutInProgress.duration);
@@ -1656,7 +1666,9 @@ export default function RoutineDetailScreen() {
         exerciseId: exercise.id,
         name: exercise.name,
         exerciseName: exercise.name,
-        imageUrl: exercise.imageUrl,
+        // Prefer static thumbnail so history summaries don't go blank after GIF filtering.
+        imageUrl:
+          getStaticExerciseImageUrl(exercise) ?? exercise.imageUrl ?? undefined,
         giftUrl:
           (
             exercise as ExerciseRequestDto & {
@@ -1670,6 +1682,7 @@ export default function RoutineDetailScreen() {
               gifUrl?: string;
             }
           ).gifUrl,
+        restSeconds: exercise.restSeconds,
         sets: (sets[exercise.id] || []).map((s) => {
           const isRecord = sessionRecords.some(
             (r) =>
@@ -1738,7 +1751,7 @@ export default function RoutineDetailScreen() {
               >
                 <Icon name="drag-indicator" size={24} color={theme.textTertiary} />
                 <CachedExerciseImage
-                  imageUrl={item.imageUrl}
+                  imageUrl={getStaticExerciseImageUrl(item)}
                   style={styles.reorderImage}
                 />
                 <Text
@@ -1770,9 +1783,9 @@ export default function RoutineDetailScreen() {
           onStartRestTimer={handleStartRestTimer}
           onCancelRestTimer={handleCancelRestTimer}
           onShowUndoSnackbar={handleShowUndoSnackbar}
-          showOptions={started && !sessionView}
+          showOptions={canReorderExercises}
           onTitleLongPress={
-            started && !sessionView && drag
+            canReorderExercises && drag
               ? () => handleExerciseLongPress(drag)
               : undefined
           }
@@ -1797,6 +1810,7 @@ export default function RoutineDetailScreen() {
       sessionView,
       sets,
       reorderMode,
+      canReorderExercises,
       theme,
       handleStartRestTimer,
       handleCancelRestTimer,
@@ -1951,12 +1965,12 @@ export default function RoutineDetailScreen() {
         </View>
       )}
 
-      {(started && !sessionView) || reorderMode ? (
+      {canReorderExercises || reorderMode ? (
         <DraggableFlatList
           data={reorderFromButton ? tempExercisesOrder : exercisesState}
           keyExtractor={(item) => item.id}
           onDragEnd={({ data }) => handleReorderComplete(data)}
-          activationDistance={0}
+          activationDistance={16}
           ListHeaderComponent={
             <RoutineHeader
               routineTitle={routineTitle}
@@ -1974,7 +1988,13 @@ export default function RoutineDetailScreen() {
             renderExerciseCard({ item, drag, isActive })
           }
           contentContainerStyle={{
-            paddingTop: started ? (reorderFromButton ? 130 : 80) : 0,
+            paddingTop: started
+              ? reorderFromButton
+                ? 130
+                : 80
+              : reorderFromButton
+                ? 56
+                : 0,
             padding: 16,
           }}
         />
@@ -2005,7 +2025,7 @@ export default function RoutineDetailScreen() {
         />
       )}
 
-      {!sessionView && !routineData?.id && !started && (
+      {!sessionView && !routineData?.id && !started && !reorderMode && (
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: theme.primary }]}
           disabled={isSaving}

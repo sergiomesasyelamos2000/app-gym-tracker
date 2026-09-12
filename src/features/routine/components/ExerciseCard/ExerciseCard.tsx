@@ -28,6 +28,7 @@ import ExerciseNotes, { ExerciseNote } from "./ExerciseNotes";
 import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
+import { getStaticExerciseImageUrl } from "../../utils/normalizeExerciseImage";
 
 const normalizeSetIds = (
   inputSets: SetRequestDto[],
@@ -570,7 +571,7 @@ const ExerciseCard = ({
           totalSeconds,
           exercise.id,
           exercise.name,
-          exercise.imageUrl ?? null,
+          getStaticExerciseImageUrl(exercise),
           nextSetSummary
         );
       }

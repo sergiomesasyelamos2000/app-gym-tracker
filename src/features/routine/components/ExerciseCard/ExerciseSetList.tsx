@@ -2,7 +2,6 @@ import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
-  FlatList,
   Modal,
   Platform,
   StyleSheet,
@@ -16,15 +15,20 @@ import { RFValue } from "react-native-responsive-fontsize";
 import * as Haptics from "expo-haptics";
 
 import {
-  GestureHandlerRootView,
   Swipeable,
+  TouchableOpacity as GHTouchableOpacity,
 } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
 import ExerciseSetRow from "./ExerciseSetRow";
-import { COLUMN_FLEX } from "./columnConstants";
+import {
+  COLUMN_GAP,
+  COLUMN_ROW_PADDING,
+  getColumnFlex,
+  getRepsColumnFlex,
+} from "./columnConstants";
 
 interface Props {
   sets: SetRequestDto[];
@@ -55,7 +59,9 @@ interface SetListItemProps {
     field: keyof SetRequestDto,
     value: SetRequestDto[keyof SetRequestDto]
   ) => void;
-  onSwipeableWillOpen: () => void;
+  onSwipeableWillOpen: (itemId: string) => void;
+  onSwipeableClose: (itemId: string) => void;
+  registerSwipeableRef: (itemId: string, ref: Swipeable | null) => void;
   renderRightActions: (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>,
@@ -73,25 +79,42 @@ const SetListItem = memo(
     recordType,
     onUpdate,
     onSwipeableWillOpen,
+    onSwipeableClose,
+    registerSwipeableRef,
     renderRightActions,
   }: SetListItemProps) => {
+    const row = (
+      <ExerciseSetRow
+        item={item}
+        onUpdate={onUpdate}
+        repsType={repsType}
+        readonly={readonly}
+        previousMark={previousMark}
+        started={started}
+        recordType={recordType}
+      />
+    );
+
+    if (readonly) {
+      return row;
+    }
+
     return (
       <Swipeable
+        ref={(ref) => registerSwipeableRef(item.id, ref)}
         renderRightActions={(progress, dragX) =>
-          !readonly ? renderRightActions(progress, dragX, item.id) : null
+          renderRightActions(progress, dragX, item.id)
         }
         overshootRight={false}
-        onSwipeableWillOpen={onSwipeableWillOpen}
+        friction={2}
+        rightThreshold={36}
+        // Prefer horizontal swipe-to-delete over parent vertical scroll / drag.
+        activeOffsetX={[-18, 18]}
+        failOffsetY={[-14, 14]}
+        onSwipeableWillOpen={() => onSwipeableWillOpen(item.id)}
+        onSwipeableClose={() => onSwipeableClose(item.id)}
       >
-        <ExerciseSetRow
-          item={item}
-          onUpdate={onUpdate}
-          repsType={repsType}
-          readonly={readonly}
-          previousMark={previousMark}
-          started={started}
-          recordType={recordType}
-        />
+        {row}
       </Swipeable>
     );
   },
@@ -131,6 +154,11 @@ const ExerciseSetList = ({
   const inputHeight = isSmallScreen ? 44 : 48;
   const deleteButtonSize = inputHeight;
   const deleteButtonOffset = Platform.OS === "ios" ? -8 : 0;
+  const columnFlex = getColumnFlex(isSmallScreen);
+  const repsColumnFlex = getRepsColumnFlex(isSmallScreen, repsType, started);
+  const headerPaddingHorizontal = isSmallScreen
+    ? COLUMN_ROW_PADDING.small
+    : COLUMN_ROW_PADDING.normal;
 
   const onUpdateRef = useRef(onUpdate);
   const onDeleteRef = useRef(onDelete);
@@ -150,6 +178,20 @@ const ExerciseSetList = ({
       value: SetRequestDto[keyof SetRequestDto]
     ) => {
       onUpdateRef.current(id, field, value);
+    },
+    []
+  );
+
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
+  const openSwipeableIdRef = useRef<string | null>(null);
+
+  const registerSwipeableRef = useCallback(
+    (itemId: string, ref: Swipeable | null) => {
+      if (ref) {
+        swipeableRefs.current.set(itemId, ref);
+      } else {
+        swipeableRefs.current.delete(itemId);
+      }
     },
     []
   );
@@ -183,8 +225,11 @@ const ExerciseSetList = ({
             },
           ]}
         >
-          <TouchableOpacity
-            onPress={() => onDeleteRef.current(itemId)}
+          <GHTouchableOpacity
+            onPress={() => {
+              swipeableRefs.current.get(itemId)?.close();
+              onDeleteRef.current(itemId);
+            }}
             activeOpacity={0.7}
             style={[
               styles.deleteButton,
@@ -214,15 +259,26 @@ const ExerciseSetList = ({
                 color={theme.error}
               />
             </Animated.View>
-          </TouchableOpacity>
+          </GHTouchableOpacity>
         </View>
       );
     },
-    [inputHeight, theme.error]
+    [deleteButtonOffset, deleteButtonSize, theme.error]
   );
 
-  const handleSwipeableWillOpen = useCallback(() => {
+  const handleSwipeableWillOpen = useCallback((itemId: string) => {
+    const previouslyOpenId = openSwipeableIdRef.current;
+    if (previouslyOpenId && previouslyOpenId !== itemId) {
+      swipeableRefs.current.get(previouslyOpenId)?.close();
+    }
+    openSwipeableIdRef.current = itemId;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleSwipeableClose = useCallback((itemId: string) => {
+    if (openSwipeableIdRef.current === itemId) {
+      openSwipeableIdRef.current = null;
+    }
   }, []);
 
   const getPreviousMark = useCallback(
@@ -267,8 +323,9 @@ const ExerciseSetList = ({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: SetRequestDto }) => (
+    (item: SetRequestDto, index: number) => (
       <SetListItem
+        key={keyExtractor(item, index)}
         item={item}
         readonly={readonly}
         repsType={repsType}
@@ -277,15 +334,20 @@ const ExerciseSetList = ({
         recordType={recordSetTypes[item.id]}
         onUpdate={handleUpdate}
         onSwipeableWillOpen={handleSwipeableWillOpen}
+        onSwipeableClose={handleSwipeableClose}
+        registerSwipeableRef={registerSwipeableRef}
         renderRightActions={renderRightActions}
       />
     ),
     [
       getPreviousMark,
-      handleUpdate,
+      handleSwipeableClose,
       handleSwipeableWillOpen,
+      handleUpdate,
+      keyExtractor,
       readonly,
       recordSetTypes,
+      registerSwipeableRef,
       renderRightActions,
       repsType,
       started,
@@ -525,18 +587,10 @@ const ExerciseSetList = ({
       description: "Peso usado en esta serie.",
     },
     reps: {
-      title: started
-        ? "Repeticiones"
-        : repsType === "reps"
-        ? "Repeticiones"
-        : "Rango",
-      subtitle: started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO",
+      title: "Repeticiones",
+      subtitle: "REPS",
       icon: "repeat" as const,
-      description: started
-        ? "Repeticiones completadas en esta serie."
-        : repsType === "reps"
-        ? "Número objetivo de repeticiones por serie."
-        : "Rango objetivo de repeticiones (mínimo–máximo).",
+      description: "Repeticiones completadas en esta serie.",
     },
     asis: {
       title: "Asistidas",
@@ -553,9 +607,11 @@ const ExerciseSetList = ({
     },
   };
 
+  // Info modals are workout-only; creation/edit must not show them.
   const openColumnInfo = (
     key: "serie" | "anterior" | "weight" | "reps" | "asis" | "check"
   ) => {
+    if (!started) return;
     setSelectedColumnInfo(key);
   };
 
@@ -685,7 +741,7 @@ const ExerciseSetList = ({
           styles.columnTitles,
           {
             backgroundColor: theme.background,
-            paddingHorizontal: isSmallScreen ? 8 : 12,
+            paddingHorizontal: headerPaddingHorizontal,
             paddingVertical: isSmallScreen ? 6 : 8,
             borderWidth: isDark ? 1 : 0,
             borderColor: theme.border,
@@ -694,13 +750,12 @@ const ExerciseSetList = ({
       >
         <TouchableOpacity
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.serie
-              : COLUMN_FLEX.normal.serie,
+            flex: columnFlex.serie,
             alignItems: "center",
             justifyContent: "center",
           }}
           onPress={() => openColumnInfo("serie")}
+          disabled={!started}
           hitSlop={6}
         >
           <Text
@@ -722,9 +777,7 @@ const ExerciseSetList = ({
         {started && (
           <TouchableOpacity
             style={{
-              flex: isSmallScreen
-                ? COLUMN_FLEX.small.anterior
-                : COLUMN_FLEX.normal.anterior,
+              flex: columnFlex.anterior,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -750,10 +803,8 @@ const ExerciseSetList = ({
 
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.weight
-              : COLUMN_FLEX.normal.weight,
-            marginHorizontal: 2,
+            flex: columnFlex.weight,
+            marginHorizontal: COLUMN_GAP,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -761,6 +812,7 @@ const ExerciseSetList = ({
           <View style={styles.columnHeader}>
             <TouchableOpacity
               onPress={() => openColumnInfo("weight")}
+              disabled={!started}
               hitSlop={6}
             >
               <Text
@@ -795,14 +847,8 @@ const ExerciseSetList = ({
 
         <View
           style={{
-            flex: isSmallScreen
-              ? !started && repsType === "range"
-                ? COLUMN_FLEX.small.repsRange
-                : COLUMN_FLEX.small.reps
-              : !started && repsType === "range"
-              ? COLUMN_FLEX.normal.repsRange
-              : COLUMN_FLEX.normal.reps,
-            marginHorizontal: 2,
+            flex: repsColumnFlex,
+            marginHorizontal: COLUMN_GAP,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -810,6 +856,7 @@ const ExerciseSetList = ({
           <View style={styles.columnHeader}>
             <TouchableOpacity
               onPress={() => openColumnInfo("reps")}
+              disabled={!started}
               hitSlop={6}
             >
               <Text
@@ -844,14 +891,13 @@ const ExerciseSetList = ({
 
         <TouchableOpacity
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.assisted
-              : COLUMN_FLEX.normal.assisted,
-            marginHorizontal: 2,
+            flex: columnFlex.assisted,
+            marginHorizontal: COLUMN_GAP,
             alignItems: "center",
             justifyContent: "center",
           }}
           onPress={() => openColumnInfo("asis")}
+          disabled={!started}
           hitSlop={6}
         >
           <Text
@@ -873,13 +919,12 @@ const ExerciseSetList = ({
         {!readonly && (
           <TouchableOpacity
             style={{
-              flex: isSmallScreen
-                ? COLUMN_FLEX.small.check
-                : COLUMN_FLEX.normal.check,
+              flex: columnFlex.check,
               alignItems: "center",
               justifyContent: "center",
             }}
             onPress={() => openColumnInfo("check")}
+            disabled={!started}
             hitSlop={6}
           >
             <Icon
@@ -891,17 +936,8 @@ const ExerciseSetList = ({
         )}
       </View>
 
-      <GestureHandlerRootView>
-        <FlatList
-          data={sets}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews={true}
-        />
-      </GestureHandlerRootView>
+      {/* Few sets per exercise: map avoids nested FlatList gesture conflicts. */}
+      <View>{sets.map((item, index) => renderItem(item, index))}</View>
 
       <WeightModal />
       <RepsModal />
@@ -914,7 +950,6 @@ const styles = StyleSheet.create({
   columnTitles: {
     flexDirection: "row",
     marginBottom: 12,
-    paddingHorizontal: 8,
     alignItems: "center",
     paddingVertical: 8,
     borderRadius: 8,

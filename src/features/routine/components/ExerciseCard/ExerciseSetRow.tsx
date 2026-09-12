@@ -20,7 +20,12 @@ import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { GLOBAL_KEYBOARD_ACCESSORY_ID } from "../../../../components/KeyboardDismissButton";
 import { getCompletedRowStyle } from "../../../../utils/themeStyles";
-import { COLUMN_FLEX } from "./columnConstants";
+import {
+  COLUMN_GAP,
+  COLUMN_ROW_PADDING,
+  getColumnFlex,
+  getRepsColumnFlex,
+} from "./columnConstants";
 import { useSetRowLogic } from "./useSetRowLogic";
 
 interface Props {
@@ -231,22 +236,11 @@ const ExerciseSetRow = ({
         }`
       : "0";
 
-  // Ancho fijo para el input de reps en modo edición.
-  const repsInputWidth =
-    repsType === "range" ? (isSmallScreen ? 72 : 84) : isSmallScreen ? 52 : 60;
-
-  // Ancho dinámico para el input de reps en modo entrenamiento:
-  // se ajusta al número de caracteres del valor introducido.
-  const startedRepsWidth = (() => {
-    if (repsType === "range") return isSmallScreen ? 72 : 84;
-    const displayVal = localReps || rangePlaceholder || "0";
-    const len = Math.max(1, displayVal.length);
-    const perChar = isSmallScreen ? 10 : 12;
-    const basePad = isSmallScreen ? 20 : 24;
-    const minW = isSmallScreen ? 36 : 42;
-    const maxW = isSmallScreen ? 70 : 80;
-    return Math.max(minW, Math.min(maxW, len * perChar + basePad));
-  })();
+  const columnFlex = getColumnFlex(isSmallScreen);
+  const repsColumnFlex = getRepsColumnFlex(isSmallScreen, repsType, started);
+  const rowPaddingHorizontal = isSmallScreen
+    ? COLUMN_ROW_PADDING.small
+    : COLUMN_ROW_PADDING.normal;
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -300,8 +294,7 @@ const ExerciseSetRow = ({
         getCompletedRowStyle(theme, item.completed ?? false),
         {
           transform: [{ scale: scaleAnim }],
-          // ← Reducido: antes 8/12, ahora 6/8
-          paddingHorizontal: isSmallScreen ? 6 : 8,
+          paddingHorizontal: rowPaddingHorizontal,
           paddingVertical: isSmallScreen ? 10 : 14,
           backgroundColor: backgroundColor,
         },
@@ -310,9 +303,7 @@ const ExerciseSetRow = ({
       {/* Serie */}
       <View
         style={{
-          flex: isSmallScreen
-            ? COLUMN_FLEX.small.serie
-            : COLUMN_FLEX.normal.serie,
+          flex: columnFlex.serie,
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -356,9 +347,7 @@ const ExerciseSetRow = ({
       {started && (
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.anterior
-              : COLUMN_FLEX.normal.anterior,
+            flex: columnFlex.anterior,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -407,10 +396,8 @@ const ExerciseSetRow = ({
       {/* Peso */}
       <View
         style={{
-          flex: isSmallScreen
-            ? COLUMN_FLEX.small.weight
-            : COLUMN_FLEX.normal.weight,
-          marginHorizontal: 1, // ← antes 2
+          flex: columnFlex.weight,
+          marginHorizontal: COLUMN_GAP,
         }}
       >
         <TextInput
@@ -425,6 +412,7 @@ const ExerciseSetRow = ({
               padding: isSmallScreen ? 9 : 12,
               fontSize: RFValue(isSmallScreen ? 14 : 16),
               minHeight: isSmallScreen ? 44 : 48,
+              width: "100%",
             },
           ]}
           keyboardType="decimal-pad"
@@ -439,12 +427,12 @@ const ExerciseSetRow = ({
         />
       </View>
 
-      {/* Repeticiones */}
-      {started ? (
-        // Modo entrenamiento: input único con ancho fijo
+      {/* Repeticiones — same flex as header so columns stay aligned */}
+      {started || repsType !== "range" ? (
         <View
           style={{
-            marginHorizontal: 1, // ← antes 2
+            flex: repsColumnFlex,
+            marginHorizontal: COLUMN_GAP,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -460,24 +448,16 @@ const ExerciseSetRow = ({
                 borderColor: theme.border,
                 paddingHorizontal: isSmallScreen ? 6 : 8,
                 paddingVertical: isSmallScreen ? 9 : 12,
-                fontSize: RFValue(
-                  repsType === "range"
-                    ? isSmallScreen
-                      ? 12
-                      : 14
-                    : isSmallScreen
-                    ? 14
-                    : 16
-                ),
+                fontSize: RFValue(isSmallScreen ? 14 : 16),
                 minHeight: isSmallScreen ? 44 : 48,
-                width: startedRepsWidth,
+                width: "100%",
                 textAlign: "center",
               },
             ]}
             keyboardType="numeric"
             value={localReps}
             selectTextOnFocus
-            placeholder={rangePlaceholder}
+            placeholder={started ? rangePlaceholder : "0"}
             placeholderTextColor={theme.textTertiary}
             onChangeText={handleRepsChange}
             editable={!readonly}
@@ -485,14 +465,11 @@ const ExerciseSetRow = ({
             accessibilityHint="Introduce el número de repeticiones"
           />
         </View>
-      ) : repsType === "range" ? (
-        // Modo edición — rango
+      ) : (
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.repsRange
-              : COLUMN_FLEX.normal.repsRange,
-            marginHorizontal: 1, // ← antes 2
+            flex: repsColumnFlex,
+            marginHorizontal: COLUMN_GAP,
           }}
         >
           <View
@@ -512,7 +489,6 @@ const ExerciseSetRow = ({
               style={[
                 styles.rangeInput,
                 {
-                  flex: 1,
                   color: theme.text,
                   paddingVertical: isSmallScreen ? 7 : 10,
                   paddingHorizontal: 2,
@@ -550,7 +526,6 @@ const ExerciseSetRow = ({
               style={[
                 styles.rangeInput,
                 {
-                  flex: 1,
                   color: theme.text,
                   paddingVertical: isSmallScreen ? 7 : 10,
                   paddingHorizontal: 2,
@@ -574,51 +549,13 @@ const ExerciseSetRow = ({
             />
           </View>
         </View>
-      ) : (
-        // Modo edición — reps simples, ancho fijo
-        <View
-          style={{
-            marginHorizontal: 1, // ← antes 2
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <TextInput
-            {...inputAccessoryProps}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.inputBackground,
-                color: theme.text,
-                borderWidth: isDark ? 1 : 0,
-                borderColor: theme.border,
-                padding: isSmallScreen ? 9 : 12,
-                fontSize: RFValue(isSmallScreen ? 14 : 16),
-                minHeight: isSmallScreen ? 44 : 48,
-                width: repsInputWidth,
-                textAlign: "center",
-              },
-            ]}
-            keyboardType="numeric"
-            value={localReps}
-            selectTextOnFocus
-            placeholder="0"
-            placeholderTextColor={theme.textTertiary}
-            onChangeText={handleRepsChange}
-            editable={!readonly}
-            accessibilityLabel="Repeticiones"
-            accessibilityHint="Introduce el número de repeticiones"
-          />
-        </View>
       )}
 
       {/* Repeticiones asistidas */}
       <View
         style={{
-          flex: isSmallScreen
-            ? COLUMN_FLEX.small.assisted
-            : COLUMN_FLEX.normal.assisted,
-          marginHorizontal: 1, // ← antes 2
+          flex: columnFlex.assisted,
+          marginHorizontal: COLUMN_GAP,
         }}
       >
         <TextInput
@@ -633,6 +570,7 @@ const ExerciseSetRow = ({
               padding: isSmallScreen ? 9 : 12,
               fontSize: RFValue(isSmallScreen ? 14 : 16),
               minHeight: isSmallScreen ? 44 : 48,
+              width: "100%",
             },
           ]}
           keyboardType="numeric"
@@ -651,9 +589,7 @@ const ExerciseSetRow = ({
       {!readonly && (
         <View
           style={{
-            flex: isSmallScreen
-              ? COLUMN_FLEX.small.check
-              : COLUMN_FLEX.normal.check,
+            flex: columnFlex.check,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -668,35 +604,36 @@ const ExerciseSetRow = ({
             accessibilityRole="checkbox"
             accessibilityState={{ checked: item.completed }}
           >
-            <Icon
-              name={item.completed ? "check-circle" : "radio-button-unchecked"}
-              size={isSmallScreen ? 24 : 28}
-              color={item.completed ? completedCheckColor : theme.textTertiary}
-            />
+            <View>
+              <Icon
+                name={item.completed ? "check-circle" : "radio-button-unchecked"}
+                size={isSmallScreen ? 24 : 28}
+                color={item.completed ? completedCheckColor : theme.textTertiary}
+              />
+              {recordType && item.completed ? (
+                <Animated.View
+                  style={[
+                    styles.recordBadge,
+                    { transform: [{ scale: iconScale }] },
+                  ]}
+                  accessibilityLabel="Récord personal"
+                >
+                  {recordType === "1RM" && (
+                    <Trophy size={isSmallScreen ? 12 : 14} color="#FFD700" />
+                  )}
+                  {recordType === "maxWeight" && (
+                    <TrendingUp size={isSmallScreen ? 12 : 14} color="#FFD700" />
+                  )}
+                  {recordType === "maxVolume" && (
+                    <Zap size={isSmallScreen ? 12 : 14} color="#FFD700" />
+                  )}
+                </Animated.View>
+              ) : null}
+            </View>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Record Icon */}
-      {recordType && item.completed && (
-        <Animated.View
-          style={{
-            marginLeft: isSmallScreen ? 2 : 4, // ← antes 4/8
-            transform: [{ scale: iconScale }],
-          }}
-          accessibilityLabel="Récord personal"
-        >
-          {recordType === "1RM" && (
-            <Trophy size={isSmallScreen ? 16 : 20} color="#FFD700" />
-          )}
-          {recordType === "maxWeight" && (
-            <TrendingUp size={isSmallScreen ? 16 : 20} color="#FFD700" />
-          )}
-          {recordType === "maxVolume" && (
-            <Zap size={isSmallScreen ? 16 : 20} color="#FFD700" />
-          )}
-        </Animated.View>
-      )}
+    </Animated.View>
 
       {/* Modal tipo de serie */}
       <Modal
@@ -853,11 +790,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   rangeContainer: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
   },
   rangeInput: {
+    // flexBasis 0 evita que el TextInput tome el ancho intrínseco del texto
+    // y deje pastillas de rango con anchos distintos entre filas.
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
     textAlign: "center",
   },
   rangeSeparator: {
@@ -893,6 +837,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+  recordBadge: {
+    position: "absolute",
+    right: -6,
+    top: -4,
   },
   modalOverlay: {
     flex: 1,

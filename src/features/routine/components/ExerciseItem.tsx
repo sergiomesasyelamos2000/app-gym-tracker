@@ -5,6 +5,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { getStaticExerciseImageUrl } from "../utils/normalizeExerciseImage";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -21,6 +22,7 @@ export default function ExerciseItem({
 }: Props) {
   const { theme, isDark } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const staticImageUrl = getStaticExerciseImageUrl(item);
 
   return (
     <TouchableOpacity
@@ -36,7 +38,7 @@ export default function ExerciseItem({
       activeOpacity={1}
     >
       <CachedExerciseImage
-        imageUrl={item.imageUrl}
+        imageUrl={staticImageUrl}
         style={styles.exerciseImage}
       />
       <View style={styles.exerciseInfo}>

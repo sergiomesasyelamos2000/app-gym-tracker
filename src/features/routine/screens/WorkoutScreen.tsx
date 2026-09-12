@@ -9,16 +9,17 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Modal as RNModal,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import type { RoutineResponseDto } from "@sergiomesasyelamos2000/shared";
@@ -27,18 +28,24 @@ import { WorkoutStackParamList } from "./WorkoutStack";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Modal from "react-native-modal";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useShallow } from "zustand/react/shallow";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
 import { notificationService } from "../../../services/notificationService";
+import { CaughtError, getErrorMessage } from "../../../types";
 import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
 import {
   deleteRoutine,
   duplicateRoutine,
   findAllRoutines,
   getRoutineById,
+  reorderRoutines,
 } from "../services/routineService";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
@@ -48,7 +55,6 @@ type WorkoutScreenNavigationProp = NativeStackNavigationProp<
 
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
-  const { width } = useWindowDimensions();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -61,6 +67,9 @@ export default function WorkoutScreen() {
     useState<RoutineResponseDto | null>(null);
   const [isActionModalVisible, setActionModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(
+    null
+  );
   const { workoutInProgress, clearWorkoutInProgress, patchWorkoutInProgress } =
     useWorkoutInProgressStore(
       useShallow((state) => ({
@@ -171,27 +180,12 @@ export default function WorkoutScreen() {
     });
   }, []);
 
-  // Función para cargar y ordenar rutinas
+  // Función para cargar rutinas (el orden viene del servidor vía sortOrder)
   const fetchRoutines = useCallback(async () => {
     try {
       const data = await findAllRoutines();
-
-      // Ordenar rutinas por fecha de creación (más recientes primero)
-      const sortedRoutines = data.sort((a, b) => {
-        // Convertir las fechas a timestamps para comparar
-        const dateA = new Date(
-          a.createdAt || (a as any).creationDate || Date.now()
-        ).getTime();
-        const dateB = new Date(
-          b.createdAt || (b as any).creationDate || Date.now()
-        ).getTime();
-
-        // Orden descendente (más recientes primero)
-        return dateB - dateA;
-      });
-
-      setRoutines(sortedRoutines);
-      prefetchRoutineDetails(sortedRoutines);
+      setRoutines(data);
+      prefetchRoutineDetails(data);
     } catch (err) {
       console.error("Error fetching routines", err);
     } finally {
@@ -213,6 +207,29 @@ export default function WorkoutScreen() {
     fetchRoutines();
   }, [fetchRoutines]);
 
+  const handleReorderRoutines = useCallback(
+    async (data: RoutineResponseDto[]) => {
+      const previous = routines;
+      const next = data.map((routine, index) => ({
+        ...routine,
+        sortOrder: index,
+      }));
+      setRoutines(next);
+
+      try {
+        await reorderRoutines(next.map((routine) => routine.id));
+      } catch (error: CaughtError) {
+        setRoutines(previous);
+        Alert.alert(
+          "Error",
+          getErrorMessage(error) ||
+            "No se pudo guardar el nuevo orden. Inténtalo de nuevo."
+        );
+      }
+    },
+    [routines]
+  );
+
   const openRoutineOptions = (routine: RoutineResponseDto) => {
     setSelectedRoutine(routine);
     setActionModalVisible(true);
@@ -223,25 +240,70 @@ export default function WorkoutScreen() {
     setActionModalVisible(false);
   };
 
+  const performRoutineMutation = useCallback(
+    async (action: "duplicate" | "delete", routine: RoutineResponseDto) => {
+      setProcessingMessage(
+        action === "duplicate" ? "Duplicando rutina..." : "Eliminando rutina..."
+      );
+
+      try {
+        if (action === "duplicate") {
+          await duplicateRoutine(routine.id);
+        } else {
+          await deleteRoutine(routine.id);
+        }
+        await fetchRoutines();
+      } catch (error: CaughtError) {
+        Alert.alert(
+          "Error",
+          getErrorMessage(error) ||
+            (action === "duplicate"
+              ? "No se pudo duplicar la rutina. Inténtalo de nuevo."
+              : "No se pudo eliminar la rutina. Inténtalo de nuevo.")
+        );
+      } finally {
+        setProcessingMessage(null);
+      }
+    },
+    [fetchRoutines]
+  );
+
   // Centraliza las acciones del modal
-  const handleRoutineAction = async (
-    action: "duplicate" | "delete" | "edit"
-  ) => {
-    if (!selectedRoutine) return;
-    if (action === "duplicate") {
-      await duplicateRoutine(selectedRoutine.id);
-      await fetchRoutines(); // Se recargarán y ordenarán automáticamente
-      closeRoutineOptions();
-    }
-    if (action === "delete") {
-      await deleteRoutine(selectedRoutine.id);
-      await fetchRoutines(); // Se recargarán y ordenarán automáticamente
-      closeRoutineOptions();
-    }
+  const handleRoutineAction = (action: "duplicate" | "delete" | "edit") => {
+    if (!selectedRoutine || processingMessage) return;
+
+    const routine = selectedRoutine;
+
     if (action === "edit") {
-      navigation.navigate("RoutineEdit", { id: selectedRoutine.id });
       closeRoutineOptions();
+      navigation.navigate("RoutineEdit", { id: routine.id });
+      return;
     }
+
+    if (action === "delete") {
+      closeRoutineOptions();
+      // Esperar a que cierre el modal de acciones para evitar conflicto con Alert en Android.
+      setTimeout(() => {
+        Alert.alert(
+          "Eliminar rutina",
+          `¿Estás seguro de que deseas eliminar "${routine.title}"? Esta acción no se puede deshacer.`,
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Eliminar",
+              style: "destructive",
+              onPress: () => {
+                void performRoutineMutation("delete", routine);
+              },
+            },
+          ]
+        );
+      }, 300);
+      return;
+    }
+
+    closeRoutineOptions();
+    void performRoutineMutation("duplicate", routine);
   };
 
   return (
@@ -271,6 +333,9 @@ export default function WorkoutScreen() {
         <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
           Selecciona una rutina para comenzar o crea una nueva
         </Text>
+        <Text style={[styles.reorderHint, { color: theme.textTertiary }]}>
+          Mantén pulsado el icono ≡ para reordenar
+        </Text>
       </View>
 
       {/* Botón principal */}
@@ -291,109 +356,139 @@ export default function WorkoutScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Listado de rutinas con RefreshControl */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.listContainer,
-          showWorkoutBanner && styles.listContainerWithBanner,
-        ]}
-        refreshControl={
-          <RefreshControl
-            key="workout-refresh-purple"
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#6C3BAA"
-            titleColor="#6C3BAA"
-            colors={["#6C3BAA"]}
-            progressBackgroundColor="#FFFFFF"
-          />
-        }
-      >
-        {loading ? (
-          <Text
-            style={{ textAlign: "center", marginTop: 40, color: theme.text }}
-          >
-            Cargando rutinas...
-          </Text>
-        ) : routines.length === 0 ? (
-          <Text
-            style={{
-              textAlign: "center",
-              marginTop: 40,
-              color: theme.textSecondary,
-            }}
-          >
-            No tienes rutinas guardadas.
-          </Text>
-        ) : (
-          routines.map((routine) => (
-            <View
-              key={routine.id}
-              style={[
-                styles.routineCard,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.moreButton}
-                onPress={() => openRoutineOptions(routine)}
-              >
-                <MaterialIcons
-                  name="more-vert"
-                  size={20}
-                  color={theme.primary}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                activeOpacity={0.8}
-                onPress={() =>
-                  navigation.navigate("RoutineDetail", {
-                    routineId: routine.id,
-                    routine: routineDetailsById[routine.id] ?? routine,
-                  })
-                }
-              >
-                <Text style={[styles.routineName, { color: theme.text }]}>
-                  {routine.title}
-                </Text>
-                {/* Opcional: Mostrar fecha de creación */}
-                {routine.createdAt && (
-                  <Text
-                    style={[styles.routineDate, { color: theme.textSecondary }]}
-                  >
-                    Creada: {new Date(routine.createdAt).toLocaleDateString()}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
+      {/* Listado de rutinas con drag-and-drop */}
+      {loading ? (
+        <Text style={{ textAlign: "center", marginTop: 40, color: theme.text }}>
+          Cargando rutinas...
+        </Text>
+      ) : routines.length === 0 ? (
+        <Text
+          style={{
+            textAlign: "center",
+            marginTop: 40,
+            color: theme.textSecondary,
+          }}
+        >
+          No tienes rutinas guardadas.
+        </Text>
+      ) : (
+        <DraggableFlatList
+          data={routines}
+          keyExtractor={(item) => item.id}
+          activationDistance={12}
+          onDragEnd={({ data }) => {
+            void handleReorderRoutines(data);
+          }}
+          refreshControl={
+            <RefreshControl
+              key="workout-refresh-purple"
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#6C3BAA"
+              titleColor="#6C3BAA"
+              colors={["#6C3BAA"]}
+              progressBackgroundColor="#FFFFFF"
+            />
+          }
+          contentContainerStyle={[
+            styles.listContainer,
+            showWorkoutBanner && styles.listContainerWithBanner,
+          ]}
+          renderItem={({
+            item: routine,
+            drag,
+            isActive,
+          }: RenderItemParams<RoutineResponseDto>) => (
+            <ScaleDecorator>
+              <View
                 style={[
-                  styles.startRoutineButton,
-                  { backgroundColor: theme.primary },
+                  styles.routineCard,
+                  {
+                    backgroundColor: theme.card,
+                    shadowColor: theme.shadowColor,
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: theme.border,
+                    opacity: isActive ? 0.92 : 1,
+                    elevation: isActive ? 6 : 2,
+                  },
                 ]}
-                onPress={() =>
-                  navigation.navigate("RoutineDetail", {
-                    routineId: routine.id,
-                    routine: routineDetailsById[routine.id] ?? routine,
-                    start: true,
-                  })
-                }
               >
-                <Text style={styles.startRoutineButtonText}>
-                  Iniciar rutina
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-      </ScrollView>
+                <TouchableOpacity
+                  style={styles.dragHandle}
+                  onLongPress={drag}
+                  delayLongPress={180}
+                  disabled={Boolean(processingMessage)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Reordenar rutina"
+                  accessibilityHint="Mantén pulsado y arrastra para cambiar el orden"
+                >
+                  <MaterialIcons
+                    name="drag-indicator"
+                    size={22}
+                    color={theme.textTertiary}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={() => openRoutineOptions(routine)}
+                  disabled={Boolean(processingMessage)}
+                >
+                  <MaterialIcons
+                    name="more-vert"
+                    size={20}
+                    color={theme.primary}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.routineBody}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    navigation.navigate("RoutineDetail", {
+                      routineId: routine.id,
+                      routine: routineDetailsById[routine.id] ?? routine,
+                    })
+                  }
+                >
+                  <Text style={[styles.routineName, { color: theme.text }]}>
+                    {routine.title}
+                  </Text>
+                  {routine.createdAt && (
+                    <Text
+                      style={[
+                        styles.routineDate,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Creada:{" "}
+                      {new Date(routine.createdAt).toLocaleDateString()}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.startRoutineButton,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={() =>
+                    navigation.navigate("RoutineDetail", {
+                      routineId: routine.id,
+                      routine: routineDetailsById[routine.id] ?? routine,
+                      start: true,
+                    })
+                  }
+                >
+                  <Text style={styles.startRoutineButtonText}>
+                    Iniciar rutina
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScaleDecorator>
+          )}
+        />
+      )}
 
       {/* Modal de acciones */}
       <Modal
@@ -420,6 +515,7 @@ export default function WorkoutScreen() {
           <TouchableOpacity
             style={styles.modalOption}
             onPress={() => handleRoutineAction("duplicate")}
+            disabled={Boolean(processingMessage)}
           >
             <View style={styles.modalOptionLeft}>
               <MaterialIcons
@@ -433,6 +529,7 @@ export default function WorkoutScreen() {
           <TouchableOpacity
             style={styles.modalOption}
             onPress={() => handleRoutineAction("edit")}
+            disabled={Boolean(processingMessage)}
           >
             <View style={styles.modalOptionLeft}>
               <MaterialIcons name="edit" size={24} color={theme.primary} />
@@ -442,6 +539,7 @@ export default function WorkoutScreen() {
           <TouchableOpacity
             style={styles.modalOption}
             onPress={() => handleRoutineAction("delete")}
+            disabled={Boolean(processingMessage)}
           >
             <View style={styles.modalOptionLeft}>
               <MaterialIcons name="delete" size={24} color={theme.error} />
@@ -452,6 +550,23 @@ export default function WorkoutScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      <RNModal
+        visible={Boolean(processingMessage)}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => {
+          // Bloquear cierre mientras se procesa la acción.
+        }}
+      >
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.processingText, { color: theme.text }]}>
+            {processingMessage}
+          </Text>
+        </View>
+      </RNModal>
 
       {/* Banner de entrenamiento en progreso - MEJORADO */}
       {showWorkoutBanner && workoutInProgress && (
@@ -544,6 +659,10 @@ const createStyles = (theme: Theme) =>
     headerSubtitle: {
       fontSize: RFValue(15),
     },
+    reorderHint: {
+      fontSize: RFValue(12),
+      marginTop: 6,
+    },
     topActions: {
       paddingHorizontal: 24,
       marginBottom: 10,
@@ -573,12 +692,27 @@ const createStyles = (theme: Theme) =>
     routineCard: {
       borderRadius: 14,
       padding: 18,
+      paddingLeft: 44,
       marginBottom: 16,
       shadowOpacity: 0.04,
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 4,
       elevation: 2,
       position: "relative",
+    },
+    dragHandle: {
+      position: "absolute",
+      left: 8,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      width: 32,
+      zIndex: 10,
+    },
+    routineBody: {
+      flex: 1,
+      paddingRight: 28,
     },
     routineName: {
       fontSize: RFValue(18),
@@ -751,5 +885,17 @@ const createStyles = (theme: Theme) =>
     buttonPressed: {
       opacity: 0.8,
       transform: [{ scale: 0.96 }],
+    },
+    processingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.25)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 2000,
+    },
+    processingText: {
+      marginTop: 12,
+      fontSize: RFValue(14),
+      fontWeight: "600",
     },
   });

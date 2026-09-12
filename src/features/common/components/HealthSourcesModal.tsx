@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +33,12 @@ export function HealthSourcesModal({ visible, onClose }: Props) {
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar aviso"
+        />
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text }]}>

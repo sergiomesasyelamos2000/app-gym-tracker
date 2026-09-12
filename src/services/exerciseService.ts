@@ -9,40 +9,16 @@ import type {
   MuscleDto,
 } from "@sergiomesasyelamos2000/shared";
 import type { CaughtError } from "../types";
+import {
+  filterAndSortExercises,
+  type SearchableExercise,
+} from "../features/routine/utils/exerciseSearch";
 
 type ExerciseSearchFilters = {
   name?: string;
   equipment?: string;
   muscle?: string;
   muscles?: string[] | string;
-};
-
-type SearchableExercise = ExerciseRequestDto & {
-  equipments?: string[];
-  targetMuscles?: string[];
-  secondaryMuscles?: string[];
-  bodyParts?: string[];
-};
-
-const normalizeSearchText = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const matchesToken = (value: string, expected: string) => {
-  const normalizedValue = normalizeSearchText(value);
-  const normalizedExpected = normalizeSearchText(expected);
-  if (!normalizedExpected) return true;
-  return (
-    normalizedValue === normalizedExpected ||
-    normalizedValue.startsWith(`${normalizedExpected} `) ||
-    normalizedValue.startsWith(normalizedExpected) ||
-    normalizedExpected.startsWith(normalizedValue)
-  );
 };
 
 const CACHE_KEYS = {
@@ -337,22 +313,10 @@ export const searchExercises = async (
       const exercises: SearchableExercise[] = JSON.parse(cached);
       await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
 
-      return exercises.filter((ex) => {
-        const matchesName =
-          !name ||
-          normalizeSearchText(ex.name).includes(normalizeSearchText(name));
-        const exerciseEquipments = ex.equipments || [];
-        const exerciseMuscles = [...(ex.targetMuscles || [])];
-        const matchesEquipment =
-          !equipment ||
-          exerciseEquipments.some((item) => matchesToken(item, equipment));
-        const matchesMuscle =
-          muscles.length === 0 ||
-          muscles.some((selectedMuscle) =>
-            exerciseMuscles.some((item) => matchesToken(item, selectedMuscle))
-          );
-
-        return matchesName && matchesEquipment && matchesMuscle;
+      return filterAndSortExercises(exercises, {
+        searchQuery: name,
+        selectedEquipmentNames: equipment ? [equipment] : [],
+        selectedMuscleNames: muscles,
       });
     }
     throw error;
