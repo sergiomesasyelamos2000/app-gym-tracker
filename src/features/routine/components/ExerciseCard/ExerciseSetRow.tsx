@@ -288,6 +288,7 @@ const ExerciseSetRow = ({
   };
 
   return (
+    <>
     <Animated.View
       style={[
         styles.row,
@@ -754,7 +755,7 @@ const ExerciseSetRow = ({
           </Animated.View>
         </TouchableWithoutFeedback>
       </Modal>
-    </Animated.View>
+    </>
   );
 };
 
