@@ -386,7 +386,7 @@ export default function RoutineDetailScreen() {
         if (ex.id === oldId) {
           return {
             ...normalizedReplacement,
-            restTime: ex.restTime,
+            restSeconds: ex.restSeconds,
             weightUnit: ex.weightUnit,
             repsType: ex.repsType,
             notes: ex.notes,
