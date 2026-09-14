@@ -372,47 +372,48 @@ export default function WorkoutScreen() {
           No tienes rutinas guardadas.
         </Text>
       ) : (
-        <DraggableFlatList
-          data={routines}
-          keyExtractor={(item) => item.id}
-          activationDistance={12}
-          onDragEnd={({ data }) => {
-            void handleReorderRoutines(data);
-          }}
-          refreshControl={
-            <RefreshControl
-              key="workout-refresh-purple"
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#6C3BAA"
-              titleColor="#6C3BAA"
-              colors={["#6C3BAA"]}
-              progressBackgroundColor="#FFFFFF"
-            />
-          }
-          contentContainerStyle={[
-            styles.listContainer,
-            showWorkoutBanner && styles.listContainerWithBanner,
-          ]}
-          renderItem={({
-            item: routine,
-            drag,
-            isActive,
-          }: RenderItemParams<RoutineResponseDto>) => (
-            <ScaleDecorator>
-              <View
-                style={[
-                  styles.routineCard,
-                  {
-                    backgroundColor: theme.card,
-                    shadowColor: theme.shadowColor,
-                    borderWidth: isDark ? 1 : 0,
-                    borderColor: theme.border,
-                    opacity: isActive ? 0.92 : 1,
-                    elevation: isActive ? 6 : 2,
-                  },
-                ]}
-              >
+        <View style={styles.listWrapper}>
+          <DraggableFlatList
+            data={routines}
+            keyExtractor={(item) => item.id}
+            activationDistance={12}
+            onDragEnd={({ data }) => {
+              void handleReorderRoutines(data);
+            }}
+            refreshControl={
+              <RefreshControl
+                key="workout-refresh-purple"
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#6C3BAA"
+                titleColor="#6C3BAA"
+                colors={["#6C3BAA"]}
+                progressBackgroundColor="#FFFFFF"
+              />
+            }
+            contentContainerStyle={[
+              styles.listContent,
+              showWorkoutBanner && styles.listContentWithBanner,
+            ]}
+            renderItem={({
+              item: routine,
+              drag,
+              isActive,
+            }: RenderItemParams<RoutineResponseDto>) => (
+              <ScaleDecorator>
+                <View
+                  style={[
+                    styles.routineCard,
+                    {
+                      backgroundColor: theme.card,
+                      shadowColor: theme.shadowColor,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: theme.border,
+                      opacity: isActive ? 0.92 : 1,
+                      elevation: isActive ? 6 : 2,
+                    },
+                  ]}
+                >
                 <TouchableOpacity
                   style={styles.dragHandle}
                   onLongPress={drag}
@@ -485,9 +486,10 @@ export default function WorkoutScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </ScaleDecorator>
-          )}
-        />
+              </ScaleDecorator>
+            )}
+          />
+        </View>
       )}
 
       {/* Modal de acciones */}
@@ -682,11 +684,14 @@ const createStyles = (theme: Theme) =>
       fontWeight: "bold",
       marginLeft: 8,
     },
-    listContainer: {
+    listWrapper: {
+      flex: 1,
+    },
+    listContent: {
       paddingHorizontal: 16,
       paddingBottom: 20,
     },
-    listContainerWithBanner: {
+    listContentWithBanner: {
       paddingBottom: 100, // Espacio extra cuando el banner está visible
     },
     routineCard: {

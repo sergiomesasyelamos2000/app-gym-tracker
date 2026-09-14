@@ -16,7 +16,7 @@ import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../../contexts/ThemeContext";
 import { BaseNavigation } from "../../../../types";
-import { getStaticExerciseImageUrl } from "../../utils/normalizeExerciseImage";
+import { getExerciseThumbnailUrl, getStaticExerciseImageUrl } from "../../utils/normalizeExerciseImage";
 
 interface Props {
   exercise: ExerciseRequestDto;
@@ -102,14 +102,20 @@ const ExerciseHeader = ({
   const filteredExercises = availableExercises.filter(
     (ex) => ex.id !== exercise.id
   );
-  const staticImageUrl = getStaticExerciseImageUrl(exercise);
+  const thumbnail = readonly
+    ? getExerciseThumbnailUrl(exercise)
+    : {
+        uri: getStaticExerciseImageUrl(exercise),
+        allowAnimated: false,
+      };
 
   return (
     <>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleOpenExerciseDetail} activeOpacity={0.8}>
           <CachedExerciseImage
-            imageUrl={staticImageUrl}
+            imageUrl={thumbnail.uri}
+            allowAnimated={thumbnail.allowAnimated}
             style={styles.exerciseImage}
           />
         </TouchableOpacity>

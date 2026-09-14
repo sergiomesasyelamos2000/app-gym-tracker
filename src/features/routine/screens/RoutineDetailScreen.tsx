@@ -797,8 +797,9 @@ export default function RoutineDetailScreen() {
       return;
     }
 
-    const normalizedInitialExercises =
-      normalizeExercisesImage(initialExercises);
+    const normalizedInitialExercises = sessionView
+      ? initialExercises
+      : normalizeExercisesImage(initialExercises);
     setExercises(normalizedInitialExercises);
 
     const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
