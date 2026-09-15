@@ -283,6 +283,25 @@ export async function findAllRoutineSessions(): Promise<
   }
 }
 
+/**
+ * Slim session rows for burned-kcal / TDEE insights (no exercises payload).
+ * Falls back to mapping full sessions if the burn endpoint is unavailable.
+ */
+export async function findSessionBurnSummaries(): Promise<
+  Array<{ id?: string; createdAt?: string | Date | null; caloriesBurned?: number | null }>
+> {
+  try {
+    return await apiFetch("routines/sessions?fields=burn", { method: "GET" });
+  } catch {
+    const sessions = await findAllRoutineSessions().catch(() => []);
+    return sessions.map((s) => ({
+      id: s.id,
+      createdAt: s.createdAt,
+      caloriesBurned: (s as { caloriesBurned?: number | null }).caloriesBurned,
+    }));
+  }
+}
+
 export async function findRoutineSessions(
   id: string
 ): Promise<RoutineSessionEntity[]> {

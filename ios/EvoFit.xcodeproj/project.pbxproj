@@ -11,6 +11,10 @@
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		A10000000000000000000011 /* WorkoutLiveAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* WorkoutLiveAttributes.swift */; };
+		A10000000000000000000012 /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* RestTimerLiveActivity.swift */; };
+		A10000000000000000000013 /* RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* RestTimerLiveActivityModule.swift */; };
+		A10000000000000000000014 /* RestTimerLiveActivityBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* RestTimerLiveActivityBridge.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +26,10 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = EvoFit/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "EvoFit-Bridging-Header.h"; path = "EvoFit/EvoFit-Bridging-Header.h"; sourceTree = "<group>"; };
+		A10000000000000000000001 /* WorkoutLiveAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutLiveAttributes.swift; path = EvoFit/WorkoutLive/WorkoutLiveAttributes.swift; sourceTree = "<group>"; };
+		A10000000000000000000002 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivity.swift; path = EvoFit/WorkoutLive/RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* RestTimerLiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivityModule.swift; path = EvoFit/WorkoutLive/RestTimerLiveActivityModule.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* RestTimerLiveActivityBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = RestTimerLiveActivityBridge.m; path = EvoFit/WorkoutLive/RestTimerLiveActivityBridge.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,12 +48,24 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* EvoFit-Bridging-Header.h */,
+				A10000000000000000000010 /* WorkoutLive */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 			);
 			name = EvoFit;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000010 /* WorkoutLive */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000001 /* WorkoutLiveAttributes.swift */,
+				A10000000000000000000002 /* RestTimerLiveActivity.swift */,
+				A10000000000000000000003 /* RestTimerLiveActivityModule.swift */,
+				A10000000000000000000004 /* RestTimerLiveActivityBridge.m */,
+			);
+			name = WorkoutLive;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -230,6 +250,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				A10000000000000000000011 /* WorkoutLiveAttributes.swift in Sources */,
+				A10000000000000000000012 /* RestTimerLiveActivity.swift in Sources */,
+				A10000000000000000000013 /* RestTimerLiveActivityModule.swift in Sources */,
+				A10000000000000000000014 /* RestTimerLiveActivityBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

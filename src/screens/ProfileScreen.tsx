@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import {
+  Activity,
   Bell,
   Brain,
   Calendar,
@@ -17,8 +18,9 @@ import {
   Trash2,
   User,
   Utensils,
+  Watch,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { BaseNavigation } from "../types/common";
 import {
   ActivityIndicator,
@@ -36,6 +38,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   deleteAccount as deleteAccountService,
@@ -49,10 +52,34 @@ import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { HealthSourcesModal } from "../features/common/components/HealthSourcesModal";
 import {
+  computeWeeklyActivitySuggestion,
+  getBurnedInsightsCached,
+  getRestSummaryCached,
+  useHealthConnectionStore,
+  type HealthAuthorizationStatus,
+  type RestSummary,
+  type WeeklyActivitySuggestion,
+} from "../features/health";
+import * as nutritionService from "../features/nutrition/services/nutritionService";
+import { calculateMacroGoals } from "../utils/macroCalculator";
+import {
   PRIVACY_POLICY_URL,
   TERMS_OF_USE_URL,
 } from "../features/common/constants/legalUrls";
 import { openExternalUrl } from "../features/common/utils/openExternalUrl";
+
+function healthStatusLabel(status: HealthAuthorizationStatus): string {
+  switch (status) {
+    case "granted":
+      return "Conectado";
+    case "denied":
+      return "Permiso denegado";
+    case "unavailable":
+      return "No disponible en este dispositivo";
+    default:
+      return "Toca para conectar reloj o banda";
+  }
+}
 
 const AI_DATA_SHARING_DETAILS = [
   {
@@ -127,6 +154,190 @@ export default function ProfileScreen() {
   const toggleRestTimerNotifications = useNotificationSettingsStore(
     (state) => state.toggleRestTimerNotifications
   );
+
+  const healthStatus = useHealthConnectionStore((state) => state.status);
+  const refreshHealthStatus = useHealthConnectionStore(
+    (state) => state.refreshStatus
+  );
+  const connectHealth = useHealthConnectionStore((state) => state.connect);
+  const writeWorkoutsToHub = useHealthConnectionStore(
+    (state) => state.writeWorkoutsToHub
+  );
+  const setWriteWorkoutsToHub = useHealthConnectionStore(
+    (state) => state.setWriteWorkoutsToHub
+  );
+  const showRestHints = useHealthConnectionStore(
+    (state) => state.showRestHints
+  );
+  const setShowRestHints = useHealthConnectionStore(
+    (state) => state.setShowRestHints
+  );
+  const lastDismissedSuggestionAt = useHealthConnectionStore(
+    (state) => state.lastDismissedSuggestionAt
+  );
+  const dismissSuggestion = useHealthConnectionStore(
+    (state) => state.dismissSuggestion
+  );
+  const setUserProfile = useNutritionStore((state) => state.setUserProfile);
+  const [isConnectingHealth, setIsConnectingHealth] = useState(false);
+  const [tdeeSuggestion, setTdeeSuggestion] =
+    useState<WeeklyActivitySuggestion | null>(null);
+  const [restSummary, setRestSummary] = useState<RestSummary | null>(null);
+  const [isApplyingSuggestion, setIsApplyingSuggestion] = useState(false);
+
+  useEffect(() => {
+    void refreshHealthStatus();
+  }, [refreshHealthStatus]);
+
+  // Read latest values inside focus effect without re-subscribing (avoids double fetch
+  // when refreshHealthStatus updates status right after mount).
+  const phase3DepsRef = useRef({
+    healthStatus,
+    showRestHints,
+    lastDismissedSuggestionAt,
+    activityLevel: userProfile?.anthropometrics?.activityLevel,
+    dailyCalories: userProfile?.macroGoals?.dailyCalories ?? 0,
+  });
+  phase3DepsRef.current = {
+    healthStatus,
+    showRestHints,
+    lastDismissedSuggestionAt,
+    activityLevel: userProfile?.anthropometrics?.activityLevel,
+    dailyCalories: userProfile?.macroGoals?.dailyCalories ?? 0,
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const loadPhase3Insights = async () => {
+        const {
+          healthStatus: status,
+          showRestHints: restHintsOn,
+          lastDismissedSuggestionAt: dismissedAt,
+          activityLevel,
+          dailyCalories,
+        } = phase3DepsRef.current;
+
+        try {
+          const shouldLoadRest =
+            restHintsOn &&
+            (status === "granted" || status === "undetermined");
+
+          // Parallel: sessions (cached TTL) + rest summary (cached longer).
+          const [burnedInsights, summary] = await Promise.all([
+            getBurnedInsightsCached(),
+            shouldLoadRest
+              ? getRestSummaryCached()
+              : Promise.resolve(null as RestSummary | null),
+          ]);
+          if (cancelled) return;
+
+          if (activityLevel) {
+            const suggestion = computeWeeklyActivitySuggestion({
+              sessions: burnedInsights.sessions,
+              currentActivityLevel: activityLevel,
+              currentDailyCalories: dailyCalories,
+            });
+
+            const dismissedRecently =
+              dismissedAt &&
+              Date.now() - new Date(dismissedAt).getTime() <
+                7 * 24 * 60 * 60 * 1000;
+
+            setTdeeSuggestion(
+              suggestion && !dismissedRecently ? suggestion : null
+            );
+          } else {
+            setTdeeSuggestion(null);
+          }
+
+          setRestSummary(summary);
+        } catch {
+          if (!cancelled) {
+            setTdeeSuggestion(null);
+            setRestSummary(null);
+          }
+        }
+      };
+
+      void loadPhase3Insights();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  const handleConnectHealth = async () => {
+    setIsConnectingHealth(true);
+    try {
+      const status = await connectHealth();
+      if (status === "unavailable") {
+        Alert.alert(
+          "Salud no disponible",
+          Platform.OS === "ios"
+            ? "Apple Salud no está disponible. Necesitas un build nativo (no Expo Go) y un dispositivo compatible."
+            : "Health Connect no está disponible. Instálalo desde Play Store y usa un build nativo de EvoFit."
+        );
+      } else if (status === "denied") {
+        Alert.alert(
+          "Permiso denegado",
+          Platform.OS === "ios"
+            ? "Activa el acceso en Ajustes > Salud > Acceso de apps y datos > EvoFit."
+            : "Concede permisos de frecuencia cardiaca y calorías en Health Connect."
+        );
+      }
+    } finally {
+      setIsConnectingHealth(false);
+    }
+  };
+
+  const handleApplyTdeeSuggestion = async (
+    mode: "calories" | "activity"
+  ) => {
+    if (!tdeeSuggestion || !userProfile || !user?.id) return;
+
+    setIsApplyingSuggestion(true);
+    try {
+      if (mode === "calories") {
+        const nextGoals = {
+          ...userProfile.macroGoals,
+          dailyCalories:
+            Math.round(userProfile.macroGoals.dailyCalories) +
+            tdeeSuggestion.suggestedCalorieBump,
+        };
+        const updated = await nutritionService.updateMacroGoals(
+          nextGoals,
+          user.id
+        );
+        setUserProfile(updated);
+      } else if (tdeeSuggestion.suggestedActivityLevel) {
+        const anthropometrics = {
+          ...userProfile.anthropometrics,
+          activityLevel: tdeeSuggestion.suggestedActivityLevel,
+        };
+        const macroGoals = calculateMacroGoals(
+          anthropometrics,
+          userProfile.goals
+        );
+        const updated = await nutritionService.updateUserProfile(
+          { anthropometrics, macroGoals },
+          user.id
+        );
+        setUserProfile(updated);
+      }
+      dismissSuggestion();
+      setTdeeSuggestion(null);
+      Alert.alert("Perfil actualizado", "Se aplicó la sugerencia de energía.");
+    } catch {
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar el perfil. Inténtalo de nuevo."
+      );
+    } finally {
+      setIsApplyingSuggestion(false);
+    }
+  };
 
   const handleEditNutritionProfile = () => {
     if (isProfileComplete()) {
@@ -670,6 +881,102 @@ export default function ProfileScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {tdeeSuggestion && (
+            <View
+              style={[
+                styles.settingCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  marginTop: 12,
+                },
+              ]}
+            >
+              <View style={styles.settingRow}>
+                <View
+                  style={[
+                    styles.settingIconContainer,
+                    { backgroundColor: theme.warning + "20" },
+                  ]}
+                >
+                  <Activity color={theme.warning} size={22} />
+                </View>
+                <View style={styles.settingContent}>
+                  <Text style={[styles.settingTitle, { color: theme.text }]}>
+                    Sugerencia de energía (7 días)
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {tdeeSuggestion.message}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 8,
+                  paddingHorizontal: 16,
+                  paddingBottom: 14,
+                  flexWrap: "wrap",
+                }}
+              >
+                <TouchableOpacity
+                  disabled={isApplyingSuggestion}
+                  onPress={() => void handleApplyTdeeSuggestion("calories")}
+                  style={{
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: theme.onPrimary, fontWeight: "700" }}>
+                    +{tdeeSuggestion.suggestedCalorieBump} kcal
+                  </Text>
+                </TouchableOpacity>
+                {tdeeSuggestion.suggestedActivityLevel ? (
+                  <TouchableOpacity
+                    disabled={isApplyingSuggestion}
+                    onPress={() => void handleApplyTdeeSuggestion("activity")}
+                    style={{
+                      backgroundColor: theme.primaryLight + "30",
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: theme.primary,
+                    }}
+                  >
+                    <Text style={{ color: theme.primary, fontWeight: "700" }}>
+                      Subir actividad
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  disabled={isApplyingSuggestion}
+                  onPress={() => {
+                    dismissSuggestion();
+                    setTdeeSuggestion(null);
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text
+                    style={{ color: theme.textSecondary, fontWeight: "600" }}
+                  >
+                    Ahora no
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* General Settings */}
@@ -895,6 +1202,119 @@ export default function ProfileScreen() {
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+              onPress={() => void handleConnectHealth()}
+              disabled={isConnectingHealth}
+            >
+              <View
+                style={[
+                  styles.settingIconContainer,
+                  { backgroundColor: theme.error + "20" },
+                ]}
+              >
+                <Watch color={theme.error} size={20} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Reloj y banda de salud
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {isConnectingHealth
+                    ? "Conectando..."
+                    : healthStatusLabel(healthStatus)}
+                </Text>
+              </View>
+              {isConnectingHealth ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <ChevronRight color={theme.textTertiary} size={20} />
+              )}
+            </TouchableOpacity>
+
+            <View
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+            >
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Exportar entrenos al hub
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Escribe cada sesión en Apple Salud / Health Connect
+                </Text>
+              </View>
+              <Switch
+                value={writeWorkoutsToHub}
+                onValueChange={setWriteWorkoutsToHub}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            <View
+              style={[
+                styles.settingRow,
+                styles.settingRowBorder,
+                { borderBottomColor: theme.divider },
+              ]}
+            >
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Consejos de descanso
+                </Text>
+                <Text
+                  style={[
+                    styles.settingSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {showRestHints && restSummary
+                    ? [
+                        restSummary.sleepHoursLastNight != null
+                          ? `Sueño ~${restSummary.sleepHoursLastNight} h`
+                          : null,
+                        restSummary.stepsLast7Days != null
+                          ? `${restSummary.stepsLast7Days.toLocaleString("es-ES")} pasos (7d)`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Sin datos de sueño/pasos todavía"
+                    : "Mostrar sueño y pasos del hub de salud"}
+                </Text>
+              </View>
+              <Switch
+                value={showRestHints}
+                onValueChange={(value) => {
+                  setShowRestHints(value);
+                  if (!value) {
+                    setRestSummary(null);
+                    return;
+                  }
+                  void getRestSummaryCached({ force: true }).then(setRestSummary);
+                }}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor="#fff"
+              />
+            </View>
 
             <TouchableOpacity
               style={[

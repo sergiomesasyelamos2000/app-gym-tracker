@@ -32,6 +32,12 @@ public class AppDelegate: ExpoAppDelegate {
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  public override func applicationWillTerminate(_ application: UIApplication) {
+    let defaults = UserDefaults(suiteName: "group.com.smy862.app") ?? .standard
+    defaults.set(Date().timeIntervalSince1970 * 1000, forKey: "workoutLive.appTerminatedAt")
+    super.applicationWillTerminate(application)
+  }
+
   // Linking API
   public override func application(
     _ app: UIApplication,

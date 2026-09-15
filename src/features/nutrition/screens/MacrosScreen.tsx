@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -45,6 +45,7 @@ import {
   getProductDetail,
   scanBarcode,
 } from "../services/nutritionService";
+import { getBurnedInsightsCached } from "../../health";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -148,6 +149,10 @@ export default function MacrosScreen({ navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  /** O(1) burned kcal lookup by local date — avoids keeping full session list in state. */
+  const [burnedByDate, setBurnedByDate] = useState<Record<string, number>>({});
+  const sessionsLoadedRef = useRef(false);
+  const loadInFlightRef = useRef(0);
   const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(
     {
       breakfast: true,
@@ -169,6 +174,9 @@ export default function MacrosScreen({ navigation }: Props) {
     notEatenEntries.has(id)
   );
   const isToday = selectedDate === new Date().toISOString().split("T")[0];
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+  const bootstrappedRef = useRef(false);
 
   // ✅ Verificar perfil al montar y cuando cambia el usuario
   useEffect(() => {
@@ -278,12 +286,24 @@ export default function MacrosScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
-        loadEntriesForDate(selectedDate);
+        // On tab focus: refresh diary + sessions (workout may have just finished).
+        void loadEntriesForDate(selectedDateRef.current, {
+          refreshSessions: true,
+        });
+        bootstrappedRef.current = true;
       }
       setTabVisibility("Macros", true);
       return () => setTabVisibility("Macros", true);
-    }, [selectedDate, user, setTabVisibility])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, setTabVisibility])
   );
+
+  // Changing diary day only reloads food entries; burned kcal is O(1) from cache.
+  useEffect(() => {
+    if (!user?.id || !bootstrappedRef.current) return;
+    void loadEntriesForDate(selectedDate, { refreshSessions: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, user?.id]);
 
   // Animar apertura/cierre del calendario con efecto fluido
   useEffect(() => {
@@ -304,26 +324,51 @@ export default function MacrosScreen({ navigation }: Props) {
     }
   }, [showCalendar]);
 
-  const loadEntriesForDate = async (date: string) => {
+  const loadEntriesForDate = async (
+    date: string,
+    options?: { refreshSessions?: boolean }
+  ) => {
     if (!user?.id) return;
 
+    const requestId = ++loadInFlightRef.current;
+    const shouldRefreshSessions =
+      options?.refreshSessions === true || !sessionsLoadedRef.current;
+
     try {
-      const data = await nutritionService.getDailyEntries(user.id, date);
+      const diaryPromise = nutritionService.getDailyEntries(user.id, date);
+      const sessionsPromise = shouldRefreshSessions
+        ? getBurnedInsightsCached({
+            // Focus/pull: reuse up to 60s. Post-workout invalidate forces a refetch.
+            maxAgeMs: 60_000,
+          }).catch(() => null)
+        : Promise.resolve(null);
+
+      const [data, burnedInsights] = await Promise.all([
+        diaryPromise,
+        sessionsPromise,
+      ]);
+
+      // Ignore stale responses when the user switched dates quickly.
+      if (requestId !== loadInFlightRef.current) return;
+
       setTodayEntries(data.entries);
       setHasProfile(data.hasProfile);
 
-      // Si no tiene perfil, mostrar prompt
+      if (burnedInsights) {
+        setBurnedByDate(burnedInsights.byDate);
+        sessionsLoadedRef.current = true;
+      }
+
       if (!data.hasProfile) {
         setShowSetupPrompt(true);
       }
     } catch (error: CaughtError) {
-      // ✅ Handle 401 Unauthorized (real authentication error)
+      if (requestId !== loadInFlightRef.current) return;
+
       const statusCode = getErrorStatusCode(error);
       if (statusCode === 401) {
         const messageLower = getErrorMessage(error)?.toLowerCase() || "";
 
-        // Check if it's truly an auth error (token expired, invalid, etc)
-        // Generic "Unauthorized" without context is treated as missing profile
         const isAuthError =
           (messageLower.includes("token") ||
             messageLower.includes("authentication") ||
@@ -333,7 +378,6 @@ export default function MacrosScreen({ navigation }: Props) {
           messageLower !== "unauthorized";
 
         if (isAuthError) {
-          // True auth error - session expired, redirect to login
           Alert.alert(
             "Sesión Expirada",
             "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
@@ -341,11 +385,10 @@ export default function MacrosScreen({ navigation }: Props) {
               {
                 text: "OK",
                 onPress: () => {
-                  // Resetea la navegación completa al stack de Auth/Login
                   navigation.dispatch(
                     CommonActions.reset({
                       index: 0,
-                      routes: [{ name: "Auth" as never }], // o 'Login' dependiendo de tu estructura
+                      routes: [{ name: "Auth" as never }],
                     })
                   );
                 },
@@ -356,7 +399,8 @@ export default function MacrosScreen({ navigation }: Props) {
         }
       }
 
-      // ✅ Any other error (404, 500, etc) or non-auth 401 = Show setup prompt
+      console.warn("[MacrosScreen] loadEntriesForDate failed:", error);
+      setTodayEntries([]);
       setHasProfile(false);
       setShowSetupPrompt(true);
     }
@@ -364,7 +408,7 @@ export default function MacrosScreen({ navigation }: Props) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadEntriesForDate(selectedDate);
+    await loadEntriesForDate(selectedDate, { refreshSessions: true });
     setRefreshing(false);
   };
 
@@ -706,32 +750,42 @@ export default function MacrosScreen({ navigation }: Props) {
     fat: 65,
   };
 
-  const effectiveEntries = todayEntries.filter(
-    (entry) => !notEatenEntries.has(entry.id || "")
+  const burnedCalories = burnedByDate[selectedDate] || 0;
+
+  const effectiveEntries = useMemo(
+    () => todayEntries.filter((entry) => !notEatenEntries.has(entry.id || "")),
+    [notEatenEntries, todayEntries]
   );
 
-  const totals = effectiveEntries.reduce(
-    (
-      acc: { calories: number; protein: number; carbs: number; fat: number },
-      entry: FoodEntry
-    ) => ({
-      calories: acc.calories + (entry.calories || 0),
-      protein: acc.protein + (entry.protein || 0),
-      carbs: acc.carbs + (entry.carbs || 0),
-      fat: acc.fat + (entry.fat || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  const totals = useMemo(
+    () =>
+      effectiveEntries.reduce(
+        (
+          acc: { calories: number; protein: number; carbs: number; fat: number },
+          entry: FoodEntry
+        ) => ({
+          calories: acc.calories + (entry.calories || 0),
+          protein: acc.protein + (entry.protein || 0),
+          carbs: acc.carbs + (entry.carbs || 0),
+          fat: acc.fat + (entry.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      ),
+    [effectiveEntries]
   );
 
   const remaining = {
-    calories: goals.dailyCalories - totals.calories,
+    calories: goals.dailyCalories + burnedCalories - totals.calories,
     protein: goals.protein - totals.protein,
     carbs: goals.carbs - totals.carbs,
     fat: goals.fat - totals.fat,
   };
 
   const percentages = {
-    calories: Math.min(100, (totals.calories / goals.dailyCalories) * 100),
+    calories: Math.min(
+      100,
+      (totals.calories / (goals.dailyCalories + burnedCalories || 1)) * 100
+    ),
   };
 
   const entriesByMeal = todayEntries.reduce(
@@ -1015,6 +1069,7 @@ export default function MacrosScreen({ navigation }: Props) {
           <DailyCalorieChart
             consumed={totals.calories}
             target={goals.dailyCalories}
+            burned={burnedCalories}
           />
         </View>
 

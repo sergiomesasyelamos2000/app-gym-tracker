@@ -22,8 +22,10 @@ describe("DailyCalorieChart", () => {
     expect(result).toBeTruthy();
   });
 
-  it("accepts consumed and target props", () => {
-    const result = render(<DailyCalorieChart consumed={2500} target={2000} />);
+  it("accepts consumed, target and burned props", () => {
+    const result = render(
+      <DailyCalorieChart consumed={1800} target={2000} burned={320} />
+    );
     expect(result).toBeTruthy();
   });
 });
