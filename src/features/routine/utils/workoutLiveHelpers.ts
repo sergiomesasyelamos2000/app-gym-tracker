@@ -60,8 +60,11 @@ function formatSetLine(nextSet: SetRequestDto, sorted: SetRequestDto[]): string 
           ? `${repsLabel} reps`
           : null;
 
-  const base = `Next: set ${setNumber} of ${total}`;
-  return prescription ? `${base} (${prescription})` : base;
+  const base = `Serie ${setNumber} de ${total}`;
+  if (!prescription) return base;
+  // Keep a consistent parseable shape for Live Activity UI:
+  // "Serie N de T (W kg x R)" — widget turns this into Hevy-style rows.
+  return `${base} (${prescription})`;
 }
 
 /**

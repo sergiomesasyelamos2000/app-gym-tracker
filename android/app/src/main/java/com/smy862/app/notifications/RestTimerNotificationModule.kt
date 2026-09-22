@@ -34,6 +34,7 @@ class RestTimerNotificationModule(
         WorkoutLiveForegroundService.ACTION_SUBTRACT,
         WorkoutLiveForegroundService.ACTION_SKIP,
         WorkoutLiveForegroundService.ACTION_COMPLETE_SET,
+        WorkoutLiveForegroundService.ACTION_OPEN,
         // Also accept legacy rest.* actions
         "com.smy862.app.rest.ADD",
         "com.smy862.app.rest.SUBTRACT",
@@ -200,14 +201,19 @@ class RestTimerNotificationModule(
 
   private fun emitIntentEvent(action: String, delta: Int, endTimestampMs: Long) {
     if (!reactContext.hasActiveReactInstance()) return
-    val params = Arguments.createMap().apply {
+    // Bridgeless/New Arch consumes WritableMap on emit — never reuse the same instance.
+    fun buildParams() = Arguments.createMap().apply {
       putString("action", action)
       putInt("delta", delta)
       putDouble("endTimestampMs", endTimestampMs.toDouble())
     }
     val emitter =
       reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-    emitter.emit(EVENT_NAME, params)
-    emitter.emit(EVENT_NAME_WORKOUT, params)
+    try {
+      emitter.emit(EVENT_NAME, buildParams())
+      emitter.emit(EVENT_NAME_WORKOUT, buildParams())
+    } catch (t: Throwable) {
+      android.util.Log.w("RestTimerNotification", "emitIntentEvent failed", t)
+    }
   }
 }

@@ -40,11 +40,9 @@ const ExerciseRestPicker = ({
 
   // Escalado más inteligente basado en breakpoints
   const dynamicStyles = {
-    containerPadding: isSmallScreen ? 10 : isMediumScreen ? 12 : 16,
-    iconSize: isSmallScreen ? 18 : isMediumScreen ? 20 : 24,
-    fontSize: isSmallScreen ? 13 : isMediumScreen ? 14 : 16,
-    borderRadius: isSmallScreen ? 10 : 12,
-    marginBottom: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
+    iconSize: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
+    fontSize: isSmallScreen ? 13 : isMediumScreen ? 14 : 15,
+    marginBottom: isSmallScreen ? 8 : isMediumScreen ? 10 : 12,
   };
 
   const modalPadding = isSmallScreen ? 16 : isMediumScreen ? 20 : 24;
@@ -93,65 +91,42 @@ const ExerciseRestPicker = ({
     return seconds === 0 ? `${minutes}m` : `${minutes}m${seconds}`;
   };
 
+  const { minutes, seconds } = parseTime(restTime);
+  const restLabel = `${minutes}min ${seconds}s`;
+
   return (
     <>
       <TouchableOpacity
         style={[
           styles.timerContainer,
           {
-            backgroundColor: theme.backgroundSecondary,
-            borderColor: theme.border,
-            padding: dynamicStyles.containerPadding,
-            borderRadius: dynamicStyles.borderRadius,
             marginBottom: dynamicStyles.marginBottom,
-            opacity: readonly ? 0.6 : 1,
+            opacity: readonly ? 0.7 : 1,
           },
         ]}
         onPress={() => !readonly && openPicker()}
         activeOpacity={0.7}
         disabled={readonly}
       >
-        <View style={[styles.iconWrapper, { backgroundColor: theme.border }]}>
-          <Icon
-            name="timer"
-            size={dynamicStyles.iconSize}
-            color={readonly ? theme.textTertiary : theme.textSecondary}
-          />
-        </View>
+        <Icon
+          name="timer"
+          size={dynamicStyles.iconSize}
+          color={readonly ? theme.textTertiary : theme.primary}
+        />
 
-        <View style={styles.textWrapper}>
-          <Text
-            style={[
-              styles.timerLabel,
-              {
-                color: theme.textSecondary,
-                fontSize: dynamicStyles.fontSize * 0.85,
-              },
-            ]}
-          >
-            Descanso
-          </Text>
-          <Text
-            style={[
-              styles.timerValue,
-              {
-                fontSize: dynamicStyles.fontSize,
-                color: readonly ? theme.textTertiary : theme.text,
-              },
-            ]}
-          >
-            {restTime}
-          </Text>
-        </View>
-
-        {!readonly && (
-          <Icon
-            name="chevron-right"
-            size={dynamicStyles.iconSize}
-            color={theme.textTertiary}
-            style={styles.chevronIcon}
-          />
-        )}
+        <Text
+          style={[
+            styles.timerValue,
+            {
+              fontSize: dynamicStyles.fontSize,
+              color: readonly ? theme.textTertiary : theme.primary,
+            },
+          ]}
+        >
+          {readonly
+            ? `Temporizador de Descanso: ${restLabel}`
+            : `Descanso: ${restLabel}`}
+        </Text>
       </TouchableOpacity>
 
       <Modal
@@ -460,39 +435,12 @@ const styles = StyleSheet.create({
   timerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    justifyContent: "space-between",
-    ...Platform.select({
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  textWrapper: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: 2,
-  },
-  timerLabel: {
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    gap: 6,
+    alignSelf: "flex-start",
   },
   timerValue: {
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  chevronIcon: {
-    marginLeft: 8,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
   modalOverlay: {
     flex: 1,

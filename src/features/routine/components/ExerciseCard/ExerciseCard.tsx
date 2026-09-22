@@ -7,7 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Button, Card } from "react-native-paper";
+import { Card } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -394,18 +394,24 @@ const ExerciseCard = ({
           reps: 0,
           assistedReps: 0,
           completed: false,
+          // Keep prior-session marks only; never copy planned template values.
           previousWeight:
-            typeof set.previousWeight === "number"
+            typeof set.previousWeight === "number" &&
+            (set.previousWeight > 0 ||
+              (typeof set.previousReps === "number" && set.previousReps > 0))
               ? set.previousWeight
-              : set.weight,
+              : undefined,
           previousReps:
-            typeof set.previousReps === "number"
+            typeof set.previousReps === "number" &&
+            (set.previousReps > 0 ||
+              (typeof set.previousWeight === "number" && set.previousWeight > 0))
               ? set.previousReps
-              : set.reps || set.repsMin,
+              : undefined,
           previousAssistedReps:
-            typeof set.previousAssistedReps === "number"
+            typeof set.previousAssistedReps === "number" &&
+            set.previousAssistedReps > 0
               ? set.previousAssistedReps
-              : set.assistedReps,
+              : undefined,
         };
       });
 
@@ -656,10 +662,11 @@ const ExerciseCard = ({
         {
           backgroundColor: theme.card,
           shadowColor: theme.shadowColor,
-          padding: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
-          marginVertical: isSmallScreen ? 8 : 16,
+          padding: isSmallScreen ? 12 : isMediumScreen ? 14 : 16,
+          marginVertical: isSmallScreen ? 6 : 10,
           borderWidth: isDark ? 1 : 0,
           borderColor: theme.border,
+          elevation: 0,
         },
       ]}
     >
@@ -751,34 +758,40 @@ const ExerciseCard = ({
           onRepsTypeChange={handleRepsTypeChange}
           readonly={readonly}
           started={started}
-          recordSetTypes={recordSetTypes} // Pass record set types
+          recordSetTypes={recordSetTypes}
+          exerciseId={exercise.id}
+          previousSessions={previousSessions}
         />
 
         {!readonly && (
           <View style={styles.setActionsContainer}>
             <Animated.View style={addButtonAnimatedStyle}>
-              <Button
-                mode="contained"
+              <TouchableOpacity
                 onPress={addSet}
                 onPressIn={handleAddButtonPressIn}
                 onPressOut={handleAddButtonPressOut}
-                rippleColor="transparent"
+                activeOpacity={0.85}
                 style={[
                   styles.addButton,
                   {
-                    backgroundColor: theme.primary,
-                    paddingVertical: isSmallScreen ? 4 : 8,
-                    marginTop: isSmallScreen ? 10 : 12,
+                    backgroundColor: theme.backgroundSecondary,
+                    marginTop: isSmallScreen ? 8 : 10,
                   },
                 ]}
-                labelStyle={{
-                  fontSize: RFValue(isSmallScreen ? 13 : 15),
-                  fontWeight: "600",
-                }}
-                icon="plus"
+                accessibilityLabel="Agregar serie"
               >
-                Añadir Serie
-              </Button>
+                <Text
+                  style={[
+                    styles.addButtonText,
+                    {
+                      color: theme.textSecondary,
+                      fontSize: RFValue(isSmallScreen ? 13 : 14),
+                    },
+                  ]}
+                >
+                  + Agregar Serie
+                </Text>
+              </TouchableOpacity>
             </Animated.View>
           </View>
         )}
@@ -789,19 +802,22 @@ const ExerciseCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 16,
-    padding: 20,
-    borderRadius: 20,
-    elevation: 4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    marginVertical: 10,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   addButton: {
-    marginTop: 20,
-    borderRadius: 12,
-    paddingVertical: 8,
-    elevation: 2,
+    borderRadius: 10,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addButtonText: {
+    fontWeight: "600",
   },
   setActionsContainer: {
     width: "100%",

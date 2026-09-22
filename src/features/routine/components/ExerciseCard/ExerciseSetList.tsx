@@ -19,13 +19,18 @@ import {
   TouchableOpacity as GHTouchableOpacity,
 } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
+import type { SetRequestDto, RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
+import {
+  formatPreviousMark,
+  getPreviousSetPerformance,
+} from "../../utils/previousSetHelpers";
 import ExerciseSetRow from "./ExerciseSetRow";
 import {
   COLUMN_GAP,
   COLUMN_ROW_PADDING,
+  getAnteriorColumnStyle,
   getColumnFlex,
   getRepsColumnFlex,
 } from "./columnConstants";
@@ -45,6 +50,8 @@ interface Props {
   readonly?: boolean;
   started?: boolean;
   recordSetTypes?: { [id: string]: "1RM" | "maxWeight" | "maxVolume" };
+  exerciseId?: string;
+  previousSessions?: RoutineSessionEntity[];
 }
 
 interface SetListItemProps {
@@ -54,6 +61,7 @@ interface SetListItemProps {
   started: boolean;
   previousMark?: string;
   recordType?: "1RM" | "maxWeight" | "maxVolume";
+  rowIndex: number;
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
@@ -77,6 +85,7 @@ const SetListItem = memo(
     started,
     previousMark,
     recordType,
+    rowIndex,
     onUpdate,
     onSwipeableWillOpen,
     onSwipeableClose,
@@ -92,6 +101,7 @@ const SetListItem = memo(
         previousMark={previousMark}
         started={started}
         recordType={recordType}
+        rowIndex={rowIndex}
       />
     );
 
@@ -124,7 +134,8 @@ const SetListItem = memo(
     prev.repsType === next.repsType &&
     prev.started === next.started &&
     prev.previousMark === next.previousMark &&
-    prev.recordType === next.recordType
+    prev.recordType === next.recordType &&
+    prev.rowIndex === next.rowIndex
 );
 
 const ExerciseSetList = ({
@@ -138,8 +149,10 @@ const ExerciseSetList = ({
   readonly = false,
   started = false,
   recordSetTypes = {},
+  exerciseId,
+  previousSessions = [],
 }: Props) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showRepsModal, setShowRepsModal] = useState(false);
   const [selectedColumnInfo, setSelectedColumnInfo] = useState<
@@ -151,10 +164,10 @@ const ExerciseSetList = ({
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
-  const inputHeight = isSmallScreen ? 44 : 48;
+  const inputHeight = isSmallScreen ? 40 : 44;
   const deleteButtonSize = inputHeight;
   const deleteButtonOffset = Platform.OS === "ios" ? -8 : 0;
-  const columnFlex = getColumnFlex(isSmallScreen);
+  const columnFlex = getColumnFlex(isSmallScreen, started);
   const repsColumnFlex = getRepsColumnFlex(isSmallScreen, repsType, started);
   const headerPaddingHorizontal = isSmallScreen
     ? COLUMN_ROW_PADDING.small
@@ -282,36 +295,49 @@ const ExerciseSetList = ({
   }, []);
 
   const getPreviousMark = useCallback(
-    (item: SetRequestDto): string | undefined => {
-      if (!started) return undefined;
+    (item: SetRequestDto, setIndex: number): string => {
+      if (!started) return "";
 
-      const previousWeight = item.previousWeight;
-      const previousReps = item.previousReps;
-      const previousAssistedReps = (
-        item as SetRequestDto & { previousAssistedReps?: number }
-      ).previousAssistedReps;
+      // Prefer real session history (includes bodyweight 0kg x N).
+      const fromHistory = exerciseId
+        ? getPreviousSetPerformance(exerciseId, setIndex, previousSessions)
+        : null;
+      const historyMark = formatPreviousMark(fromHistory, weightUnit);
+      if (historyMark) return historyMark;
 
+      // Stored previous* only if a real load was logged (weight > 0).
+      // Template seeds used weight 0 + planned reps and must not show as history.
+      const storedWeight = item.previousWeight;
+      const storedReps = item.previousReps;
       if (
-        typeof previousWeight === "number" &&
-        Number.isFinite(previousWeight) &&
-        typeof previousReps === "number" &&
-        Number.isFinite(previousReps)
+        typeof storedWeight === "number" &&
+        Number.isFinite(storedWeight) &&
+        storedWeight > 0 &&
+        typeof storedReps === "number" &&
+        Number.isFinite(storedReps) &&
+        storedReps > 0
       ) {
-        const baseMark = `${previousWeight} ${weightUnit} x ${previousReps}`;
-        if (
-          typeof previousAssistedReps === "number" &&
-          Number.isFinite(previousAssistedReps) &&
-          previousAssistedReps > 0
-        ) {
-          return `${baseMark} (A:${previousAssistedReps})`;
-        }
-
-        return baseMark;
+        const assisted = (
+          item as SetRequestDto & { previousAssistedReps?: number }
+        ).previousAssistedReps;
+        return (
+          formatPreviousMark(
+            {
+              weight: storedWeight,
+              reps: storedReps,
+              assistedReps:
+                typeof assisted === "number" && assisted > 0
+                  ? assisted
+                  : undefined,
+            },
+            weightUnit
+          ) ?? "-"
+        );
       }
 
       return "-";
     },
-    [started, weightUnit]
+    [started, weightUnit, exerciseId, previousSessions]
   );
 
   const keyExtractor = useCallback(
@@ -330,8 +356,9 @@ const ExerciseSetList = ({
         readonly={readonly}
         repsType={repsType}
         started={started}
-        previousMark={getPreviousMark(item)}
+        previousMark={getPreviousMark(item, index)}
         recordType={recordSetTypes[item.id]}
+        rowIndex={index}
         onUpdate={handleUpdate}
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onSwipeableClose={handleSwipeableClose}
@@ -740,11 +767,9 @@ const ExerciseSetList = ({
         style={[
           styles.columnTitles,
           {
-            backgroundColor: theme.background,
+            backgroundColor: "transparent",
             paddingHorizontal: headerPaddingHorizontal,
-            paddingVertical: isSmallScreen ? 6 : 8,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: theme.border,
+            paddingVertical: isSmallScreen ? 4 : 6,
           },
         ]}
       >
@@ -753,6 +778,7 @@ const ExerciseSetList = ({
             flex: columnFlex.serie,
             alignItems: "center",
             justifyContent: "center",
+            minWidth: 0,
           }}
           onPress={() => openColumnInfo("serie")}
           disabled={!started}
@@ -763,7 +789,7 @@ const ExerciseSetList = ({
               styles.columnTitle,
               {
                 color: theme.textSecondary,
-                fontSize: RFValue(isSmallScreen ? 8 : 10),
+                fontSize: isSmallScreen ? 9 : 10,
               },
             ]}
             numberOfLines={1}
@@ -776,11 +802,7 @@ const ExerciseSetList = ({
 
         {started && (
           <TouchableOpacity
-            style={{
-              flex: columnFlex.anterior,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={getAnteriorColumnStyle(isSmallScreen)}
             onPress={() => openColumnInfo("anterior")}
             hitSlop={6}
           >
@@ -789,12 +811,11 @@ const ExerciseSetList = ({
                 styles.columnTitle,
                 {
                   color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 7 : 9),
+                  fontSize: isSmallScreen ? 8 : 9,
+                  width: "100%",
                 },
               ]}
               numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.5}
             >
               ANTERIOR
             </Text>
@@ -804,9 +825,10 @@ const ExerciseSetList = ({
         <View
           style={{
             flex: columnFlex.weight,
-            marginHorizontal: COLUMN_GAP,
+            marginHorizontal: COLUMN_GAP / 2,
             alignItems: "center",
             justifyContent: "center",
+            minWidth: 0,
           }}
         >
           <View style={styles.columnHeader}>
@@ -820,7 +842,7 @@ const ExerciseSetList = ({
                   styles.columnTitle,
                   {
                     color: theme.textSecondary,
-                    fontSize: RFValue(isSmallScreen ? 8 : 10),
+                    fontSize: isSmallScreen ? 9 : 10,
                   },
                 ]}
                 numberOfLines={1}
@@ -848,9 +870,10 @@ const ExerciseSetList = ({
         <View
           style={{
             flex: repsColumnFlex,
-            marginHorizontal: COLUMN_GAP,
+            marginHorizontal: COLUMN_GAP / 2,
             alignItems: "center",
             justifyContent: "center",
+            minWidth: 0,
           }}
         >
           <View style={styles.columnHeader}>
@@ -864,14 +887,18 @@ const ExerciseSetList = ({
                   styles.columnTitle,
                   {
                     color: theme.textSecondary,
-                    fontSize: RFValue(isSmallScreen ? 8 : 10),
+                    fontSize: isSmallScreen ? 8 : 10,
                   },
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.6}
+                minimumFontScale={0.55}
               >
-                {started ? "REPS" : repsType === "reps" ? "REPS" : "RANGO"}
+                {started
+                  ? "REPS"
+                  : repsType === "range"
+                  ? "RANGO DE REPS"
+                  : "REPS"}
               </Text>
             </TouchableOpacity>
             {!readonly && !started && (
@@ -889,42 +916,44 @@ const ExerciseSetList = ({
           </View>
         </View>
 
-        <TouchableOpacity
-          style={{
-            flex: columnFlex.assisted,
-            marginHorizontal: COLUMN_GAP,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onPress={() => openColumnInfo("asis")}
-          disabled={!started}
-          hitSlop={6}
-        >
-          <Text
-            style={[
-              styles.columnTitle,
-              {
-                color: theme.textSecondary,
-                fontSize: RFValue(isSmallScreen ? 8 : 10),
-              },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-          >
-            ASIS
-          </Text>
-        </TouchableOpacity>
-
-        {!readonly && (
+        {started && (
           <TouchableOpacity
             style={{
-              flex: columnFlex.check,
+              flex: getColumnFlex(isSmallScreen, true).assisted,
+              marginHorizontal: COLUMN_GAP / 2,
               alignItems: "center",
               justifyContent: "center",
+              minWidth: 0,
+            }}
+            onPress={() => openColumnInfo("asis")}
+            hitSlop={6}
+          >
+            <Text
+              style={[
+                styles.columnTitle,
+                {
+                  color: theme.textSecondary,
+                  fontSize: isSmallScreen ? 9 : 10,
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              ASIS
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {started && !readonly && (
+          <TouchableOpacity
+            style={{
+              flex: getColumnFlex(isSmallScreen, true).check,
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 0,
             }}
             onPress={() => openColumnInfo("check")}
-            disabled={!started}
             hitSlop={6}
           >
             <Icon
@@ -949,10 +978,9 @@ const ExerciseSetList = ({
 const styles = StyleSheet.create({
   columnTitles: {
     flexDirection: "row",
-    marginBottom: 12,
+    marginBottom: 6,
     alignItems: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 4,
   },
   columnHeader: {
     flexDirection: "row",
@@ -964,6 +992,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: RFValue(10),
     textAlign: "center",
+    letterSpacing: 0.4,
   },
   actionsContainer: {
     justifyContent: "center",

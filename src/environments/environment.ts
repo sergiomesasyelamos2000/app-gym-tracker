@@ -8,6 +8,9 @@ const LOCAL_ANDROID_EMULATOR_API_URL = "http://10.0.2.2:3000/api";
 const LOCAL_ANDROID_DEVICE_API_URL = LOCAL_API_URL;
 const PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
 
+/** En local (__DEV__), usa la API de producción. Ponlo a false para volver a la API local. */
+const USE_PROD_API_IN_DEV = true;
+
 const androidConstants = Platform.OS === "android" ? Platform.constants : null;
 const androidFingerprint = String(
   (androidConstants as { Fingerprint?: string } | null)?.Fingerprint || ""
@@ -32,16 +35,18 @@ const DEFAULT_ANDROID_API_URL = isAndroidEmulator
   : LOCAL_ANDROID_DEVICE_API_URL;
 
 // Si defines EXPO_PUBLIC_API_URL, tiene prioridad.
-// Si no, en dev usa URL por plataforma y en producción usa remoto.
+// Si no, en dev usa prod (USE_PROD_API_IN_DEV) o URL local por plataforma.
 // Android Emulator usa 10.0.2.2 para acceder al host.
 // iOS Simulator usa localhost. Para iPhone fisico, define EXPO_PUBLIC_API_URL_IOS.
 const RESOLVED_API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__
-    ? Platform.OS === "android"
-      ? process.env.EXPO_PUBLIC_API_URL_ANDROID ||
-        DEFAULT_ANDROID_API_URL
-      : process.env.EXPO_PUBLIC_API_URL_IOS || LOCAL_IOS_SIMULATOR_API_URL
+    ? USE_PROD_API_IN_DEV
+      ? PROD_API_URL
+      : Platform.OS === "android"
+        ? process.env.EXPO_PUBLIC_API_URL_ANDROID ||
+          DEFAULT_ANDROID_API_URL
+        : process.env.EXPO_PUBLIC_API_URL_IOS || LOCAL_IOS_SIMULATOR_API_URL
     : PROD_API_URL);
 
 const getAssetBaseUrl = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");

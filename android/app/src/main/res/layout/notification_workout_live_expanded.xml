@@ -1,53 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/workout_live_root"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
+  android:background="@drawable/workout_live_card_bg"
   android:orientation="vertical"
-  android:paddingStart="12dp"
-  android:paddingTop="10dp"
-  android:paddingEnd="12dp"
-  android:paddingBottom="12dp">
+  android:paddingStart="16dp"
+  android:paddingTop="14dp"
+  android:paddingEnd="16dp"
+  android:paddingBottom="14dp">
 
+  <!-- Top: timer icon + Workout + elapsed -->
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
+    <ImageView
+      android:layout_width="14dp"
+      android:layout_height="14dp"
+      android:layout_marginEnd="6dp"
+      android:importantForAccessibility="no"
+      android:src="@drawable/ic_workout_live_timer" />
+
     <TextView
-      android:id="@+id/workout_live_header_title"
+      android:id="@+id/workout_live_header_label"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_weight="1"
-      android:text="EvoFit · Entreno"
-      android:textColor="#B8FFFFFF"
-      android:textSize="12sp"
-      android:textStyle="bold" />
+      android:text="Entreno"
+      android:textColor="#5F6368"
+      android:textSize="13sp" />
 
     <Chronometer
       android:id="@+id/workout_live_duration"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:format="%s"
-      android:textColor="#B8FFFFFF"
-      android:textSize="12sp"
-      android:textStyle="bold" />
+      android:textColor="#5F6368"
+      android:textSize="13sp" />
   </LinearLayout>
 
+  <!-- Middle: tonal icon + exercise + set -->
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="10dp"
+    android:layout_marginTop="12dp"
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
     <ImageView
       android:id="@+id/workout_live_exercise_image"
-      android:layout_width="52dp"
-      android:layout_height="52dp"
+      android:layout_width="40dp"
+      android:layout_height="40dp"
       android:layout_marginEnd="12dp"
-      android:background="@drawable/rest_timer_image_bg"
-      android:scaleType="centerCrop" />
+      android:background="@drawable/workout_live_image_bg"
+      android:padding="8dp"
+      android:scaleType="centerInside"
+      android:src="@drawable/ic_workout_live_barbell" />
 
     <LinearLayout
       android:layout_width="0dp"
@@ -60,110 +71,143 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
+        android:maxLines="1"
+        android:textColor="#1C1B1F"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
       <TextView
         android:id="@+id/workout_live_next_summary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="#B8FFFFFF"
+        android:maxLines="1"
+        android:textColor="#49454F"
         android:textSize="12sp" />
     </LinearLayout>
   </LinearLayout>
 
+  <!-- Rest block -->
   <LinearLayout
-    android:id="@+id/workout_live_rest_row"
+    android:id="@+id/workout_live_rest_block"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="12dp"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:visibility="gone">
 
-    <TextView
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginEnd="8dp"
-      android:text="Rest"
-      android:textColor="@android:color/white"
-      android:textSize="14sp"
-      android:textStyle="bold" />
+    <ProgressBar
+      android:id="@+id/workout_live_rest_progress"
+      style="?android:attr/progressBarStyleHorizontal"
+      android:layout_width="match_parent"
+      android:layout_height="3dp"
+      android:indeterminate="false"
+      android:max="1000"
+      android:progress="0"
+      android:progressBackgroundTint="#E8DEF8"
+      android:progressTint="#6C3BAA" />
 
-    <Chronometer
-      android:id="@+id/workout_live_rest_time"
-      android:layout_width="0dp"
+    <LinearLayout
+      android:id="@+id/workout_live_rest_actions"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_weight="1"
-      android:format="%s"
-      android:textColor="#8F59FF"
-      android:textSize="28sp"
-      android:textStyle="bold" />
+      android:layout_marginTop="10dp"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+
+      <TextView
+        android:id="@+id/workout_live_minus"
+        android:layout_width="44dp"
+        android:layout_height="36dp"
+        android:background="@drawable/workout_live_button_muted"
+        android:gravity="center"
+        android:text="−15"
+        android:textColor="#1C1B1F"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:text="" />
+
+      <Chronometer
+        android:id="@+id/workout_live_rest_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:format="%s"
+        android:textColor="#6C3BAA"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:text="" />
+
+      <TextView
+        android:id="@+id/workout_live_plus"
+        android:layout_width="44dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/workout_live_button_muted"
+        android:gravity="center"
+        android:text="+15"
+        android:textColor="#1C1B1F"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:id="@+id/workout_live_skip"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:background="@drawable/workout_live_button_brand"
+        android:gravity="center"
+        android:minWidth="56dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:text="Omitir"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    </LinearLayout>
   </LinearLayout>
 
-  <LinearLayout
-    android:id="@+id/workout_live_rest_actions"
+  <!-- Bottom: prescription + primary check -->
+  <RelativeLayout
+    android:id="@+id/workout_live_active_row"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="10dp"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
+    android:layout_marginTop="14dp"
     android:visibility="gone">
 
     <TextView
-      android:id="@+id/workout_live_minus"
-      android:layout_width="0dp"
-      android:layout_height="40dp"
-      android:layout_marginEnd="6dp"
-      android:layout_weight="1"
-      android:background="@drawable/rest_timer_button_secondary"
-      android:gravity="center"
-      android:text="-15s"
-      android:textColor="@android:color/white"
-      android:textSize="13sp"
+      android:id="@+id/workout_live_prescription"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_alignParentStart="true"
+      android:layout_centerVertical="true"
+      android:layout_toStartOf="@+id/workout_live_complete"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:paddingEnd="12dp"
+      android:text="Serie lista"
+      android:textColor="#1C1B1F"
+      android:textSize="22sp"
       android:textStyle="bold" />
 
-    <TextView
-      android:id="@+id/workout_live_plus"
-      android:layout_width="0dp"
-      android:layout_height="40dp"
-      android:layout_marginEnd="6dp"
-      android:layout_weight="1"
-      android:background="@drawable/rest_timer_button_primary"
-      android:gravity="center"
-      android:text="+15s"
-      android:textColor="@android:color/white"
-      android:textSize="13sp"
-      android:textStyle="bold" />
-
-    <TextView
-      android:id="@+id/workout_live_skip"
-      android:layout_width="0dp"
-      android:layout_height="40dp"
-      android:layout_weight="1"
-      android:background="@drawable/rest_timer_button_danger"
-      android:gravity="center"
-      android:text="Omitir"
-      android:textColor="@android:color/white"
-      android:textSize="13sp"
-      android:textStyle="bold" />
-  </LinearLayout>
-
-  <TextView
-    android:id="@+id/workout_live_complete"
-    android:layout_width="match_parent"
-    android:layout_height="44dp"
-    android:layout_marginTop="10dp"
-    android:background="@drawable/rest_timer_button_primary"
-    android:gravity="center"
-    android:text="Completar serie"
-    android:textColor="@android:color/white"
-    android:textSize="14sp"
-    android:textStyle="bold"
-    android:visibility="gone" />
+    <ImageView
+      android:id="@+id/workout_live_complete"
+      android:layout_width="44dp"
+      android:layout_height="44dp"
+      android:layout_alignParentEnd="true"
+      android:layout_centerVertical="true"
+      android:background="@drawable/workout_live_complete_bg"
+      android:padding="11dp"
+      android:scaleType="fitCenter"
+      android:src="@drawable/ic_workout_live_check" />
+  </RelativeLayout>
 </LinearLayout>

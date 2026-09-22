@@ -70,7 +70,7 @@ export default function WorkoutStack() {
       <Stack.Screen
         name="WorkoutList"
         component={WorkoutScreen}
-        options={{ title: "Entrenamiento" }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="RoutineDetail"

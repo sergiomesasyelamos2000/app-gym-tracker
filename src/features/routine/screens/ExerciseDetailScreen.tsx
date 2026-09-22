@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   ImageStyle,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -1557,17 +1558,28 @@ const createStyles = (theme: Theme) =>
       textAlign: "center",
     },
     historyList: {
-      gap: IS_SMALL_DEVICE ? 10 : 12,
+      gap: IS_SMALL_DEVICE ? 12 : 14,
     },
     historyCard: {
       backgroundColor: theme.card,
       borderRadius: IS_SMALL_DEVICE ? 14 : 16,
       padding: IS_SMALL_DEVICE ? 14 : 16,
-      shadowColor: theme.shadowColor,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 8,
-      elevation: 2,
+      borderWidth: 1,
+      borderColor: theme.border,
+      // Avoid Android elevation under rounded corners (square shadow bleed).
+      // Card identity comes from border + contrast with page background.
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.shadowColor,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+        },
+        android: {
+          elevation: 0,
+        },
+        default: {},
+      }),
       position: "relative",
     },
     personalBestCard: {

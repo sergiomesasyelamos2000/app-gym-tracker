@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { TrendingUp, Trophy, Zap } from "lucide-react-native";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, { memo, useCallback, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -14,7 +14,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../../contexts/ThemeContext";
@@ -23,6 +22,10 @@ import { getCompletedRowStyle } from "../../../../utils/themeStyles";
 import {
   COLUMN_GAP,
   COLUMN_ROW_PADDING,
+  SET_BADGE,
+  SET_CHECK,
+  SET_INPUT,
+  getAnteriorColumnStyle,
   getColumnFlex,
   getRepsColumnFlex,
 } from "./columnConstants";
@@ -40,6 +43,7 @@ interface Props {
   previousMark?: string;
   started?: boolean;
   recordType?: "1RM" | "maxWeight" | "maxVolume";
+  rowIndex?: number;
 }
 
 type SetTypeOption = {
@@ -109,11 +113,13 @@ const ExerciseSetRow = ({
   previousMark,
   started = false,
   recordType,
+  rowIndex = 0,
 }: Props) => {
   const { theme, isDark } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
+  const sizeKey = isSmallScreen ? "small" : "normal";
   const inputAccessoryProps =
     Platform.OS === "ios"
       ? { inputAccessoryViewID: GLOBAL_KEYBOARD_ACCESSORY_ID }
@@ -173,7 +179,7 @@ const ExerciseSetRow = ({
     } else {
       iconScale.setValue(0);
     }
-  }, [recordType, item.completed]);
+  }, [recordType, item.completed, iconScale]);
 
   const flashAnim = useRef(new Animated.Value(0)).current;
 
@@ -193,31 +199,38 @@ const ExerciseSetRow = ({
         }),
       ]).start();
     }
-  }, [recordType, item.completed]);
+  }, [recordType, item.completed, flashAnim]);
 
   const backgroundColor = flashAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [
-      item.completed ? (isDark ? "#14532D" : "#DCFCE7") : "transparent",
+      item.completed
+        ? isDark
+          ? "#14532D99"
+          : "#DCFCE7"
+        : "transparent",
       "#FFD70040",
     ],
   });
 
-  const completedCheckColor = isDark ? "#4ADE80" : "#16A34A";
-  const [isSetTypeModalVisible, setIsSetTypeModalVisible] =
-    React.useState(false);
+  const [isSetTypeModalVisible, setIsSetTypeModalVisible] = useState(false);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(280)).current;
   const setType = getSetTypeValue(
     (item as SetRequestDto & { setType?: SetTypeValue }).setType
   );
   const setTypeIcon = getSetTypeIcon(setType);
+  const setTypeColor = getSetTypeColor(setType);
+  const isSpecialSetType = setType !== "normal";
 
   const previousWeightPlaceholder =
     previousMark?.match(/^\s*([\d.,]+)/)?.[1]?.replace(",", ".") || "0";
   const previousMainMark =
     previousMark?.replace(/\s*\(A:\d+\)\s*$/i, "").trim() || "-";
   const previousAssistedMark = previousMark?.match(/\(A:(\d+)\)/i)?.[1];
+  const hasPreviousMark = Boolean(
+    previousMainMark && previousMainMark !== "-"
+  );
 
   const rangePlaceholder =
     repsType === "range"
@@ -236,11 +249,44 @@ const ExerciseSetRow = ({
         }`
       : "0";
 
-  const columnFlex = getColumnFlex(isSmallScreen);
+  const columnFlex = getColumnFlex(isSmallScreen, started);
   const repsColumnFlex = getRepsColumnFlex(isSmallScreen, repsType, started);
-  const rowPaddingHorizontal = isSmallScreen
-    ? COLUMN_ROW_PADDING.small
-    : COLUMN_ROW_PADDING.normal;
+  const rowPaddingHorizontal = COLUMN_ROW_PADDING[sizeKey];
+  const inputHeight = SET_INPUT.height[sizeKey];
+  const inputFontSize = SET_INPUT.fontSize[sizeKey];
+  const inputPaddingH = SET_INPUT.paddingH[sizeKey];
+  const badgeSize = SET_BADGE.size[sizeKey];
+  const checkSize = SET_CHECK.size[sizeKey];
+  const showCheck = started && !readonly;
+  const showAssisted = started;
+  const isZebra = readonly && !started && rowIndex % 2 === 1;
+
+  const displayWeight =
+    item.weight != null && item.weight > 0 ? String(item.weight) : "-";
+  const displayReps =
+    repsType === "range" && !started
+      ? `${item.repsMin ?? item.reps ?? 0}-${item.repsMax ?? item.reps ?? 0}`
+      : item.reps != null && item.reps > 0
+      ? String(item.reps)
+      : "-";
+
+  const hevyInputStyle = {
+    backgroundColor: theme.card,
+    color: theme.text,
+    borderWidth: SET_INPUT.borderWidth,
+    borderColor: theme.border,
+    borderRadius: SET_INPUT.radius,
+    height: inputHeight,
+    paddingHorizontal: inputPaddingH,
+    paddingVertical: 0,
+    fontSize: inputFontSize,
+    fontWeight: "700" as const,
+    textAlign: "center" as const,
+    width: "100%" as const,
+    ...(Platform.OS === "android"
+      ? { includeFontPadding: false, textAlignVertical: "center" as const }
+      : {}),
+  };
 
   const openSetTypeModal = () => {
     Animated.parallel([
@@ -252,29 +298,28 @@ const ExerciseSetRow = ({
       }),
       Animated.timing(modalTranslateY, {
         toValue: 0,
-        duration: 260,
-        easing: Easing.out(Easing.ease),
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
   };
 
-  const closeSetTypeModal = (callback?: () => void) => {
+  const closeSetTypeModal = (onClosed?: () => void) => {
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 220,
-        easing: Easing.in(Easing.ease),
+        duration: 200,
         useNativeDriver: true,
       }),
       Animated.timing(modalTranslateY, {
         toValue: 280,
         duration: 220,
-        easing: Easing.in(Easing.ease),
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      callback?.();
+    ]).start(({ finished }) => {
+      if (finished) onClosed?.();
     });
   };
 
@@ -287,354 +332,409 @@ const ExerciseSetRow = ({
     closeSetTypeModal(() => setIsSetTypeModalVisible(false));
   };
 
+  const renderValueCell = (value: string, flex: number) => (
+    <View
+      style={{
+        flex,
+        marginHorizontal: COLUMN_GAP / 2,
+        minWidth: 0,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={[
+          styles.readonlyValue,
+          { color: theme.text, fontSize: inputFontSize },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+
   return (
     <>
-    <Animated.View
-      style={[
-        styles.row,
-        getCompletedRowStyle(theme, item.completed ?? false),
-        {
-          transform: [{ scale: scaleAnim }],
-          paddingHorizontal: rowPaddingHorizontal,
-          paddingVertical: isSmallScreen ? 10 : 14,
-          backgroundColor: backgroundColor,
-        },
-      ]}
-    >
-      {/* Serie */}
-      <View
-        style={{
-          flex: columnFlex.serie,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+      <Animated.View
+        style={[
+          styles.row,
+          getCompletedRowStyle(theme, item.completed ?? false),
+          {
+            transform: [{ scale: scaleAnim }],
+            paddingHorizontal: rowPaddingHorizontal,
+            paddingVertical: isSmallScreen ? 6 : 8,
+            backgroundColor: item.completed
+              ? backgroundColor
+              : isZebra
+              ? theme.backgroundSecondary
+              : "transparent",
+          },
+        ]}
       >
-        <TouchableOpacity
-          onPress={() => !readonly && setIsSetTypeModalVisible(true)}
-          disabled={readonly}
-          style={styles.setTypeTrigger}
-          accessibilityLabel={`Serie ${item.order}. ${getSetTypeLabel(
-            setType
-          )}`}
-          accessibilityHint={
-            readonly ? undefined : "Toca para cambiar el tipo de serie"
-          }
+        {/* Serie badge */}
+        <View
+          style={{
+            flex: columnFlex.serie,
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 0,
+          }}
         >
-          <Text
-            style={[
-              styles.label,
-              {
-                color: theme.text,
-                fontSize: RFValue(isSmallScreen ? 13 : 15),
-              },
-            ]}
+          <TouchableOpacity
+            onPress={() => !readonly && setIsSetTypeModalVisible(true)}
+            disabled={readonly}
+            style={styles.setTypeTrigger}
+            accessibilityLabel={`Serie ${item.order}. ${getSetTypeLabel(
+              setType
+            )}`}
+            accessibilityHint={
+              readonly ? undefined : "Toca para cambiar el tipo de serie"
+            }
           >
-            {item.order}
-          </Text>
-          {setTypeIcon ? (
             <View
               style={[
-                styles.setTypeBadge,
-                { backgroundColor: getSetTypeColor(setType) },
+                styles.serieBadge,
+                {
+                  width: badgeSize,
+                  height: badgeSize,
+                  borderRadius: SET_BADGE.radius,
+                  backgroundColor: isSpecialSetType
+                    ? setTypeColor
+                    : theme.backgroundSecondary,
+                },
               ]}
             >
-              <Icon name={setTypeIcon} size={11} color={theme.onPrimary} />
-            </View>
-          ) : null}
-        </TouchableOpacity>
-      </View>
-
-      {/* Marca anterior */}
-      {started && (
-        <View
-          style={{
-            flex: columnFlex.anterior,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <TouchableOpacity
-            onPress={handleAutofillFromPrevious}
-            disabled={readonly || !previousMark || previousMark === "-"}
-            accessibilityLabel="Autocompletar con marca anterior"
-            accessibilityHint="Toca para copiar los valores de tu sesión anterior"
-            style={{ width: "100%" }}
-          >
-            <View style={styles.previousMarkContainer}>
               <Text
                 style={[
-                  styles.previousMark,
+                  styles.serieBadgeText,
                   {
-                    color: theme.textSecondary,
-                    fontSize: RFValue(isSmallScreen ? 12 : 14),
+                    color: isSpecialSetType ? theme.onPrimary : theme.text,
+                    fontSize: isSmallScreen ? 13 : 14,
                   },
-                  previousMark &&
-                    previousMark !== "-" &&
-                    styles.clickablePreviousMark,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
-                {previousMainMark}
+                {item.order}
               </Text>
-              {previousAssistedMark ? (
-                <Text
-                  style={[
-                    styles.previousAssistedMark,
-                    { color: theme.textTertiary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  A:{previousAssistedMark}
-                </Text>
-              ) : null}
             </View>
+            {setTypeIcon && isSpecialSetType ? (
+              <View
+                style={[
+                  styles.setTypeBadge,
+                  { backgroundColor: setTypeColor },
+                ]}
+              >
+                <Icon name={setTypeIcon} size={10} color={theme.onPrimary} />
+              </View>
+            ) : null}
           </TouchableOpacity>
         </View>
-      )}
 
-      {/* Peso */}
-      <View
-        style={{
-          flex: columnFlex.weight,
-          marginHorizontal: COLUMN_GAP,
-        }}
-      >
-        <TextInput
-          {...inputAccessoryProps}
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              color: theme.text,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-              padding: isSmallScreen ? 9 : 12,
-              fontSize: RFValue(isSmallScreen ? 14 : 16),
-              minHeight: isSmallScreen ? 44 : 48,
-              width: "100%",
-            },
-          ]}
-          keyboardType="decimal-pad"
-          value={localWeight}
-          selectTextOnFocus
-          placeholder={previousWeightPlaceholder}
-          placeholderTextColor={theme.textTertiary}
-          onChangeText={handleWeightChange}
-          editable={!readonly}
-          accessibilityLabel="Peso"
-          accessibilityHint="Introduce el peso levantado"
-        />
-      </View>
+        {/* Marca anterior — solo entreno */}
+        {started && (
+          <View style={getAnteriorColumnStyle(isSmallScreen)}>
+            {hasPreviousMark ? (
+              <TouchableOpacity
+                onPress={handleAutofillFromPrevious}
+                disabled={readonly}
+                accessibilityLabel="Autocompletar con marca anterior"
+                accessibilityHint="Toca para copiar los valores de tu sesión anterior"
+                style={{
+                  width: "100%",
+                  minHeight: inputHeight,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <View style={styles.previousMarkContainer}>
+                  <Text
+                    style={[
+                      styles.previousMark,
+                      styles.clickablePreviousMark,
+                      {
+                        color: theme.textSecondary,
+                        fontSize: isSmallScreen ? 11 : 12,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {previousMainMark}
+                  </Text>
+                  {previousAssistedMark ? (
+                    <Text
+                      style={[
+                        styles.previousAssistedMark,
+                        { color: theme.textTertiary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      A:{previousAssistedMark}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <Text
+                style={{
+                  color: theme.textTertiary,
+                  fontSize: 15,
+                  fontWeight: "600",
+                  textAlign: "center",
+                  width: "100%",
+                  includeFontPadding: false,
+                }}
+              >
+                -
+              </Text>
+            )}
+          </View>
+        )}
 
-      {/* Repeticiones — same flex as header so columns stay aligned */}
-      {started || repsType !== "range" ? (
-        <View
-          style={{
-            flex: repsColumnFlex,
-            marginHorizontal: COLUMN_GAP,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <TextInput
-            {...inputAccessoryProps}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.inputBackground,
-                color: theme.text,
-                borderWidth: isDark ? 1 : 0,
-                borderColor: theme.border,
-                paddingHorizontal: isSmallScreen ? 6 : 8,
-                paddingVertical: isSmallScreen ? 9 : 12,
-                fontSize: RFValue(isSmallScreen ? 14 : 16),
-                minHeight: isSmallScreen ? 44 : 48,
-                width: "100%",
-                textAlign: "center",
-              },
-            ]}
-            keyboardType="numeric"
-            value={localReps}
-            selectTextOnFocus
-            placeholder={started ? rangePlaceholder : "0"}
-            placeholderTextColor={theme.textTertiary}
-            onChangeText={handleRepsChange}
-            editable={!readonly}
-            accessibilityLabel="Repeticiones"
-            accessibilityHint="Introduce el número de repeticiones"
-          />
-        </View>
-      ) : (
-        <View
-          style={{
-            flex: repsColumnFlex,
-            marginHorizontal: COLUMN_GAP,
-          }}
-        >
+        {/* Readonly detail: plain text cells */}
+        {readonly && !started ? (
+          <>
+            {renderValueCell(displayWeight, columnFlex.weight)}
+            {renderValueCell(displayReps, repsColumnFlex)}
+          </>
+        ) : (
+          <>
+            {/* Peso */}
+            <View
+              style={{
+                flex: columnFlex.weight,
+                marginHorizontal: COLUMN_GAP / 2,
+                minWidth: 0,
+              }}
+            >
+              <TextInput
+                {...inputAccessoryProps}
+                style={[styles.input, hevyInputStyle]}
+                keyboardType="decimal-pad"
+                value={localWeight}
+                selectTextOnFocus
+                placeholder={previousWeightPlaceholder}
+                placeholderTextColor={theme.textTertiary}
+                onChangeText={handleWeightChange}
+                editable={!readonly}
+                accessibilityLabel="Peso"
+                accessibilityHint="Introduce el peso levantado"
+              />
+            </View>
+
+            {/* Repeticiones */}
+            {started || repsType !== "range" ? (
+              <View
+                style={{
+                  flex: repsColumnFlex,
+                  marginHorizontal: COLUMN_GAP / 2,
+                  minWidth: 0,
+                }}
+              >
+                <TextInput
+                  {...inputAccessoryProps}
+                  style={[styles.input, hevyInputStyle]}
+                  keyboardType="numeric"
+                  value={localReps}
+                  selectTextOnFocus
+                  placeholder={started ? rangePlaceholder : "0"}
+                  placeholderTextColor={theme.textTertiary}
+                  onChangeText={handleRepsChange}
+                  editable={!readonly}
+                  accessibilityLabel="Repeticiones"
+                  accessibilityHint="Introduce el número de repeticiones"
+                />
+              </View>
+            ) : (
+              <View
+                style={{
+                  flex: repsColumnFlex,
+                  marginHorizontal: COLUMN_GAP / 2,
+                  minWidth: 0,
+                }}
+              >
+                <View
+                  style={[
+                    styles.rangeContainer,
+                    {
+                      backgroundColor: theme.card,
+                      borderWidth: SET_INPUT.borderWidth,
+                      borderColor: theme.border,
+                      borderRadius: SET_INPUT.radius,
+                      height: inputHeight,
+                      paddingHorizontal: 2,
+                    },
+                  ]}
+                >
+                  <TextInput
+                    {...inputAccessoryProps}
+                    style={[
+                      styles.rangeInput,
+                      {
+                        color: theme.text,
+                        fontSize: inputFontSize,
+                        fontWeight: "700",
+                        ...(Platform.OS === "android"
+                          ? {
+                              includeFontPadding: false,
+                              textAlignVertical: "center" as const,
+                            }
+                          : {}),
+                      },
+                    ]}
+                    keyboardType="numeric"
+                    value={localRepsMin}
+                    selectTextOnFocus
+                    placeholder={
+                      item.repsMin && item.repsMin > 0
+                        ? item.repsMin.toString()
+                        : item.reps && item.reps > 0
+                        ? item.reps.toString()
+                        : "0"
+                    }
+                    placeholderTextColor={theme.textTertiary}
+                    onChangeText={handleRepsMinChange}
+                    editable={!readonly}
+                    accessibilityLabel="Repeticiones mínimas"
+                  />
+                  <Text
+                    style={[
+                      styles.rangeSeparator,
+                      {
+                        color: theme.textSecondary,
+                        fontSize: inputFontSize,
+                      },
+                    ]}
+                  >
+                    -
+                  </Text>
+                  <TextInput
+                    {...inputAccessoryProps}
+                    style={[
+                      styles.rangeInput,
+                      {
+                        color: theme.text,
+                        fontSize: inputFontSize,
+                        fontWeight: "700",
+                        ...(Platform.OS === "android"
+                          ? {
+                              includeFontPadding: false,
+                              textAlignVertical: "center" as const,
+                            }
+                          : {}),
+                      },
+                    ]}
+                    keyboardType="numeric"
+                    value={localRepsMax}
+                    selectTextOnFocus
+                    placeholder={
+                      item.repsMax && item.repsMax > 0
+                        ? item.repsMax.toString()
+                        : item.reps && item.reps > 0
+                        ? item.reps.toString()
+                        : "0"
+                    }
+                    placeholderTextColor={theme.textTertiary}
+                    onChangeText={handleRepsMaxChange}
+                    editable={!readonly}
+                    accessibilityLabel="Repeticiones máximas"
+                  />
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ASIS — solo entreno */}
+        {showAssisted && (
           <View
-            style={[
-              styles.rangeContainer,
-              {
-                backgroundColor: theme.inputBackground,
-                borderWidth: isDark ? 1 : 0,
-                borderColor: theme.border,
-                paddingHorizontal: isSmallScreen ? 3 : 4,
-                minHeight: isSmallScreen ? 44 : 48,
-              },
-            ]}
+            style={{
+              flex: getColumnFlex(isSmallScreen, true).assisted,
+              marginHorizontal: COLUMN_GAP / 2,
+              minWidth: 0,
+            }}
           >
             <TextInput
               {...inputAccessoryProps}
-              style={[
-                styles.rangeInput,
-                {
-                  color: theme.text,
-                  paddingVertical: isSmallScreen ? 7 : 10,
-                  paddingHorizontal: 2,
-                  fontSize: RFValue(isSmallScreen ? 14 : 16),
-                },
-              ]}
+              style={[styles.input, hevyInputStyle]}
               keyboardType="numeric"
-              value={localRepsMin}
+              value={localAssistedReps}
               selectTextOnFocus
-              placeholder={
-                item.repsMin && item.repsMin > 0
-                  ? item.repsMin.toString()
-                  : item.reps && item.reps > 0
-                  ? item.reps.toString()
-                  : "0"
-              }
+              placeholder="0"
               placeholderTextColor={theme.textTertiary}
-              onChangeText={handleRepsMinChange}
+              onChangeText={handleAssistedRepsChange}
               editable={!readonly}
-              accessibilityLabel="Repeticiones mínimas"
-            />
-            <Text
-              style={[
-                styles.rangeSeparator,
-                {
-                  color: theme.textSecondary,
-                  fontSize: RFValue(isSmallScreen ? 14 : 16),
-                },
-              ]}
-            >
-              -
-            </Text>
-            <TextInput
-              {...inputAccessoryProps}
-              style={[
-                styles.rangeInput,
-                {
-                  color: theme.text,
-                  paddingVertical: isSmallScreen ? 7 : 10,
-                  paddingHorizontal: 2,
-                  fontSize: RFValue(isSmallScreen ? 14 : 16),
-                },
-              ]}
-              keyboardType="numeric"
-              value={localRepsMax}
-              selectTextOnFocus
-              placeholder={
-                item.repsMax && item.repsMax > 0
-                  ? item.repsMax.toString()
-                  : item.reps && item.reps > 0
-                  ? item.reps.toString()
-                  : "0"
-              }
-              placeholderTextColor={theme.textTertiary}
-              onChangeText={handleRepsMaxChange}
-              editable={!readonly}
-              accessibilityLabel="Repeticiones máximas"
+              accessibilityLabel="Repeticiones asistidas"
+              accessibilityHint="Introduce cuántas repeticiones fueron asistidas"
             />
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Repeticiones asistidas */}
-      <View
-        style={{
-          flex: columnFlex.assisted,
-          marginHorizontal: COLUMN_GAP,
-        }}
-      >
-        <TextInput
-          {...inputAccessoryProps}
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBackground,
-              color: theme.text,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: theme.border,
-              padding: isSmallScreen ? 9 : 12,
-              fontSize: RFValue(isSmallScreen ? 14 : 16),
-              minHeight: isSmallScreen ? 44 : 48,
-              width: "100%",
-            },
-          ]}
-          keyboardType="numeric"
-          value={localAssistedReps}
-          selectTextOnFocus
-          placeholder="0"
-          placeholderTextColor={theme.textTertiary}
-          onChangeText={handleAssistedRepsChange}
-          editable={!readonly}
-          accessibilityLabel="Repeticiones asistidas"
-          accessibilityHint="Introduce cuántas repeticiones fueron asistidas"
-        />
-      </View>
-
-      {/* Check */}
-      {!readonly && (
-        <View
-          style={{
-            flex: columnFlex.check,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <TouchableOpacity
-            onPress={handleToggleWithAnimation}
-            activeOpacity={1}
-            accessibilityLabel={
-              item.completed ? "Serie completada" : "Serie no completada"
-            }
-            accessibilityHint="Toca para marcar como completada o no completada"
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.completed }}
+        {/* Check cuadrado — solo entreno editable */}
+        {showCheck && (
+          <View
+            style={{
+              flex: getColumnFlex(isSmallScreen, true).check,
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 0,
+            }}
           >
-            <View>
-              <Icon
-                name={item.completed ? "check-circle" : "radio-button-unchecked"}
-                size={isSmallScreen ? 24 : 28}
-                color={item.completed ? completedCheckColor : theme.textTertiary}
-              />
-              {recordType && item.completed ? (
-                <Animated.View
+            <TouchableOpacity
+              onPress={handleToggleWithAnimation}
+              activeOpacity={0.85}
+              accessibilityLabel={
+                item.completed ? "Serie completada" : "Serie no completada"
+              }
+              accessibilityHint="Toca para marcar como completada o no completada"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: item.completed }}
+            >
+              <View>
+                <View
                   style={[
-                    styles.recordBadge,
-                    { transform: [{ scale: iconScale }] },
+                    styles.checkButton,
+                    {
+                      width: checkSize,
+                      height: checkSize,
+                      borderRadius: SET_CHECK.radius,
+                      backgroundColor: item.completed
+                        ? theme.success
+                        : theme.backgroundSecondary,
+                    },
                   ]}
-                  accessibilityLabel="Récord personal"
                 >
-                  {recordType === "1RM" && (
-                    <Trophy size={isSmallScreen ? 12 : 14} color="#FFD700" />
-                  )}
-                  {recordType === "maxWeight" && (
-                    <TrendingUp size={isSmallScreen ? 12 : 14} color="#FFD700" />
-                  )}
-                  {recordType === "maxVolume" && (
-                    <Zap size={isSmallScreen ? 12 : 14} color="#FFD700" />
-                  )}
-                </Animated.View>
-              ) : null}
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
-    </Animated.View>
+                  <Icon
+                    name="check"
+                    size={isSmallScreen ? 16 : 18}
+                    color={item.completed ? "#FFFFFF" : theme.textTertiary}
+                  />
+                </View>
+                {recordType && item.completed ? (
+                  <Animated.View
+                    style={[
+                      styles.recordBadge,
+                      { transform: [{ scale: iconScale }] },
+                    ]}
+                    accessibilityLabel="Récord personal"
+                  >
+                    {recordType === "1RM" && (
+                      <Trophy size={12} color="#FFD700" />
+                    )}
+                    {recordType === "maxWeight" && (
+                      <TrendingUp size={12} color="#FFD700" />
+                    )}
+                    {recordType === "maxVolume" && (
+                      <Zap size={12} color="#FFD700" />
+                    )}
+                  </Animated.View>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Animated.View>
 
       {/* Modal tipo de serie */}
       <Modal
@@ -775,7 +875,8 @@ const arePropsEqual = (prevProps: Props, nextProps: Props) => {
     prevProps.readonly === nextProps.readonly &&
     prevProps.previousMark === nextProps.previousMark &&
     prevProps.started === nextProps.started &&
-    prevProps.recordType === nextProps.recordType
+    prevProps.recordType === nextProps.recordType &&
+    prevProps.rowIndex === nextProps.rowIndex
   );
 };
 
@@ -783,45 +884,47 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    borderRadius: 16,
+    marginBottom: 4,
+    borderRadius: 8,
   },
   input: {
-    borderRadius: 12,
+    borderRadius: SET_INPUT.radius,
     textAlign: "center",
   },
   rangeContainer: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
   },
   rangeInput: {
-    // flexBasis 0 evita que el TextInput tome el ancho intrínseco del texto
-    // y deje pastillas de rango con anchos distintos entre filas.
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
     minWidth: 0,
     textAlign: "center",
+    paddingVertical: 0,
+    paddingHorizontal: 2,
   },
   rangeSeparator: {
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
-  label: {
+  readonlyValue: {
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "700",
   },
   previousMark: {
     textAlign: "center",
+    width: "100%",
   },
   previousMarkContainer: {
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
+    minHeight: 18,
   },
   previousAssistedMark: {
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 10,
     marginTop: 1,
   },
   clickablePreviousMark: {
@@ -830,12 +933,25 @@ const styles = StyleSheet.create({
   setTypeTrigger: {
     alignItems: "center",
   },
+  serieBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  serieBadgeText: {
+    fontWeight: "700",
+    textAlign: "center",
+  },
   setTypeBadge: {
-    marginTop: 4,
-    width: 18,
-    height: 18,
+    marginTop: 3,
+    width: 16,
+    height: 16,
     borderRadius: 8,
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkButton: {
     alignItems: "center",
     justifyContent: "center",
   },

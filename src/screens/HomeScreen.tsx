@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -39,10 +40,8 @@ import { useTheme } from "../contexts/ThemeContext";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import {
   findAllRoutineSessions,
-  getGlobalStats,
   getRoutineById,
 } from "../features/routine/services/routineService";
-import type { GlobalStats } from "../features/routine/services/routineService";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -104,7 +103,11 @@ interface SessionWithTotals {
   createdAt: Date | string;
 }
 
-// GlobalStats is now imported from routineService
+type WeeklyStats = {
+  sessions: number;
+  durationSeconds: number;
+  volumeKg: number;
+};
 
 const toSafeNumber = (value: unknown): number => {
   const parsed =
@@ -117,6 +120,35 @@ const toSafeNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+/** Monday 00:00 local time for the calendar week containing `date`. */
+const getStartOfWeek = (date: Date = new Date()): Date => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay(); // 0 Sun … 6 Sat
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+  start.setDate(start.getDate() - daysFromMonday);
+  return start;
+};
+
+const computeWeeklyStats = (sessions: SessionWithTotals[]): WeeklyStats => {
+  const weekStart = getStartOfWeek();
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  return sessions.reduce<WeeklyStats>(
+    (acc, session) => {
+      const created = new Date(session.createdAt);
+      if (created < weekStart || created >= weekEnd) return acc;
+      return {
+        sessions: acc.sessions + 1,
+        durationSeconds: acc.durationSeconds + toSafeNumber(session.totalTime),
+        volumeKg: acc.volumeKg + toSafeNumber(session.totalWeight),
+      };
+    },
+    { sessions: 0, durationSeconds: 0, volumeKg: 0 }
+  );
+};
+
 const formatSessionDuration = (totalSeconds: number): string => {
   const safeSeconds = Math.max(0, toSafeNumber(totalSeconds));
   const totalMinutes = Math.floor(safeSeconds / 60);
@@ -127,6 +159,33 @@ const formatSessionDuration = (totalSeconds: number): string => {
   if (hours === 0) return `${totalMinutes}m`;
   if (minutes === 0) return `${hours}h`;
   return `${hours}h ${minutes}m`;
+};
+
+/** Compact duration for the home weekly strip. */
+const formatWeeklyDuration = (totalSeconds: number): string => {
+  const safeSeconds = Math.max(0, toSafeNumber(totalSeconds));
+  const totalMinutes = Math.floor(safeSeconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+};
+
+const formatWeeklyVolume = (kg: number): string => {
+  const n = Math.round(toSafeNumber(kg));
+  if (n >= 1000) {
+    const compact = n / 1000;
+    const text =
+      compact >= 10 ? compact.toFixed(0) : compact.toFixed(1).replace(/\.0$/, "");
+    return `${text}k`;
+  }
+  return `${n}`;
+};
+
+const weeklyDurationUnit = (totalSeconds: number): string => {
+  const totalMinutes = Math.floor(Math.max(0, toSafeNumber(totalSeconds)) / 60);
+  return totalMinutes < 60 ? "Min" : "Tiempo";
 };
 
 const formatSessionDateLabel = (createdAt: Date | string): string => {
@@ -284,7 +343,6 @@ const getGreetingForDate = (date: Date): string => {
 
 export default function HomeScreen() {
   const [sessions, setSessions] = useState<SessionWithTotals[]>([]);
-  const [stats, setStats] = useState<GlobalStats | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
@@ -305,6 +363,9 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+
+  const weeklyStats = useMemo(() => computeWeeklyStats(sessions), [sessions]);
+  const weeklyDurationLabel = weeklyDurationUnit(weeklyStats.durationSeconds);
 
   // Listener para el tab press
   useEffect(() => {
@@ -358,10 +419,7 @@ export default function HomeScreen() {
     }
 
     try {
-      const [globalStats, sessionsData] = await Promise.all([
-        getGlobalStats(),
-        findAllRoutineSessions(),
-      ]);
+      const sessionsData = await findAllRoutineSessions();
 
       const sessionsWithTotals = sessionsData.map(
         (session): SessionWithTotals => {
@@ -417,26 +475,6 @@ export default function HomeScreen() {
         }
       );
 
-      const fallbackDuration = sessionsWithTotals.reduce(
-        (sum, session) => sum + toSafeNumber(session.totalTime),
-        0
-      );
-      const fallbackVolume = sessionsWithTotals.reduce(
-        (sum, session) => sum + toSafeNumber(session.totalWeight),
-        0
-      );
-      const fallbackSessions = sessionsWithTotals.length;
-
-      const resolvedStats: GlobalStats = {
-        ...globalStats,
-        totalDuration:
-          toSafeNumber(globalStats.totalDuration) || fallbackDuration,
-        totalVolume: toSafeNumber(globalStats.totalVolume) || fallbackVolume,
-        totalSessions:
-          toSafeNumber(globalStats.totalSessions) || fallbackSessions,
-      };
-
-      setStats(resolvedStats);
       setSessions(sessionsWithTotals);
     } catch (error) {
       console.error("Error fetching data", error);
@@ -791,27 +829,28 @@ export default function HomeScreen() {
               />
             </View>
 
-            {/* Quick Stats Overview */}
+            {/* Weekly stats overview */}
             <View style={styles.quickStats}>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>
-                  {stats ? Math.round(stats.totalDuration / 60) : 0}
-                </Text>
-                <Text style={styles.quickStatLabel}>Min</Text>
-              </View>
-              <View style={styles.quickStatDivider} />
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>
-                  {stats ? stats.totalSessions : 0}
-                </Text>
-                <Text style={styles.quickStatLabel}>Sesiones</Text>
-              </View>
-              <View style={styles.quickStatDivider} />
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>
-                  {stats ? Math.round(stats.totalVolume) : 0}
-                </Text>
-                <Text style={styles.quickStatLabel}>Kg</Text>
+              <Text style={styles.quickStatsPeriod}>Esta semana</Text>
+              <View style={styles.quickStatsRow}>
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatValue}>
+                    {formatWeeklyDuration(weeklyStats.durationSeconds)}
+                  </Text>
+                  <Text style={styles.quickStatLabel}>{weeklyDurationLabel}</Text>
+                </View>
+                <View style={styles.quickStatDivider} />
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatValue}>{weeklyStats.sessions}</Text>
+                  <Text style={styles.quickStatLabel}>Sesiones</Text>
+                </View>
+                <View style={styles.quickStatDivider} />
+                <View style={styles.quickStat}>
+                  <Text style={styles.quickStatValue}>
+                    {formatWeeklyVolume(weeklyStats.volumeKg)}
+                  </Text>
+                  <Text style={styles.quickStatLabel}>Kg</Text>
+                </View>
               </View>
             </View>
           </Animated.View>
@@ -823,106 +862,8 @@ export default function HomeScreen() {
               { backgroundColor: theme.backgroundSecondary },
             ]}
           >
-            {/* Stats Section Rediseñada */}
-            <View style={styles.statsSection}>
-              <View style={styles.statsGrid}>
-                <View
-                  style={[
-                    styles.statCard,
-                    styles.timeCard,
-                    {
-                      backgroundColor: theme.card,
-                      shadowColor: theme.shadowColor,
-                      borderWidth: isDark ? 1 : 0,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.statIconContainer,
-                      styles.timeIconContainer,
-                      { backgroundColor: theme.primary + "20" },
-                    ]}
-                  >
-                    <Text style={styles.statIcon}>⏱️</Text>
-                  </View>
-                  <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? Math.round(stats.totalDuration / 60) : 0}
-                  </Text>
-                  <Text
-                    style={[styles.statLabel, { color: theme.textSecondary }]}
-                  >
-                    Minutos totales
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.statCard,
-                    styles.setsCard,
-                    {
-                      backgroundColor: theme.card,
-                      shadowColor: theme.shadowColor,
-                      borderWidth: isDark ? 1 : 0,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.statIconContainer,
-                      styles.setsIconContainer,
-                      { backgroundColor: theme.success + "20" },
-                    ]}
-                  >
-                    <Text style={styles.statIcon}>📊</Text>
-                  </View>
-                  <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? stats.totalSessions : 0}
-                  </Text>
-                  <Text
-                    style={[styles.statLabel, { color: theme.textSecondary }]}
-                  >
-                    Sesiones totales
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.statCard,
-                    styles.weightCard,
-                    {
-                      backgroundColor: theme.card,
-                      shadowColor: theme.shadowColor,
-                      borderWidth: isDark ? 1 : 0,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.statIconContainer,
-                      styles.weightIconContainer,
-                      { backgroundColor: theme.warning + "20" },
-                    ]}
-                  >
-                    <Text style={styles.statIcon}>🏋️</Text>
-                  </View>
-                  <Text style={[styles.statValue, { color: theme.text }]}>
-                    {stats ? Math.round(stats.totalVolume) : 0}
-                  </Text>
-                  <Text
-                    style={[styles.statLabel, { color: theme.textSecondary }]}
-                  >
-                    Volumen
-                  </Text>
-                </View>
-              </View>
-            </View>
-
             {/* Acciones Rápidas */}
-            <View style={styles.actionsSection}>
+            <View style={[styles.actionsSection, styles.actionsSectionAfterHeader]}>
               <View style={styles.actionsGrid}>
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                   <Pressable
@@ -1134,10 +1075,24 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   quickStats: {
-    flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.15)",
     borderRadius: 20,
-    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  quickStatsPeriod: {
+    color: "#E0D7F5",
+    fontSize: RFValue(11),
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    textAlign: "center",
+    marginBottom: 10,
+    opacity: 0.95,
+  },
+  quickStatsRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   quickStat: {
@@ -1160,71 +1115,12 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
-  statsSection: {
-    paddingHorizontal: 20,
-    marginTop: -15,
-    marginBottom: 24,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-  statCard: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 120,
-  },
-  timeCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#6C3BAA",
-  },
-  setsCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#10B981",
-  },
-  weightCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#F59E0B",
-  },
-  statIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  timeIconContainer: {},
-  setsIconContainer: {},
-  weightIconContainer: {},
-  statIcon: {
-    fontSize: RFValue(18),
-  },
-  statValue: {
-    fontSize: RFValue(20),
-    fontWeight: "bold",
-    marginBottom: 4,
-    flexShrink: 1,
-    textAlign: "center",
-  },
-  statLabel: {
-    fontSize: RFValue(11),
-    fontWeight: "600",
-    textAlign: "center",
-    flexShrink: 1,
-  },
   actionsSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
+  },
+  actionsSectionAfterHeader: {
+    marginTop: 20,
   },
   actionsGrid: {
     gap: 16,

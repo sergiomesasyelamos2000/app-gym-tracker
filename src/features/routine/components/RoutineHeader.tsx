@@ -97,9 +97,9 @@ export const RoutineHeader: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  header: { marginBottom: 16, paddingHorizontal: 8, paddingTop: 16 },
+  header: { marginBottom: 8, paddingHorizontal: 4, paddingTop: 10 },
   title: {
-    fontSize: RFValue(26),
+    fontSize: RFValue(24),
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "center",
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: RFValue(13),
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
     fontWeight: "500",
   },
   headerActions: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   startButton: {
     paddingVertical: 10,

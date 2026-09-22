@@ -243,12 +243,10 @@ export const getCompletedRowStyle = (
   theme: Theme,
   completed: boolean
 ): ViewStyle => ({
-  backgroundColor: completed
-    ? withOpacity(theme.success, 15)
-    : theme.backgroundSecondary,
-  borderRadius: 16,
-  borderWidth: completed ? 1 : 0,
-  borderColor: completed ? withOpacity(theme.success, 30) : "transparent",
+  backgroundColor: completed ? withOpacity(theme.success, 15) : "transparent",
+  borderRadius: 8,
+  borderWidth: 0,
+  borderColor: "transparent",
 });
 
 export const getTableHeaderStyle = (theme: Theme): ViewStyle => ({

@@ -15,7 +15,8 @@ export type WorkoutLiveIntentAction =
   | "add"
   | "subtract"
   | "skip"
-  | "completeSet";
+  | "completeSet"
+  | "open";
 
 export interface WorkoutLiveIntentEvent {
   action: WorkoutLiveIntentAction;
@@ -69,7 +70,7 @@ const parseWorkoutLiveActionURL = (
   url: string
 ): WorkoutLiveIntentEvent | null => {
   const match = url.match(
-    /^com\.smy862\.app:\/\/(?:rest-timer|workout-live)\/(add|subtract|skip|completeSet)(?:[/?#].*)?$/
+    /^com\.smy862\.app:\/\/(?:rest-timer|workout-live)\/(add|subtract|skip|completeSet|open)(?:[/?#].*)?$/
   );
   if (!match) return null;
 

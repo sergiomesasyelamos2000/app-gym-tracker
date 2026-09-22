@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import KeyboardDismissButton from "../components/KeyboardDismissButton";
 import { useTheme } from "../contexts/ThemeContext";
+import AppleProfileCompletionGate from "../features/login/components/AppleProfileCompletionGate";
 import AuthScreen from "../features/login/screens/AuthScreen";
 import ForgotPasswordScreen from "../features/login/screens/ForgotPasswordScreen";
 import { prefetchProductCatalog } from "../features/nutrition/services/nutritionService";
@@ -151,6 +152,7 @@ export const RootNavigator = () => {
           </>
         )}
       </Stack.Navigator>
+      {isAuthenticated ? <AppleProfileCompletionGate /> : null}
       <KeyboardDismissButton />
     </View>
   );

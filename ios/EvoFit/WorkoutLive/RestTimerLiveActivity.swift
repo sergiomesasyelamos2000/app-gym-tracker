@@ -5,7 +5,14 @@ import React
 @objc(RestTimerLiveActivity)
 class RestTimerLiveActivity: NSObject {
 
-  private var currentActivity: Activity<WorkoutLiveAttributes>?
+  /// Boxed so the class can link against iOS 15.1; ActivityKit types need 16.1+.
+  private var currentActivityBox: Any?
+
+  @available(iOS 16.1, *)
+  private var currentActivity: Activity<WorkoutLiveAttributes>? {
+    get { currentActivityBox as? Activity<WorkoutLiveAttributes> }
+    set { currentActivityBox = newValue }
+  }
 
   @objc
   static func requiresMainQueueSetup() -> Bool { true }
@@ -114,7 +121,9 @@ class RestTimerLiveActivity: NSObject {
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
     Task { @MainActor in
-      await endAll()
+      if #available(iOS 16.1, *) {
+        await endAll()
+      }
       resolver(true)
     }
   }
@@ -229,6 +238,7 @@ class RestTimerLiveActivity: NSObject {
     getCurrentWorkoutLiveState(resolver, rejecter: rejecter)
   }
 
+  @available(iOS 16.1, *)
   private func makeState(
     exerciseName: String?,
     nextSetSummary: String?,
@@ -251,6 +261,7 @@ class RestTimerLiveActivity: NSObject {
     )
   }
 
+  @available(iOS 16.1, *)
   @MainActor
   private func endAll() async {
     for activity in Activity<WorkoutLiveAttributes>.activities {
@@ -259,6 +270,7 @@ class RestTimerLiveActivity: NSObject {
     currentActivity = nil
   }
 
+  @available(iOS 16.1, *)
   private func persistState(_ state: WorkoutLiveAttributes.ContentState, startedAt: Date) {
     let payload: [String: Any] = [
       "exerciseName": state.exerciseName,

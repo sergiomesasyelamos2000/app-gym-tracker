@@ -128,7 +128,7 @@ const ExerciseHeader = ({
           activeOpacity={0.7}
         >
           <Text
-            style={[styles.title, { color: theme.text }]}
+            style={[styles.title, { color: theme.primary }]}
             numberOfLines={3}
             ellipsizeMode="tail"
           >
@@ -329,23 +329,23 @@ const createStyles = (theme: Theme) =>
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 16,
+      marginBottom: 8,
     },
     titleContainer: {
       flex: 1,
-      paddingVertical: 8,
+      paddingVertical: 4,
+      marginRight: 8,
     },
     title: {
-      fontSize: RFValue(22),
-      fontWeight: "600",
+      fontSize: RFValue(18),
+      fontWeight: "700",
       flexShrink: 1,
-      maxWidth: 180,
     },
     exerciseImage: {
-      width: 80,
-      height: 80,
+      width: 40,
+      height: 40,
       borderRadius: 8,
-      marginRight: 12,
+      marginRight: 10,
     },
     modalContainer: {
       justifyContent: "flex-end",

@@ -16,6 +16,22 @@ export function isApplePrivateRelayEmail(email?: string | null): boolean {
   return email.trim().toLowerCase().endsWith("@privaterelay.appleid.com");
 }
 
+/** Apple identity `sub` style: 001234.abcdef....1234 */
+const APPLE_SUB_NAME_RE = /^\d{6}\.[a-z0-9]+\.\d+$/i;
+
+/** Long alphanumeric/hex token with no spaces — typical relay local-part / opaque id */
+const APPLE_OPAQUE_ID_NAME_RE = /^[a-z0-9._-]{10,}$/i;
+
+export function looksLikeAppleAssignedId(name: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (APPLE_SUB_NAME_RE.test(trimmed)) return true;
+  if (APPLE_OPAQUE_ID_NAME_RE.test(trimmed) && !/[aeiouáéíóú]/i.test(trimmed)) {
+    return true;
+  }
+  return APPLE_OPAQUE_ID_NAME_RE.test(trimmed) && trimmed.length >= 16;
+}
+
 export function isLikelyApplePlaceholderName(
   name?: string | null,
   email?: string | null
@@ -31,13 +47,25 @@ export function isLikelyApplePlaceholderName(
     }
   }
 
+  if (looksLikeAppleAssignedId(trimmed)) {
+    return true;
+  }
+
+  if (isApplePrivateRelayEmail(email) && APPLE_OPAQUE_ID_NAME_RE.test(trimmed)) {
+    return true;
+  }
+
   return false;
 }
 
 export function needsAppleProfileCompletion(user: {
   name?: string | null;
   email?: string | null;
+  appleId?: string | null;
 }): boolean {
+  const isAppleUser =
+    !!user.appleId || isApplePrivateRelayEmail(user.email);
+  if (!isAppleUser) return false;
   return isLikelyApplePlaceholderName(user.name, user.email);
 }
 

@@ -24,7 +24,7 @@ interface Props {
 }
 
 const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [newNoteText, setNewNoteText] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -46,50 +46,22 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
     onChange(notes.filter((note) => note.id !== noteId));
   };
 
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
   return (
     <View style={styles.container}>
-      {/* Lista de notas existentes */}
       {notes.length > 0 && (
         <View style={styles.notesList}>
           {notes.map((note) => (
-            <View
-              key={note.id}
-              style={[
-                styles.noteItem,
-                {
-                  backgroundColor: theme.card,
-                  shadowColor: theme.shadowColor,
-                  borderWidth: isDark ? 1 : 0,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View style={styles.noteContent}>
-                <Text style={[styles.noteText, { color: theme.text }]}>
-                  {note.text}
-                </Text>
-                <Text style={[styles.noteDate, { color: theme.textSecondary }]}>
-                  {formatDate(note.createdAt)}
-                </Text>
-              </View>
+            <View key={note.id} style={styles.noteItem}>
+              <Text style={[styles.noteText, { color: theme.textSecondary }]}>
+                {note.text}
+              </Text>
               {!readonly && (
                 <TouchableOpacity
                   onPress={() => deleteNote(note.id)}
-                  style={[
-                    styles.deleteButton,
-                    { backgroundColor: theme.error + "20" },
-                  ]}
+                  hitSlop={8}
+                  accessibilityLabel="Eliminar nota"
                 >
-                  <Icon name="close" size={18} color={theme.error} />
+                  <Icon name="close" size={16} color={theme.textTertiary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -97,7 +69,6 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
         </View>
       )}
 
-      {/* Input para nueva nota */}
       {!readonly && (
         <>
           {isAdding ? (
@@ -106,12 +77,12 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                 style={[
                   styles.noteInput,
                   {
-                    backgroundColor: theme.inputBackground,
+                    backgroundColor: theme.card,
                     borderColor: theme.border,
                     color: theme.text,
                   },
                 ]}
-                placeholder="Escribe tu nota..."
+                placeholder="Agregar notas aquí…"
                 placeholderTextColor={theme.textTertiary}
                 value={newNoteText}
                 onChangeText={setNewNoteText}
@@ -124,10 +95,7 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                     setIsAdding(false);
                     setNewNoteText("");
                   }}
-                  style={[
-                    styles.cancelButton,
-                    { backgroundColor: theme.backgroundSecondary },
-                  ]}
+                  style={styles.cancelButton}
                 >
                   <Text
                     style={[
@@ -147,7 +115,9 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
                   ]}
                   disabled={!newNoteText.trim()}
                 >
-                  <Text style={[styles.saveButtonText, { color: theme.onPrimary }]}>
+                  <Text
+                    style={[styles.saveButtonText, { color: theme.onPrimary }]}
+                  >
                     Guardar
                   </Text>
                 </TouchableOpacity>
@@ -156,19 +126,14 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
           ) : (
             <TouchableOpacity
               onPress={() => setIsAdding(true)}
-              style={[
-                styles.addNoteButton,
-                {
-                  backgroundColor: theme.backgroundSecondary,
-                  borderColor: theme.border,
-                },
-              ]}
+              accessibilityLabel="Agregar notas"
             >
-              <Icon name="add" size={20} color={theme.primary} />
               <Text
-                style={[styles.addNoteButtonText, { color: theme.primary }]}
+                style={[styles.placeholder, { color: theme.textTertiary }]}
               >
-                {notes.length > 0 ? "Añadir otra nota" : "Añadir nota"}
+                {notes.length > 0
+                  ? "Agregar otra nota…"
+                  : "Agregar notas aquí…"}
               </Text>
             </TouchableOpacity>
           )}
@@ -180,47 +145,31 @@ const ExerciseNotes = ({ notes = [], onChange, readonly = false }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 6,
   },
   notesList: {
-    gap: 8,
-    marginBottom: 12,
+    gap: 4,
+    marginBottom: 4,
   },
   noteItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderRadius: 12,
-    padding: 12,
     gap: 8,
   },
-  noteContent: {
-    flex: 1,
-    gap: 4,
-  },
   noteText: {
-    fontSize: RFValue(14),
-    lineHeight: RFValue(20),
-  },
-  noteDate: {
-    fontSize: RFValue(11),
-    fontWeight: "500",
-  },
-  deleteButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
+    flex: 1,
+    fontSize: RFValue(13),
+    lineHeight: RFValue(18),
   },
   inputContainer: {
     gap: 8,
   },
   noteInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 8,
+    padding: 10,
     fontSize: RFValue(14),
-    minHeight: 80,
+    minHeight: 64,
     textAlignVertical: "top",
   },
   inputActions: {
@@ -229,16 +178,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cancelButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
   },
   cancelButtonText: {
     fontSize: RFValue(13),
     fontWeight: "600",
   },
   saveButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
   },
@@ -249,19 +197,10 @@ const styles = StyleSheet.create({
     fontSize: RFValue(13),
     fontWeight: "600",
   },
-  addNoteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
-    borderStyle: "dashed",
-  },
-  addNoteButtonText: {
+  placeholder: {
     fontSize: RFValue(13),
-    fontWeight: "600",
+    fontStyle: "italic",
+    paddingVertical: 2,
   },
 });
 

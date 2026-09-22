@@ -147,6 +147,12 @@ const sortSetsMapByOrder = (setsMap: {
     ])
   );
 
+/** Clears absolute LiveRoutineMetrics without leaving a large empty gap. */
+const LIVE_METRICS_OFFSET = 80;
+const REORDER_BAR_HEIGHT = 48;
+/** Breathing room under the stack header when the workout has not started. */
+const DETAIL_LIST_TOP_PADDING = 8;
+
 export default function RoutineDetailScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -220,6 +226,7 @@ export default function RoutineDetailScreen() {
   const liveSnapshotRef = useRef<WorkoutLiveSnapshot | null>(null);
   const liveFingerprintRef = useRef<string>("");
   const livePushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exerciseListRef = useRef<FlatList<ExerciseRequestDto> | null>(null);
   const savePauseStartedAtRef = useRef<number | null>(null);
   const durationRef = useRef(0);
   const healthSnapshotRef = useRef<WorkoutHealthSnapshot | null>(null);
@@ -1000,9 +1007,9 @@ export default function RoutineDetailScreen() {
         reps: 0,
         assistedReps: 0,
         completed: false,
-        previousWeight: set.weight,
-        previousReps: set.reps || set.repsMin,
-        previousAssistedReps: set.assistedReps,
+        previousWeight: undefined,
+        previousReps: undefined,
+        previousAssistedReps: undefined,
       })),
     }));
 
@@ -1068,17 +1075,22 @@ export default function RoutineDetailScreen() {
         return {
           ...set,
           previousWeight:
-            typeof set.previousWeight === "number"
+            typeof set.previousWeight === "number" &&
+            (set.previousWeight > 0 ||
+              (typeof set.previousReps === "number" && set.previousReps > 0))
               ? set.previousWeight
-              : set.weight,
+              : undefined,
           previousReps:
-            typeof set.previousReps === "number"
+            typeof set.previousReps === "number" &&
+            (set.previousReps > 0 ||
+              (typeof set.previousWeight === "number" && set.previousWeight > 0))
               ? set.previousReps
-              : set.reps || set.repsMin,
+              : undefined,
           previousAssistedReps:
-            typeof set.previousAssistedReps === "number"
+            typeof set.previousAssistedReps === "number" &&
+            set.previousAssistedReps > 0
               ? set.previousAssistedReps
-              : set.assistedReps,
+              : undefined,
         };
       });
     });
@@ -1341,18 +1353,9 @@ export default function RoutineDetailScreen() {
           reps: 0,
           assistedReps: 0,
           completed: false,
-          previousWeight:
-            typeof set.previousWeight === "number"
-              ? set.previousWeight
-              : set.weight,
-          previousReps:
-            typeof set.previousReps === "number"
-              ? set.previousReps
-              : set.reps || set.repsMin,
-          previousAssistedReps:
-            typeof set.previousAssistedReps === "number"
-              ? set.previousAssistedReps
-              : set.assistedReps,
+          previousWeight: undefined,
+          previousReps: undefined,
+          previousAssistedReps: undefined,
         };
       });
     });
@@ -1765,6 +1768,34 @@ export default function RoutineDetailScreen() {
     [activeNotificationId, clearRestCountdownInterval, getWorkoutStartTime]
   );
 
+  const handleOpenFromLive = useCallback(() => {
+    if (!started) return;
+    const exerciseId =
+      liveExerciseIdRef.current ||
+      exercisesState.find((e) => e.name === currentExerciseNameRef.current)?.id ||
+      exercisesState[0]?.id;
+    if (!exerciseId) return;
+
+    const index = exercisesState.findIndex((e) => e.id === exerciseId);
+    if (index < 0) return;
+
+    // Brief delay so the activity is foregrounded before scrolling.
+    setTimeout(() => {
+      try {
+        exerciseListRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.15,
+        });
+      } catch {
+        exerciseListRef.current?.scrollToOffset({
+          offset: Math.max(0, index * 280),
+          animated: true,
+        });
+      }
+    }, 120);
+  }, [started, exercisesState]);
+
   const handleCompleteSetFromLive = useCallback(async () => {
     if (!started || isSaving) return;
 
@@ -1905,9 +1936,6 @@ export default function RoutineDetailScreen() {
           ...re.exercise,
           sets: sortSetsByOrder(re.sets).map((set: SetResponseDto) => ({
             ...set,
-            previousWeight: set.weight,
-            previousReps: set.reps || set.repsMin,
-            previousAssistedReps: (set as SetWithPreviousAssisted).assistedReps,
           })),
           notes: re.notes,
           restSeconds: re.restSeconds,
@@ -2160,6 +2188,10 @@ export default function RoutineDetailScreen() {
           case "completeSet":
             await handleCompleteSetFromLive();
             break;
+
+          case "open":
+            handleOpenFromLive();
+            break;
         }
       }
     );
@@ -2169,6 +2201,7 @@ export default function RoutineDetailScreen() {
     handleAddRestTime,
     handleCancelRestTimer,
     handleCompleteSetFromLive,
+    handleOpenFromLive,
     handleSubtractRestTime,
     syncRestTimerFromIntent,
   ]);
@@ -2193,6 +2226,7 @@ export default function RoutineDetailScreen() {
   if (loading || isExercisesLoading) {
     return (
       <SafeAreaView
+        edges={["left", "right"]}
         style={[
           styles.safeArea,
           { backgroundColor: theme.backgroundSecondary },
@@ -2222,7 +2256,9 @@ export default function RoutineDetailScreen() {
 
   return (
     <SafeAreaView
-      edges={["top", "left", "right"]}
+      // Stack header already applies the top inset; including "top" here
+      // double-pads after insets hydrate and creates a delayed empty gap.
+      edges={["left", "right"]}
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
       {started && (
@@ -2256,7 +2292,7 @@ export default function RoutineDetailScreen() {
             {
               backgroundColor: theme.card,
               borderBottomColor: theme.border,
-              top: started ? 120 : 0,
+              top: started ? LIVE_METRICS_OFFSET : 0,
             },
           ]}
         >
@@ -2275,10 +2311,17 @@ export default function RoutineDetailScreen() {
 
       {canReorderExercises || reorderMode ? (
         <DraggableFlatList
+          ref={exerciseListRef as any}
           data={reorderFromButton ? tempExercisesOrder : exercisesState}
           keyExtractor={(item) => item.id}
           onDragEnd={({ data }) => handleReorderComplete(data)}
           activationDistance={16}
+          onScrollToIndexFailed={(info) => {
+            exerciseListRef.current?.scrollToOffset({
+              offset: Math.max(0, info.index * 280),
+              animated: true,
+            });
+          }}
           ListHeaderComponent={
             <RoutineHeader
               routineTitle={routineTitle}
@@ -2296,18 +2339,20 @@ export default function RoutineDetailScreen() {
             renderExerciseCard({ item, drag, isActive })
           }
           contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 16,
             paddingTop: started
               ? reorderFromButton
-                ? 170
-                : 120
+                ? LIVE_METRICS_OFFSET + REORDER_BAR_HEIGHT
+                : LIVE_METRICS_OFFSET
               : reorderFromButton
-                ? 56
-                : 0,
-            padding: 16,
+                ? REORDER_BAR_HEIGHT
+                : DETAIL_LIST_TOP_PADDING,
           }}
         />
       ) : (
         <FlatList
+          ref={exerciseListRef}
           data={exercisesState}
           scrollEnabled={!isSaving}
           keyExtractor={(item) => item.id}
@@ -2315,6 +2360,12 @@ export default function RoutineDetailScreen() {
           maxToRenderPerBatch={5}
           windowSize={7}
           removeClippedSubviews
+          onScrollToIndexFailed={(info) => {
+            exerciseListRef.current?.scrollToOffset({
+              offset: Math.max(0, info.index * 280),
+              animated: true,
+            });
+          }}
           ListHeaderComponent={
             <RoutineHeader
               routineTitle={routineTitle}
@@ -2329,7 +2380,11 @@ export default function RoutineDetailScreen() {
             />
           }
           renderItem={({ item }) => renderExerciseCard({ item })}
-          contentContainerStyle={{ paddingTop: started ? 120 : 0, padding: 16 }}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 16,
+            paddingTop: started ? LIVE_METRICS_OFFSET : DETAIL_LIST_TOP_PADDING,
+          }}
         />
       )}
 

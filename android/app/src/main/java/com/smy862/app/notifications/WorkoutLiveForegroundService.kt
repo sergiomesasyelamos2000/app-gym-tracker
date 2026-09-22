@@ -13,8 +13,6 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.CountDownTimer
 import android.os.IBinder
-import android.os.SystemClock
-import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -25,14 +23,14 @@ import java.net.URL
 import kotlin.math.max
 
 /**
- * Foreground service that hosts the Hevy-style workout Live Activity notification
- * for the entire workout (duration + exercise + optional rest controls).
+ * Foreground service hosting the ongoing workout Live Activity notification.
+ * Presentation lives in [WorkoutLiveNotificationUi]; this class owns state + intents.
  */
 class WorkoutLiveForegroundService : Service() {
 
   companion object {
     const val NOTIFICATION_ID = 9102
-    const val CHANNEL_ID = "workout-live-ongoing"
+    const val CHANNEL_ID = "workout-live-ongoing-v2"
 
     const val ACTION_START = "com.smy862.app.workout.START"
     const val ACTION_UPDATE = "com.smy862.app.workout.UPDATE"
@@ -42,6 +40,7 @@ class WorkoutLiveForegroundService : Service() {
     const val ACTION_SUBTRACT = "com.smy862.app.workout.SUBTRACT"
     const val ACTION_SKIP = "com.smy862.app.workout.SKIP"
     const val ACTION_COMPLETE_SET = "com.smy862.app.workout.COMPLETE_SET"
+    const val ACTION_OPEN = "com.smy862.app.workout.OPEN"
 
     const val EXTRA_WORKOUT_STARTED_AT = "workoutStartedAtMs"
     const val EXTRA_EXERCISE_NAME = "exerciseName"
@@ -55,9 +54,12 @@ class WorkoutLiveForegroundService : Service() {
     private var instance: WorkoutLiveForegroundService? = null
 
     fun handleAction(context: Context, action: String) {
+      if (action == ACTION_OPEN) {
+        bringAppToForegroundAndOpen(context)
+        return
+      }
       val svc = instance
       if (svc == null) {
-        // Bounce through startService so we still emit even if JS module is alive.
         val intent = Intent(context, WorkoutLiveForegroundService::class.java).apply {
           this.action = action
         }
@@ -67,16 +69,24 @@ class WorkoutLiveForegroundService : Service() {
       when (action) {
         ACTION_ADD -> svc.applyRestDelta(15)
         ACTION_SUBTRACT -> svc.applyRestDelta(-15)
-        ACTION_SKIP -> {
-          svc.clearRest(emitSkip = true)
-        }
-        ACTION_CLEAR_REST -> {
-          svc.clearRest(emitSkip = false)
-        }
+        ACTION_SKIP -> svc.clearRest(emitSkip = true)
+        ACTION_CLEAR_REST -> svc.clearRest(emitSkip = false)
         ACTION_COMPLETE_SET -> {
           RestTimerNotificationModule.emitFromService("completeSet", 0, 0)
         }
       }
+    }
+
+    private fun bringAppToForegroundAndOpen(context: Context) {
+      val launch = Intent(context, MainActivity::class.java).apply {
+        addFlags(
+          Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        )
+      }
+      context.startActivity(launch)
+      RestTimerNotificationModule.emitFromService("open", 0, 0)
     }
   }
 
@@ -90,6 +100,7 @@ class WorkoutLiveForegroundService : Service() {
   private var lastImageUrl: String? = null
   private var restTimer: CountDownTimer? = null
   private var lastPublishedKey: String? = null
+  private var lastRestPublishAtMs: Long = 0
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -111,7 +122,7 @@ class WorkoutLiveForegroundService : Service() {
         stopSelfSafely()
         return START_NOT_STICKY
       }
-      ACTION_ADD, ACTION_SUBTRACT, ACTION_SKIP, ACTION_COMPLETE_SET, ACTION_CLEAR_REST -> {
+      ACTION_ADD, ACTION_SUBTRACT, ACTION_SKIP, ACTION_COMPLETE_SET, ACTION_CLEAR_REST, ACTION_OPEN -> {
         handleAction(this, intent.action!!)
         return START_STICKY
       }
@@ -144,7 +155,7 @@ class WorkoutLiveForegroundService : Service() {
     if (!imageUrl.isNullOrBlank() && imageUrl != lastImageUrl) {
       lastImageUrl = imageUrl
       Thread {
-        val bmp = loadBitmap(imageUrl)
+        val bmp = loadBitmap(imageUrl)?.let { WorkoutLiveNotificationUi.toCircularBitmap(it) }
         if (bmp != null && lastImageUrl == imageUrl) {
           exerciseBitmap = bmp
           publishForeground(force = true)
@@ -167,7 +178,7 @@ class WorkoutLiveForegroundService : Service() {
       clearRest(emitSkip = true)
     } else {
       restartRestTimer()
-      publishForeground()
+      publishForeground(force = true)
     }
   }
 
@@ -178,7 +189,7 @@ class WorkoutLiveForegroundService : Service() {
     if (emitSkip) {
       RestTimerNotificationModule.emitFromService("skip", 0, 0)
     }
-    publishForeground()
+    publishForeground(force = true)
   }
 
   private fun restartRestTimer() {
@@ -190,9 +201,11 @@ class WorkoutLiveForegroundService : Service() {
     }
     restTimer = object : CountDownTimer(remaining, 1000L) {
       override fun onTick(millisUntilFinished: Long) {
-        // Chronometer handles visual countdown; periodic refresh keeps OEM happy.
-        if (millisUntilFinished % 5000L < 1000L) {
-          publishForeground()
+        val now = System.currentTimeMillis()
+        // Progress bar needs ~1 Hz updates; Chronometer handles the digits.
+        if (now - lastRestPublishAtMs >= 900L) {
+          lastRestPublishAtMs = now
+          publishForeground(force = true)
         }
       }
 
@@ -207,12 +220,22 @@ class WorkoutLiveForegroundService : Service() {
     restTimer = null
   }
 
+  private fun currentModel(): WorkoutLiveNotificationUi.Model =
+    WorkoutLiveNotificationUi.Model(
+      workoutStartedAtMs = workoutStartedAtMs,
+      exerciseName = exerciseName,
+      nextSetSummary = nextSetSummary,
+      isResting = isResting,
+      restEndAtMs = restEndAtMs,
+      restSecondsDefault = restSecondsDefault,
+      exerciseBitmap = exerciseBitmap,
+    )
+
   private fun publishForeground(force: Boolean = false) {
     ensureChannel()
     val key =
-      "$workoutStartedAtMs|$exerciseName|$nextSetSummary|$isResting|$restEndAtMs"
+      "$workoutStartedAtMs|$exerciseName|$nextSetSummary|$isResting|$restEndAtMs|$restSecondsDefault"
     if (!force && key == lastPublishedKey && !isResting) {
-      // Non-rest updates with identical content — skip notify (Chronometer runs alone).
       return
     }
     lastPublishedKey = key
@@ -224,8 +247,6 @@ class WorkoutLiveForegroundService : Service() {
         notification,
         ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
       )
-    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      startForeground(NOTIFICATION_ID, notification)
     } else {
       startForeground(NOTIFICATION_ID, notification)
     }
@@ -238,14 +259,23 @@ class WorkoutLiveForegroundService : Service() {
   }
 
   private fun buildNotification(): Notification {
-    val compact = buildCompact()
-    val expanded = buildExpanded()
+    val model = currentModel()
+    val openPi = openIntent()
+    val compact = WorkoutLiveNotificationUi.bindCompact(packageName, model)
+    val expanded = WorkoutLiveNotificationUi.bindExpanded(packageName, model) { views ->
+      bindActions(views)
+    }
+    // Custom RemoteViews need an explicit root click; builder contentIntent alone is unreliable.
+    compact.setOnClickPendingIntent(R.id.workout_live_root, openPi)
+    expanded.setOnClickPendingIntent(R.id.workout_live_root, openPi)
+
     return NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.mipmap.ic_launcher)
-      .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+      .setColor(0xFF6C3BAA.toInt())
       .setCustomContentView(compact)
       .setCustomBigContentView(expanded)
-      .setContentIntent(contentIntent())
+      // Full custom card — no system Decorated header (bell / chevron chrome).
+      .setContentIntent(openPi)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setShowWhen(false)
@@ -256,95 +286,21 @@ class WorkoutLiveForegroundService : Service() {
       .build()
   }
 
-  private fun buildCompact(): RemoteViews {
-    val views = RemoteViews(packageName, R.layout.notification_workout_live_compact)
-    bindExercise(views)
+  private fun bindActions(views: RemoteViews) {
     if (isResting && restEndAtMs > System.currentTimeMillis()) {
-      views.setChronometer(
-        R.id.workout_live_primary_time,
-        SystemClock.elapsedRealtime() + (restEndAtMs - System.currentTimeMillis()),
-        null,
-        true
-      )
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        views.setChronometerCountDown(R.id.workout_live_primary_time, true)
-      }
-    } else {
-      views.setChronometer(
-        R.id.workout_live_primary_time,
-        SystemClock.elapsedRealtime() - (System.currentTimeMillis() - workoutStartedAtMs),
-        null,
-        true
-      )
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        views.setChronometerCountDown(R.id.workout_live_primary_time, false)
-      }
-    }
-    return views
-  }
-
-  private fun buildExpanded(): RemoteViews {
-    val views = RemoteViews(packageName, R.layout.notification_workout_live_expanded)
-    bindExercise(views)
-    views.setChronometer(
-      R.id.workout_live_duration,
-      SystemClock.elapsedRealtime() - (System.currentTimeMillis() - workoutStartedAtMs),
-      null,
-      true
-    )
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      views.setChronometerCountDown(R.id.workout_live_duration, false)
-    }
-
-    if (isResting && restEndAtMs > System.currentTimeMillis()) {
-      views.setViewVisibility(R.id.workout_live_rest_row, View.VISIBLE)
-      views.setViewVisibility(R.id.workout_live_rest_actions, View.VISIBLE)
-      views.setViewVisibility(R.id.workout_live_complete, View.GONE)
-      views.setChronometer(
-        R.id.workout_live_rest_time,
-        SystemClock.elapsedRealtime() + (restEndAtMs - System.currentTimeMillis()),
-        null,
-        true
-      )
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        views.setChronometerCountDown(R.id.workout_live_rest_time, true)
-      }
       views.setOnClickPendingIntent(R.id.workout_live_minus, actionIntent(ACTION_SUBTRACT, 3101))
       views.setOnClickPendingIntent(R.id.workout_live_plus, actionIntent(ACTION_ADD, 3102))
       views.setOnClickPendingIntent(R.id.workout_live_skip, actionIntent(ACTION_SKIP, 3103))
     } else {
-      views.setViewVisibility(R.id.workout_live_rest_row, View.GONE)
-      views.setViewVisibility(R.id.workout_live_rest_actions, View.GONE)
-      views.setViewVisibility(R.id.workout_live_complete, View.VISIBLE)
       views.setOnClickPendingIntent(
         R.id.workout_live_complete,
         actionIntent(ACTION_COMPLETE_SET, 3104)
       )
     }
-    return views
   }
 
-  private fun bindExercise(views: RemoteViews) {
-    views.setTextViewText(
-      R.id.workout_live_exercise_name,
-      exerciseName?.takeIf { it.isNotBlank() } ?: "Entrenamiento"
-    )
-    views.setTextViewText(
-      R.id.workout_live_next_summary,
-      nextSetSummary?.takeIf { it.isNotBlank() } ?: "Siguiente serie pendiente"
-    )
-    if (exerciseBitmap != null) {
-      views.setImageViewBitmap(R.id.workout_live_exercise_image, exerciseBitmap)
-    } else {
-      views.setImageViewResource(R.id.workout_live_exercise_image, R.mipmap.ic_launcher)
-    }
-  }
-
-  private fun contentIntent(): PendingIntent {
-    val intent = Intent(this, MainActivity::class.java).apply {
-      addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-    }
-    return PendingIntent.getActivity(this, 2101, intent, pendingFlags())
+  private fun openIntent(): PendingIntent {
+    return actionIntent(ACTION_OPEN, 2101)
   }
 
   private fun actionIntent(action: String, requestCode: Int): PendingIntent {
@@ -367,11 +323,12 @@ class WorkoutLiveForegroundService : Service() {
     val channel = NotificationChannel(
       CHANNEL_ID,
       "Entreno en curso",
-      NotificationManager.IMPORTANCE_HIGH
+      NotificationManager.IMPORTANCE_DEFAULT
     ).apply {
-      description = "Live Activity del entrenamiento (estilo Hevy)"
+      description = "Notificación continua del entrenamiento"
       setShowBadge(false)
       enableVibration(false)
+      setSound(null, null)
       lockscreenVisibility = Notification.VISIBILITY_PUBLIC
     }
     manager.createNotificationChannel(channel)

@@ -1,5 +1,7 @@
-import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
-import {
+import type {
+  RoutineFolderResponseDto,
+  RoutineLayoutRequestDto,
+  RoutineSessionEntity,
   RoutineRequestDto,
   RoutineResponseDto,
 } from "@sergiomesasyelamos2000/shared";
@@ -8,6 +10,7 @@ import { apiFetch } from "../../../api/client";
 import type { CaughtError } from "../../../types";
 
 const ROUTINES_CACHE_KEY = "@routines_cache";
+const FOLDERS_CACHE_KEY = "@routine_folders_cache";
 
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto
@@ -45,6 +48,96 @@ export async function findAllRoutines(): Promise<RoutineResponseDto[]> {
     // If both fail, return empty array instead of throwing
     console.warn("[RoutineService] No cached routines available");
     return [];
+  }
+}
+
+export async function fetchRoutineFolders(): Promise<RoutineFolderResponseDto[]> {
+  try {
+    const folders = await apiFetch<RoutineFolderResponseDto[]>(
+      "routines/folders",
+      { method: "GET" }
+    );
+    await AsyncStorage.setItem(FOLDERS_CACHE_KEY, JSON.stringify(folders));
+    return folders;
+  } catch (error: CaughtError) {
+    try {
+      const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+      if (cached) return JSON.parse(cached) as RoutineFolderResponseDto[];
+    } catch (cacheError) {
+      console.error("[RoutineService] Folders cache read failed:", cacheError);
+    }
+    console.warn("[RoutineService] No cached folders available");
+    return [];
+  }
+}
+
+export async function createRoutineFolder(
+  title: string
+): Promise<RoutineFolderResponseDto> {
+  const folder = await apiFetch<RoutineFolderResponseDto>("routines/folders", {
+    method: "POST",
+    body: JSON.stringify({ title }),
+  });
+  try {
+    const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+    const list = cached
+      ? (JSON.parse(cached) as RoutineFolderResponseDto[])
+      : [];
+    await AsyncStorage.setItem(
+      FOLDERS_CACHE_KEY,
+      JSON.stringify([folder, ...list.filter((f) => f.id !== folder.id)])
+    );
+  } catch {
+    // ignore cache errors
+  }
+  return folder;
+}
+
+export async function renameRoutineFolder(
+  id: string,
+  title: string
+): Promise<RoutineFolderResponseDto> {
+  return await apiFetch<RoutineFolderResponseDto>(`routines/folders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteRoutineFolder(id: string): Promise<void> {
+  await apiFetch<void>(`routines/folders/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function saveRoutineLayout(
+  layout: RoutineLayoutRequestDto
+): Promise<void> {
+  await apiFetch<void>("routines/layout", {
+    method: "PUT",
+    body: JSON.stringify(layout),
+  });
+
+  try {
+    await AsyncStorage.setItem(
+      FOLDERS_CACHE_KEY,
+      JSON.stringify(
+        layout.folders.map((folder) => {
+          const sortIndex = layout.rootOrder.findIndex(
+            (item) => item.type === "folder" && item.id === folder.id
+          );
+          return {
+            id: folder.id,
+            title: folder.title,
+            sortOrder: sortIndex >= 0 ? sortIndex : 0,
+            routineIds: folder.routineIds,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        })
+      )
+    );
+  } catch (cacheError) {
+    console.error("[RoutineService] Failed to update folders cache:", cacheError);
   }
 }
 
@@ -191,13 +284,12 @@ export async function reorderRoutines(routineIds: string[]): Promise<void> {
 
     const routines = JSON.parse(cached) as RoutineResponseDto[];
     const byId = new Map(routines.map((routine) => [routine.id, routine]));
-    const ordered = routineIds
-      .map((id, index) => {
-        const routine = byId.get(id);
-        if (!routine) return null;
-        return { ...routine, sortOrder: index };
-      })
-      .filter((routine): routine is RoutineResponseDto => Boolean(routine));
+    const ordered: RoutineResponseDto[] = [];
+    routineIds.forEach((id, index) => {
+      const routine = byId.get(id);
+      if (!routine) return;
+      ordered.push({ ...routine, sortOrder: index });
+    });
 
     // Append any cached routines missing from the reorder payload.
     routines.forEach((routine) => {
