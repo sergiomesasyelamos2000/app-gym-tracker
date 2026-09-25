@@ -51,3 +51,6 @@ android/.gradle/
 android/app/build/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+
+#Cursor
+.cursor/
