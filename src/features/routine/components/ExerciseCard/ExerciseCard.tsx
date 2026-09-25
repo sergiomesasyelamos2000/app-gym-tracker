@@ -267,6 +267,15 @@ const ExerciseCard = ({
     (state) => state.removeRecordBySetId
   );
 
+  /**
+   * Rolling best metrics for the CURRENT session.
+   * Starts at zero so that the very first completed set (with no history)
+   * is correctly flagged as a record. Updated whenever a confirmed record
+   * set is stored, so subsequent sets in the same session are compared
+   * against the best already achieved today — not just the historical baseline.
+   */
+  const sessionBestMetricsRef = useRef({ best1RM: 0, bestWeight: 0, bestVolume: 0 });
+
   const buildNextSetSummary = (
     setList: SetRequestDto[],
     completedSetId: string
@@ -305,11 +314,10 @@ const ExerciseCard = ({
     return `Serie ${nextSet.order}`;
   };
 
+  // Historical best — always computed (returns {0,0,0} when there is no history,
+  // which is exactly what we want: any first-ever set beats the baseline).
   const bestMetrics = useMemo(
-    () =>
-      previousSessions.length > 0
-        ? getBestMetrics(exercise.id, previousSessions)
-        : { best1RM: 0, bestWeight: 0, bestVolume: 0 },
+    () => getBestMetrics(exercise.id, previousSessions),
     [exercise.id, previousSessions]
   );
 
@@ -587,21 +595,39 @@ const ExerciseCard = ({
     if (!updatedSet) return;
 
     // 3. Handle Side Effects (Rest timer + record detection)
-    // Record detection requires previous sessions as baseline.
-    if (started && previousSessions.length > 0) {
+    // Record detection runs whenever the routine is started, regardless of
+    // whether there is prior history. With no history, bestMetrics is {0,0,0}
+    // so any set with weight > 0 and reps > 0 correctly beats the baseline.
+    if (started) {
       if (
         (field === "completed" && value === true) || // Just marked completed
         (updatedSet.completed && field !== "completed") // Already completed, modifying values
       ) {
+        // Combine historical best with the best achieved so far in this session.
+        const effectiveBest = {
+          best1RM: Math.max(bestMetrics.best1RM, sessionBestMetricsRef.current.best1RM),
+          bestWeight: Math.max(bestMetrics.bestWeight, sessionBestMetricsRef.current.bestWeight),
+          bestVolume: Math.max(bestMetrics.bestVolume, sessionBestMetricsRef.current.bestVolume),
+        };
+
         // Check for record
         const record = detectRecordWithPrecomputedMetrics(
           exercise.id,
           exercise.name,
           updatedSet,
-          bestMetrics
+          effectiveBest
         );
 
         if (record) {
+          // Update the rolling session best so the next set is compared correctly.
+          const weight = updatedSet.weight ?? 0;
+          const reps = updatedSet.reps ?? 0;
+          sessionBestMetricsRef.current = {
+            best1RM: Math.max(sessionBestMetricsRef.current.best1RM, calculate1RM(weight, reps)),
+            bestWeight: Math.max(sessionBestMetricsRef.current.bestWeight, weight),
+            bestVolume: Math.max(sessionBestMetricsRef.current.bestVolume, calculateVolume(weight, reps)),
+          };
+
           // Only update if not already this type of record to avoid loops/dups
           if (recordSetTypes[id] !== record.type) {
             setRecordSetTypes((prev) => ({ ...prev, [id]: record.type }));
@@ -612,12 +638,11 @@ const ExerciseCard = ({
               setCelebrationTrigger((prev) => prev + 1);
             }
           } else {
-            // Even if typ is same, value might changed (e.g. 100kg -> 105kg), update store
-            // But check logic inside store handles idempotency
+            // Type is the same but value might have changed (e.g. 100 kg → 105 kg); update store.
             addOrUpdateRecord(record);
           }
         } else {
-          // No record detected (maybe weight lowered)
+          // No record detected (e.g. weight or reps lowered below session best).
           if (recordSetTypes[id]) {
             setRecordSetTypes((prev) => {
               const newState = { ...prev };
@@ -628,7 +653,7 @@ const ExerciseCard = ({
           }
         }
       } else if (field === "completed" && value === false) {
-        // Unchecking completion
+        // Unchecking completion — revoke the record badge.
         if (recordSetTypes[id]) {
           setRecordSetTypes((prev) => {
             const newState = { ...prev };

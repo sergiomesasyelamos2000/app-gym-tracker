@@ -54,3 +54,4 @@ android/app/build/
 
 #Cursor
 .cursor/
+.ECC/
