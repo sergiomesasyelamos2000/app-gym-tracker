@@ -291,69 +291,176 @@ export async function prefetchProductCatalog(options?: {
   }
 }
 
-// Búsqueda avanzada de productos por nombre (optimizado para España)
+// Búsqueda avanzada de productos por nombre (local-first + enrich)
+export type ProductSearchPhase = "local" | "full";
+
+export type ProductSearchResult = {
+  products: Product[];
+  total: number;
+  incomplete?: boolean;
+};
+
+const SEARCH_RESULT_CACHE_TTL_MS = 2 * 60 * 1000;
+const SEARCH_RESULT_CACHE_MAX = 40;
+const searchResultCache = new Map<
+  string,
+  { expiresAt: number; value: ProductSearchResult }
+>();
+
+function buildSearchCacheKey(
+  searchTerm: string,
+  page: number,
+  pageSize: number,
+  brand: string | undefined,
+  phase: ProductSearchPhase,
+  includeOverlay: boolean,
+): string {
+  return [
+    phase,
+    normalizeSearchTerm(searchTerm),
+    page,
+    pageSize,
+    brand?.trim().toLowerCase() ?? "",
+    includeOverlay ? "1" : "0",
+  ].join("|");
+}
+
+function readSearchCache(key: string): ProductSearchResult | null {
+  const cached = searchResultCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    searchResultCache.delete(key);
+    return null;
+  }
+  return cached.value;
+}
+
+function writeSearchCache(key: string, value: ProductSearchResult): void {
+  searchResultCache.set(key, {
+    expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
+    value,
+  });
+  if (searchResultCache.size <= SEARCH_RESULT_CACHE_MAX) return;
+  const oldestKey = searchResultCache.keys().next().value;
+  if (oldestKey) searchResultCache.delete(oldestKey);
+}
+
 export async function searchProductsByName(
   searchTerm: string,
   page = 1,
   pageSize = 20,
   brand?: string,
-  includeOverlay = true,
+  includeOverlay = false,
   signal?: AbortSignal,
-): Promise<{ products: Product[]; total: number }> {
+  phase: ProductSearchPhase = "full",
+): Promise<ProductSearchResult> {
   if (!searchTerm || searchTerm.trim().length === 0) {
-    return { products: [], total: 0 };
+    return { products: [], total: 0, incomplete: false };
+  }
+
+  const trimmed = searchTerm.trim();
+  const cacheKey = buildSearchCacheKey(
+    trimmed,
+    page,
+    pageSize,
+    brand,
+    phase,
+    includeOverlay,
+  );
+  const cached = readSearchCache(cacheKey);
+  if (cached) {
+    return cached;
   }
 
   const brandParam = brand?.trim()
     ? `&brand=${encodeURIComponent(brand.trim())}`
     : "";
-  const primaryResult = await apiFetch<{ products: Product[]; total: number }>(
+  const result = await apiFetch<ProductSearchResult>(
     `nutrition/products/search?q=${encodeURIComponent(
-      searchTerm.trim(),
-    )}&page=${page}&pageSize=${pageSize}&overlay=${includeOverlay ? "1" : "0"}${brandParam}`,
+      trimmed,
+    )}&page=${page}&pageSize=${pageSize}&phase=${phase}&overlay=${
+      includeOverlay ? "1" : "0"
+    }${brandParam}`,
     {
       method: "GET",
       signal,
     },
   );
 
-  if ((primaryResult.products?.length ?? 0) >= 3) {
-    return primaryResult;
+  const normalized: ProductSearchResult = {
+    products: result?.products ?? [],
+    total: result?.total ?? 0,
+    incomplete: result?.incomplete === true,
+  };
+
+  if (normalized.products.length > 0 || phase === "local") {
+    writeSearchCache(cacheKey, normalized);
   }
 
-  const fallbackQueries = buildFallbackQueries(searchTerm.trim()).slice(0, 3);
-  if (fallbackQueries.length === 0) {
-    return primaryResult;
+  return normalized;
+}
+
+/**
+ * Two-phase search: paint local catalog ASAP, then merge public enrichment.
+ */
+export async function searchProductsProgressive(
+  searchTerm: string,
+  page = 1,
+  pageSize = 20,
+  brand?: string,
+  signal?: AbortSignal,
+  onLocalResults?: (result: ProductSearchResult) => void,
+): Promise<ProductSearchResult> {
+  const local = await searchProductsByName(
+    searchTerm,
+    page,
+    pageSize,
+    brand,
+    false,
+    signal,
+    "local",
+  );
+  onLocalResults?.(local);
+
+  if (signal?.aborted) {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+    throw abortError;
   }
 
-  const merged = dedupeProducts(primaryResult.products ?? []);
+  // Always enrich page 1 so the catalog keeps growing; skip if local already full
+  // and caller only paginates — still enrich when incomplete or short.
+  if (page > 1 && local.products.length >= pageSize && !local.incomplete) {
+    return local;
+  }
 
-  for (const fallbackQuery of fallbackQueries) {
-    if (signal?.aborted) {
-      const abortError = new Error("Aborted");
-      abortError.name = "AbortError";
-      throw abortError;
-    }
-
-    const fallbackResult = await apiFetch<{ products: Product[]; total: number }>(
-      `nutrition/products/search?q=${encodeURIComponent(
-        fallbackQuery,
-      )}&page=${page}&pageSize=${pageSize}&overlay=${includeOverlay ? "1" : "0"}${brandParam}`,
-      {
-        method: "GET",
-        signal,
-      },
+  try {
+    const full = await searchProductsByName(
+      searchTerm,
+      page,
+      pageSize,
+      brand,
+      false,
+      signal,
+      "full",
     );
+    const merged = dedupeProducts([
+      ...(local.products ?? []),
+      ...(full.products ?? []),
+    ]).slice(0, pageSize);
 
-    merged.push(...(fallbackResult.products ?? []));
-    const uniqueNow = dedupeProducts(merged);
-    if (uniqueNow.length >= pageSize) {
-      return { products: uniqueNow.slice(0, pageSize), total: uniqueNow.length };
+    return {
+      products: merged,
+      total: Math.max(full.total ?? 0, merged.length),
+      incomplete: false,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw error;
     }
+    // Keep local results if enrichment fails.
+    return local;
   }
-
-  const finalProducts = dedupeProducts(merged).slice(0, pageSize);
-  return { products: finalProducts, total: finalProducts.length };
 }
 
 function normalizeSearchTerm(value: string): string {
@@ -364,39 +471,6 @@ function normalizeSearchTerm(value: string): string {
     .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function buildFallbackQueries(searchTerm: string): string[] {
-  const normalized = normalizeSearchTerm(searchTerm);
-  const queries = new Set<string>();
-
-  const compact = normalized
-    .replace(/\b(de|del|la|el|los|las|para|con)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (compact && compact !== normalized) queries.add(compact);
-
-  if (normalized.includes("mercadona")) {
-    queries.add(normalized.replace(/\bmercadona\b/g, "hacendado"));
-    queries.add(`hacendado ${compact || normalized}`.trim());
-  }
-
-  if (normalized.includes("copos de avena") || normalized.includes("copos avena")) {
-    queries.add("avena");
-    queries.add("copos avena");
-    if (normalized.includes("hacendado") || normalized.includes("mercadona")) {
-      queries.add("avena hacendado");
-      queries.add("copos avena hacendado");
-    }
-  }
-
-  if (normalized.includes("oatmeal")) {
-    queries.add("avena");
-    queries.add("copos avena");
-  }
-
-  queries.delete(normalized);
-  return Array.from(queries).filter((q) => q.length >= 2);
 }
 
 function dedupeProducts(products: Product[]): Product[] {

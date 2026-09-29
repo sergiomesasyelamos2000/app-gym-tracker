@@ -58,7 +58,7 @@ const Tab = createMaterialTopTabNavigator();
 const { width } = Dimensions.get("window");
 const PAGE_SIZE = 24;
 const SEARCH_PAGE_SIZE = 20;
-const SEARCH_DEBOUNCE_MS = 800;
+const SEARCH_DEBOUNCE_MS = 350;
 const MIN_SEARCH_CHARS = 2;
 
 // Función auxiliar para obtener el color según el Nutri-Score
@@ -166,9 +166,14 @@ function AllProductsTab({
   const [loadingMore, setLoadingMore] = useState(false);
   const hasLoadedRef = useRef(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  /** Query that the list reflects (after debounce). Input can differ while typing. */
+  const [committedQuery, setCommittedQuery] = useState("");
+  const [listSource, setListSource] = useState<"browse" | "search">("browse");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRequestControllerRef = useRef<AbortController | null>(null);
   const lastTriggeredSearchRef = useRef("");
+  const searchGenerationRef = useRef(0);
   const prefetchedPageRef = useRef<{
     page: number;
     products: Product[];
@@ -236,6 +241,9 @@ function AllProductsTab({
     } else {
       activeRequestControllerRef.current?.abort();
       setIsSearching(false);
+      setIsEnriching(false);
+      setCommittedQuery("");
+      setListSource("browse");
       lastTriggeredSearchRef.current = "";
       if (selectedBrands.length === 0 && dataCache.allProducts) {
         setProductos(dataCache.allProducts);
@@ -388,53 +396,97 @@ function AllProductsTab({
       if (normalizedQuery.length < MIN_SEARCH_CHARS) {
         setProductos([]);
         setHasMore(false);
+        setIsEnriching(false);
         return;
       }
 
       if (initial) {
         lastTriggeredSearchRef.current = normalizedQuery;
+        setCommittedQuery(normalizedQuery);
+        setListSource("search");
+        setProductos([]);
+        setHasMore(true);
+        setPage(1);
       }
 
       const controller = new AbortController();
       activeRequestControllerRef.current?.abort();
       activeRequestControllerRef.current = controller;
+      const generation = ++searchGenerationRef.current;
+
+      if (initial) {
+        setIsEnriching(true);
+        const data = await nutritionService.searchProductsProgressive(
+          normalizedQuery,
+          pageToLoad,
+          SEARCH_PAGE_SIZE,
+          selectedBrandsParam,
+          controller.signal,
+          (local) => {
+            if (searchGenerationRef.current !== generation) return;
+            const localProducts = local.products ?? [];
+            // Only paint local hits when non-empty. Empty local + enriching
+            // must keep the loading state (avoid flashing "no results").
+            if (localProducts.length > 0) {
+              setProductos(localProducts);
+              setHasMore(
+                localProducts.length === SEARCH_PAGE_SIZE ||
+                  local.incomplete === true
+              );
+              setPage(pageToLoad);
+            }
+          }
+        );
+
+        if (searchGenerationRef.current !== generation) return;
+
+        if (!data || !data.products) {
+          setHasMore(false);
+          setProductos([]);
+          return;
+        }
+
+        setProductos(data.products);
+        setHasMore(data.products.length === SEARCH_PAGE_SIZE);
+        setPage(pageToLoad);
+        return;
+      }
 
       const data = await nutritionService.searchProductsByName(
         normalizedQuery,
         pageToLoad,
         SEARCH_PAGE_SIZE,
         selectedBrandsParam,
-        true,
-        controller.signal
+        false,
+        controller.signal,
+        "full"
       );
+
+      if (searchGenerationRef.current !== generation) return;
 
       if (!data || !data.products) {
         setHasMore(false);
-        setProductos([]);
         return;
       }
 
-      if (initial) {
-        setProductos(data.products);
-        setHasMore(data.products.length === SEARCH_PAGE_SIZE);
-        setPage(pageToLoad);
-      } else {
-        const newProducts = [...productos, ...data.products];
-        setProductos(newProducts);
-        setHasMore(data.products.length === SEARCH_PAGE_SIZE);
-        setPage(pageToLoad);
-      }
+      const newProducts = [...productos, ...data.products];
+      setProductos(newProducts);
+      setHasMore(data.products.length === SEARCH_PAGE_SIZE);
+      setPage(pageToLoad);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
       console.error("Error buscando productos:", err);
       setHasMore(false);
-      setProductos([]);
+      if (initial) {
+        setProductos([]);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
       setIsSearching(false);
+      setIsEnriching(false);
     }
   };
 
@@ -482,6 +534,24 @@ function AllProductsTab({
     };
   };
 
+  const normalizedSearchInput = useMemo(
+    () => searchText.replace(/\s+/g, " ").trim(),
+    [searchText]
+  );
+
+  const isSearchActive = normalizedSearchInput.length >= MIN_SEARCH_CHARS;
+
+  const showBackendProducts = useMemo(() => {
+    if (!isSearchActive) {
+      return listSource === "browse";
+    }
+    return (
+      listSource === "search" &&
+      normalizedSearchInput === committedQuery &&
+      committedQuery.length >= MIN_SEARCH_CHARS
+    );
+  }, [isSearchActive, listSource, normalizedSearchInput, committedQuery]);
+
   // FILTRAR Y COMBINAR PRODUCTOS
   const getCombinedProducts = (): Product[] => {
     const searchLower = searchText.toLowerCase().trim();
@@ -499,9 +569,9 @@ function AllProductsTab({
 
     // Combinar: productos personalizados primero, luego los del backend
     // y eliminar duplicados por code (o name+brand si no hay code).
-    const filteredBackend = productos.filter((p) =>
-      matchesBrandFilters(p.brand, selectedBrands)
-    );
+    const filteredBackend = showBackendProducts
+      ? productos.filter((p) => matchesBrandFilters(p.brand, selectedBrands))
+      : [];
     const combined = [...filteredCustom, ...filteredBackend];
     const deduped = new Map<string, Product>();
 
@@ -525,8 +595,57 @@ function AllProductsTab({
 
   const allProducts = useMemo(
     () => getCombinedProducts(),
-    [customProducts, productos, searchText, selectedBrands]
+    [
+      customProducts,
+      productos,
+      searchText,
+      selectedBrands,
+      showBackendProducts,
+    ]
   );
+
+  type SearchUiState =
+    | "idle"
+    | "pending"
+    | "loading"
+    | "updating"
+    | "empty"
+    | "results";
+
+  const searchUiState: SearchUiState = useMemo(() => {
+    if (!isSearchActive) return "idle";
+    if (normalizedSearchInput !== committedQuery) return "pending";
+    if (loading && productos.length === 0) return "loading";
+    if (isEnriching) return "updating";
+    if (!loading && !isEnriching && allProducts.length === 0) return "empty";
+    return "results";
+  }, [
+    isSearchActive,
+    normalizedSearchInput,
+    committedQuery,
+    loading,
+    productos.length,
+    isEnriching,
+    allProducts.length,
+  ]);
+
+  const searchStatusMessage = useMemo(() => {
+    switch (searchUiState) {
+      case "pending":
+        return `Preparando búsqueda de «${normalizedSearchInput}»…`;
+      case "loading":
+        return `Buscando «${committedQuery}»…`;
+      case "updating":
+        return `Actualizando resultados para «${committedQuery}»…`;
+      default:
+        return null;
+    }
+  }, [searchUiState, normalizedSearchInput, committedQuery]);
+
+  const isAwaitingSearchFeedback =
+    searchUiState === "pending" ||
+    searchUiState === "loading" ||
+    searchUiState === "updating";
 
   useEffect(() => {
     prefetchImageBatch(
@@ -534,6 +653,11 @@ function AllProductsTab({
       24
     );
   }, [allProducts]);
+
+  const customProductIds = useMemo(
+    () => new Set(customProducts.map((cp) => cp.id)),
+    [customProducts]
+  );
 
   const handleQuickAdd = (item: Product, event: GestureResponderEvent) => {
     event.stopPropagation();
@@ -591,8 +715,7 @@ function AllProductsTab({
             ]}
           />
         )}
-        {/* Badge para productos personalizados */}
-        {customProducts.some((cp) => cp.id === item.code) && (
+        {customProductIds.has(item.code) && (
           <View style={styles.customBadge}>
             <Ionicons name="create" size={14} color={theme.primary} />
           </View>
@@ -695,11 +818,19 @@ function AllProductsTab({
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (
+    (loading || isEnriching || searchUiState === "pending") &&
+    allProducts.length === 0
+  ) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando productos...</Text>
+        <Text style={styles.loadingText}>
+          {searchStatusMessage ??
+            (isEnriching
+              ? "Buscando productos…"
+              : "Cargando productos...")}
+        </Text>
       </View>
     );
   }
@@ -709,37 +840,64 @@ function AllProductsTab({
       style={styles.container}
       data={allProducts}
       renderItem={renderItem}
-      keyExtractor={(item, index) =>
-        `product-${
-          item.code && item.code.trim().length > 0
-            ? item.code.trim()
-            : `${item.name ?? "unknown"}-${item.brand ?? ""}`
-        }-${index}`
+      keyExtractor={(item) =>
+        item.code && item.code.trim().length > 0
+          ? `product-${item.code.trim()}`
+          : `product-${(item.name ?? "unknown").trim()}-${(
+              item.brand ?? ""
+            ).trim()}`
       }
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.4}
+      initialNumToRender={12}
+      windowSize={7}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={Platform.OS === "android"}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listContent}
+      ListHeaderComponent={
+        searchStatusMessage ? (
+          <View style={styles.searchStatusBanner}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={styles.searchStatusText}>{searchStatusMessage}</Text>
+          </View>
+        ) : null
+      }
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons
-            name="search-outline"
-            size={64}
-            color={theme.textTertiary}
-          />
-          <Text style={styles.emptyTitle}>
-            {isBootstrappingCatalog && !searchText
-              ? "Preparando catálogo..."
-              : "No se encontraron productos"}
-          </Text>
-          <Text style={styles.emptySubtitle}>
-            {isBootstrappingCatalog && !searchText
-              ? "Cargando productos iniciales. Esto puede tardar unos segundos."
-              : searchText
-              ? `No encontramos "${searchText}"`
-              : "Intenta con otros términos de búsqueda"}
-          </Text>
-          {searchText && (
+          {isAwaitingSearchFeedback ? (
+            <>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text style={styles.emptyTitle}>
+                {searchStatusMessage ?? "Buscando productos…"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                Estamos consultando el catálogo. Los resultados aparecerán aquí
+                en unos segundos.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Ionicons
+                name="search-outline"
+                size={64}
+                color={theme.textTertiary}
+              />
+              <Text style={styles.emptyTitle}>
+                {isBootstrappingCatalog && !searchText
+                  ? "Preparando catálogo..."
+                  : "No se encontraron productos"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {isBootstrappingCatalog && !searchText
+                  ? "Cargando productos iniciales. Esto puede tardar unos segundos."
+                  : searchText
+                  ? `No encontramos "${searchText}"`
+                  : "Intenta con otros términos de búsqueda"}
+              </Text>
+            </>
+          )}
+          {searchText && !isAwaitingSearchFeedback && (
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => {
@@ -2273,6 +2431,27 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       marginTop: 16,
       fontSize: RFValue(14),
       color: theme.textSecondary,
+      textAlign: "center",
+      paddingHorizontal: 24,
+    },
+    searchStatusBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      marginBottom: 8,
+      borderRadius: 10,
+      backgroundColor: isDark ? `${theme.primary}18` : `${theme.primary}12`,
+      borderWidth: 1,
+      borderColor: isDark ? `${theme.primary}40` : `${theme.primary}25`,
+    },
+    searchStatusText: {
+      flex: 1,
+      color: theme.textSecondary,
+      fontSize: RFValue(13),
+      fontWeight: "500",
     },
     listContent: {
       paddingHorizontal: 20,
