@@ -30,7 +30,7 @@
       android:layout_height="wrap_content"
       android:layout_weight="1"
       android:text="Entreno"
-      android:textColor="#5F6368"
+      android:textColor="@color/workout_live_text_tertiary"
       android:textSize="13sp" />
 
     <Chronometer
@@ -38,7 +38,7 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:format="%s"
-      android:textColor="#5F6368"
+      android:textColor="@color/workout_live_text_tertiary"
       android:textSize="13sp" />
   </LinearLayout>
 
@@ -72,7 +72,7 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#1C1B1F"
+        android:textColor="@color/workout_live_text_primary"
         android:textSize="15sp"
         android:textStyle="bold" />
 
@@ -83,7 +83,7 @@
         android:layout_marginTop="2dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#49454F"
+        android:textColor="@color/workout_live_text_secondary"
         android:textSize="12sp" />
     </LinearLayout>
   </LinearLayout>
@@ -105,8 +105,8 @@
       android:indeterminate="false"
       android:max="1000"
       android:progress="0"
-      android:progressBackgroundTint="#E8DEF8"
-      android:progressTint="#6C3BAA" />
+      android:progressBackgroundTint="@color/workout_live_brand_muted"
+      android:progressTint="@color/workout_live_brand" />
 
     <LinearLayout
       android:id="@+id/workout_live_rest_actions"
@@ -123,7 +123,7 @@
         android:background="@drawable/workout_live_button_muted"
         android:gravity="center"
         android:text="−15"
-        android:textColor="#1C1B1F"
+        android:textColor="@color/workout_live_text_primary"
         android:textSize="12sp"
         android:textStyle="bold" />
 
@@ -138,7 +138,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:format="%s"
-        android:textColor="#6C3BAA"
+        android:textColor="@color/workout_live_brand"
         android:textSize="22sp"
         android:textStyle="bold" />
 
@@ -156,7 +156,7 @@
         android:background="@drawable/workout_live_button_muted"
         android:gravity="center"
         android:text="+15"
-        android:textColor="#1C1B1F"
+        android:textColor="@color/workout_live_text_primary"
         android:textSize="12sp"
         android:textStyle="bold" />
 
@@ -195,7 +195,7 @@
       android:maxLines="1"
       android:paddingEnd="12dp"
       android:text="Serie lista"
-      android:textColor="#1C1B1F"
+      android:textColor="@color/workout_live_text_primary"
       android:textSize="22sp"
       android:textStyle="bold" />
 

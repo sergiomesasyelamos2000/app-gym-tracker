@@ -30,7 +30,7 @@ class WorkoutLiveForegroundService : Service() {
 
   companion object {
     const val NOTIFICATION_ID = 9102
-    const val CHANNEL_ID = "workout-live-ongoing-v2"
+    const val CHANNEL_ID = "workout-live-ongoing-v4"
 
     const val ACTION_START = "com.smy862.app.workout.START"
     const val ACTION_UPDATE = "com.smy862.app.workout.UPDATE"
@@ -261,11 +261,11 @@ class WorkoutLiveForegroundService : Service() {
   private fun buildNotification(): Notification {
     val model = currentModel()
     val openPi = openIntent()
-    val compact = WorkoutLiveNotificationUi.bindCompact(packageName, model)
-    val expanded = WorkoutLiveNotificationUi.bindExpanded(packageName, model) { views ->
+    val compact = WorkoutLiveNotificationUi.bindCompact(this, model)
+    val expanded = WorkoutLiveNotificationUi.bindExpanded(this, model) { views ->
       bindActions(views)
     }
-    // Custom RemoteViews need an explicit root click; builder contentIntent alone is unreliable.
+    // Root click must be on RemoteViews; builder contentIntent alone is unreliable.
     compact.setOnClickPendingIntent(R.id.workout_live_root, openPi)
     expanded.setOnClickPendingIntent(R.id.workout_live_root, openPi)
 
@@ -274,7 +274,9 @@ class WorkoutLiveForegroundService : Service() {
       .setColor(0xFF6C3BAA.toInt())
       .setCustomContentView(compact)
       .setCustomBigContentView(expanded)
-      // Full custom card — no system Decorated header (bell / chevron chrome).
+      // Do not use DecoratedCustomViewStyle — it adds extra system chrome.
+      // Note: OEMs still draw the app icon/name + expand chevron above big content;
+      // that row cannot be removed for expanded shade notifications.
       .setContentIntent(openPi)
       .setOngoing(true)
       .setOnlyAlertOnce(true)

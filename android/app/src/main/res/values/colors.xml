@@ -3,4 +3,13 @@
   <color name="iconBackground">#5B21B6</color>
   <color name="colorPrimary">#023c69</color>
   <color name="colorPrimaryDark">#ffffff</color>
+  <!-- Workout Live Activity Light Theme -->
+  <color name="workout_live_bg">#FFFFFF</color>
+  <color name="workout_live_text_primary">#1C1B1F</color>
+  <color name="workout_live_text_secondary">#49454F</color>
+  <color name="workout_live_text_tertiary">#5F6368</color>
+  <color name="workout_live_brand">#6C3BAA</color>
+  <color name="workout_live_brand_muted">#E8DEF8</color>
+  <color name="workout_live_button_muted_bg">#F4F4F4</color>
+  <color name="workout_live_success">#34C759</color>
 </resources>

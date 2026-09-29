@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material 3 primary-container tonal surface -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-  <solid android:color="#EADDFF" />
+  <solid android:color="@color/workout_live_brand_muted" />
 </shape>

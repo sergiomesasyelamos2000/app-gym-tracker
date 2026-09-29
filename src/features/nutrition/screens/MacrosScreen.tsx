@@ -627,6 +627,29 @@ export default function MacrosScreen({ navigation }: Props) {
     });
   };
 
+  // Hooks must run before any early return (Rules of Hooks).
+  const effectiveEntries = useMemo(
+    () => todayEntries.filter((entry) => !notEatenEntries.has(entry.id || "")),
+    [notEatenEntries, todayEntries]
+  );
+
+  const totals = useMemo(
+    () =>
+      effectiveEntries.reduce(
+        (
+          acc: { calories: number; protein: number; carbs: number; fat: number },
+          entry: FoodEntry
+        ) => ({
+          calories: acc.calories + (entry.calories || 0),
+          protein: acc.protein + (entry.protein || 0),
+          carbs: acc.carbs + (entry.carbs || 0),
+          fat: acc.fat + (entry.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      ),
+    [effectiveEntries]
+  );
+
   // ✅ Loading inicial mientras verifica perfil
   if (checkingProfile) {
     return (
@@ -751,28 +774,6 @@ export default function MacrosScreen({ navigation }: Props) {
   };
 
   const burnedCalories = burnedByDate[selectedDate] || 0;
-
-  const effectiveEntries = useMemo(
-    () => todayEntries.filter((entry) => !notEatenEntries.has(entry.id || "")),
-    [notEatenEntries, todayEntries]
-  );
-
-  const totals = useMemo(
-    () =>
-      effectiveEntries.reduce(
-        (
-          acc: { calories: number; protein: number; carbs: number; fat: number },
-          entry: FoodEntry
-        ) => ({
-          calories: acc.calories + (entry.calories || 0),
-          protein: acc.protein + (entry.protein || 0),
-          carbs: acc.carbs + (entry.carbs || 0),
-          fat: acc.fat + (entry.fat || 0),
-        }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      ),
-    [effectiveEntries]
-  );
 
   const remaining = {
     calories: goals.dailyCalories + burnedCalories - totals.calories,

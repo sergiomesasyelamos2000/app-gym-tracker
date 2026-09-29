@@ -34,7 +34,7 @@
       android:layout_height="wrap_content"
       android:ellipsize="end"
       android:maxLines="1"
-      android:textColor="#1C1B1F"
+      android:textColor="@color/workout_live_text_primary"
       android:textSize="14sp"
       android:textStyle="bold" />
 
@@ -45,7 +45,7 @@
       android:layout_marginTop="2dp"
       android:ellipsize="end"
       android:maxLines="1"
-      android:textColor="#49454F"
+      android:textColor="@color/workout_live_text_secondary"
       android:textSize="11sp" />
   </LinearLayout>
 
@@ -55,6 +55,6 @@
     android:layout_height="wrap_content"
     android:layout_marginStart="8dp"
     android:format="%s"
-    android:textColor="#5F6368"
+    android:textColor="@color/workout_live_text_tertiary"
     android:textSize="14sp" />
 </LinearLayout>

@@ -1,1 +1,11 @@
-<resources/>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="workout_live_bg">#18181A</color>
+  <color name="workout_live_text_primary">#FFFFFF</color>
+  <color name="workout_live_text_secondary">#A0A0A5</color>
+  <color name="workout_live_text_tertiary">#8E8E93</color>
+  <color name="workout_live_brand">#B886F8</color>
+  <color name="workout_live_brand_muted">#4A2D73</color>
+  <color name="workout_live_button_muted_bg">#2C2C2E</color>
+  <color name="workout_live_success">#30D158</color>
+</resources>

@@ -10,6 +10,8 @@ import android.os.Build
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
+import android.content.Context
+import androidx.core.content.ContextCompat
 import com.smy862.app.R
 import kotlin.math.max
 import kotlin.math.min
@@ -107,8 +109,8 @@ internal object WorkoutLiveNotificationUi {
     return output
   }
 
-  fun bindCompact(packageName: String, model: Model): RemoteViews {
-    val views = RemoteViews(packageName, R.layout.notification_workout_live_compact)
+  fun bindCompact(context: Context, model: Model): RemoteViews {
+    val views = RemoteViews(context.packageName, R.layout.notification_workout_live_compact)
     val parts = parseSetSummary(model.nextSetSummary)
     bindSharedExercise(views, model, parts, compact = true)
 
@@ -123,7 +125,7 @@ internal object WorkoutLiveNotificationUi {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         views.setChronometerCountDown(R.id.workout_live_primary_time, true)
       }
-      views.setTextColor(R.id.workout_live_primary_time, 0xFF6C3BAA.toInt())
+      views.setTextColor(R.id.workout_live_primary_time, ContextCompat.getColor(context, R.color.workout_live_brand))
     } else {
       val base = if (model.workoutStartedAtMs > 0) model.workoutStartedAtMs else now
       views.setChronometer(
@@ -135,17 +137,17 @@ internal object WorkoutLiveNotificationUi {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         views.setChronometerCountDown(R.id.workout_live_primary_time, false)
       }
-      views.setTextColor(R.id.workout_live_primary_time, 0xFF5F6368.toInt())
+      views.setTextColor(R.id.workout_live_primary_time, ContextCompat.getColor(context, R.color.workout_live_text_tertiary))
     }
     return views
   }
 
   fun bindExpanded(
-    packageName: String,
+    context: Context,
     model: Model,
     actionBinder: (RemoteViews) -> Unit,
   ): RemoteViews {
-    val views = RemoteViews(packageName, R.layout.notification_workout_live_expanded)
+    val views = RemoteViews(context.packageName, R.layout.notification_workout_live_expanded)
     val parts = parseSetSummary(model.nextSetSummary)
     bindSharedExercise(views, model, parts, compact = false)
 
