@@ -68,6 +68,17 @@ const isNetworkError = (error: unknown): boolean => {
   );
 };
 
+const canUseStaleExerciseCache = (error: unknown): boolean => {
+  if (isNetworkError(error)) return true;
+  if (error instanceof ApiError && (error.status ?? 0) >= 500) return true;
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error || "");
+  return (
+    message.includes("suspendido") ||
+    message.includes("no está disponible")
+  );
+};
+
 const normalizeApiUrl = (value: string) =>
   value.trim().replace(/\/+$/, "").toLowerCase();
 
@@ -201,9 +212,9 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
 
     return data;
   } catch (error: CaughtError) {
-    // Only fallback to cache when the error is an actual network failure.
-    // For API errors (401/403/500/etc), surface the error to avoid stale data.
-    if (!isNetworkError(error)) {
+    // Network failures and host outages (for example a suspended server)
+    // can still show the last catalog instead of the raw error page.
+    if (!canUseStaleExerciseCache(error)) {
       const message =
         error instanceof Error && error.message
           ? error.message

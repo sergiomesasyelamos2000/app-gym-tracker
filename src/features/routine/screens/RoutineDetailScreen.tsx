@@ -88,6 +88,7 @@ import { formatTime } from "../components/ExerciseCard/helpers";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { LiveRoutineMetrics } from "../components/RoutineMetrics";
 import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
+import { UpdateRoutineConfirmModal } from "../components/UpdateRoutineConfirmModal";
 import {
   LiveWorkoutHealthPanel,
   getHealthClient,
@@ -166,6 +167,7 @@ export default function RoutineDetailScreen() {
     sessionDateLabel,
     replaceExerciseId,
     replacementExercise,
+    addExercises,
   } = route.params;
 
   // Notification settings
@@ -395,6 +397,35 @@ export default function RoutineDetailScreen() {
     [exercisesState, sets, navigation, routineData?.id, routineId, routineTitle]
   );
 
+  const handleAddExercise = useCallback(() => {
+    if (!started || sessionView || reorderMode) return;
+
+    const draftExercises = exercisesState.map((exercise) => ({
+      ...exercise,
+      sets: sortSetsByOrder(sets[exercise.id] || []),
+    }));
+
+    navigation.navigate("ExerciseList", {
+      ...(routineData?.id || routineId
+        ? { routineId: routineData?.id ?? routineId }
+        : {}),
+      mode: "addToRoutine",
+      draftTitle: routineTitle,
+      draftExercises,
+      returnTo: "RoutineDetail",
+    });
+  }, [
+    started,
+    sessionView,
+    reorderMode,
+    exercisesState,
+    sets,
+    navigation,
+    routineData?.id,
+    routineId,
+    routineTitle,
+  ]);
+
   // Apply exercise replacement returning from ExerciseList (active workout or creation)
   useEffect(() => {
     if (!replaceExerciseId || !replacementExercise) return;
@@ -437,7 +468,38 @@ export default function RoutineDetailScreen() {
     });
   }, [replaceExerciseId, replacementExercise, started, readonly, navigation]);
 
+  // Append exercises returning from ExerciseList during an active workout.
+  // The list screen pops back here; this must not open a second detail.
+  useEffect(() => {
+    if (!addExercises || addExercises.length === 0) return;
+    if (!started || sessionView) return;
+
+    const normalizedAddExercises = normalizeExercisesImage(addExercises);
+
+    setExercises((prev) => {
+      const newExercises = normalizedAddExercises.filter(
+        (ex) => !prev.some((p) => p.id === ex.id)
+      );
+      if (newExercises.length === 0) return prev;
+      return [...prev, ...newExercises];
+    });
+
+    setSets((prev) => {
+      const next = { ...prev };
+      normalizedAddExercises.forEach((exercise) => {
+        if (!next[exercise.id]) {
+          next[exercise.id] = initializeSets(exercise.sets || []);
+        }
+      });
+      return next;
+    });
+
+    navigation.setParams({ addExercises: undefined });
+  }, [addExercises, started, sessionView, navigation]);
+
   const [showShortWorkoutModal, setShowShortWorkoutModal] = useState(false);
+  const [showUpdateRoutineModal, setShowUpdateRoutineModal] = useState(false);
+  const [addedExerciseCount, setAddedExerciseCount] = useState(0);
   const [frozenDuration, setFrozenDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingTerminationAt, setPendingTerminationAt] = useState<
@@ -1406,7 +1468,20 @@ export default function RoutineDetailScreen() {
     return () => clearInterval(pollInterval);
   }, [showRestToast]);
 
-  const processFinishRoutine = async () => {
+  const getExercisesAddedDuringWorkout = () => {
+    const template = routineData?.routineExercises;
+    if (!routineData?.id || !template?.length) return [];
+
+    const originalIds = new Set(
+      template
+        .map((item) => item.exercise?.id)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    return exercisesState.filter((exercise) => !originalIds.has(exercise.id));
+  };
+
+  const processFinishRoutine = async (updateRoutineTemplate = true) => {
     if (isSaving) return;
     setIsSaving(true);
 
@@ -1440,10 +1515,14 @@ export default function RoutineDetailScreen() {
 
       const routineToSave = buildRoutinePayload();
 
-      // Use offline-first service
-      const updatedRoutine = routineData?.id
-        ? await updateRoutineOffline(routineData.id, routineToSave)
-        : await saveRoutineOffline(routineToSave);
+      // Added exercises stay on the session. The saved routine changes only
+      // when the user confirms it at the end of the workout.
+      const updatedRoutine =
+        routineData?.id && !updateRoutineTemplate
+          ? routineData
+          : routineData?.id
+            ? await updateRoutineOffline(routineData.id, routineToSave)
+            : await saveRoutineOffline(routineToSave);
 
       const sessionToSave = buildSessionPayload();
       await saveSessionOffline(updatedRoutine.id, sessionToSave);
@@ -1481,9 +1560,11 @@ export default function RoutineDetailScreen() {
 
       // Check if saved offline or online
       const isPending = (updatedRoutine as any)._isPending;
-      const message = isPending
-        ? "Rutina guardada localmente. Se sincronizará cuando haya conexión."
-        : "Rutina y sesión guardadas exitosamente";
+      const message = !updateRoutineTemplate
+        ? "Sesión guardada. La rutina original se mantiene."
+        : isPending
+          ? "Rutina guardada localmente. Se sincronizará cuando haya conexión."
+          : "Rutina y sesión guardadas exitosamente";
 
       Alert.alert("¡Éxito!", message);
 
@@ -1504,6 +1585,17 @@ export default function RoutineDetailScreen() {
     }
   };
 
+  const confirmFinishRoutine = () => {
+    const addedExercises = getExercisesAddedDuringWorkout();
+    if (addedExercises.length === 0) {
+      void processFinishRoutine(true);
+      return;
+    }
+
+    setAddedExerciseCount(addedExercises.length);
+    setShowUpdateRoutineModal(true);
+  };
+
   const handleFinishAndSaveRoutine = async () => {
     if (isSaving) return;
     // Freeze the current duration before showing modal
@@ -1514,7 +1606,7 @@ export default function RoutineDetailScreen() {
       setShowShortWorkoutModal(true);
       return;
     }
-    await processFinishRoutine();
+    confirmFinishRoutine();
   };
 
   const handleDiscardWorkout = () => {
@@ -2190,6 +2282,34 @@ export default function RoutineDetailScreen() {
       ? keyboardHeight + 8
       : Math.max(insets.bottom, 12) + 8;
 
+  const showAddExerciseRow = started && !sessionView && !reorderMode;
+
+  const listBottomPadding = Math.max(insets.bottom, 16) + 32;
+
+  const addExerciseRow = showAddExerciseRow ? (
+    <TouchableOpacity
+      style={[
+        styles.addExerciseButton,
+        {
+          backgroundColor: theme.card,
+          borderWidth: 1.5,
+          borderColor: theme.primary,
+        },
+      ]}
+      disabled={isSaving}
+      onPress={() => {
+        if (isSaving) return;
+        handleAddExercise();
+      }}
+      accessibilityLabel="Añadir ejercicio"
+    >
+      <Icon name="add-circle-outline" size={20} color={theme.primary} />
+      <Text style={[styles.addExerciseButtonText, { color: theme.primary }]}>
+        Añadir ejercicio
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   const isSmallDevice = width < 360;
   const loadingTextMaxWidth = Math.min(width * 0.8, 360);
 
@@ -2242,7 +2362,9 @@ export default function RoutineDetailScreen() {
       {started && (
         <LiveRoutineMetrics
           getStartTime={getWorkoutStartTime}
-          timerPaused={showShortWorkoutModal || isSaving}
+          timerPaused={
+            showShortWorkoutModal || showUpdateRoutineModal || isSaving
+          }
           volume={volume}
           completedSets={completedSets}
           records={sessionRecordsCount}
@@ -2289,6 +2411,8 @@ export default function RoutineDetailScreen() {
       {canReorderExercises || reorderMode ? (
         <DraggableFlatList
           ref={exerciseListRef as any}
+          containerStyle={styles.exerciseList}
+          style={styles.exerciseList}
           data={reorderFromButton ? tempExercisesOrder : exercisesState}
           keyExtractor={(item) => item.id}
           onDragEnd={({ data }) => handleReorderComplete(data)}
@@ -2315,15 +2439,17 @@ export default function RoutineDetailScreen() {
           renderItem={({ item, drag, isActive }: RenderItemParams<ExerciseRequestDto>) =>
             renderExerciseCard({ item, drag, isActive })
           }
+          ListFooterComponent={addExerciseRow}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingBottom: 16,
+            paddingBottom: listBottomPadding,
             paddingTop: DETAIL_LIST_TOP_PADDING,
           }}
         />
       ) : (
         <FlatList
           ref={exerciseListRef}
+          style={styles.exerciseList}
           data={exercisesState}
           scrollEnabled={!isSaving}
           keyExtractor={(item) => item.id}
@@ -2351,9 +2477,10 @@ export default function RoutineDetailScreen() {
             />
           }
           renderItem={({ item }) => renderExerciseCard({ item })}
+          ListFooterComponent={addExerciseRow}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingBottom: 16,
+            paddingBottom: listBottomPadding,
             paddingTop: DETAIL_LIST_TOP_PADDING,
           }}
         />
@@ -2413,7 +2540,22 @@ export default function RoutineDetailScreen() {
         onSave={() => {
           if (isSaving) return;
           setShowShortWorkoutModal(false);
-          processFinishRoutine();
+          confirmFinishRoutine();
+        }}
+      />
+
+      <UpdateRoutineConfirmModal
+        visible={showUpdateRoutineModal}
+        addedCount={addedExerciseCount}
+        onUpdate={() => {
+          if (isSaving) return;
+          setShowUpdateRoutineModal(false);
+          void processFinishRoutine(true);
+        }}
+        onKeepOriginal={() => {
+          if (isSaving) return;
+          setShowUpdateRoutineModal(false);
+          void processFinishRoutine(false);
         }}
       />
 
@@ -2449,6 +2591,9 @@ export default function RoutineDetailScreen() {
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+  },
+  exerciseList: {
     flex: 1,
   },
   loadingText: {
@@ -2537,5 +2682,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(14),
     fontWeight: "600",
+  },
+  addExerciseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 8,
+  },
+  addExerciseButtonText: {
+    fontWeight: "600",
+    fontSize: RFValue(16),
   },
 });

@@ -339,15 +339,15 @@ export default function ExerciseList() {
 
     if (mode === "replaceExercise" && replaceExerciseId) {
       if (returnTo === "RoutineDetail") {
-        navigation.navigate({
-          name: "RoutineDetail",
-          params: {
+        navigation.navigate(
+          "RoutineDetail",
+          {
             ...(routineId ? { routineId } : {}),
             replaceExerciseId,
             replacementExercise: selectedExercises[0],
           },
-          merge: true,
-        });
+          { merge: true, pop: true }
+        );
       } else if (routineId) {
         navigation.navigate({
           name: "RoutineEdit",
@@ -365,19 +365,33 @@ export default function ExerciseList() {
       return;
     }
 
-    if (mode === "addToRoutine" && routineId) {
-      navigation.navigate({
-        name: "RoutineEdit",
-        params: {
-          id: routineId,
-          title: draftTitle,
-          exercises: draftExercises,
-          addExercises: selectedExercises,
-        },
-        merge: true,
-      });
-      clearSelectionContext();
-      return;
+    if (mode === "addToRoutine") {
+      if (returnTo === "RoutineDetail") {
+        // Pop back to the workout already on the stack. A plain navigate
+        // pushes a new RoutineDetail and drops the in-progress session.
+        navigation.navigate(
+          "RoutineDetail",
+          { addExercises: selectedExercises },
+          { merge: true, pop: true }
+        );
+        clearSelectionContext();
+        return;
+      }
+
+      if (routineId) {
+        navigation.navigate({
+          name: "RoutineEdit",
+          params: {
+            id: routineId,
+            title: draftTitle,
+            exercises: draftExercises,
+            addExercises: selectedExercises,
+          },
+          merge: true,
+        });
+        clearSelectionContext();
+        return;
+      }
     }
 
     navigation.navigate("RoutineDetail", {
@@ -764,6 +778,7 @@ export default function ExerciseList() {
               data={filteredExercises}
               keyExtractor={(item) => item.id}
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.listContent}
               renderItem={({ item }) => (
                 <ExerciseItem
                   item={item}
@@ -814,7 +829,7 @@ const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: theme.backgroundSecondary,
     },
     loadingContainer: {
       flex: 1,
@@ -948,6 +963,10 @@ const createStyles = (theme: Theme) =>
     },
     listContainer: {
       flex: 1,
+    },
+    listContent: {
+      paddingTop: 4,
+      paddingBottom: 16,
     },
     modalOverlay: {
       flex: 1,

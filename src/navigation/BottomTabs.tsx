@@ -22,6 +22,18 @@ export const BottomTabs = () => {
     return focusedRouteName === "CheckoutScreen";
   };
 
+  const shouldHideTabBar = (route: any) => {
+    if (hiddenTabs[route.name] || isTabBarLockedForPayment(route)) {
+      return true;
+    }
+    // Full-screen workout flow: hide tabs on nested Entreno screens.
+    if (route.name === "Entreno") {
+      const focusedRouteName = getFocusedRouteNameFromRoute(route);
+      return Boolean(focusedRouteName && focusedRouteName !== "WorkoutList");
+    }
+    return false;
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -44,12 +56,8 @@ export const BottomTabs = () => {
         tabBarActiveTintColor: theme.tabBarActive,
         tabBarInactiveTintColor: theme.tabBarInactive,
         headerShown: false,
-        // Aplicar visibilidad específica por tab
         tabBarStyle: {
-          display:
-            hiddenTabs[route.name] || isTabBarLockedForPayment(route)
-              ? "none"
-              : "flex",
+          display: shouldHideTabBar(route) ? "none" : "flex",
           backgroundColor: theme.tabBarBackground,
           borderTopColor: theme.tabBarBorder,
           borderTopWidth: 1,

@@ -25,6 +25,7 @@ export type WorkoutStackParamList = {
     sessionDateLabel?: string;
     replaceExerciseId?: string;
     replacementExercise?: ExerciseRequestDto;
+    addExercises?: ExerciseRequestDto[];
   };
   ExerciseList: {
     routineId?: string;

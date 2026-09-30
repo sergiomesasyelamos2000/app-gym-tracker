@@ -8,8 +8,8 @@ const LOCAL_ANDROID_EMULATOR_API_URL = "http://10.0.2.2:3000/api";
 const LOCAL_ANDROID_DEVICE_API_URL = LOCAL_API_URL;
 const PROD_API_URL = "https://api-gym-tracker.onrender.com/api";
 
-/** En local (__DEV__), usa la API de producción. Ponlo a false para volver a la API local. */
-const USE_PROD_API_IN_DEV = true;
+/** En local (__DEV__), usa la API de esta máquina. Ponlo a true solo para apuntar a producción. */
+const USE_PROD_API_IN_DEV = false;
 
 const androidConstants = Platform.OS === "android" ? Platform.constants : null;
 const androidFingerprint = String(

@@ -129,6 +129,27 @@ function handleAuthFailure(endpoint: string) {
   }
 }
 
+function messageFromErrorBody(status: number, errorText: string): string {
+  const trimmed = errorText.trim();
+  const isHtml =
+    /^<!doctype html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed);
+  const isSuspended = /service has been suspended/i.test(trimmed);
+
+  if (isSuspended) {
+    return "El servidor está suspendido. Actívalo de nuevo e inténtalo otra vez.";
+  }
+
+  if (isHtml) {
+    return "El servidor no está disponible. Inténtalo de nuevo en unos minutos.";
+  }
+
+  if (!trimmed || trimmed.length > 280) {
+    return `Error ${status}`;
+  }
+
+  return trimmed;
+}
+
 export class ApiError extends Error {
   status?: number;
   statusText?: string;
@@ -195,11 +216,14 @@ export async function apiFetch<T = unknown>(
     try {
       const errorData = JSON.parse(errorText);
       // Extraer el mensaje del error del backend
-      errorMessage = errorData.message || errorData.error || errorText;
+      const rawMessage = errorData.message || errorData.error || errorText;
+      errorMessage =
+        typeof rawMessage === "string"
+          ? messageFromErrorBody(response.status, rawMessage)
+          : `Error ${response.status}`;
       errorDetails = errorData;
     } catch {
-      // Si no es JSON, usar el texto completo
-      errorMessage = errorText || errorMessage;
+      errorMessage = messageFromErrorBody(response.status, errorText);
     }
 
     // ✅ Handle 401 Unauthorized with automatic token refresh
