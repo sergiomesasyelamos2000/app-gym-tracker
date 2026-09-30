@@ -60,11 +60,8 @@ export default function WorkoutStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerBackButtonDisplayMode: "minimal",
-        headerStyle: { backgroundColor: theme.background },
-        headerTintColor: theme.text,
+        headerShown: false,
         contentStyle: { backgroundColor: theme.backgroundSecondary },
-        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
@@ -75,34 +72,26 @@ export default function WorkoutStack() {
       <Stack.Screen
         name="RoutineDetail"
         component={RoutineDetailScreen}
-        options={{
-          title: "Detalle",
-        }}
       />
       <Stack.Screen
         name="ExerciseList"
         component={ExerciseListScreen}
-        options={{ title: "Listado" }}
       />
       <Stack.Screen
         name="RoutineEdit"
         component={RoutineEditScreen}
-        options={{ title: "Editar rutina" }}
       />
       <Stack.Screen
         name="CreateExercise"
         component={CreateExerciseScreen}
-        options={{ title: "Crear ejercicio" }}
       />
       <Stack.Screen
         name="ExerciseDetail"
         component={ExerciseDetailScreen}
-        options={{ title: "Detalle del ejercicio" }}
       />
       <Stack.Screen
         name="ExerciseProgress"
         component={ExerciseProgressScreen}
-        options={{ title: "Progreso del ejercicio" }}
       />
     </Stack.Navigator>
   );

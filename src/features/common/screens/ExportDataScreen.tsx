@@ -1,6 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
 import {
-  ArrowLeft,
   Calendar,
   Download,
   FileJson,
@@ -20,6 +19,7 @@ import {
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../components/ScreenHeader";
 import {
   DataType,
   ExportFormat,
@@ -115,17 +115,10 @@ export default function ExportDataScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <ArrowLeft color={theme.text} size={24} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          Exportar Datos
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Exportar Datos"
+        onBack={() => navigation.goBack()}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>

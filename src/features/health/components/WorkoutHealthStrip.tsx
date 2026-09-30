@@ -77,11 +77,6 @@ export const WorkoutHealthStrip = memo(WorkoutHealthStripComponent);
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    top: 72,
-    left: 0,
-    right: 0,
-    zIndex: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",

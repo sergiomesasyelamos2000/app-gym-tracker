@@ -13,11 +13,9 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import { HeaderBackButton } from "@react-navigation/elements";
 import React, {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -51,6 +49,7 @@ import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { notificationService } from "../../../services/notificationService";
 import { playRestCompleteFeedback } from "../../../services/restTimerFeedback";
 import {
@@ -147,10 +146,7 @@ const sortSetsMapByOrder = (setsMap: {
     ])
   );
 
-/** Clears absolute LiveRoutineMetrics without leaving a large empty gap. */
-const LIVE_METRICS_OFFSET = 80;
-const REORDER_BAR_HEIGHT = 48;
-/** Breathing room under the stack header when the workout has not started. */
+/** Breathing room under the custom header when the workout has not started. */
 const DETAIL_LIST_TOP_PADDING = 8;
 
 export default function RoutineDetailScreen() {
@@ -539,32 +535,6 @@ export default function RoutineDetailScreen() {
       | undefined;
     parent?.navigate("Inicio" as never);
   }, [navigation, sessionView]);
-
-  useLayoutEffect(() => {
-    if (!sessionView) {
-      navigation.setOptions({
-        headerLeft: undefined,
-        title: "Detalle",
-      });
-      return;
-    }
-
-    navigation.setOptions({
-      title: sessionTitle || "Detalle de sesión",
-      headerLeft: () => (
-        <HeaderBackButton
-          tintColor={theme.text}
-          onPress={handleExitSessionView}
-        />
-      ),
-    });
-  }, [
-    handleExitSessionView,
-    navigation,
-    sessionTitle,
-    sessionView,
-    theme.primary,
-  ]);
 
   useEffect(() => {
     if (!sessionView) {
@@ -2226,12 +2196,16 @@ export default function RoutineDetailScreen() {
   if (loading || isExercisesLoading) {
     return (
       <SafeAreaView
-        edges={["left", "right"]}
+        edges={["top", "left", "right"]}
         style={[
           styles.safeArea,
           { backgroundColor: theme.backgroundSecondary },
         ]}
       >
+        <ScreenHeader
+          title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
+          onBack={sessionView ? handleExitSessionView : () => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size={isSmallDevice ? "small" : "large"}
@@ -2256,11 +2230,15 @@ export default function RoutineDetailScreen() {
 
   return (
     <SafeAreaView
-      // Stack header already applies the top inset; including "top" here
-      // double-pads after insets hydrate and creates a delayed empty gap.
-      edges={["left", "right"]}
+      edges={["top", "left", "right"]}
       style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
     >
+      <ScreenHeader
+        title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
+        onBack={
+          sessionView ? handleExitSessionView : () => navigation.goBack()
+        }
+      />
       {started && (
         <LiveRoutineMetrics
           getStartTime={getWorkoutStartTime}
@@ -2292,7 +2270,6 @@ export default function RoutineDetailScreen() {
             {
               backgroundColor: theme.card,
               borderBottomColor: theme.border,
-              top: started ? LIVE_METRICS_OFFSET : 0,
             },
           ]}
         >
@@ -2341,13 +2318,7 @@ export default function RoutineDetailScreen() {
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingBottom: 16,
-            paddingTop: started
-              ? reorderFromButton
-                ? LIVE_METRICS_OFFSET + REORDER_BAR_HEIGHT
-                : LIVE_METRICS_OFFSET
-              : reorderFromButton
-                ? REORDER_BAR_HEIGHT
-                : DETAIL_LIST_TOP_PADDING,
+            paddingTop: DETAIL_LIST_TOP_PADDING,
           }}
         />
       ) : (
@@ -2383,7 +2354,7 @@ export default function RoutineDetailScreen() {
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingBottom: 16,
-            paddingTop: started ? LIVE_METRICS_OFFSET : DETAIL_LIST_TOP_PADDING,
+            paddingTop: DETAIL_LIST_TOP_PADDING,
           }}
         />
       )}
@@ -2524,10 +2495,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   reorderBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    zIndex: 50,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

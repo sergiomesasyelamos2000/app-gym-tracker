@@ -13,7 +13,6 @@ import {
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Crown,
   Calendar,
   CreditCard,
   ArrowRight,
@@ -38,6 +37,7 @@ import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 
 type StatusScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
@@ -154,6 +154,10 @@ export function StatusScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScreenHeader
+        title="Mi Suscripción"
+        onBack={() => navigation.goBack()}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -167,14 +171,6 @@ export function StatusScreen() {
             </Text>
           </View>
         )}
-
-        <View style={styles.header}>
-          <Crown
-            size={32}
-            color={isPremium ? theme.warning : theme.textTertiary}
-          />
-          <Text style={styles.title}>Mi Suscripción</Text>
-        </View>
 
         <View style={[styles.card, isPremium && styles.premiumCard]}>
           <View style={styles.cardHeader}>

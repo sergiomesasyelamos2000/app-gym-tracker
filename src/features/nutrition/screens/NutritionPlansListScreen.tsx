@@ -16,6 +16,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { NutritionPlanResponseDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { NutritionHeaderIconButton, NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { CaughtError, getErrorMessage } from "../../../types";
@@ -118,16 +119,10 @@ export default function NutritionPlansListScreen({ navigation }: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Planes Nutricionales</Text>
-          <View style={styles.headerRight} />
-        </View>
+        <NutritionScreenHeader
+          title="Planes Nutricionales"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -137,18 +132,18 @@ export default function NutritionPlansListScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Planes Nutricionales</Text>
-        <TouchableOpacity style={styles.headerRight} onPress={handleGeneratePress}>
-          <Ionicons name="add-circle-outline" size={26} color={theme.primary} />
-        </TouchableOpacity>
-      </View>
+      <NutritionScreenHeader
+        title="Planes Nutricionales"
+        onBack={() => navigation.goBack()}
+        right={
+          <NutritionHeaderIconButton
+            icon="add-circle-outline"
+            color={theme.primary}
+            onPress={handleGeneratePress}
+            accessibilityLabel="Generar plan"
+          />
+        }
+      />
 
       <FlatList
         data={plans}

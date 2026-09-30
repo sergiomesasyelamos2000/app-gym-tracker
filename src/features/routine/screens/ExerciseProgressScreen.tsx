@@ -16,9 +16,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ExerciseProgressDataPoint,
   ProgressStats,
@@ -81,6 +84,9 @@ const getDataForWindow = (
 export default function ExerciseProgressScreen({ route, navigation }: Props) {
   const { exercise } = route.params;
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const androidTop =
+    Platform.OS === "android" ? { paddingTop: insets.top } : null;
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const [loading, setLoading] = useState(true);
@@ -406,7 +412,11 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, androidTop]}>
+        <ScreenHeader
+          title="Progreso del ejercicio"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Cargando datos...</Text>
@@ -419,7 +429,11 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     const hasHistoricalData = allProgressData.length > 0;
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, androidTop]}>
+        <ScreenHeader
+          title="Progreso del ejercicio"
+          onBack={() => navigation.goBack()}
+        />
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -454,7 +468,11 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, androidTop]}>
+      <ScreenHeader
+        title="Progreso del ejercicio"
+        onBack={() => navigation.goBack()}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

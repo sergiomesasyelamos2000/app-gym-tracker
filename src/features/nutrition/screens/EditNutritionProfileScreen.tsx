@@ -26,6 +26,7 @@ import type {
   WeightGoal,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
@@ -893,14 +894,11 @@ export default function EditNutritionProfileScreen({
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
+      <NutritionScreenHeader
+        title="Editar Perfil de Nutrición"
+        onBack={handleBack}
+      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="chevron-back" size={28} color={theme.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Editar Perfil de Nutrición</Text>
-        </View>
-
         {renderProgressBar()}
         {renderStep()}
       </ScrollView>

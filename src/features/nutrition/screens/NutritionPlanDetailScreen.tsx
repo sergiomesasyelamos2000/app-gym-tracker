@@ -14,6 +14,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { NutritionPlanResponseDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  NutritionHeaderIconButton,
+  NutritionScreenHeader,
+} from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
@@ -119,16 +123,10 @@ export default function NutritionPlanDetailScreen({ route, navigation }: Props) 
   if (loading || !plan) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalle del plan</Text>
-          <View style={styles.headerRight} />
-        </View>
+        <NutritionScreenHeader
+          title="Detalle del plan"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -140,25 +138,20 @@ export default function NutritionPlanDetailScreen({ route, navigation }: Props) 
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={actionLoading}
-        >
-          <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {plan.name}
-        </Text>
-        <TouchableOpacity
-          style={styles.headerRight}
-          onPress={handleDelete}
-          disabled={actionLoading}
-        >
-          <Ionicons name="trash-outline" size={22} color={theme.error} />
-        </TouchableOpacity>
-      </View>
+      <NutritionScreenHeader
+        title={plan.name}
+        onBack={() => navigation.goBack()}
+        leadingDisabled={actionLoading}
+        right={
+          <NutritionHeaderIconButton
+            icon="trash-outline"
+            color={theme.error}
+            onPress={handleDelete}
+            disabled={actionLoading}
+            accessibilityLabel="Eliminar plan"
+          />
+        }
+      />
 
       {actionLoading ? (
         <View style={styles.actionOverlay}>

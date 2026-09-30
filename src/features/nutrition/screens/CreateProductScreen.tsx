@@ -27,6 +27,7 @@ import type {
   MealType,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import {
@@ -331,20 +332,11 @@ export default function CreateProductScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={requestLeave}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Crear Producto</Text>
-            <Text style={styles.headerSubtitle}>Producto personalizado</Text>
-          </View>
-          <View style={styles.headerButton} />
-        </View>
+        <NutritionScreenHeader
+          title="Crear Producto"
+          subtitle="Producto personalizado"
+          onBack={requestLeave}
+        />
 
         <ScrollView
           style={styles.content}

@@ -26,6 +26,10 @@ import type {
   UpdateFoodEntryDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  NutritionHeaderIconButton,
+  NutritionScreenHeader,
+} from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
@@ -426,35 +430,33 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleGoBack}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {fromDiary ? "Editar Alimento" : "Detalle del Producto"}
-          </Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={handleAddToShoppingList}
-              disabled={addingToCart}
-            >
-              {addingToCart ? (
-                <ActivityIndicator color={theme.primary} />
-              ) : (
-                <Ionicons name="cart-outline" size={24} color={theme.primary} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleToggleFavorite}>
-              <Ionicons
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={28}
-                color={isFavorite ? theme.error : theme.primary}
+      <NutritionScreenHeader
+        title={fromDiary ? "Editar Alimento" : "Detalle del Producto"}
+        onBack={handleGoBack}
+        right={
+          <>
+            {addingToCart ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <NutritionHeaderIconButton
+                icon="cart-outline"
+                color={theme.primary}
+                onPress={handleAddToShoppingList}
+                accessibilityLabel="Añadir a la lista de compras"
               />
-            </TouchableOpacity>
-          </View>
-        </View>
-
+            )}
+            <NutritionHeaderIconButton
+              icon={isFavorite ? "heart" : "heart-outline"}
+              color={isFavorite ? theme.error : theme.primary}
+              onPress={handleToggleFavorite}
+              accessibilityLabel={
+                isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"
+              }
+            />
+          </>
+        }
+      />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
           <Image
             source={

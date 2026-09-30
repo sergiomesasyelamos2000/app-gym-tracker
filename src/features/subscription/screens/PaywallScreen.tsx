@@ -8,7 +8,8 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { Crown, X, Check } from "lucide-react-native";
+import { Crown, Check } from "lucide-react-native";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useNavigation } from "@react-navigation/native";
 import type { BaseNavigation } from "../../../types";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
@@ -64,15 +65,7 @@ export function PaywallScreen({
       statusBarTranslucent={Platform.OS === "android"}
     >
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Crown size={24} color={theme.warning} />
-            <Text style={styles.headerTitle}>Premium</Text>
-          </View>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <X size={24} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader title="Premium" mode="close" onBack={onClose} />
 
         <ScrollView
           style={styles.scrollView}

@@ -26,6 +26,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import {
   CustomMealResponseDto as CustomMeal,
   CustomProductResponseDto as CustomProduct,
@@ -707,96 +708,43 @@ export default function ProductSelectionScreen() {
       />
       <View style={styles.container}>
         {/* Header */}
-        <View
-          style={[
-            styles.header,
-            {
-              paddingHorizontal: isTinyScreen ? 10 : isSmallScreen ? 12 : 16,
-              paddingVertical: isTinyScreen ? 10 : isSmallScreen ? 12 : 16,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              isTinyScreen ? { width: 36, height: 36 } : null,
-            ]}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
-          >
-            <Ionicons
-              name="close"
-              size={isTinyScreen ? 24 : isSmallScreen ? 26 : 28}
-              color={theme.text}
-            />
-          </TouchableOpacity>
-          <View
-            style={[
-              styles.headerCenter,
-              {
-                paddingHorizontal: isTinyScreen ? 6 : isSmallScreen ? 8 : 12,
-              },
-            ]}
-          >
-            <Text
+        <NutritionScreenHeader
+          title="Seleccionar Productos"
+          subtitle={selectionSubtitle}
+          mode="close"
+          onBack={() => navigation.goBack()}
+          right={
+            <TouchableOpacity
               style={[
-                styles.headerTitle,
+                styles.confirmButton,
                 {
-                  fontSize: RFValue(
-                    isTinyScreen ? 15 : isSmallScreen ? 16 : 17,
-                  ),
+                  paddingHorizontal: isTinyScreen ? 12 : isSmallScreen ? 14 : 18,
+                  paddingVertical: isTinyScreen ? 6 : 8,
                 },
+                selectedProducts.size === 0 && styles.confirmButtonDisabled,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
+              onPress={handleConfirm}
+              disabled={selectedProducts.size === 0}
+              accessibilityRole="button"
+              accessibilityLabel="Añadir productos seleccionados"
             >
-              Seleccionar Productos
-            </Text>
-            <Text
-              style={[
-                styles.headerSubtitle,
-                { fontSize: RFValue(isTinyScreen ? 11 : 12) },
-              ]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {selectionSubtitle}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              {
-                paddingHorizontal: isTinyScreen ? 12 : isSmallScreen ? 14 : 18,
-                paddingVertical: isTinyScreen ? 6 : 8,
-              },
-              selectedProducts.size === 0 && styles.confirmButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={selectedProducts.size === 0}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="Añadir productos seleccionados"
-          >
-            <Text
-              style={[
-                styles.confirmButtonText,
-                {
-                  fontSize: RFValue(
-                    isTinyScreen ? 12 : isSmallScreen ? 13 : 14,
-                  ),
-                },
-                selectedProducts.size === 0 && styles.confirmButtonTextDisabled,
-              ]}
-              numberOfLines={1}
-            >
-              Añadir
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <Text
+                style={[
+                  styles.confirmButtonText,
+                  {
+                    fontSize: RFValue(
+                      isTinyScreen ? 12 : isSmallScreen ? 13 : 14,
+                    ),
+                  },
+                  selectedProducts.size === 0 && styles.confirmButtonTextDisabled,
+                ]}
+                numberOfLines={1}
+              >
+                Añadir
+              </Text>
+            </TouchableOpacity>
+          }
+        />
 
         {/* Barra de Búsqueda */}
         <View style={styles.searchContainer}>

@@ -25,7 +25,9 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import {
   createExercise,
   fetchEquipment,
@@ -44,6 +46,7 @@ interface DropdownOption {
 
 export default function CreateExerciseScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();
   const setPendingCreatedExercise = useExerciseSelectionStore(
@@ -437,7 +440,16 @@ export default function CreateExerciseScreen() {
     !name.trim() || !equipmentId || !primaryMuscleId || isLoading;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <ScreenHeader
+        title="Crear ejercicio"
+        onBack={() => navigation.goBack()}
+      />
       <View style={styles.container}>
         <ScrollView
           style={styles.scrollView}

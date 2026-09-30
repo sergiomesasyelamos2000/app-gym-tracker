@@ -30,6 +30,8 @@ import type {
   MuscleDto,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fetchEquipment,
   fetchMuscles,
@@ -69,6 +71,7 @@ const MAX_MUSCLE_FILTER_OPTIONS = 24;
 
 export default function ExerciseList() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();
 
@@ -480,7 +483,16 @@ export default function ExerciseList() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <ScreenHeader
+        title="Listado de Ejercicios"
+        onBack={() => navigation.goBack()}
+      />
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -504,7 +516,6 @@ export default function ExerciseList() {
           )}
 
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Listado de Ejercicios</Text>
             <View style={styles.searchInputContainer}>
               <TextInput
                 style={styles.searchInput}

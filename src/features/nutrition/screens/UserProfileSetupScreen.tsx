@@ -25,6 +25,7 @@ import {
   WeightUnit,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
@@ -921,16 +922,12 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <NutritionScreenHeader
+        title="Configura tu Perfil"
+        onBack={handleBack}
+        showLeading={currentStep > 1}
+      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          {currentStep > 1 && (
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-back" size={28} color={theme.primary} />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.headerTitle}>Configura tu Perfil</Text>
-        </View>
-
         {renderProgressBar()}
         {renderStep()}
       </ScrollView>

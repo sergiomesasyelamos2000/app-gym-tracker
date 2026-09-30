@@ -16,6 +16,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { ShoppingListItemResponseDto } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 
@@ -239,17 +240,10 @@ export default function ShoppingListScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Lista de Compras</Text>
-          <View style={styles.headerRight} />
-        </View>
+        <NutritionScreenHeader
+          title="Lista de Compras"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -259,17 +253,10 @@ export default function ShoppingListScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lista de Compras</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <NutritionScreenHeader
+        title="Lista de Compras"
+        onBack={() => navigation.goBack()}
+      />
 
       {items.length > 0 && (
         <View style={styles.statsContainer}>

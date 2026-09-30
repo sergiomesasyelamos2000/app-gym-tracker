@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type {
   ExerciseRequestDto,
@@ -26,6 +28,7 @@ import type {
 } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import {
   CaughtError,
@@ -60,6 +63,7 @@ const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<WorkoutStackParamList, "RoutineEdit">>();
   const navigation =
     useNavigation<NativeStackNavigationProp<WorkoutStackParamList>>();
@@ -642,7 +646,13 @@ export default function RoutineEditScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <ScreenHeader title="Editar rutina" onBack={() => navigation.goBack()} />
       <View style={styles.container}>
         <View style={styles.headerSection}>
           <TextInput

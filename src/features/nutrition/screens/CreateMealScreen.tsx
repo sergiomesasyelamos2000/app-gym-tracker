@@ -29,6 +29,7 @@ import type {
   MappedProduct as Product,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { ProductSearchEmptyState } from "../components/product-search/ProductSearchEmptyState";
@@ -554,22 +555,11 @@ export default function CreateMealScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={requestLeave}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Crear Comida</Text>
-            <Text style={styles.headerSubtitle}>
-              {products.length} producto{products.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
-          <View style={styles.headerButton} />
-        </View>
+        <NutritionScreenHeader
+          title="Crear Comida"
+          subtitle={`${products.length} producto${products.length !== 1 ? "s" : ""}`}
+          onBack={requestLeave}
+        />
 
         <ScrollView
           style={styles.content}

@@ -18,10 +18,12 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { WebView } from "react-native-webview";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { ExerciseSet, SessionData, SessionExercise } from "../../../types";
 import {
@@ -929,6 +931,7 @@ const HistoryCard = ({
 export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const { exercise } = route.params;
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   // Estado
@@ -1081,7 +1084,16 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <ScreenHeader
+        title="Detalle del ejercicio"
+        onBack={() => navigation.goBack()}
+      />
       {isScreenLoading && (
         <View style={styles.loadingOverlay} pointerEvents="auto">
           <ActivityIndicator size="large" color={theme.primary} />

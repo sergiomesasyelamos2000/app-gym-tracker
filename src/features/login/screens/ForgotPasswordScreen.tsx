@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { forgotPassword, resetPassword } from "../services/authService";
 
@@ -262,6 +263,11 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader
+        title="Recuperar contraseña"
+        onBack={() => navigation.goBack()}
+        leadingDisabled={isLoading}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

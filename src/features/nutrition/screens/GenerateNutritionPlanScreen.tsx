@@ -16,6 +16,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import * as nutritionPlansService from "../services/nutritionPlansService";
@@ -72,17 +73,11 @@ export default function GenerateNutritionPlanScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={generating}
-        >
-          <Ionicons name="arrow-back" size={RFValue(20)} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Generar plan IA</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <NutritionScreenHeader
+        title="Generar plan IA"
+        onBack={() => navigation.goBack()}
+        leadingDisabled={generating}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}

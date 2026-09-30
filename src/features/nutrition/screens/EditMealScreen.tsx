@@ -29,6 +29,10 @@ import type {
   UpdateCustomMealDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
+import {
+  NutritionHeaderIconButton,
+  NutritionScreenHeader,
+} from "../components/NutritionScreenHeader";
 import * as nutritionService from "../services/nutritionService";
 import { ProductSearchEmptyState } from "../components/product-search/ProductSearchEmptyState";
 import { MealCollagePreview } from "../components/MealCollagePreview";
@@ -587,37 +591,23 @@ export default function EditMealScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={requestLeave}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Editar Comida</Text>
-            <Text style={styles.headerSubtitle}>
-              {products.length} productos
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleDelete}
-            disabled={deleting}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {deleting ? (
+        <NutritionScreenHeader
+          title="Editar Comida"
+          subtitle={`${products.length} productos`}
+          onBack={requestLeave}
+          right={
+            deleting ? (
               <ActivityIndicator size="small" color={theme.error} />
             ) : (
-              <Ionicons
-                name="trash-outline"
-                size={RFValue(24)}
+              <NutritionHeaderIconButton
+                icon="trash-outline"
                 color={theme.error}
+                onPress={handleDelete}
+                accessibilityLabel="Eliminar comida"
               />
-            )}
-          </TouchableOpacity>
-        </View>
+            )
+          }
+        />
 
         <ScrollView
           style={styles.content}

@@ -16,7 +16,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { X } from "lucide-react-native";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import {
   getMySubscription,
   verifyPayment,
@@ -203,6 +203,11 @@ export function CheckoutScreen() {
   if (verifying) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScreenHeader
+          title="Pago Seguro"
+          mode="close"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.verifyingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.verifyingText}>Verificando pago...</Text>
@@ -233,6 +238,11 @@ export function CheckoutScreen() {
 
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScreenHeader
+          title="Pago Seguro"
+          mode="close"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.verifyingContainer}>
           <Text style={styles.verifyingText}>Compra con App Store</Text>
           <Text style={styles.verifyingSubtext}>
@@ -255,13 +265,11 @@ export function CheckoutScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
-          <X size={24} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pago Seguro</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="Pago Seguro"
+        mode="close"
+        onBack={handleCancel}
+      />
 
       <WebView
         ref={webViewRef}

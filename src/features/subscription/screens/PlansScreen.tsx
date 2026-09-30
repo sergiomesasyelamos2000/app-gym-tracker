@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PlanCard } from "../components/PlanCard";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 import { useSubscription } from "../hooks/useSubscription";
+import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
@@ -85,19 +86,17 @@ export function PlansScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScreenHeader title="Elige tu Plan" onBack={() => navigation.goBack()} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Elige tu Plan</Text>
-          <Text style={styles.subtitle}>
-            Desbloquea todas las funciones con Premium y lleva tu entrenamiento
-            al siguiente nivel
-          </Text>
-        </View>
+        <Text style={styles.subtitle}>
+          Desbloquea todas las funciones con Premium y lleva tu entrenamiento
+          al siguiente nivel
+        </Text>
 
         {/* Current Plan Info */}
         {subscription && (

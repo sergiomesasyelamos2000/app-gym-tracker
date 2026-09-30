@@ -26,6 +26,10 @@ import type {
   UpdateCustomProductDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
+import {
+  NutritionHeaderIconButton,
+  NutritionScreenHeader,
+} from "../components/NutritionScreenHeader";
 import * as nutritionService from "../services/nutritionService";
 import {
   parseDecimalInput,
@@ -396,35 +400,23 @@ export default function EditProductScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={requestLeave}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Editar Producto</Text>
-            <Text style={styles.headerSubtitle}>Producto personalizado</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleDelete}
-            disabled={deleting}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            {deleting ? (
+        <NutritionScreenHeader
+          title="Editar Producto"
+          subtitle="Producto personalizado"
+          onBack={requestLeave}
+          right={
+            deleting ? (
               <ActivityIndicator size="small" color={theme.error} />
             ) : (
-              <Ionicons
-                name="trash-outline"
-                size={RFValue(24)}
+              <NutritionHeaderIconButton
+                icon="trash-outline"
                 color={theme.error}
+                onPress={handleDelete}
+                accessibilityLabel="Eliminar producto"
               />
-            )}
-          </TouchableOpacity>
-        </View>
+            )
+          }
+        />
 
         <ScrollView
           style={styles.content}
