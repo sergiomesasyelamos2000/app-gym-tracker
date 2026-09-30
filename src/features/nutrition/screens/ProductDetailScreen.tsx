@@ -29,6 +29,7 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
+import { MACRO_COLORS, MACRO_LABELS } from "../utils/macroColors";
 
 const { width } = Dimensions.get("window");
 
@@ -497,38 +498,36 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         <View style={styles.nutritionSection}>
           <Text style={styles.sectionTitle}>Información Nutricional</Text>
           <View style={styles.nutritionGrid}>
-            {(
-              [
-                {
-                  key: "calories",
-                  label: "Calorías",
-                  icon: "flame" as const,
-                  color: "#6FCF97",
-                  suffix: "",
-                },
-                {
-                  key: "carbs",
-                  label: "Carbohidratos",
-                  icon: "nutrition" as const,
-                  color: "#FFB74D",
-                  suffix: "g",
-                },
-                {
-                  key: "protein",
-                  label: "Proteína",
-                  icon: "barbell" as const,
-                  color: "#409CFF",
-                  suffix: "g",
-                },
-                {
-                  key: "fat",
-                  label: "Grasa",
-                  icon: "water" as const,
-                  color: "#FF6B6B",
-                  suffix: "g",
-                },
-              ] as const
-            ).map(({ key, label, icon, color, suffix }) => (
+            {[
+              {
+                key: "calories" as const,
+                label: MACRO_LABELS.calories.long,
+                icon: "flame" as const,
+                color: MACRO_COLORS.calories.accent,
+                suffix: "",
+              },
+              {
+                key: "protein" as const,
+                label: MACRO_LABELS.protein.long,
+                icon: "barbell" as const,
+                color: MACRO_COLORS.protein.accent,
+                suffix: "g",
+              },
+              {
+                key: "carbs" as const,
+                label: MACRO_LABELS.carbs.long,
+                icon: "nutrition" as const,
+                color: MACRO_COLORS.carbs.accent,
+                suffix: "g",
+              },
+              {
+                key: "fat" as const,
+                label: "Grasa",
+                icon: "water" as const,
+                color: MACRO_COLORS.fat.accent,
+                suffix: "g",
+              },
+            ].map(({ key, label, icon, color, suffix }) => (
               <View
                 key={key}
                 style={[

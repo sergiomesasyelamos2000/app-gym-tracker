@@ -1,7 +1,42 @@
 import { NavigationProp } from "@react-navigation/native";
+import type { SubscriptionFeatures } from "@sergiomesasyelamos2000/shared";
 import { Alert } from "react-native";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { BaseNavigation } from "../types";
+
+export type RoutineLimitState = {
+  isPremium: boolean;
+  features: SubscriptionFeatures | null;
+};
+
+/**
+ * True when a non-premium user has reached the routine cap.
+ * Fails open while features are unknown so the create action stays available.
+ */
+export function isAtRoutineLimitFromState(
+  currentCount: number,
+  state: RoutineLimitState
+): boolean {
+  if (state.isPremium) return false;
+  if (!state.features) return false;
+  if (state.features.maxRoutines === null) return false;
+  return currentCount >= state.features.maxRoutines;
+}
+
+export function isAtRoutineLimit(currentCount: number): boolean {
+  const { features, isPremium } = useSubscriptionStore.getState();
+  return isAtRoutineLimitFromState(currentCount, { isPremium, features });
+}
+
+export function openPremiumPlans(navigation: NavigationProp<any>): void {
+  navigation.navigate("SubscriptionStack", {
+    screen: "PlansScreen",
+  });
+}
+
+export function routineLimitMessage(maxRoutines: number): string {
+  return `Has alcanzado el límite de ${maxRoutines} rutinas en el plan gratuito. Actualiza a Premium para rutinas ilimitadas.`;
+}
 
 /**
  * Check if user can create a new routine
@@ -15,30 +50,19 @@ export function canCreateRoutine(
 ): boolean {
   const { features, isPremium } = useSubscriptionStore.getState();
 
-  // Premium should always allow unlimited creation, even if features not loaded.
-  if (isPremium) {
+  if (!isAtRoutineLimitFromState(currentCount, { isPremium, features })) {
     return true;
   }
 
-  if (!features) return true; // Allow if not loaded yet
-
-  if (features.maxRoutines === null) {
-    return true; // Unlimited
-  }
-
-  const canCreate = currentCount < features.maxRoutines;
-
-  if (!canCreate && navigation) {
+  if (navigation && features?.maxRoutines != null) {
     Alert.alert(
       "Función Premium",
-      `Has alcanzado el límite de ${features.maxRoutines} rutinas en el plan gratuito. Actualiza a Premium para rutinas ilimitadas.`,
+      routineLimitMessage(features.maxRoutines),
       [
         {
           text: "Actualizar a Premium",
           onPress: () => {
-            navigation.navigate("SubscriptionStack", {
-              screen: "PlansScreen",
-            });
+            openPremiumPlans(navigation);
           },
         },
         { text: "Cancelar", style: "cancel" },
@@ -46,7 +70,7 @@ export function canCreateRoutine(
     );
   }
 
-  return canCreate;
+  return false;
 }
 
 /**

@@ -15,6 +15,7 @@ import {
   Image,
   Platform,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -33,6 +34,7 @@ import {
 } from "@sergiomesasyelamos2000/shared";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
+import { returnFromProductSelection } from "../utils/nutritionNavigation";
 import { NutritionStackParamList } from "./NutritionStack";
 
 const Tab = createMaterialTopTabNavigator();
@@ -610,6 +612,7 @@ export default function ProductSelectionScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
   const isMediumScreen = width < 420;
+  const isTinyScreen = width < 360;
 
   const styles = React.useMemo(
     () => createStyles(theme, isDark),
@@ -618,6 +621,12 @@ export default function ProductSelectionScreen() {
 
   // Determinar de dónde viene la navegación
   const sourceScreen = route.params?.from; // 'CreateMealScreen' o 'EditMealScreen'
+
+  const selectedCount = selectedProducts.size;
+  const selectionSubtitle =
+    selectedCount === 1
+      ? "1 seleccionado"
+      : `${selectedCount} seleccionados`;
 
   const handleToggleProduct = (
     product: Product | CustomProduct | CustomMeal,
@@ -646,25 +655,22 @@ export default function ProductSelectionScreen() {
 
     const productsArray = Array.from(selectedProducts.values());
 
-    // Navegar de vuelta a la pantalla correcta según de dónde venga
     if (sourceScreen === "EditMealScreen") {
       if (route.params?.meal) {
-        navigation.navigate("EditMealScreen", {
-          meal: route.params.meal, // Pasar la comida original
+        returnFromProductSelection(navigation, "EditMealScreen", {
+          meal: route.params.meal,
           selectedProducts: productsArray,
         });
       } else {
-        // Fallback: si no hay meal, navegar a CreateMealScreen
         console.warn(
-          "No se encontró la comida para editar, redirigiendo a creación"
+          "No se encontró la comida para editar, redirigiendo a creación",
         );
-        navigation.navigate("CreateMealScreen", {
+        returnFromProductSelection(navigation, "CreateMealScreen", {
           selectedProducts: productsArray,
         });
       }
     } else {
-      // Por defecto, o si viene de CreateMealScreen
-      navigation.navigate("CreateMealScreen", {
+      returnFromProductSelection(navigation, "CreateMealScreen", {
         selectedProducts: productsArray,
         draftName: route.params?.draftName,
         draftDescription: route.params?.draftDescription,
@@ -693,37 +699,99 @@ export default function ProductSelectionScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
+      />
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              paddingHorizontal: isTinyScreen ? 10 : isSmallScreen ? 12 : 16,
+              paddingVertical: isTinyScreen ? 10 : isSmallScreen ? 12 : 16,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={styles.headerButton}
+            style={[
+              styles.headerButton,
+              isTinyScreen ? { width: 36, height: 36 } : null,
+            ]}
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
           >
-            <Ionicons name="close" size={28} color={theme.text} />
+            <Ionicons
+              name="close"
+              size={isTinyScreen ? 24 : isSmallScreen ? 26 : 28}
+              color={theme.text}
+            />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Seleccionar Productos</Text>
-            <Text style={styles.headerSubtitle}>
-              {selectedProducts.size} seleccionado
-              {selectedProducts.size !== 1 ? "s" : ""}
+          <View
+            style={[
+              styles.headerCenter,
+              {
+                paddingHorizontal: isTinyScreen ? 6 : isSmallScreen ? 8 : 12,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.headerTitle,
+                {
+                  fontSize: RFValue(
+                    isTinyScreen ? 15 : isSmallScreen ? 16 : 17,
+                  ),
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              Seleccionar Productos
+            </Text>
+            <Text
+              style={[
+                styles.headerSubtitle,
+                { fontSize: RFValue(isTinyScreen ? 11 : 12) },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {selectionSubtitle}
             </Text>
           </View>
           <TouchableOpacity
             style={[
               styles.confirmButton,
+              {
+                paddingHorizontal: isTinyScreen ? 12 : isSmallScreen ? 14 : 18,
+                paddingVertical: isTinyScreen ? 6 : 8,
+              },
               selectedProducts.size === 0 && styles.confirmButtonDisabled,
             ]}
             onPress={handleConfirm}
             disabled={selectedProducts.size === 0}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Añadir productos seleccionados"
           >
             <Text
               style={[
                 styles.confirmButtonText,
+                {
+                  fontSize: RFValue(
+                    isTinyScreen ? 12 : isSmallScreen ? 13 : 14,
+                  ),
+                },
                 selectedProducts.size === 0 && styles.confirmButtonTextDisabled,
               ]}
+              numberOfLines={1}
             >
               Añadir
             </Text>
@@ -857,8 +925,6 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 16,
       backgroundColor: theme.card,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -872,29 +938,30 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     headerCenter: {
       flex: 1,
       alignItems: "center",
-      paddingHorizontal: 16,
+      minWidth: 0,
     },
     headerTitle: {
-      fontSize: RFValue(18),
       fontWeight: "700",
       color: theme.text,
+      textAlign: "center",
+      width: "100%",
     },
     headerSubtitle: {
-      fontSize: RFValue(12),
       color: theme.textSecondary,
       marginTop: 2,
+      textAlign: "center",
     },
     confirmButton: {
-      paddingHorizontal: 20,
-      paddingVertical: 8,
       backgroundColor: theme.primary,
       borderRadius: 20,
+      minWidth: 64,
+      alignItems: "center",
+      justifyContent: "center",
     },
     confirmButtonDisabled: {
       backgroundColor: theme.border,
     },
     confirmButtonText: {
-      fontSize: RFValue(14),
       fontWeight: "600",
       color: "#FFF",
     },

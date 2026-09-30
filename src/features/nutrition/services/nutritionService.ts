@@ -879,25 +879,36 @@ export async function createCustomMeal(
     | "totalCarbs"
     | "totalFat"
     | "userId"
-  > & { userId?: string },
+  > & {
+    userId?: string;
+    image?: string | null;
+    imageKind?: "user" | "auto";
+  },
 ): Promise<CustomMeal> {
   const userId = meal.userId || getCurrentUserId();
 
-  // Convertir imagen a base64 si existe
-  let imageBase64: string | undefined = undefined;
+  let imagePayload: string | null | undefined = meal.image;
   if (meal.image && meal.image.startsWith("file://")) {
-    imageBase64 = (await convertImageToBase64(meal.image)) || undefined;
-  } else if (meal.image) {
-    imageBase64 = meal.image; // Ya es una URL o base64
+    imagePayload = (await convertImageToBase64(meal.image)) || null;
+  }
+
+  const body: Record<string, unknown> = {
+    ...meal,
+    userId,
+    imageKind: meal.imageKind ?? "auto",
+  };
+
+  if (imagePayload === null) {
+    body.image = null;
+  } else if (imagePayload !== undefined) {
+    body.image = imagePayload;
+  } else {
+    delete body.image;
   }
 
   return apiFetch<CustomMeal>("nutrition/custom-meals", {
     method: "POST",
-    body: JSON.stringify({
-      ...meal,
-      userId,
-      image: imageBase64,
-    }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -920,23 +931,35 @@ export async function getCustomMealById(
 
 export async function updateCustomMeal(
   mealId: string,
-  updates: Partial<CustomMeal>,
+  updates: Partial<CustomMeal> & {
+    image?: string | null;
+    imageKind?: "user" | "auto";
+  },
 ): Promise<CustomMeal> {
   const userId = getCurrentUserId();
 
-  // Convertir imagen a base64 si existe y es local
-  let imageBase64 = updates.image;
-  if (imageBase64 && imageBase64.startsWith("file://")) {
-    imageBase64 = (await convertImageToBase64(imageBase64)) || undefined;
+  let imagePayload: string | null | undefined = updates.image;
+  if (imagePayload && imagePayload.startsWith("file://")) {
+    imagePayload = (await convertImageToBase64(imagePayload)) || null;
+  }
+
+  const body: Record<string, unknown> = {
+    ...updates,
+    userId,
+    imageKind: updates.imageKind ?? "auto",
+  };
+
+  if (imagePayload === null) {
+    body.image = null;
+  } else if (imagePayload !== undefined) {
+    body.image = imagePayload;
+  } else {
+    delete body.image;
   }
 
   return apiFetch<CustomMeal>(`nutrition/custom-meals/${mealId}`, {
     method: "PUT",
-    body: JSON.stringify({
-      ...updates,
-      userId,
-      image: imageBase64,
-    }),
+    body: JSON.stringify(body),
   });
 }
 

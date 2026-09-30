@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import CircularProgress from "react-native-circular-progress-indicator";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { MACRO_COLORS, MACRO_GRAMS_ORDER, MACRO_LABELS } from "../utils/macroColors";
 
 interface MacroData {
   current: number;
@@ -101,34 +102,42 @@ export const MacroDistributionChart: React.FC<Props> = ({
     );
   };
 
+  const circleData: Record<
+    (typeof MACRO_GRAMS_ORDER)[number],
+    { value: number; goal: number; current: number }
+  > = {
+    protein: {
+      value: displayProtein,
+      goal: protein.target,
+      current: protein.current,
+    },
+    carbs: {
+      value: displayCarbs,
+      goal: carbs.target,
+      current: carbs.current,
+    },
+    fat: {
+      value: displayFat,
+      goal: fat.target,
+      current: fat.current,
+    },
+  };
+
   return (
     <View style={styles.macrosSection}>
       <Text style={styles.sectionTitle}>Macronutrientes</Text>
       <View style={styles.macrosRow}>
-        {renderMacroCircle(
-          "carbs",
-          "Carbos",
-          "#FFB74D",
-          displayCarbs,
-          carbs.target,
-          carbs.current
-        )}
-        {renderMacroCircle(
-          "protein",
-          "Proteína",
-          "#2196F3",
-          displayProtein,
-          protein.target,
-          protein.current
-        )}
-        {renderMacroCircle(
-          "fat",
-          "Grasa",
-          "#FF9800",
-          displayFat,
-          fat.target,
-          fat.current
-        )}
+        {MACRO_GRAMS_ORDER.map((key) => {
+          const data = circleData[key];
+          return renderMacroCircle(
+            key,
+            key === "carbs" ? "Carbos" : MACRO_LABELS[key].long,
+            MACRO_COLORS[key].accent,
+            data.value,
+            data.goal,
+            data.current
+          );
+        })}
       </View>
     </View>
   );

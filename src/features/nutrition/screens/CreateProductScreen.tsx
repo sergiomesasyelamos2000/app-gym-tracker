@@ -2,14 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +20,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   CreateCustomProductDto,
   FoodUnit,
@@ -27,6 +29,12 @@ import type {
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
+import {
+  parseDecimalInput,
+  sanitizeDecimalInput,
+} from "../utils/decimalInput";
+import { useNutritionFormLeaveGuard } from "../hooks/useNutritionFormLeaveGuard";
+import { isCreateProductDirty } from "../utils/nutritionFormDirty";
 import { NutritionStackParamList } from "./NutritionStack";
 
 interface NutritionalValues {
@@ -71,7 +79,8 @@ type CreateProductScreenRouteProp = RouteProp<
 >;
 
 export default function CreateProductScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
   const route = useRoute<CreateProductScreenRouteProp>();
@@ -109,6 +118,33 @@ export default function CreateProductScreen() {
       sodium: "",
     }
   );
+
+  const isDirty = useCallback(
+    () =>
+      isCreateProductDirty({
+        name,
+        description,
+        brand,
+        barcode,
+        servingSize,
+        imageUri,
+        nutritionalValues,
+      }),
+    [
+      barcode,
+      brand,
+      description,
+      imageUri,
+      name,
+      nutritionalValues,
+      servingSize,
+    ],
+  );
+
+  const { requestLeave, completeSavedLeave } = useNutritionFormLeaveGuard({
+    isDirty,
+    productListParams: { screen: "Products", selectedMeal },
+  });
 
   const handlePickImage = async () => {
     const permissionResult =
@@ -153,8 +189,10 @@ export default function CreateProductScreen() {
     key: keyof NutritionalValues,
     value: string
   ) => {
-    const numericValue = value.replace(/[^0-9.]/g, "");
-    setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
+    setNutritionalValues((prev) => ({
+      ...prev,
+      [key]: sanitizeDecimalInput(value),
+    }));
   };
 
   const getUnitLabel = (value: FoodUnit): string => {
@@ -173,7 +211,8 @@ export default function CreateProductScreen() {
 
     if (
       !nutritionalValues.calories ||
-      parseFloat(nutritionalValues.calories) < 0
+      Number.isNaN(parseDecimalInput(nutritionalValues.calories)) ||
+      parseDecimalInput(nutritionalValues.calories) < 0
     ) {
       Alert.alert("Error de Validación", "Las calorías son requeridas");
       return false;
@@ -181,18 +220,27 @@ export default function CreateProductScreen() {
 
     if (
       !nutritionalValues.protein ||
-      parseFloat(nutritionalValues.protein) < 0
+      Number.isNaN(parseDecimalInput(nutritionalValues.protein)) ||
+      parseDecimalInput(nutritionalValues.protein) < 0
     ) {
       Alert.alert("Error de Validación", "Las proteínas son requeridas");
       return false;
     }
 
-    if (!nutritionalValues.carbs || parseFloat(nutritionalValues.carbs) < 0) {
+    if (
+      !nutritionalValues.carbs ||
+      Number.isNaN(parseDecimalInput(nutritionalValues.carbs)) ||
+      parseDecimalInput(nutritionalValues.carbs) < 0
+    ) {
       Alert.alert("Error de Validación", "Los carbohidratos son requeridos");
       return false;
     }
 
-    if (!nutritionalValues.fat || parseFloat(nutritionalValues.fat) < 0) {
+    if (
+      !nutritionalValues.fat ||
+      Number.isNaN(parseDecimalInput(nutritionalValues.fat)) ||
+      parseDecimalInput(nutritionalValues.fat) < 0
+    ) {
       Alert.alert("Error de Validación", "Las grasas son requeridas");
       return false;
     }
@@ -218,20 +266,23 @@ export default function CreateProductScreen() {
         brand: brand.trim() || undefined,
         image: imageUri || undefined,
         barcode: barcode.trim() || undefined,
-        servingSize: servingSize ? parseFloat(servingSize) : undefined,
+        servingSize:
+          servingSize && !Number.isNaN(parseDecimalInput(servingSize))
+            ? parseDecimalInput(servingSize)
+            : undefined,
         servingUnit: servingUnit,
-        caloriesPer100: parseFloat(nutritionalValues.calories),
-        proteinPer100: parseFloat(nutritionalValues.protein),
-        carbsPer100: parseFloat(nutritionalValues.carbs),
-        fatPer100: parseFloat(nutritionalValues.fat),
+        caloriesPer100: parseDecimalInput(nutritionalValues.calories),
+        proteinPer100: parseDecimalInput(nutritionalValues.protein),
+        carbsPer100: parseDecimalInput(nutritionalValues.carbs),
+        fatPer100: parseDecimalInput(nutritionalValues.fat),
         fiberPer100: nutritionalValues.fiber
-          ? parseFloat(nutritionalValues.fiber)
+          ? parseDecimalInput(nutritionalValues.fiber)
           : undefined,
         sugarPer100: nutritionalValues.sugar
-          ? parseFloat(nutritionalValues.sugar)
+          ? parseDecimalInput(nutritionalValues.sugar)
           : undefined,
         sodiumPer100: nutritionalValues.sodium
-          ? parseFloat(nutritionalValues.sodium)
+          ? parseDecimalInput(nutritionalValues.sodium)
           : undefined,
       };
 
@@ -241,8 +292,9 @@ export default function CreateProductScreen() {
         {
           text: "OK",
           onPress: () => {
-            navigation.navigate("ProductListScreen", {
+            completeSavedLeave({
               refresh: true,
+              screen: "Products",
               selectedMeal,
             });
           },
@@ -250,7 +302,11 @@ export default function CreateProductScreen() {
       ]);
     } catch (error) {
       console.error("Error creating product:", error);
-      Alert.alert("Error", "No se pudo crear el producto. Intenta de nuevo.");
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "No se pudo crear el producto. Intenta de nuevo.";
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
@@ -259,7 +315,18 @@ export default function CreateProductScreen() {
   const selectedUnit = getUnitData(servingUnit);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -267,7 +334,7 @@ export default function CreateProductScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => navigation.goBack()}
+            onPress={requestLeave}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
@@ -392,7 +459,9 @@ export default function CreateProductScreen() {
               <TextInput
                 style={styles.input}
                 value={servingSize}
-                onChangeText={setServingSize}
+                onChangeText={(value) =>
+                  setServingSize(sanitizeDecimalInput(value))
+                }
                 placeholder="100"
                 placeholderTextColor={theme.textTertiary}
                 keyboardType="decimal-pad"

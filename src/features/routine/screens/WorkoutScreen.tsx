@@ -43,9 +43,16 @@ import {
   type RootKey,
   type RoutineFolder,
 } from "../../../store/useRoutineFolderStore";
+import { useSubscription } from "../../subscription/hooks/useSubscription";
+import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import { CaughtError, getErrorMessage } from "../../../types";
-import { canCreateRoutine } from "../../../utils/subscriptionHelpers";
+import {
+  canCreateRoutine,
+  isAtRoutineLimitFromState,
+  openPremiumPlans,
+  routineLimitMessage,
+} from "../../../utils/subscriptionHelpers";
 import {
   createRoutineFolder,
   deleteRoutine,
@@ -101,8 +108,20 @@ export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  useSubscription();
+  const { isPremium, features } = useSubscriptionStore(
+    useShallow((state) => ({
+      isPremium: state.isPremium,
+      features: state.features,
+    }))
+  );
 
   const [routines, setRoutines] = useState<RoutineResponseDto[]>([]);
+  const atRoutineLimit = isAtRoutineLimitFromState(routines.length, {
+    isPremium,
+    features,
+  });
+  const routineCap = features?.maxRoutines;
   const [routineDetailsById, setRoutineDetailsById] = useState<
     Record<string, RoutineResponseDto>
   >({});
@@ -788,6 +807,12 @@ export default function WorkoutScreen() {
     }
 
     closeRoutineOptions();
+    if (isAtRoutineLimitFromState(routines.length, { isPremium, features })) {
+      setTimeout(() => {
+        canCreateRoutine(routines.length, navigation);
+      }, 300);
+      return;
+    }
     void performRoutineMutation("duplicate", routine);
   };
 
@@ -933,14 +958,45 @@ export default function WorkoutScreen() {
     );
   };
 
-  const listHeader = (
-    <View>
-      <View style={styles.screenHeader}>
-        <Text style={[styles.screenTitle, { color: theme.text }]}>
-          Entrenamiento
-        </Text>
-      </View>
+  const renderRoutineCreateSlot = () => {
+    if (loading) return null;
 
+    if (atRoutineLimit && typeof routineCap === "number") {
+      return (
+        <TouchableOpacity
+          style={[
+            styles.limitCard,
+            {
+              backgroundColor: theme.selection,
+              borderColor: theme.primary,
+            },
+          ]}
+          onPress={() => openPremiumPlans(navigation)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Ver planes Premium"
+        >
+          <View style={styles.limitCardHeader}>
+            <MaterialIcons name="lock" size={20} color={theme.primary} />
+            <Text style={[styles.limitCardTitle, { color: theme.text }]}>
+              Límite de rutinas
+            </Text>
+          </View>
+          <Text style={[styles.limitCardBody, { color: theme.textSecondary }]}>
+            {routineLimitMessage(routineCap)}
+          </Text>
+          <View
+            style={[styles.limitCardCta, { backgroundColor: theme.primary }]}
+          >
+            <Text style={[styles.limitCardCtaText, { color: theme.onPrimary }]}>
+              Ver Premium
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
       <TouchableOpacity
         style={[
           styles.createCard,
@@ -956,6 +1012,18 @@ export default function WorkoutScreen() {
           Nueva rutina
         </Text>
       </TouchableOpacity>
+    );
+  };
+
+  const listHeader = (
+    <View>
+      <View style={styles.screenHeader}>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>
+          Entrenamiento
+        </Text>
+      </View>
+
+      {renderRoutineCreateSlot()}
 
       <View style={styles.sectionRow}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -1598,6 +1666,38 @@ const createStyles = (theme: Theme) =>
     },
     createCardText: {
       fontSize: RFValue(15),
+      fontWeight: "700",
+    },
+    limitCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      marginBottom: 22,
+      gap: 8,
+    },
+    limitCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    limitCardTitle: {
+      fontSize: RFValue(15),
+      fontWeight: "700",
+    },
+    limitCardBody: {
+      fontSize: RFValue(12),
+      lineHeight: RFValue(18),
+    },
+    limitCardCta: {
+      alignSelf: "flex-start",
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginTop: 4,
+    },
+    limitCardCtaText: {
+      fontSize: RFValue(13),
       fontWeight: "700",
     },
     sectionRow: {

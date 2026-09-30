@@ -40,6 +40,7 @@ import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCa
 import { DailyCalorieChart } from "../components/DailyCalorieChart";
 import { MacroDistributionChart } from "../components/MacroDistributionChart";
 import * as nutritionService from "../services/nutritionService";
+import { MACRO_COLORS, MACRO_GRAMS_ORDER, MACRO_LABELS } from "../utils/macroColors";
 import {
   deleteFoodEntry,
   getProductDetail,
@@ -840,17 +841,17 @@ export default function MacrosScreen({ navigation }: Props) {
             </Text>
           </View>
           <View style={styles.foodEntryMacros}>
-            {[
-              { key: "carbs", label: "C", color: "#FFF3E0" },
-              { key: "protein", label: "P", color: "#E3F2FD" },
-              { key: "fat", label: "G", color: "#FFE0B2" },
-            ].map(({ key, label, color }) => (
+            {MACRO_GRAMS_ORDER.map((key) => (
               <View
                 key={key}
-                style={[styles.macroChip, { backgroundColor: color }]}
+                style={[
+                  styles.macroChip,
+                  { backgroundColor: MACRO_COLORS[key].background },
+                ]}
               >
                 <Text style={styles.macroChipText}>
-                  {label} {Math.round(entry[key as keyof FoodEntry] as number)}
+                  {MACRO_LABELS[key].short}{" "}
+                  {Math.round(entry[key as keyof FoodEntry] as number)}
                 </Text>
               </View>
             ))}

@@ -2,14 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -18,13 +20,22 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   FoodUnit,
   UpdateCustomProductDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import * as nutritionService from "../services/nutritionService";
+import {
+  parseDecimalInput,
+  sanitizeDecimalInput,
+} from "../utils/decimalInput";
+import { useNutritionFormLeaveGuard } from "../hooks/useNutritionFormLeaveGuard";
+import {
+  isEditProductDirty,
+  type EditProductBaseline,
+} from "../utils/nutritionFormDirty";
 import { NutritionStackParamList } from "./NutritionStack";
 
 interface NutritionalValues {
@@ -79,7 +90,8 @@ const normalizeFoodUnit = (value?: string): FoodUnit => {
 };
 
 export default function EditProductScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<EditProductScreenNavigationProp>();
   const route = useRoute<EditProductScreenRouteProp>();
   const product = route.params.product;
@@ -114,6 +126,54 @@ export default function EditProductScreen() {
       sodium: product?.sodiumPer100 ? String(product.sodiumPer100) : "",
     }
   );
+
+  const productBaseline = useRef<EditProductBaseline>({
+    name: product?.name || "",
+    description: product?.description || "",
+    brand: product?.brand || "",
+    barcode: product?.barcode || "",
+    servingSize: product?.servingSize ? String(product.servingSize) : "",
+    imageUri: product?.image || null,
+    nutritionalValues: {
+      calories: product?.caloriesPer100 ? String(product.caloriesPer100) : "",
+      protein: product?.proteinPer100 ? String(product.proteinPer100) : "",
+      carbs: product?.carbsPer100 ? String(product.carbsPer100) : "",
+      fat: product?.fatPer100 ? String(product.fatPer100) : "",
+      fiber: product?.fiberPer100 ? String(product.fiberPer100) : "",
+      sugar: product?.sugarPer100 ? String(product.sugarPer100) : "",
+      sodium: product?.sodiumPer100 ? String(product.sodiumPer100) : "",
+    },
+  });
+
+  const isDirty = useCallback(
+    () =>
+      isEditProductDirty(
+        {
+          name,
+          description,
+          brand,
+          barcode,
+          servingSize,
+          imageUri,
+          nutritionalValues,
+        },
+        productBaseline.current,
+      ),
+    [
+      barcode,
+      brand,
+      description,
+      imageUri,
+      name,
+      nutritionalValues,
+      servingSize,
+    ],
+  );
+
+  const { requestLeave, completeSavedLeave } = useNutritionFormLeaveGuard({
+    isDirty,
+    productListParams: { screen: "Products" },
+  });
 
   useEffect(() => {
     if (!product) {
@@ -166,8 +226,10 @@ export default function EditProductScreen() {
     key: keyof NutritionalValues,
     value: string
   ) => {
-    const numericValue = value.replace(/[^0-9.]/g, "");
-    setNutritionalValues((prev) => ({ ...prev, [key]: numericValue }));
+    setNutritionalValues((prev) => ({
+      ...prev,
+      [key]: sanitizeDecimalInput(value),
+    }));
   };
 
   const getUnitLabel = (value: FoodUnit): string => {
@@ -186,7 +248,8 @@ export default function EditProductScreen() {
 
     if (
       !nutritionalValues.calories ||
-      parseFloat(nutritionalValues.calories) < 0
+      Number.isNaN(parseDecimalInput(nutritionalValues.calories)) ||
+      parseDecimalInput(nutritionalValues.calories) < 0
     ) {
       Alert.alert("Error de Validación", "Las calorías son requeridas");
       return false;
@@ -194,18 +257,27 @@ export default function EditProductScreen() {
 
     if (
       !nutritionalValues.protein ||
-      parseFloat(nutritionalValues.protein) < 0
+      Number.isNaN(parseDecimalInput(nutritionalValues.protein)) ||
+      parseDecimalInput(nutritionalValues.protein) < 0
     ) {
       Alert.alert("Error de Validación", "Las proteínas son requeridas");
       return false;
     }
 
-    if (!nutritionalValues.carbs || parseFloat(nutritionalValues.carbs) < 0) {
+    if (
+      !nutritionalValues.carbs ||
+      Number.isNaN(parseDecimalInput(nutritionalValues.carbs)) ||
+      parseDecimalInput(nutritionalValues.carbs) < 0
+    ) {
       Alert.alert("Error de Validación", "Los carbohidratos son requeridos");
       return false;
     }
 
-    if (!nutritionalValues.fat || parseFloat(nutritionalValues.fat) < 0) {
+    if (
+      !nutritionalValues.fat ||
+      Number.isNaN(parseDecimalInput(nutritionalValues.fat)) ||
+      parseDecimalInput(nutritionalValues.fat) < 0
+    ) {
       Alert.alert("Error de Validación", "Las grasas son requeridas");
       return false;
     }
@@ -225,20 +297,23 @@ export default function EditProductScreen() {
         brand: brand.trim() || undefined,
         image: imageUri || undefined,
         barcode: barcode.trim() || undefined,
-        servingSize: servingSize ? parseFloat(servingSize) : undefined,
+        servingSize:
+          servingSize && !Number.isNaN(parseDecimalInput(servingSize))
+            ? parseDecimalInput(servingSize)
+            : undefined,
         servingUnit: servingUnit,
-        caloriesPer100: parseFloat(nutritionalValues.calories),
-        proteinPer100: parseFloat(nutritionalValues.protein),
-        carbsPer100: parseFloat(nutritionalValues.carbs),
-        fatPer100: parseFloat(nutritionalValues.fat),
+        caloriesPer100: parseDecimalInput(nutritionalValues.calories),
+        proteinPer100: parseDecimalInput(nutritionalValues.protein),
+        carbsPer100: parseDecimalInput(nutritionalValues.carbs),
+        fatPer100: parseDecimalInput(nutritionalValues.fat),
         fiberPer100: nutritionalValues.fiber
-          ? parseFloat(nutritionalValues.fiber)
+          ? parseDecimalInput(nutritionalValues.fiber)
           : undefined,
         sugarPer100: nutritionalValues.sugar
-          ? parseFloat(nutritionalValues.sugar)
+          ? parseDecimalInput(nutritionalValues.sugar)
           : undefined,
         sodiumPer100: nutritionalValues.sodium
-          ? parseFloat(nutritionalValues.sodium)
+          ? parseDecimalInput(nutritionalValues.sodium)
           : undefined,
       };
 
@@ -248,10 +323,7 @@ export default function EditProductScreen() {
         {
           text: "OK",
           onPress: () => {
-            navigation.navigate("ProductListScreen", {
-              refresh: true,
-              screen: "Products",
-            });
+            completeSavedLeave({ refresh: true, screen: "Products" });
           },
         },
       ]);
@@ -286,10 +358,7 @@ export default function EditProductScreen() {
                 {
                   text: "OK",
                   onPress: () => {
-                    navigation.navigate("ProductListScreen", {
-                      refresh: true,
-                      screen: "Products",
-                    });
+                    completeSavedLeave({ refresh: true, screen: "Products" });
                   },
                 },
               ]);
@@ -311,7 +380,18 @@ export default function EditProductScreen() {
   const selectedUnit = getUnitData(servingUnit);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -319,7 +399,7 @@ export default function EditProductScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => navigation.goBack()}
+            onPress={requestLeave}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
@@ -459,7 +539,9 @@ export default function EditProductScreen() {
               <TextInput
                 style={styles.input}
                 value={servingSize}
-                onChangeText={setServingSize}
+                onChangeText={(value) =>
+                  setServingSize(sanitizeDecimalInput(value))
+                }
                 placeholder="100"
                 placeholderTextColor={theme.textTertiary}
                 keyboardType="decimal-pad"

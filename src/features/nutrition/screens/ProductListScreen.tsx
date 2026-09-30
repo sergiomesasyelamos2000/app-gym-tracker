@@ -17,13 +17,13 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Image,
   Modal,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -50,35 +50,25 @@ import {
   canCreateCustomProduct,
 } from "../../../utils/subscriptionHelpers";
 import ReusableCameraView from "../../common/components/ReusableCameraView";
+import { ActiveBrandFiltersRow } from "../components/product-search/ActiveBrandFiltersRow";
+import { AnimatedListItem } from "../components/product-search/AnimatedListItem";
+import { ProductListItem } from "../components/product-search/ProductListItem";
+import { ProductListSkeleton } from "../components/product-search/ProductListSkeleton";
+import { ProductSearchBar } from "../components/product-search/ProductSearchBar";
+import { ProductSearchEmptyState } from "../components/product-search/ProductSearchEmptyState";
+import { ProductSearchHeader } from "../components/product-search/ProductSearchHeader";
+import { SearchStatusBanner } from "../components/product-search/SearchStatusBanner";
+import { SwapListShell } from "../components/product-search/SwapListShell";
+import { useDebouncedSwapKey } from "../components/product-search/useDebouncedSwapKey";
 import * as nutritionService from "../services/nutritionService";
 import { NutritionStackParamList } from "./NutritionStack";
 
 const Tab = createMaterialTopTabNavigator();
 
-const { width } = Dimensions.get("window");
 const PAGE_SIZE = 24;
 const SEARCH_PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
 const MIN_SEARCH_CHARS = 2;
-
-// Función auxiliar para obtener el color según el Nutri-Score
-function getNutritionGradeColor(grade: string): string {
-  const normalizedGrade = grade.toLowerCase();
-  switch (normalizedGrade) {
-    case "a":
-      return "#038141"; // Verde oscuro
-    case "b":
-      return "#85BB2F"; // Verde claro
-    case "c":
-      return "#FECB02"; // Amarillo
-    case "d":
-      return "#EE8100"; // Naranja
-    case "e":
-      return "#E63E11"; // Rojo
-    default:
-      return "#999999"; // Gris por defecto
-  }
-}
 
 import { GestureResponderEvent } from "react-native";
 
@@ -170,6 +160,11 @@ function AllProductsTab({
   /** Query that the list reflects (after debounce). Input can differ while typing. */
   const [committedQuery, setCommittedQuery] = useState("");
   const [listSource, setListSource] = useState<"browse" | "search">("browse");
+  /** Bumped only on full list replacements (not pagination). */
+  const [listSwapToken, setListSwapToken] = useState(0);
+  const bumpListSwap = useCallback(() => {
+    setListSwapToken((n) => n + 1);
+  }, []);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRequestControllerRef = useRef<AbortController | null>(null);
   const lastTriggeredSearchRef = useRef("");
@@ -180,8 +175,6 @@ function AllProductsTab({
   } | null>(null);
   const initialEmptyRetryDoneRef = useRef(false);
 
-  const { width } = useWindowDimensions();
-  const isSmallScreen = width < 380;
   const selectedBrandsParam = useMemo(
     () => (selectedBrands.length ? selectedBrands.join(",") : undefined),
     [selectedBrands]
@@ -219,6 +212,7 @@ function AllProductsTab({
       hasLoadedRef.current = true;
     } else if (dataCache.allProducts) {
       setProductos(dataCache.allProducts);
+      bumpListSwap();
     }
   }, []);
 
@@ -249,6 +243,7 @@ function AllProductsTab({
         setProductos(dataCache.allProducts);
         setHasMore(dataCache.allProducts.length === PAGE_SIZE);
         setPage(1);
+        bumpListSwap();
       } else {
         loadProducts(1, true);
       }
@@ -329,6 +324,7 @@ function AllProductsTab({
         setHasMore(data.products.length === PAGE_SIZE);
         setPage(pageToLoad);
         setIsBootstrappingCatalog(false);
+        bumpListSwap();
         void prefetchProductsPage(pageToLoad + 1);
       } else {
         const newProducts = [...productos, ...data.products];
@@ -434,6 +430,7 @@ function AllProductsTab({
                   local.incomplete === true
               );
               setPage(pageToLoad);
+              bumpListSwap();
             }
           }
         );
@@ -449,6 +446,7 @@ function AllProductsTab({
         setProductos(data.products);
         setHasMore(data.products.length === SEARCH_PAGE_SIZE);
         setPage(pageToLoad);
+        bumpListSwap();
         return;
       }
 
@@ -668,251 +666,130 @@ function AllProductsTab({
     });
   };
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      style={[
-        styles.productCard,
-        {
-          padding: isSmallScreen ? 10 : 12,
-          borderRadius: isSmallScreen ? 10 : 14,
-        },
-      ]}
-      onPress={() =>
-        navigation.navigate("ProductDetailScreen", {
-          producto: item,
-          selectedMeal,
-        })
-      }
-      activeOpacity={0.8}
-    >
-      <View
-        style={[
-          styles.productImageContainer,
-          { width: width * 0.15, height: width * 0.15 },
-        ]}
-      >
-        {item.image ? (
-          <Image
-            source={{ uri: item.image, cache: "force-cache" }}
-            defaultSource={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              { width: width * 0.12, height: width * 0.12 },
-            ]}
-            fadeDuration={80}
-          />
-        ) : (
-          <Image
-            source={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              {
-                width: width * 0.12,
-                height: width * 0.12,
-                tintColor:
-                  !item.image && isDark ? theme.textSecondary : undefined,
-              },
-            ]}
-          />
-        )}
-        {customProductIds.has(item.code) && (
-          <View style={styles.customBadge}>
-            <Ionicons name="create" size={14} color={theme.primary} />
-          </View>
-        )}
-      </View>
-      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
-        <Text
-          style={[
-            styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
-          ]}
-          numberOfLines={2}
-        >
-          {item.name}
-        </Text>
-        {item.brand && (
-          <Text
-            style={[
-              styles.productBrand,
-              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
-            ]}
-            numberOfLines={1}
-          >
-            {item.brand}
-          </Text>
-        )}
-        <View style={styles.productMacros}>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="flame"
-              size={isSmallScreen ? 12 : 14}
-              color="#6FCF97"
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {Math.round(item.calories || 0)} kcal
-            </Text>
-          </View>
-          {item.servingSize && (
-            <View style={[styles.macroItem, { marginLeft: 8 }]}>
-              <Ionicons
-                name="restaurant-outline"
-                size={isSmallScreen ? 12 : 14}
-                color="#409CFF"
-              />
-              <Text
-                style={[
-                  styles.macroText,
-                  { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-                ]}
-              >
-                {item.servingSize}
-              </Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.productMacros}>
-          <Text
-            style={[
-              styles.macroText,
-              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
-            ]}
-          >
-            P: {item.protein || 0}g • C: {item.carbohydrates || 0}g • F:{" "}
-            {item.fat || 0}g
-          </Text>
-        </View>
-        {item.nutritionGrade &&
-          item.nutritionGrade.toLowerCase() !== "unknown" && (
-            <View style={styles.nutritionGradeContainer}>
-              <Text
-                style={[
-                  styles.nutritionGrade,
-                  {
-                    backgroundColor: getNutritionGradeColor(
-                      item.nutritionGrade
-                    ),
-                  },
-                ]}
-              >
-                {item.nutritionGrade.toUpperCase()}
-              </Text>
-            </View>
-          )}
-      </View>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={(e) => handleQuickAdd(item, e)}
-      >
-        <Ionicons
-          name="add"
-          size={isSmallScreen ? 22 : 24}
-          color={theme.primary}
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const renderItem = ({
+    item,
+    index,
+    allowEntering,
+  }: {
+    item: Product;
+    index: number;
+    allowEntering: boolean;
+  }) => (
+    <AnimatedListItem allowEntering={allowEntering} index={index}>
+      <ProductListItem
+        item={item}
+        isCustom={customProductIds.has(item.code)}
+        onPress={() =>
+          navigation.navigate("ProductDetailScreen", {
+            producto: item,
+            selectedMeal,
+          })
+        }
+        onQuickAdd={(e) => handleQuickAdd(item, e)}
+      />
+    </AnimatedListItem>
   );
 
   if (
     (loading || isEnriching || searchUiState === "pending") &&
     allProducts.length === 0
   ) {
+    const loadingMessage =
+      searchStatusMessage ??
+      (isEnriching
+        ? "Buscando productos…"
+        : isBootstrappingCatalog
+        ? "Preparando catálogo…"
+        : "Cargando productos…");
+
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>
-          {searchStatusMessage ??
-            (isEnriching
-              ? "Buscando productos…"
-              : "Cargando productos...")}
-        </Text>
+        <ProductListSkeleton count={5} message={loadingMessage} />
       </View>
     );
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      data={allProducts}
-      renderItem={renderItem}
-      keyExtractor={(item) =>
-        item.code && item.code.trim().length > 0
-          ? `product-${item.code.trim()}`
-          : `product-${(item.name ?? "unknown").trim()}-${(
-              item.brand ?? ""
-            ).trim()}`
-      }
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.4}
-      initialNumToRender={12}
-      windowSize={7}
-      maxToRenderPerBatch={10}
-      removeClippedSubviews={Platform.OS === "android"}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.listContent}
-      ListHeaderComponent={
-        searchStatusMessage ? (
-          <View style={styles.searchStatusBanner}>
-            <ActivityIndicator size="small" color={theme.primary} />
-            <Text style={styles.searchStatusText}>{searchStatusMessage}</Text>
-          </View>
-        ) : null
-      }
-      ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          {isAwaitingSearchFeedback ? (
-            <>
-              <ActivityIndicator size="large" color={theme.primary} />
-              <Text style={styles.emptyTitle}>
-                {searchStatusMessage ?? "Buscando productos…"}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                Estamos consultando el catálogo. Los resultados aparecerán aquí
-                en unos segundos.
-              </Text>
-            </>
-          ) : (
-            <>
-              <Ionicons
-                name="search-outline"
-                size={64}
-                color={theme.textTertiary}
-              />
-              <Text style={styles.emptyTitle}>
-                {isBootstrappingCatalog && !searchText
-                  ? "Preparando catálogo..."
-                  : "No se encontraron productos"}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {isBootstrappingCatalog && !searchText
+    <SwapListShell swapKey={`all:${listSwapToken}`}>
+      {(allowRowEntering) => (
+        <FlatList
+          style={styles.container}
+          data={allProducts}
+          renderItem={({ item, index }) =>
+            renderItem({ item, index, allowEntering: allowRowEntering })
+          }
+          keyExtractor={(item) =>
+            item.code && item.code.trim().length > 0
+              ? `product-${item.code.trim()}`
+              : `product-${(item.name ?? "unknown").trim()}-${(
+                  item.brand ?? ""
+                ).trim()}`
+          }
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
+          initialNumToRender={12}
+          windowSize={7}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={
+            Platform.OS === "android" && !allowRowEntering
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            searchStatusMessage ? (
+              <SearchStatusBanner message={searchStatusMessage} />
+            ) : null
+          }
+          ListEmptyComponent={
+            <ProductSearchEmptyState
+              variant={
+                isAwaitingSearchFeedback
+                  ? "loading"
+                  : isBootstrappingCatalog && !searchText
+                  ? "bootstrap"
+                  : searchText.trim().length >= MIN_SEARCH_CHARS
+                  ? "empty-search"
+                  : "empty-browse"
+              }
+              title={
+                isBootstrappingCatalog && !searchText
+                  ? "Preparando catálogo…"
+                  : "No se encontraron productos"
+              }
+              subtitle={
+                isAwaitingSearchFeedback
+                  ? "Estamos consultando el catálogo. Los resultados aparecerán aquí en unos segundos."
+                  : isBootstrappingCatalog && !searchText
                   ? "Cargando productos iniciales. Esto puede tardar unos segundos."
-                  : searchText
-                  ? `No encontramos "${searchText}"`
-                  : "Intenta con otros términos de búsqueda"}
-              </Text>
-            </>
-          )}
-          {searchText && !isAwaitingSearchFeedback && (
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => {
-                if (canCreateCustomProduct(customProducts.length, navigation)) {
-                  navigation.navigate("CreateProductScreen");
-                }
-              }}
-            >
-              <Ionicons name="add-circle" size={24} color="#fff" />
-              <Text style={styles.createButtonText}>Crear Producto</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      }
-    />
+                  : searchText.trim().length >= MIN_SEARCH_CHARS
+                  ? `Prueba otra marca, menos palabras o crea un producto propio.`
+                  : "Escribe al menos 2 caracteres o explora el catálogo."
+              }
+              statusMessage={searchStatusMessage}
+              actionLabel={
+                searchText && !isAwaitingSearchFeedback
+                  ? "Crear producto"
+                  : undefined
+              }
+              onAction={
+                searchText && !isAwaitingSearchFeedback
+                  ? () => {
+                      if (
+                        canCreateCustomProduct(
+                          customProducts.length,
+                          navigation
+                        )
+                      ) {
+                        navigation.navigate("CreateProductScreen");
+                      }
+                    }
+                  : undefined
+              }
+            />
+          }
+        />
+      )}
+    </SwapListShell>
   );
 }
 
@@ -929,8 +806,6 @@ function FavoritesTab({
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const hasLoadedRef = useRef(false);
-  const { width } = useWindowDimensions();
-  const isSmallScreen = width < 380;
 
   // Efecto inicial - Cargar si no hay datos
   useEffect(() => {
@@ -1051,6 +926,11 @@ function FavoritesTab({
     f?.productName?.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  const swapKey = useDebouncedSwapKey(
+    `fav:${searchText.trim().toLowerCase()}`,
+    SEARCH_DEBOUNCE_MS
+  );
+
   useEffect(() => {
     prefetchImageBatch(
       filteredFavorites.map((favorite) => favorite.productImage),
@@ -1058,136 +938,89 @@ function FavoritesTab({
     );
   }, [filteredFavorites]);
 
-  const renderItem = ({ item }: { item: FavoriteProduct }) => (
-    <TouchableOpacity
-      style={[
-        styles.productCard,
-        {
-          padding: isSmallScreen ? 10 : 12,
-          borderRadius: isSmallScreen ? 10 : 14,
-        },
-      ]}
-      onPress={() => handleProductPress(item)}
-      activeOpacity={0.8}
-    >
-      <View
-        style={[
-          styles.productImageContainer,
-          { width: width * 0.15, height: width * 0.15 },
-        ]}
-      >
-        {item.productImage ? (
-          <Image
-            source={{ uri: item.productImage, cache: "force-cache" }}
-            defaultSource={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              { width: width * 0.12, height: width * 0.12 },
-            ]}
-            fadeDuration={80}
-          />
-        ) : (
-          <Image
-            source={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              { width: width * 0.12, height: width * 0.12 },
-            ]}
-          />
-        )}
-        <View style={styles.favoriteBadge}>
-          <Ionicons name="heart" size={16} color="#E94560" />
-        </View>
-      </View>
-      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
-        <Text
-          style={[
-            styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
-          ]}
-          numberOfLines={2}
-        >
-          {item.productName}
-        </Text>
-        <View style={styles.productMacros}>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="flame"
-              size={isSmallScreen ? 12 : 14}
-              color="#6FCF97"
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {Math.round(item.calories) || 0} kcal
-            </Text>
-          </View>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="analytics"
-              size={isSmallScreen ? 12 : 14}
-              color="#808080"
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              100g
-            </Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
+  const favoriteToProduct = (item: FavoriteProduct): Product => ({
+    code: item.productCode,
+    name: item.productName,
+    image: item.productImage ?? null,
+    brand: null,
+    grams: 100,
+    calories: item.calories,
+    protein: item.protein,
+    carbohydrates: item.carbs,
+    fat: item.fat,
+    categories: null,
+    nutritionGrade: null,
+    fiber: null,
+    sugar: null,
+    sodium: null,
+    servingSize: null,
+    others: [],
+  });
+
+  const renderItem = ({
+    item,
+    index,
+    allowEntering,
+  }: {
+    item: FavoriteProduct;
+    index: number;
+    allowEntering: boolean;
+  }) => (
+    <AnimatedListItem allowEntering={allowEntering} index={index}>
+      <ProductListItem
+        item={favoriteToProduct(item)}
+        showFavoriteBadge
+        onPress={() => handleProductPress(item)}
+      />
+    </AnimatedListItem>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando favoritos...</Text>
+        <ProductListSkeleton
+          count={5}
+          showTrailing={false}
+          showBrand={false}
+          message="Cargando favoritos…"
+        />
       </View>
     );
   }
 
   if (favorites.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="heart-outline" size={64} color={theme.textTertiary} />
-        <Text style={styles.emptyTitle}>No tienes favoritos</Text>
-        <Text style={styles.emptySubtitle}>
-          Agrega productos a tus favoritos para verlos aquí
-        </Text>
-      </View>
+      <ProductSearchEmptyState
+        variant="empty-collection"
+        icon="heart-outline"
+        title="No tienes favoritos"
+        subtitle="Marca productos como favoritos para encontrarlos aquí rápido."
+      />
     );
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      data={filteredFavorites}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={styles.listContent}
-      showsVerticalScrollIndicator={false}
-      ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          <Ionicons
-            name="search-outline"
-            size={64}
-            color={theme.textTertiary}
-          />
-          <Text style={styles.emptyTitle}>No se encontraron favoritos</Text>
-          <Text style={styles.emptySubtitle}>
-            Intenta con otros términos de búsqueda
-          </Text>
-        </View>
-      }
-    />
+    <SwapListShell swapKey={swapKey}>
+      {(allowRowEntering) => (
+        <FlatList
+          style={styles.container}
+          data={filteredFavorites}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) =>
+            renderItem({ item, index, allowEntering: allowRowEntering })
+          }
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <ProductSearchEmptyState
+              variant="empty-search"
+              title="No se encontraron favoritos"
+              subtitle="Prueba con otro nombre o limpia la búsqueda."
+            />
+          }
+        />
+      )}
+    </SwapListShell>
   );
 }
 
@@ -1206,8 +1039,6 @@ function CustomProductsTab({
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedRef = useRef(false);
-  const { width } = useWindowDimensions();
-  const isSmallScreen = width < 380;
 
   useEffect(() => {
     // Solo cargar si no se ha cargado antes o si el cache está vencido
@@ -1270,40 +1101,40 @@ function CustomProductsTab({
     loadCustomProducts(true);
   };
 
-  const handleProductPress = (item: CustomProduct) => {
-    const mappedProduct: Product = {
-      code: item.id,
-      name: item.name,
-      image: item.image ?? null,
-      brand: item.brand ?? null,
-      grams: 100,
-      calories: item.caloriesPer100,
-      protein: item.proteinPer100,
-      carbohydrates: item.carbsPer100,
-      fat: item.fatPer100,
-      categories: null,
-      nutritionGrade: null,
-      fiber: item.fiberPer100 ?? null,
-      sugar: item.sugarPer100 ?? null,
-      sodium: item.sodiumPer100 ?? null,
-      servingSize: item.servingSize
-        ? `${item.servingSize} ${item.servingUnit || "g"}`
-        : null,
-      others: [
-        ...(item.fiberPer100
-          ? [{ label: "Fibra", value: item.fiberPer100 }]
-          : []),
-        ...(item.sugarPer100
-          ? [{ label: "Azúcar", value: item.sugarPer100 }]
-          : []),
-        ...(item.sodiumPer100
-          ? [{ label: "Sodio", value: item.sodiumPer100 }]
-          : []),
-      ],
-    };
+  const customProductToListItem = (item: CustomProduct): Product => ({
+    code: item.id,
+    name: item.name,
+    image: item.image ?? null,
+    brand: item.brand ?? null,
+    grams: 100,
+    calories: item.caloriesPer100,
+    protein: item.proteinPer100,
+    carbohydrates: item.carbsPer100,
+    fat: item.fatPer100,
+    categories: null,
+    nutritionGrade: null,
+    fiber: item.fiberPer100 ?? null,
+    sugar: item.sugarPer100 ?? null,
+    sodium: item.sodiumPer100 ?? null,
+    servingSize: item.servingSize
+      ? `${item.servingSize} ${item.servingUnit || "g"}`
+      : null,
+    others: [
+      ...(item.fiberPer100
+        ? [{ label: "Fibra", value: item.fiberPer100 }]
+        : []),
+      ...(item.sugarPer100
+        ? [{ label: "Azúcar", value: item.sugarPer100 }]
+        : []),
+      ...(item.sodiumPer100
+        ? [{ label: "Sodio", value: item.sodiumPer100 }]
+        : []),
+    ],
+  });
 
+  const handleProductPress = (item: CustomProduct) => {
     navigation.navigate("ProductDetailScreen", {
-      producto: mappedProduct,
+      producto: customProductToListItem(item),
       selectedMeal,
     });
   };
@@ -1314,6 +1145,15 @@ function CustomProductsTab({
       matchesBrandFilters(p.brand, selectedBrands)
   );
 
+  const swapKeyRaw = useMemo(() => {
+    const brandsKey = [...selectedBrands]
+      .map(normalizeBrandFilter)
+      .sort()
+      .join(",");
+    return `cp:${searchText.trim().toLowerCase()}|${brandsKey}`;
+  }, [searchText, selectedBrands]);
+  const swapKey = useDebouncedSwapKey(swapKeyRaw, SEARCH_DEBOUNCE_MS);
+
   useEffect(() => {
     prefetchImageBatch(
       filteredProducts.map((product) => product.image),
@@ -1321,111 +1161,30 @@ function CustomProductsTab({
     );
   }, [filteredProducts]);
 
-  const renderItem = ({ item }: { item: CustomProduct }) => (
-    <TouchableOpacity
-      style={[
-        styles.productCard,
-        {
-          padding: isSmallScreen ? 10 : 12,
-          borderRadius: isSmallScreen ? 10 : 14,
-        },
-      ]}
-      onPress={() => handleProductPress(item)}
-      activeOpacity={0.8}
-    >
-      <View
-        style={[
-          styles.productImageContainer,
-          { width: width * 0.15, height: width * 0.15 },
-        ]}
-      >
-        {item.image ? (
-          <Image
-            source={{ uri: item.image, cache: "force-cache" }}
-            defaultSource={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              { width: width * 0.12, height: width * 0.12 },
-            ]}
-            fadeDuration={80}
-          />
-        ) : (
-          <Ionicons name="cube" size={28} color={theme.primary} />
-        )}
-        <View style={styles.customBadge}>
-          <Ionicons name="create" size={14} color={theme.primary} />
-        </View>
-      </View>
-      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
-        <Text
-          style={[
-            styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
-          ]}
-          numberOfLines={2}
-        >
-          {item.name}
-        </Text>
-        {item.brand && (
-          <Text
-            style={[
-              styles.brandText,
-              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
-            ]}
-            numberOfLines={1}
-          >
-            {item.brand}
-          </Text>
-        )}
-        <View style={styles.productMacros}>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="flame"
-              size={isSmallScreen ? 12 : 14}
-              color="#6FCF97"
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {Math.round(item.caloriesPer100)} kcal
-            </Text>
-          </View>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="analytics"
-              size={isSmallScreen ? 12 : 14}
-              color={theme.textSecondary}
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {item.servingSize && item.servingUnit
-                ? `${item.servingSize} ${item.servingUnit}`
-                : "100g"}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          navigation.navigate("EditProductScreen", { product: item });
+  const renderItem = ({
+    item,
+    index,
+    allowEntering,
+  }: {
+    item: CustomProduct;
+    index: number;
+    allowEntering: boolean;
+  }) => (
+    <AnimatedListItem allowEntering={allowEntering} index={index}>
+      <ProductListItem
+        item={customProductToListItem(item)}
+        isCustom
+        onPress={() => handleProductPress(item)}
+        trailingAction={{
+          icon: "create-outline",
+          accessibilityLabel: "Editar producto",
+          onPress: (e) => {
+            e.stopPropagation();
+            navigation.navigate("EditProductScreen", { product: item });
+          },
         }}
-      >
-        <Ionicons
-          name="create-outline"
-          size={isSmallScreen ? 18 : 20}
-          color={theme.primary}
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      />
+    </AnimatedListItem>
   );
 
   const refreshControl = (
@@ -1438,70 +1197,59 @@ function CustomProductsTab({
     />
   );
 
+  const openCreateProduct = () => {
+    if (canCreateCustomProduct(customProducts.length, navigation)) {
+      navigation.navigate("CreateProductScreen");
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>
-          Cargando productos personalizados...
-        </Text>
+        <ProductListSkeleton count={5} message="Cargando productos…" />
       </View>
     );
   }
 
   if (customProducts.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="cube-outline" size={64} color={theme.textTertiary} />
-        <Text style={styles.emptyTitle}>
-          No tienes productos personalizados
-        </Text>
-        <Text style={styles.emptySubtitle}>
-          Crea productos personalizados para verlos aquí
-        </Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => {
-            if (canCreateCustomProduct(customProducts.length, navigation)) {
-              navigation.navigate("CreateProductScreen");
-            }
-          }}
-        >
-          <Ionicons name="add-circle" size={24} color="#fff" />
-          <Text style={styles.createButtonText}>Crear Producto</Text>
-        </TouchableOpacity>
-      </View>
+      <ProductSearchEmptyState
+        variant="empty-collection"
+        icon="cube-outline"
+        title="No tienes productos personalizados"
+        subtitle="Crea productos propios para verlos aquí y añadirlos a tus comidas."
+        actionLabel="Crear producto"
+        onAction={openCreateProduct}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={filteredProducts}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={refreshControl}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>
-              No se encontraron productos personalizados
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              Intenta con otros términos de búsqueda
-            </Text>
-          </View>
-        }
-      />
+      <SwapListShell swapKey={swapKey}>
+        {(allowRowEntering) => (
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) =>
+              renderItem({ item, index, allowEntering: allowRowEntering })
+            }
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
+            ListEmptyComponent={
+              <ProductSearchEmptyState
+                variant="empty-search"
+                title="No se encontraron productos"
+                subtitle="Prueba con otro nombre o limpia la búsqueda."
+              />
+            }
+          />
+        )}
+      </SwapListShell>
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => {
-          if (canCreateCustomProduct(customProducts.length, navigation)) {
-            navigation.navigate("CreateProductScreen");
-          }
-        }}
+        onPress={openCreateProduct}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
@@ -1522,8 +1270,6 @@ function CustomMealsTab({
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedRef = useRef(false);
-  const { width } = useWindowDimensions();
-  const isSmallScreen = width < 380;
 
   useEffect(() => {
     // Solo cargar si no se ha cargado antes o si el cache está vencido
@@ -1590,12 +1336,40 @@ function CustomMealsTab({
     loadCustomMeals(true);
   };
 
+  const mealToListItem = (item: CustomMeal): Product => ({
+    code: item.id,
+    name: item.name,
+    image: item.image ?? null,
+    brand:
+      item.description?.trim() ||
+      `${item.products?.length ?? 0} alimento${
+        (item.products?.length ?? 0) === 1 ? "" : "s"
+      }`,
+    grams: 100,
+    calories: item.totalCalories,
+    protein: item.totalProtein,
+    carbohydrates: item.totalCarbs,
+    fat: item.totalFat,
+    categories: null,
+    nutritionGrade: null,
+    fiber: item.totalFiber ?? null,
+    sugar: item.totalSugar ?? null,
+    sodium: item.totalSodium ?? null,
+    servingSize: null,
+    others: [],
+  });
+
   const handleMealPress = (item: CustomMeal) => {
     navigation.navigate("EditMealScreen", { meal: item });
   };
 
   const filteredMeals = customMeals.filter((m) =>
     m?.name?.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const swapKey = useDebouncedSwapKey(
+    `cm:${searchText.trim().toLowerCase()}`,
+    SEARCH_DEBOUNCE_MS
   );
 
   useEffect(() => {
@@ -1605,110 +1379,30 @@ function CustomMealsTab({
     );
   }, [filteredMeals]);
 
-  const renderItem = ({ item }: { item: CustomMeal }) => (
-    <TouchableOpacity
-      style={[
-        styles.productCard,
-        {
-          padding: isSmallScreen ? 10 : 12,
-          borderRadius: isSmallScreen ? 10 : 14,
-        },
-      ]}
-      onPress={() => handleMealPress(item)}
-      activeOpacity={0.8}
-    >
-      <View
-        style={[
-          styles.productImageContainer,
-          { width: width * 0.15, height: width * 0.15 },
-        ]}
-      >
-        {item.image ? (
-          <Image
-            source={{ uri: item.image, cache: "force-cache" }}
-            defaultSource={FALLBACK_PRODUCT_IMAGE}
-            style={[
-              styles.productImage,
-              { width: width * 0.12, height: width * 0.12 },
-            ]}
-            fadeDuration={80}
-          />
-        ) : (
-          <Ionicons name="restaurant" size={28} color={theme.primary} />
-        )}
-        <View style={styles.customBadge}>
-          <Ionicons name="restaurant" size={14} color={theme.primary} />
-        </View>
-      </View>
-      <View style={{ flex: 1, flexShrink: 1, marginRight: 8 }}>
-        <Text
-          style={[
-            styles.productName,
-            { fontSize: RFValue(isSmallScreen ? 12 : 14) },
-          ]}
-          numberOfLines={2}
-        >
-          {item.name}
-        </Text>
-        {item.description && (
-          <Text
-            style={[
-              styles.brandText,
-              { fontSize: RFValue(isSmallScreen ? 9 : 11) },
-            ]}
-            numberOfLines={1}
-          >
-            {item.description}
-          </Text>
-        )}
-        <View style={styles.productMacros}>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="flame"
-              size={isSmallScreen ? 12 : 14}
-              color="#6FCF97"
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {Math.round(item.totalCalories)} kcal
-            </Text>
-          </View>
-          <View style={styles.macroItem}></View>
-          <View style={styles.macroItem}>
-            <Ionicons
-              name="fast-food"
-              size={isSmallScreen ? 12 : 14}
-              color={theme.primary}
-            />
-            <Text
-              style={[
-                styles.macroText,
-                { fontSize: RFValue(isSmallScreen ? 10 : 12) },
-              ]}
-            >
-              {item.products.length} items
-            </Text>
-          </View>
-        </View>
-      </View>
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          navigation.navigate("EditMealScreen", { meal: item });
+  const renderItem = ({
+    item,
+    index,
+    allowEntering,
+  }: {
+    item: CustomMeal;
+    index: number;
+    allowEntering: boolean;
+  }) => (
+    <AnimatedListItem allowEntering={allowEntering} index={index}>
+      <ProductListItem
+        item={mealToListItem(item)}
+        isMeal
+        onPress={() => handleMealPress(item)}
+        trailingAction={{
+          icon: "create-outline",
+          accessibilityLabel: "Editar comida",
+          onPress: (e) => {
+            e.stopPropagation();
+            navigation.navigate("EditMealScreen", { meal: item });
+          },
         }}
-      >
-        <Ionicons
-          name="create-outline"
-          size={isSmallScreen ? 18 : 20}
-          color={theme.primary}
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      />
+    </AnimatedListItem>
   );
 
   const refreshControl = (
@@ -1721,73 +1415,57 @@ function CustomMealsTab({
     />
   );
 
+  const openCreateMeal = () => {
+    if (canCreateCustomMeal(customMeals.length, navigation)) {
+      navigation.navigate("CreateMealScreen");
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>
-          Cargando comidas personalizadas...
-        </Text>
+        <ProductListSkeleton count={5} message="Cargando comidas…" />
       </View>
     );
   }
 
   if (customMeals.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons
-          name="restaurant-outline"
-          size={64}
-          color={theme.textTertiary}
-        />
-        <Text style={styles.emptyTitle}>No tienes comidas personalizadas</Text>
-        <Text style={styles.emptySubtitle}>
-          Crea comidas personalizadas para verlas aquí
-        </Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => {
-            if (canCreateCustomMeal(customMeals.length, navigation)) {
-              navigation.navigate("CreateMealScreen");
-            }
-          }}
-        >
-          <Ionicons name="add-circle" size={24} color="#fff" />
-          <Text style={styles.createButtonText}>Crear Comida</Text>
-        </TouchableOpacity>
-      </View>
+      <ProductSearchEmptyState
+        variant="empty-collection"
+        icon="restaurant-outline"
+        title="No tienes comidas personalizadas"
+        subtitle="Agrupa productos en comidas para añadirlas rápido a tu diario."
+        actionLabel="Crear comida"
+        onAction={openCreateMeal}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={filteredMeals}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={refreshControl}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>
-              No se encontraron comidas personalizadas
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              Intenta con otros términos de búsqueda
-            </Text>
-          </View>
-        }
-      />
-      <TouchableOpacity
-        style={styles.floatingButton}
-        onPress={() => {
-          if (canCreateCustomMeal(customMeals.length, navigation)) {
-            navigation.navigate("CreateMealScreen");
-          }
-        }}
-      >
+      <SwapListShell swapKey={swapKey}>
+        {(allowRowEntering) => (
+          <FlatList
+            data={filteredMeals}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) =>
+              renderItem({ item, index, allowEntering: allowRowEntering })
+            }
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
+            ListEmptyComponent={
+              <ProductSearchEmptyState
+                variant="empty-search"
+                title="No se encontraron comidas"
+                subtitle="Prueba con otro nombre o limpia la búsqueda."
+              />
+            }
+          />
+        )}
+      </SwapListShell>
+      <TouchableOpacity style={styles.floatingButton} onPress={openCreateMeal}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -1838,6 +1516,15 @@ export default function ProductListScreen() {
   const clearBrandFilter = () => {
     setSelectedBrands([]);
     setBrandSearchText("");
+  };
+
+  const removeBrandFilter = (brand: string) => {
+    setSelectedBrands((prev) =>
+      prev.filter(
+        (value) =>
+          normalizeBrandFilter(value) !== normalizeBrandFilter(brand)
+      )
+    );
   };
 
   const openBrandFiltersModal = () => {
@@ -1949,81 +1636,56 @@ export default function ProductListScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
+      />
       <View style={styles.container}>
-        {/* Header Global */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Buscar Producto</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <ProductSearchHeader onBack={() => navigation.goBack()} />
 
-        {/* Barra de Búsqueda Global */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color={theme.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar por nombre..."
-              placeholderTextColor={theme.textTertiary}
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText("")}>
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color={theme.textTertiary}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={openBrandFiltersModal}
-          >
-            <Ionicons name="funnel-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => setShowCamera(true)}
-          >
-            <Ionicons name="barcode-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <ProductSearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          onOpenFilters={openBrandFiltersModal}
+          onOpenScanner={() => setShowCamera(true)}
+          filtersActiveCount={selectedBrands.length}
+        />
 
-        {/* Navegador de Tabs */}
+        <ActiveBrandFiltersRow
+          brands={selectedBrands}
+          onRemove={removeBrandFilter}
+          onClearAll={clearBrandFilter}
+        />
+
         <Tab.Navigator
           initialRouteName={initialTab}
           screenOptions={{
-            lazy: true, // Lazy loading activado
-            lazyPreloadDistance: 1, // Pre-cargar solo el tab adyacente
+            lazy: true,
+            lazyPreloadDistance: 1,
             sceneStyle: {
-              backgroundColor: theme.background,
+              backgroundColor: theme.backgroundSecondary,
             },
             tabBarActiveTintColor: theme.primary,
             tabBarInactiveTintColor: theme.textTertiary,
             tabBarLabelStyle: {
               fontSize: tabConfig.fontSize,
-              fontWeight: "600",
+              fontWeight: "700",
               textTransform: "none",
               marginTop: 2,
             },
             tabBarItemStyle: {
-              height: 56,
+              height: 52,
               paddingVertical: 4,
             },
             tabBarIndicatorStyle: {
               backgroundColor: theme.primary,
               height: 3,
+              borderRadius: 3,
             },
             tabBarStyle: {
-              backgroundColor: theme.card,
+              backgroundColor: theme.backgroundSecondary,
               elevation: 0,
               shadowOpacity: 0,
               borderBottomWidth: 1,
@@ -2423,12 +2085,13 @@ const createStyles = (theme: Theme, isDark: boolean) =>
     },
     loadingContainer: {
       flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
+      justifyContent: "flex-start",
+      alignItems: "stretch",
       backgroundColor: theme.background,
+      width: "100%",
     },
     loadingText: {
-      marginTop: 16,
+      marginTop: 12,
       fontSize: RFValue(14),
       color: theme.textSecondary,
       textAlign: "center",
@@ -2454,8 +2117,9 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       fontWeight: "500",
     },
     listContent: {
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 24,
     },
     productCard: {
       flexDirection: "row",

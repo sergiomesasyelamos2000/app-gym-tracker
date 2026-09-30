@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +10,9 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +20,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   CustomMealResponseDto as CustomMeal,
   CustomProductResponseDto as CustomProduct,
@@ -28,6 +30,24 @@ import type {
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
 import * as nutritionService from "../services/nutritionService";
+import { ProductSearchEmptyState } from "../components/product-search/ProductSearchEmptyState";
+import { MealCollagePreview } from "../components/MealCollagePreview";
+import {
+  buildMealImagePayload,
+  collectMealProductImageUrls,
+  inferLegacyMealImageSource,
+} from "../utils/mealCollageLayout";
+import {
+  getMacroPillColors,
+  MACRO_COLORS,
+  MACRO_LABELS,
+} from "../utils/macroColors";
+import { useNutritionFormLeaveGuard } from "../hooks/useNutritionFormLeaveGuard";
+import {
+  isEditMealDirty,
+  mealProductsFromMeal,
+  type EditMealBaseline,
+} from "../utils/nutritionFormDirty";
 import { NutritionStackParamList } from "./NutritionStack";
 
 type EditMealScreenNavigationProp = NativeStackNavigationProp<
@@ -115,21 +135,81 @@ const toFrontendMealProduct = (
 };
 
 export default function EditMealScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<EditMealScreenNavigationProp>();
   const route = useRoute<EditMealScreenRouteProp>();
   const meal = route.params.meal as CustomMeal;
+  const initialIsUserImage =
+    inferLegacyMealImageSource({
+      image: meal?.image,
+      imageSource: (meal as CustomMeal & { imageSource?: "user" | "collage" | null })
+        ?.imageSource,
+      products: meal?.products,
+    }) === "user";
 
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDark),
+    [theme, isDark]
+  );
+  const caloriePill = getMacroPillColors("calories", isDark);
+  const proteinPill = getMacroPillColors("protein", isDark);
+  const carbsPill = getMacroPillColors("carbs", isDark);
+  const fatPill = getMacroPillColors("fat", isDark);
 
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState(meal?.name || "");
   const [description, setDescription] = useState(meal?.description || "");
-  const [imageUri, setImageUri] = useState<string | null>(meal?.image || null);
+  const [imageUri, setImageUri] = useState<string | null>(
+    initialIsUserImage ? meal?.image || null : null,
+  );
+  const [userSetMealImage, setUserSetMealImage] = useState(initialIsUserImage);
+  const [clearedUserPhoto, setClearedUserPhoto] = useState(false);
   const [products, setProducts] = useState<FrontendMealProduct[]>(
     (meal?.products as FrontendMealProduct[]) || [],
   );
+  const collageUrls = collectMealProductImageUrls(products);
+
+  const mealBaseline = useRef<EditMealBaseline>({
+    name: meal?.name || "",
+    description: meal?.description || "",
+    hadUserImage: initialIsUserImage,
+    imageUri: initialIsUserImage ? meal?.image || null : null,
+    products: mealProductsFromMeal(meal),
+  });
+
+  const isDirty = useCallback(
+    () =>
+      isEditMealDirty(
+        {
+          name,
+          description,
+          hasUserImage: userSetMealImage,
+          imageUri,
+          clearedUserPhoto,
+          products: products.map((product) => ({
+            productCode: product.productCode,
+            quantity: product.quantity,
+            unit: product.unit,
+          })),
+        },
+        mealBaseline.current,
+      ),
+    [
+      clearedUserPhoto,
+      description,
+      imageUri,
+      name,
+      products,
+      userSetMealImage,
+    ],
+  );
+
+  const { requestLeave, completeSavedLeave } = useNutritionFormLeaveGuard({
+    isDirty,
+    productListParams: { screen: "Meals" },
+  });
 
   useEffect(() => {
     if (!meal) {
@@ -190,6 +270,8 @@ export default function EditMealScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
+      setClearedUserPhoto(false);
+      setUserSetMealImage(true);
       setImageUri(result.assets[0].uri);
     }
   };
@@ -203,7 +285,11 @@ export default function EditMealScreen() {
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: () => setImageUri(null),
+          onPress: () => {
+            setClearedUserPhoto(userSetMealImage || initialIsUserImage);
+            setUserSetMealImage(false);
+            setImageUri(null);
+          },
         },
       ],
     );
@@ -222,10 +308,15 @@ export default function EditMealScreen() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.productCode === productCode) {
-          const baseCalories = product.calories / product.quantity;
-          const baseProtein = product.protein / product.quantity;
-          const baseCarbs = product.carbs / product.quantity;
-          const baseFat = product.fat / product.quantity;
+          const getBase = (currentVal: number, baseVal?: number) => {
+            if (baseVal !== undefined) return baseVal;
+            return product.quantity > 0 ? currentVal / product.quantity : 0;
+          };
+
+          const baseCalories = getBase(product.calories, product.baseCalories);
+          const baseProtein = getBase(product.protein, product.baseProtein);
+          const baseCarbs = getBase(product.carbs, product.baseCarbs);
+          const baseFat = getBase(product.fat, product.baseFat);
 
           return {
             ...product,
@@ -317,12 +408,17 @@ export default function EditMealScreen() {
         fiber: p.fiber,
         sodium: p.sodium,
         isCustom: p.isCustom,
+        productImage: p.productImage ?? null,
       }));
 
       const updateData: UpdateCustomMealDto = {
         name: name.trim(),
         description: description.trim() || undefined,
-        image: imageUri || undefined,
+        ...buildMealImagePayload({
+          userSetMealImage,
+          userImageUri: imageUri,
+          clearedUserPhoto,
+        }),
         products: mealProducts,
       };
 
@@ -332,10 +428,7 @@ export default function EditMealScreen() {
         {
           text: "OK",
           onPress: () => {
-            navigation.navigate("ProductListScreen", {
-              refresh: true,
-              screen: "Meals",
-            });
+            completeSavedLeave({ refresh: true, screen: "Meals" });
           },
         },
       ]);
@@ -370,10 +463,7 @@ export default function EditMealScreen() {
                 {
                   text: "OK",
                   onPress: () => {
-                    navigation.navigate("ProductListScreen", {
-                      refresh: true,
-                      screen: "Meals",
-                    });
+                    completeSavedLeave({ refresh: true, screen: "Meals" });
                   },
                 },
               ]);
@@ -442,25 +532,29 @@ export default function EditMealScreen() {
           <Text style={styles.unitText}>{item.unit}</Text>
         </View>
         <View style={styles.macrosChips}>
-          <View style={styles.macroChip}>
-            <Ionicons name="flame-outline" size={RFValue(10)} color="#FF6B6B" />
-            <Text style={styles.macroChipText}>
-              {Math.round(item.calories)} cal
+          <View style={[styles.macroChip, { backgroundColor: caloriePill.background }]}>
+            <Ionicons
+              name="flame"
+              size={RFValue(10)}
+              color={caloriePill.accent}
+            />
+            <Text style={[styles.macroChipText, { color: caloriePill.text }]}>
+              {Math.round(item.calories)} {MACRO_LABELS.calories.short}
             </Text>
           </View>
-          <View style={styles.macroChip}>
-            <Text style={[styles.macroChipText, styles.proteinText]}>
-              {Math.round(item.protein)}g P
+          <View style={[styles.macroChip, { backgroundColor: proteinPill.background }]}>
+            <Text style={[styles.macroChipText, { color: proteinPill.text }]}>
+              {MACRO_LABELS.protein.short} {Math.round(item.protein)}g
             </Text>
           </View>
-          <View style={styles.macroChip}>
-            <Text style={[styles.macroChipText, styles.carbsText]}>
-              {Math.round(item.carbs)}g C
+          <View style={[styles.macroChip, { backgroundColor: carbsPill.background }]}>
+            <Text style={[styles.macroChipText, { color: carbsPill.text }]}>
+              {MACRO_LABELS.carbs.short} {Math.round(item.carbs)}g
             </Text>
           </View>
-          <View style={styles.macroChip}>
-            <Text style={[styles.macroChipText, styles.fatText]}>
-              {Math.round(item.fat)}g G
+          <View style={[styles.macroChip, { backgroundColor: fatPill.background }]}>
+            <Text style={[styles.macroChipText, { color: fatPill.text }]}>
+              {MACRO_LABELS.fat.short} {Math.round(item.fat)}g
             </Text>
           </View>
         </View>
@@ -477,7 +571,18 @@ export default function EditMealScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        Platform.OS === "android" ? { paddingTop: insets.top } : null,
+      ]}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.background}
+        hidden={false}
+        translucent={false}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -485,7 +590,7 @@ export default function EditMealScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => navigation.goBack()}
+            onPress={requestLeave}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={RFValue(24)} color={theme.text} />
@@ -521,7 +626,7 @@ export default function EditMealScreen() {
         >
           {/* Imagen de la comida */}
           <View style={styles.imageSection}>
-            {imageUri ? (
+            {userSetMealImage && imageUri ? (
               <View style={styles.imagePreviewContainer}>
                 <Image
                   source={{ uri: imageUri }}
@@ -542,6 +647,22 @@ export default function EditMealScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+            ) : collageUrls.length > 0 ? (
+              <View style={styles.imagePreviewContainer}>
+                <MealCollagePreview
+                  urls={collageUrls}
+                  style={styles.mealImagePreview}
+                  borderRadius={16}
+                />
+                <View style={styles.imageOverlay}>
+                  <TouchableOpacity
+                    style={styles.imageActionButton}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="camera" size={RFValue(18)} color={theme.onPrimary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             ) : (
               <TouchableOpacity
                 style={styles.mealImagePlaceholder}
@@ -557,7 +678,7 @@ export default function EditMealScreen() {
                 </View>
                 <Text style={styles.imagePlaceholderText}>Agregar Foto</Text>
                 <Text style={styles.imagePlaceholderSubtext}>
-                  Opcional - Haz la comida más memorable
+                  Opcional — o usa el collage de productos
                 </Text>
               </TouchableOpacity>
             )}
@@ -630,21 +751,14 @@ export default function EditMealScreen() {
                 />
               </View>
             ) : (
-              <View style={styles.emptyProducts}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons
-                    name="restaurant-outline"
-                    size={RFValue(48)}
-                    color={theme.primary}
-                  />
-                </View>
-                <Text style={styles.emptyProductsText}>
-                  No hay productos añadidos
-                </Text>
-                <Text style={styles.emptyProductsSubtext}>
-                  Toca el botón "Añadir" para seleccionar productos
-                </Text>
-              </View>
+              <ProductSearchEmptyState
+                variant="empty-collection"
+                icon="restaurant-outline"
+                title="No hay productos añadidos"
+                subtitle='Toca "Añadir" para seleccionar productos de tu comida.'
+                actionLabel="Añadir productos"
+                onAction={handleAddProducts}
+              />
             )}
           </View>
 
@@ -657,7 +771,11 @@ export default function EditMealScreen() {
               <View style={styles.macrosCard}>
                 <View style={styles.macroGrid}>
                   <View style={styles.mainMacro}>
-                    <Ionicons name="flame" size={RFValue(24)} color="#FF6B6B" />
+                    <Ionicons
+                      name="flame"
+                      size={RFValue(24)}
+                      color={MACRO_COLORS.calories.accent}
+                    />
                     <Text style={styles.mainMacroValue}>
                       {Math.round(totalMacros.calories)}
                     </Text>
@@ -669,7 +787,7 @@ export default function EditMealScreen() {
                       <View
                         style={[
                           styles.macroIndicator,
-                          { backgroundColor: "#2196F3" },
+                          { backgroundColor: MACRO_COLORS.protein.accent },
                         ]}
                       />
                       <Text style={styles.secondaryMacroValue}>
@@ -682,7 +800,7 @@ export default function EditMealScreen() {
                       <View
                         style={[
                           styles.macroIndicator,
-                          { backgroundColor: "#FFB74D" },
+                          { backgroundColor: MACRO_COLORS.carbs.accent },
                         ]}
                       />
                       <Text style={styles.secondaryMacroValue}>
@@ -697,7 +815,7 @@ export default function EditMealScreen() {
                       <View
                         style={[
                           styles.macroIndicator,
-                          { backgroundColor: "#FF9800" },
+                          { backgroundColor: MACRO_COLORS.fat.accent },
                         ]}
                       />
                       <Text style={styles.secondaryMacroValue}>
@@ -741,7 +859,7 @@ export default function EditMealScreen() {
   );
 }
 
-const createStyles = (theme: Theme) =>
+const createStyles = (theme: Theme, _isDark: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -995,22 +1113,13 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.backgroundSecondary,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 6,
+      borderRadius: 8,
       gap: 3,
     },
     macroChipText: {
       fontSize: RFValue(11),
       color: theme.textSecondary,
-      fontWeight: "500",
-    },
-    proteinText: {
-      color: "#2196F3",
-    },
-    carbsText: {
-      color: "#FFB74D",
-    },
-    fatText: {
-      color: "#FF9800",
+      fontWeight: "600",
     },
     removeProductButton: {
       width: 36,
@@ -1019,34 +1128,6 @@ const createStyles = (theme: Theme) =>
       backgroundColor: `${theme.error}15`,
       justifyContent: "center",
       alignItems: "center",
-    },
-    emptyProducts: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      padding: 48,
-      alignItems: "center",
-    },
-    emptyIconContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: theme.backgroundSecondary,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 16,
-    },
-    emptyProductsText: {
-      fontSize: RFValue(17),
-      fontWeight: "600",
-      color: theme.text,
-      marginBottom: 8,
-      textAlign: "center",
-    },
-    emptyProductsSubtext: {
-      fontSize: RFValue(14),
-      color: theme.textTertiary,
-      textAlign: "center",
-      lineHeight: 20,
     },
     macrosCard: {
       backgroundColor: theme.card,
