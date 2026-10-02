@@ -1605,7 +1605,8 @@ export default function RoutineDetailScreen() {
     const currentDuration = durationRef.current;
     setFrozenDuration(currentDuration);
 
-    if (currentDuration < MIN_WORKOUT_DURATION) {
+    // Ask before saving when the session is short OR no sets were checked.
+    if (currentDuration < MIN_WORKOUT_DURATION || completedSets === 0) {
       setShowShortWorkoutModal(true);
       return;
     }
@@ -2518,6 +2519,7 @@ export default function RoutineDetailScreen() {
       <ShortWorkoutConfirmModal
         visible={showShortWorkoutModal}
         duration={frozenDuration}
+        noCompletedSets={completedSets === 0}
         onContinue={() => setShowShortWorkoutModal(false)}
         onDiscard={handleDiscardWorkout}
         onSave={() => {

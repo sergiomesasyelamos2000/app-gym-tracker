@@ -14,6 +14,8 @@ import { useTheme } from "../../../contexts/ThemeContext";
 interface Props {
   visible: boolean;
   duration: number; // en segundos
+  /** When true, copy focuses on missing completed sets instead of short duration. */
+  noCompletedSets?: boolean;
   onContinue: () => void;
   onDiscard: () => void;
   onSave: () => void;
@@ -24,6 +26,7 @@ const { width } = Dimensions.get("window");
 export const ShortWorkoutConfirmModal = ({
   visible,
   duration,
+  noCompletedSets = false,
   onContinue,
   onDiscard,
   onSave,
@@ -35,6 +38,24 @@ export const ShortWorkoutConfirmModal = ({
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const title = noCompletedSets
+    ? "¿Guardar entrenamiento?"
+    : "¿Entrenamiento corto?";
+
+  const message = noCompletedSets ? (
+    <>
+      No has completado ninguna serie. ¿Qué deseas hacer?
+    </>
+  ) : (
+    <>
+      Tu entrenamiento ha durado solo{" "}
+      <Text style={{ fontWeight: "bold", color: theme.text }}>
+        {formatDuration(duration)}
+      </Text>
+      . ¿Qué deseas hacer?
+    </>
+  );
 
   return (
     <Modal
@@ -58,16 +79,10 @@ export const ShortWorkoutConfirmModal = ({
             <AlertTriangle size={48} color="#F59E0B" />
           </View>
 
-          <Text style={[styles.title, { color: theme.text }]}>
-            ¿Entrenamiento corto?
-          </Text>
+          <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
 
           <Text style={[styles.message, { color: theme.textSecondary }]}>
-            Tu entrenamiento ha durado solo{" "}
-            <Text style={{ fontWeight: "bold", color: theme.text }}>
-              {formatDuration(duration)}
-            </Text>
-            . ¿Qué deseas hacer?
+            {message}
           </Text>
 
           <View style={styles.buttonContainer}>
