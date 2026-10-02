@@ -14,8 +14,43 @@ jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn(),
 }));
 jest.mock("../../contexts/ThemeContext", () => ({
-  useTheme: () => ({ theme: { background: "white", primary: "blue" } }),
+  useTheme: () => ({
+    theme: {
+      background: "white",
+      backgroundSecondary: "#f8f8f8",
+      primary: "blue",
+      onPrimary: "#fff",
+      text: "#000",
+      textSecondary: "#666",
+      textTertiary: "#888",
+      border: "#eee",
+      card: "#fff",
+      warning: "#F59E0B",
+      overlay: "rgba(0,0,0,0.45)",
+      inputBackground: "#f8f8f8",
+      inputBorder: "#ddd",
+      inputPlaceholder: "#999",
+      shadowColor: "#000",
+    },
+    isDark: false,
+  }),
 }));
+
+jest.mock("../../hooks/useAIUsageLimit", () => ({
+  useAIUsageLimit: () => ({
+    remainingCalls: null,
+    canUseAI: () => true,
+    incrementUsage: jest.fn().mockResolvedValue(true),
+    isPremium: true,
+    dailyLimit: 10,
+    loading: false,
+  }),
+}));
+
+jest.mock("../../features/common/components/HealthDisclaimerCard", () => ({
+  HealthDisclaimerCard: () => null,
+}));
+
 
 // Mock API - Complete imports but mocked
 jest.mock("../../features/nutrition/services/nutritionService", () => ({

@@ -34,7 +34,7 @@ const MessageBubbleComponent: React.FC<Props> = ({
           <Text
             style={[
               styles.messageText,
-              { color: isUser ? "#FFFFFF" : theme.text },
+              { color: isUser ? theme.onPrimary : theme.text },
             ]}
           >
             {message.text}
@@ -82,7 +82,9 @@ const MessageBubbleComponent: React.FC<Props> = ({
                   style={[styles.addButton, { backgroundColor: theme.primary }]}
                   onPress={() => onAddRecognizedFood?.(item)}
                 >
-                  <Text style={styles.addButtonText}>Agregar al diario</Text>
+                  <Text style={[styles.addButtonText, { color: theme.onPrimary }]}>
+                    Agregar al diario
+                  </Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -253,7 +255,7 @@ const MessageBubbleComponent: React.FC<Props> = ({
     }
 
     return (
-      <Text style={[styles.messageText, { color: "#FFFFFF" }]}>
+      <Text style={[styles.messageText, { color: theme.onPrimary }]}>
         {message.text}
       </Text>
     );
@@ -265,8 +267,20 @@ const MessageBubbleComponent: React.FC<Props> = ({
         style={[
           styles.messageBubble,
           isUser
-            ? { backgroundColor: theme.primary, alignSelf: "flex-end" }
-            : { backgroundColor: theme.card, alignSelf: "flex-start" },
+            ? {
+                backgroundColor: theme.primary,
+                alignSelf: "flex-end",
+                borderBottomRightRadius: 6,
+              }
+            : {
+                backgroundColor: withOpacity(theme.primary, 6),
+                alignSelf: "flex-start",
+                borderColor: withOpacity(theme.primary, 16),
+                borderWidth: 1,
+                borderLeftWidth: 3,
+                borderLeftColor: theme.primary,
+                borderTopLeftRadius: 6,
+              },
         ]}
       >
         {renderContent()}
@@ -286,10 +300,10 @@ const MessageBubbleComponent: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   messageBubble: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    maxWidth: "80%",
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 10,
+    maxWidth: "82%",
   },
   messageText: {
     fontSize: 16,
@@ -355,7 +369,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addButtonText: {
-    color: "#fff",
     fontWeight: "700",
     fontSize: 12,
   },

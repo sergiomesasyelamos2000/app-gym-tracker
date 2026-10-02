@@ -26,6 +26,11 @@ type HeaderProps = {
   leadingDisabled?: boolean;
   accessibilityLabel?: string;
   right?: React.ReactNode;
+  backgroundColor?: string;
+  titleColor?: string;
+  subtitleColor?: string;
+  iconColor?: string;
+  borderBottomColor?: string;
 };
 
 type IconButtonProps = {
@@ -65,19 +70,27 @@ export function ScreenHeader({
   leadingDisabled = false,
   accessibilityLabel,
   right,
+  backgroundColor,
+  titleColor,
+  subtitleColor,
+  iconColor,
+  borderBottomColor,
 }: HeaderProps) {
   const { theme } = useTheme();
   const iconName = screenHeaderIconName(mode, Platform.OS);
   const label =
     accessibilityLabel ?? (mode === "close" ? "Cerrar" : "Volver");
+  const resolvedTitleColor = titleColor ?? theme.text;
+  const resolvedSubtitleColor = subtitleColor ?? theme.textSecondary;
+  const resolvedIconColor = iconColor ?? theme.text;
 
   return (
     <View
       style={[
         styles.bar,
         {
-          backgroundColor: theme.background,
-          borderBottomColor: theme.border,
+          backgroundColor: backgroundColor ?? theme.background,
+          borderBottomColor: borderBottomColor ?? theme.border,
         },
       ]}
     >
@@ -89,21 +102,24 @@ export function ScreenHeader({
           accessibilityRole="button"
           accessibilityLabel={label}
         >
-          <Ionicons name={iconName} size={ICON} color={theme.text} />
+          <Ionicons name={iconName} size={ICON} color={resolvedIconColor} />
         </TouchableOpacity>
       ) : (
         <View style={styles.hit} />
       )}
       <View style={styles.center}>
         <Text
-          style={[styles.title, { color: theme.text, fontSize: RFValue(17) }]}
+          style={[
+            styles.title,
+            { color: resolvedTitleColor, fontSize: RFValue(17) },
+          ]}
           numberOfLines={1}
         >
           {title}
         </Text>
         {subtitle ? (
           <Text
-            style={[styles.subtitle, { color: theme.textSecondary }]}
+            style={[styles.subtitle, { color: resolvedSubtitleColor }]}
             numberOfLines={1}
           >
             {subtitle}

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { withOpacity } from "../../../utils/themeStyles";
 import {
   Bone,
   SkeletonRoot,
@@ -16,23 +17,20 @@ export function NutritionChatSkeleton({
 }: NutritionChatSkeletonProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const onPrimary = skeletonBoneColor(theme, "onPrimary");
+  const onPrimaryBone = withOpacity(theme.onPrimary, 28);
   const onCard = skeletonBoneColor(theme, "card");
 
   return (
     <SkeletonRoot style={styles.root} message={message} messagePosition="below">
-      <View style={styles.header}>
-        <Bone style={[styles.headerIcon, { backgroundColor: onPrimary }]} />
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <View style={styles.headerTitles}>
-          <Bone style={[styles.headerTitle, { backgroundColor: onPrimary }]} />
+          <Bone style={[styles.headerTitle, { backgroundColor: onPrimaryBone }]} />
           <Bone
-            style={[styles.headerSubtitle, { backgroundColor: onPrimary }]}
+            style={[styles.headerSubtitle, { backgroundColor: onPrimaryBone }]}
           />
         </View>
-        <Bone style={[styles.headerIcon, { backgroundColor: onPrimary }]} />
+        <Bone style={[styles.headerIcon, { backgroundColor: onPrimaryBone }]} />
       </View>
-
-      <Bone style={[styles.banner, { backgroundColor: onCard }]} />
 
       <View style={styles.messages}>
         <Bone style={[styles.bubbleLeft, { backgroundColor: onCard }]} />
@@ -41,8 +39,8 @@ export function NutritionChatSkeleton({
       </View>
 
       <View style={styles.composer}>
-        <Bone style={[styles.composerIcon, { backgroundColor: onCard }]} />
         <Bone style={[styles.composerInput, { backgroundColor: onCard }]} />
+        <Bone style={[styles.composerIcon, { backgroundColor: onCard }]} />
         <Bone style={[styles.composerIcon, { backgroundColor: onCard }]} />
       </View>
     </SkeletonRoot>
@@ -56,37 +54,31 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.backgroundSecondary,
     },
     header: {
-      backgroundColor: theme.primary,
       flexDirection: "row",
       alignItems: "center",
+      minHeight: 72,
       paddingHorizontal: 16,
-      paddingVertical: 14,
-      gap: 12,
+      paddingVertical: 12,
     },
     headerIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
     },
     headerTitles: {
       flex: 1,
-      gap: 6,
+      gap: 8,
+      paddingRight: 12,
     },
     headerTitle: {
-      width: "55%",
-      height: 14,
+      width: "48%",
+      height: 16,
       borderRadius: 6,
     },
     headerSubtitle: {
-      width: "35%",
+      width: "36%",
       height: 10,
       borderRadius: 5,
-    },
-    banner: {
-      marginHorizontal: 16,
-      marginTop: 12,
-      height: 44,
-      borderRadius: 12,
     },
     messages: {
       flex: 1,
@@ -117,19 +109,19 @@ const createStyles = (theme: Theme) =>
       alignItems: "center",
       paddingHorizontal: 12,
       paddingVertical: 10,
-      gap: 10,
-      borderTopWidth: 1,
+      gap: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: theme.border,
-      backgroundColor: theme.card,
+      backgroundColor: theme.background,
     },
     composerIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 16,
     },
     composerInput: {
       flex: 1,
       height: 44,
-      borderRadius: 22,
+      borderRadius: 16,
     },
   });

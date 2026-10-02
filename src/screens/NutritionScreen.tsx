@@ -1,38 +1,46 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { Crown } from "lucide-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MealType,
   RecognizeFoodResponseDto,
   FoodEntryResponseDto as FoodEntry,
 } from "@sergiomesasyelamos2000/shared";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   FlatList,
   KeyboardAvoidingView,
   ListRenderItem,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
-  SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../contexts/ThemeContext";
+import { withOpacity } from "../utils/themeStyles";
 import { HealthDisclaimerCard } from "../features/common/components/HealthDisclaimerCard";
+import { AddRecognizedFoodModal } from "../features/chat/components/AddRecognizedFoodModal";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
+import { NutritionChatEmptyState } from "../features/chat/components/NutritionChatEmptyState";
 import { NutritionChatSkeleton } from "../features/chat/components/NutritionChatSkeleton";
 import ImageModal from "../features/common/components/ImageModal";
+import {
+  LOW_QUERY_THRESHOLD,
+  NUTRITION_CHAT_TITLE,
+  nutritionChatSubtitle,
+} from "../features/chat/nutritionChatCopy";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNutritionStore } from "../store/useNutritionStore";
@@ -45,7 +53,6 @@ import {
 import type { Message } from "../store/useChatStore";
 import type { BaseNavigation } from "../types";
 
-// Typing indicator component with animated dots
 const TypingIndicator = ({ theme }: { theme: Theme }) => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
@@ -83,7 +90,7 @@ const TypingIndicator = ({ theme }: { theme: Theme }) => {
       animation2.stop();
       animation3.stop();
     };
-  }, []);
+  }, [dot1, dot2, dot3]);
 
   const dotStyle = (animValue: Animated.Value) => ({
     opacity: animValue.interpolate({
@@ -102,7 +109,13 @@ const TypingIndicator = ({ theme }: { theme: Theme }) => {
 
   return (
     <View
-      style={[styles.typingIndicatorContainer, { backgroundColor: theme.card }]}
+      style={[
+        styles.typingIndicatorContainer,
+        {
+          backgroundColor: withOpacity(theme.primary, 6),
+          borderColor: withOpacity(theme.primary, 16),
+        },
+      ]}
     >
       <View style={styles.typingIndicatorContent}>
         <Animated.View
@@ -131,42 +144,6 @@ const TypingIndicator = ({ theme }: { theme: Theme }) => {
   );
 };
 
-// Empty state component
-const EmptyState = ({ theme }: { theme: Theme }) => (
-  <View style={styles.emptyStateContainer}>
-    <Ionicons
-      name="nutrition-outline"
-      size={80}
-      color={theme.textSecondary}
-      style={styles.emptyStateIcon}
-    />
-    <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
-      ¡Hola! Soy tu asistente de nutrición
-    </Text>
-    <Text style={[styles.emptyStateSubtitle, { color: theme.textSecondary }]}>
-      Puedo ayudarte a crear dietas personalizadas, calcular macros, y mucho
-      más. ¿En qué puedo ayudarte hoy?
-    </Text>
-    <View style={styles.suggestionsContainer}>
-      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
-        <Text style={[styles.suggestionText, { color: theme.text }]}>
-          💪 Crear plan de dieta
-        </Text>
-      </View>
-      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
-        <Text style={[styles.suggestionText, { color: theme.text }]}>
-          📊 Calcular macros
-        </Text>
-      </View>
-      <View style={[styles.suggestionChip, { backgroundColor: theme.card }]}>
-        <Text style={[styles.suggestionText, { color: theme.text }]}>
-          📸 Analizar comida
-        </Text>
-      </View>
-    </View>
-  </View>
-);
-
 export default function NutritionScreen() {
   const [chatInput, setChatInput] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -180,23 +157,19 @@ export default function NutritionScreen() {
   const [pendingGrams, setPendingGrams] = useState("");
   const [savingRecognizedFood, setSavingRecognizedFood] = useState(false);
 
-  // Selectores de Zustand
-  const messages = useMessages(); // Hook personalizado sin loop
+  const messages = useMessages();
   const loading = useChatStore(selectLoading);
   const user = useAuthStore((state) => state.user);
 
-  // Acciones de Zustand
   const addMessage = useChatStore((state) => state.addMessage);
   const sendMessage = useChatStore((state) => state.sendMessage);
   const sendPhoto = useChatStore((state) => state.sendPhoto);
   const setCurrentUser = useChatStore((state) => state.setCurrentUser);
   const addLocalFoodEntry = useNutritionStore((state) => state.addFoodEntry);
 
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const navigation = useNavigation<BaseNavigation>();
-  const insets = useSafeAreaInsets();
 
-  // Hook para límite de uso de IA
   const {
     remainingCalls,
     canUseAI,
@@ -209,15 +182,28 @@ export default function NutritionScreen() {
   const flatListRef = useRef<FlatList>(null);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
 
-  // Set current user and load chat history on mount
-  // Establecer usuario actual cuando cambia
+  const openPlans = useCallback(() => {
+    navigation.navigate("SubscriptionStack", {
+      screen: "PlansScreen",
+    });
+  }, [navigation]);
+
+  const subtitle = useMemo(() => {
+    if (isPremium) return undefined;
+    return nutritionChatSubtitle(remainingCalls, dailyLimit);
+  }, [isPremium, remainingCalls, dailyLimit]);
+
+  const showCrown =
+    !isPremium &&
+    remainingCalls !== null &&
+    remainingCalls <= LOW_QUERY_THRESHOLD;
+
   useEffect(() => {
     if (user?.id) {
       setCurrentUser(user.id);
     }
   }, [user?.id, setCurrentUser]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0 && flatListRef.current) {
       setTimeout(() => {
@@ -226,85 +212,90 @@ export default function NutritionScreen() {
     }
   }, [messages]);
 
-  // Animate scroll button appearance
   useEffect(() => {
     Animated.timing(scrollButtonOpacity, {
       toValue: showScrollButton ? 1 : 0,
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, [showScrollButton]);
+  }, [showScrollButton, scrollButtonOpacity]);
 
-  const handleSend = async () => {
-    if (!chatInput.trim() || loading) return;
-
-    // Verificar límite de uso para usuarios gratuitos
-    if (!canUseAI()) {
+  const showLimitAlert = useCallback(
+    (forPhoto: boolean) => {
       Alert.alert(
         "Límite Alcanzado",
-        `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para consultas ilimitadas.`,
+        forPhoto
+          ? `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para análisis ilimitados.`
+          : `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para consultas ilimitadas.`,
         [
           {
             text: "Actualizar a Premium",
-            onPress: () => {
-              navigation.navigate("SubscriptionStack", {
-                screen: "PlansScreen",
-              });
-            },
+            onPress: openPlans,
           },
           { text: "Cancelar", style: "cancel" },
         ]
       );
-      return;
-    }
+    },
+    [dailyLimit, openPlans]
+  );
 
-    if (!user?.id) {
-      Alert.alert("Error", "Debes iniciar sesión para usar el chat");
-      return;
-    }
+  const submitMessage = useCallback(
+    async (rawText: string, clearComposer: boolean) => {
+      if (!rawText.trim() || loading) return;
 
-    const messageText = chatInput;
-    addMessage({ text: messageText, sender: "user" }, user.id);
-    setChatInput("");
-    setLoadingMessage(true);
-
-    try {
-      // Incrementar uso antes de enviar
-      const allowed = await incrementUsage();
-      if (!allowed) {
-        Alert.alert(
-          "Límite Alcanzado",
-          `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito.`
-        );
+      if (!canUseAI()) {
+        showLimitAlert(false);
         return;
       }
 
-      await sendMessage(messageText, user.id);
-    } catch (error) {
-      console.error("❌ Error sending message:", error);
-    } finally {
-      setLoadingMessage(false);
-    }
+      if (!user?.id) {
+        Alert.alert("Error", "Debes iniciar sesión para usar el chat");
+        return;
+      }
+
+      const messageText = rawText.trim();
+      addMessage({ text: messageText, sender: "user" }, user.id);
+      if (clearComposer) {
+        setChatInput("");
+      }
+      setLoadingMessage(true);
+
+      try {
+        const allowed = await incrementUsage();
+        if (!allowed) {
+          Alert.alert(
+            "Límite Alcanzado",
+            `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito.`
+          );
+          return;
+        }
+
+        await sendMessage(messageText, user.id);
+      } catch (error) {
+        console.error("❌ Error sending message:", error);
+      } finally {
+        setLoadingMessage(false);
+      }
+    },
+    [
+      loading,
+      canUseAI,
+      showLimitAlert,
+      user?.id,
+      addMessage,
+      incrementUsage,
+      dailyLimit,
+      sendMessage,
+    ]
+  );
+
+  const handleSend = async () => {
+    await submitMessage(chatInput, true);
   };
 
   const handleImagePicker = async () => {
-    // Verificar límite de uso para usuarios gratuitos
     if (!canUseAI()) {
-      Alert.alert(
-        "Límite Alcanzado",
-        `Has alcanzado el límite de ${dailyLimit} consultas en el plan gratuito. Actualiza a Premium para análisis ilimitados.`,
-        [
-          {
-            text: "Actualizar a Premium",
-            onPress: () => {
-              navigation.navigate("SubscriptionStack", {
-                screen: "PlansScreen",
-              });
-            },
-          },
-          { text: "Cancelar", style: "cancel" },
-        ]
-      );
+      showLimitAlert(true);
       return;
     }
 
@@ -332,7 +323,6 @@ export default function NutritionScreen() {
           return;
         }
 
-        // Incrementar uso antes de enviar
         const allowed = await incrementUsage();
         if (!allowed) {
           Alert.alert(
@@ -353,7 +343,6 @@ export default function NutritionScreen() {
         );
 
         const formData = new FormData();
-        // FormData.append expects Blob | File | string, but React Native uses a custom type
         const fileBlob: { uri: string; name: string; type: string } = {
           uri: photo.uri,
           name: "photo.jpg",
@@ -493,23 +482,56 @@ export default function NutritionScreen() {
         onAddRecognizedFood={handleAddRecognizedFood}
       />
     ),
-    [handleImagePress, handleAddRecognizedFood]
+    [handleImagePress]
   );
 
   const renderEmptyComponent = useCallback(
-    () => <EmptyState theme={theme} />,
-    [theme]
+    () => (
+      <NutritionChatEmptyState
+        onSendPrompt={(text) => {
+          void submitMessage(text, false);
+        }}
+        onPickPhoto={() => {
+          void handleImagePicker();
+        }}
+        disabled={loading || loadingMessage}
+      />
+    ),
+    [submitMessage, loading, loadingMessage]
+  );
+
+  const hasUserMessage = messages.some((message) => message.sender === "user");
+
+  const renderListFooter = useCallback(
+    () => (
+      <>
+        {!hasUserMessage ? (
+          <NutritionChatEmptyState
+            onSendPrompt={(text) => {
+              void submitMessage(text, false);
+            }}
+            onPickPhoto={() => {
+              void handleImagePicker();
+            }}
+            disabled={loading || loadingMessage}
+          />
+        ) : null}
+        {loadingMessage ? <TypingIndicator theme={theme} /> : null}
+      </>
+    ),
+    [hasUserMessage, submitMessage, loading, loadingMessage, theme]
   );
 
   if (usageLoading) {
     return (
       <SafeAreaView
-        style={[
-          styles.safeArea,
-          { backgroundColor: theme.backgroundSecondary },
-          Platform.OS === "android" ? { paddingTop: insets.top } : null,
-        ]}
+        edges={["top"]}
+        style={[styles.safeArea, { backgroundColor: theme.primary }]}
       >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={theme.primary}
+        />
         <NutritionChatSkeleton />
       </SafeAreaView>
     );
@@ -517,81 +539,78 @@ export default function NutritionScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        { backgroundColor: theme.backgroundSecondary },
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["top"]}
+      style={[styles.safeArea, { backgroundColor: theme.primary }]}
     >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.primary}
+      />
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View style={[styles.header, { backgroundColor: theme.primary }]}>
-          <View style={styles.headerContent}>
-            <Ionicons name="nutrition" size={32} color="#fff" />
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Nutrición IA</Text>
-              <Text style={[styles.headerSubtitle, { color: "#E0F2FE" }]}>
-                Tu asistente personalizado
+        <View
+          style={[
+            styles.brandHeader,
+            {
+              backgroundColor: theme.primary,
+              shadowColor: theme.primary,
+            },
+          ]}
+        >
+          <View style={styles.brandHeaderRow}>
+            <View style={styles.brandHeaderText}>
+              <Text
+                style={[styles.brandTitle, { color: theme.onPrimary }]}
+                numberOfLines={1}
+              >
+                {NUTRITION_CHAT_TITLE}
               </Text>
-            </View>
-            <HealthDisclaimerCard
-              variant="icon"
-              iconColor="#fff"
-              iconSize={26}
-            />
-          </View>
-        </View>
-
-        {/* Banner de uso de IA para usuarios gratuitos */}
-        {!isPremium && remainingCalls !== null && (
-          <TouchableOpacity
-            style={[
-              styles.usageBanner,
-              {
-                backgroundColor:
-                  remainingCalls > 3 ? theme.info + "20" : theme.warning + "20",
-                borderColor: remainingCalls > 3 ? theme.info : theme.warning,
-              },
-            ]}
-            onPress={() => {
-              navigation.navigate("SubscriptionStack", {
-                screen: "PlansScreen",
-              });
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.usageBannerContent}>
-              <View style={styles.usageBannerLeft}>
-                <Ionicons
-                  name={remainingCalls > 3 ? "information-circle" : "warning"}
-                  size={20}
-                  color={remainingCalls > 3 ? theme.info : theme.warning}
-                />
+              {subtitle ? (
                 <Text
                   style={[
-                    styles.usageBannerText,
-                    { color: remainingCalls > 3 ? theme.info : theme.warning },
+                    styles.brandSubtitle,
+                    { color: withOpacity(theme.onPrimary, 78) },
                   ]}
+                  numberOfLines={1}
                 >
-                  {remainingCalls > 0
-                    ? `${remainingCalls} de ${dailyLimit} consultas disponibles`
-                    : "Límite de consultas alcanzado"}
+                  {subtitle}
                 </Text>
-              </View>
-              <View style={styles.usageBannerRight}>
-                <Crown size={16} color={theme.warning} />
+              ) : (
                 <Text
-                  style={[styles.upgradeBannerText, { color: theme.warning }]}
+                  style={[
+                    styles.brandSubtitle,
+                    { color: withOpacity(theme.onPrimary, 78) },
+                  ]}
+                  numberOfLines={1}
                 >
-                  Actualizar
+                  Asistente de nutrición
                 </Text>
+              )}
+            </View>
+            <View style={styles.headerActions}>
+              {showCrown ? (
+                <TouchableOpacity
+                  style={styles.headerHit}
+                  onPress={openPlans}
+                  accessibilityRole="button"
+                  accessibilityLabel="Actualizar a Premium"
+                >
+                  <Crown size={20} color="#FBBF24" />
+                </TouchableOpacity>
+              ) : null}
+              <View style={styles.headerHit}>
+                <HealthDisclaimerCard
+                  variant="icon"
+                  iconColor={theme.onPrimary}
+                  iconSize={24}
+                />
               </View>
             </View>
-          </TouchableOpacity>
-        )}
+          </View>
+        </View>
 
         <View style={styles.chatWrapper}>
           <FlatList
@@ -601,18 +620,13 @@ export default function NutritionScreen() {
             keyExtractor={(item) => `msg-${item.id}`}
             contentContainerStyle={[
               styles.chatContentContainer,
-              messages.length === 0 && { flexGrow: 1 },
+              !hasUserMessage && { flexGrow: 1 },
             ]}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={renderEmptyComponent}
-            ListFooterComponent={
-              <>
-                {loadingMessage ? <TypingIndicator theme={theme} /> : null}
-                <HealthDisclaimerCard variant="footer" />
-              </>
-            }
+            ListFooterComponent={renderListFooter}
             maintainVisibleContentPosition={{
               minIndexForVisible: 0,
             }}
@@ -631,8 +645,10 @@ export default function NutritionScreen() {
                   styles.scrollToBottomButtonInner,
                   { backgroundColor: theme.primary },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Ir al final del chat"
               >
-                <Ionicons name="arrow-down" size={24} color="#fff" />
+                <Ionicons name="arrow-down" size={24} color={theme.onPrimary} />
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -642,7 +658,7 @@ export default function NutritionScreen() {
           value={chatInput}
           onChangeText={setChatInput}
           onSend={handleSend}
-          onOpenCamera={handleImagePicker}
+          onPickPhoto={handleImagePicker}
           loading={loading}
         />
       </KeyboardAvoidingView>
@@ -651,126 +667,19 @@ export default function NutritionScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
-      <Modal
+      <AddRecognizedFoodModal
         visible={showAddFoodModal}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAddFoodModal}
-        statusBarTranslucent={Platform.OS === "android"}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Añadir al diario
-            </Text>
-            <Text
-              style={[styles.modalSubtitle, { color: theme.textSecondary }]}
-            >
-              {pendingFood?.name || "Alimento"}
-            </Text>
-
-            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
-              Comida
-            </Text>
-            <View style={styles.mealTypesRow}>
-              {(
-                [
-                  { key: "breakfast", label: "Desayuno" },
-                  { key: "lunch", label: "Comida" },
-                  { key: "dinner", label: "Cena" },
-                  { key: "snack", label: "Snack" },
-                ] as Array<{ key: MealType; label: string }>
-              ).map((item) => (
-                <TouchableOpacity
-                  key={item.key}
-                  style={[
-                    styles.mealChip,
-                    {
-                      borderColor:
-                        pendingMealType === item.key
-                          ? theme.primary
-                          : theme.border,
-                      backgroundColor:
-                        pendingMealType === item.key
-                          ? `${theme.primary}20`
-                          : theme.backgroundSecondary,
-                    },
-                  ]}
-                  onPress={() => setPendingMealType(item.key)}
-                >
-                  <Text
-                    style={{
-                      color:
-                        pendingMealType === item.key
-                          ? theme.primary
-                          : theme.text,
-                      fontWeight: "600",
-                      fontSize: 12,
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
-              Cantidad (gramos)
-            </Text>
-            <TextInput
-              value={pendingGrams}
-              onChangeText={setPendingGrams}
-              keyboardType="numeric"
-              placeholder="Ej: 180"
-              placeholderTextColor={theme.textTertiary}
-              style={[
-                styles.gramsInput,
-                {
-                  color: theme.text,
-                  borderColor: theme.border,
-                  backgroundColor: theme.backgroundSecondary,
-                },
-              ]}
-            />
-
-            <View style={styles.modalButtonsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.modalSecondaryButton,
-                  { borderColor: theme.border },
-                ]}
-                onPress={closeAddFoodModal}
-                disabled={savingRecognizedFood}
-              >
-                <Text
-                  style={[
-                    styles.modalSecondaryButtonText,
-                    { color: theme.text },
-                  ]}
-                >
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.modalPrimaryButton,
-                  { backgroundColor: theme.primary },
-                ]}
-                onPress={handleConfirmAddRecognizedFood}
-                disabled={savingRecognizedFood}
-              >
-                {savingRecognizedFood ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalPrimaryButtonText}>Guardar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        foodName={pendingFood?.name || "Alimento"}
+        mealType={pendingMealType}
+        grams={pendingGrams}
+        saving={savingRecognizedFood}
+        onChangeMealType={setPendingMealType}
+        onChangeGrams={setPendingGrams}
+        onCancel={closeAddFoodModal}
+        onSave={() => {
+          void handleConfirmAddRecognizedFood();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -782,163 +691,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fullScreenLoading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
+  brandHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
   },
-  fullScreenLoadingText: {
-    fontSize: 16,
+  brandHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 52,
+  },
+  brandHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  brandTitle: {
+    fontSize: RFValue(20),
+    fontWeight: "800",
+  },
+  brandSubtitle: {
+    fontSize: RFValue(12),
+    marginTop: 2,
     fontWeight: "500",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  headerContent: {
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    opacity: 0.9,
-  },
-  usageBanner: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  usageBannerContent: {
-    flexDirection: "row",
+  headerHit: {
+    width: 44,
+    height: 44,
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  usageBannerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 8,
-  },
-  usageBannerText: {
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-  usageBannerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-  },
-  upgradeBannerText: {
-    fontSize: 12,
-    fontWeight: "700",
+    justifyContent: "center",
   },
   chatWrapper: {
     flex: 1,
     position: "relative",
-  },
-  chatContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
   },
   chatContentContainer: {
     paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
-  // Empty state styles
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-    paddingVertical: 40,
-  },
-  emptyStateIcon: {
-    marginBottom: 24,
-    opacity: 0.6,
-  },
-  emptyStateTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  suggestionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-  },
-  suggestionChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  suggestionText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  // Typing indicator styles
-  typingIndicatorContainer: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    marginTop: 8,
-    marginBottom: 8,
-    marginLeft: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  typingIndicatorContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  typingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  // Scroll to bottom button
   scrollToBottomButton: {
     position: "absolute",
     bottom: 16,
@@ -951,79 +750,30 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
+    elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    borderRadius: 14,
-    padding: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-    marginBottom: 10,
-  },
-  modalLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  mealTypesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 14,
-  },
-  mealChip: {
+  typingIndicatorContainer: {
+    alignSelf: "flex-start",
+    marginVertical: 8,
+    marginHorizontal: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    maxWidth: "80%",
   },
-  gramsInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 16,
-  },
-  modalButtonsRow: {
+  typingIndicatorContent: {
     flexDirection: "row",
-    gap: 10,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 10,
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
   },
-  modalPrimaryButton: {},
-  modalSecondaryButton: {
-    borderWidth: 1,
-    backgroundColor: "transparent",
-  },
-  modalPrimaryButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  modalSecondaryButtonText: {
-    fontWeight: "600",
-    fontSize: 14,
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

@@ -7,8 +7,13 @@ jest.mock("../../../../contexts/ThemeContext", () => ({
   useTheme: () => ({
     theme: {
       primary: "blue",
+      onPrimary: "#fff",
       card: "#fff",
       text: "#000",
+      textSecondary: "#666",
+      background: "#f8f8f8",
+      border: "#eee",
+      selection: "rgba(108, 59, 170, 0.12)",
     },
   }),
 }));
