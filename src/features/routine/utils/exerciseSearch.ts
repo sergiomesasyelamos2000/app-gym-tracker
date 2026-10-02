@@ -1,172 +1,51 @@
 import type { EquipmentDto, MuscleDto } from "@sergiomesasyelamos2000/shared";
+import {
+  getEquipmentAliasKeys,
+  getMuscleAliasKeys,
+} from "./exerciseAliasKeys";
+import {
+  type ExerciseFilterIndex,
+  type IndexedSearchFields,
+  type SearchableExercise,
+  indexedExerciseMatchesEquipment,
+  indexedExerciseMatchesMuscle,
+  prepareNameFilter,
+} from "./exerciseFilterIndex";
+import {
+  normalizeSearchText,
+  normalizedKeysMatch,
+  tokenizeSearch,
+  toFilterKey,
+  valuesMatch,
+} from "./exerciseSearchText";
 
-export type SearchableExercise = {
-  id: string;
-  name: string;
-  equipments?: string[];
-  targetMuscles?: string[];
-  secondaryMuscles?: string[];
-  bodyParts?: string[];
-  keywords?: string[];
-  muscularGroup?: string;
-};
-
-const SEARCH_STOP_WORDS = new Set([
-  "de",
-  "del",
-  "la",
-  "el",
-  "los",
-  "las",
-  "con",
-  "y",
-  "en",
-  "para",
-  "a",
-  "al",
-  "un",
-  "una",
-  "unos",
-  "unas",
-]);
-
-/** Body-part / muscle labels that should resolve to the same filter. */
-export const MUSCLE_ALIAS_GROUPS: string[][] = [
-  ["pecho", "chest", "pectorales", "pectoral", "pecs", "pectorals"],
-  ["espalda", "back", "dorsales", "lats", "latissimus", "espalda alta", "espalda baja", "upper back", "lower back"],
-  ["hombros", "hombro", "shoulders", "shoulder", "deltoides", "deltoide", "delts", "deltoids"],
-  ["cintura", "waist", "abdominales", "abs", "core", "abdominal", "abdomen"],
-  ["gluteos", "gluteo", "glutes", "glute", "caderas", "hips", "hip"],
-  ["pantorrillas", "pantorrilla", "calves", "calf", "gemelo", "gemelos"],
-  ["antebrazos", "antebrazo", "forearms", "forearm"],
-  ["trapecios", "trapecio", "traps", "trapezius"],
-  ["isquiotibiales", "isquiotibial", "hamstrings", "hamstring", "isquio"],
-  [
-    "cuadriceps",
-    "cuádriceps",
-    "quadriceps",
-    "quads",
-  ],
-  ["biceps", "bíceps", "bicep"],
-  ["triceps", "tríceps", "tricep"],
-  ["cuello", "neck"],
-  ["muslos", "thighs", "thigh", "piernas superiores", "upper legs"],
-  ["piernas inferiores", "lower legs", "lower leg"],
-  ["brazos superiores", "upper arms"],
-  ["brazos inferiores", "lower arms", "lower arm"],
-  ["aductores", "adductors", "adductor"],
-  ["abductores", "abductors", "abductor"],
-];
-
-/** Equipment labels that should resolve to the same filter. */
-export const EQUIPMENT_ALIAS_GROUPS: string[][] = [
-  ["cable", "cables", "polea", "poleas", "cable machine"],
-  ["dumbbell", "dumbbells", "mancuerna", "mancuernas"],
-  ["barbell", "barra", "barras"],
-  [
-    "bodyweight",
-    "body weight",
-    "peso corporal",
-    "peso del cuerpo",
-    "sin equipo",
-  ],
-  [
-    "machine",
-    "maquina",
-    "maquinas",
-    "leverage machine",
-    "maquina de palanca",
-  ],
-  ["smith", "smith machine", "maquina smith"],
-  [
-    "band",
-    "bands",
-    "banda",
-    "bandas",
-    "banda elastica",
-    "banda de resistencia",
-    "resistance band",
-  ],
-  ["kettlebell", "kettlebells", "pesa rusa", "pesas rusas"],
-  ["bench", "banco", "bancos"],
-  ["ez bar", "ez-bar", "barra z", "ez barbell"],
-  ["medicine ball", "balon medicinal", "pelota medicinal"],
-  ["stability ball", "pelota de estabilidad", "fitball"],
-  ["trx", "suspension", "suspension trainer"],
-];
-
-export const normalizeSearchText = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-export const tokenizeSearch = (value: string) =>
-  normalizeSearchText(value)
-    .split(" ")
-    .filter((token) => token.length > 0 && !SEARCH_STOP_WORDS.has(token));
-
-export const toFilterKey = (value: string) => normalizeSearchText(value);
-
-/**
- * Flexible label match: equality, prefix, or substring (min length 3).
- */
-export const valuesMatch = (value: string, expected: string): boolean => {
-  const normalizedValue = normalizeSearchText(value);
-  const normalizedExpected = normalizeSearchText(expected);
-  if (!normalizedValue || !normalizedExpected) return false;
-
-  if (
-    normalizedValue === normalizedExpected ||
-    normalizedValue.startsWith(`${normalizedExpected} `) ||
-    normalizedExpected.startsWith(`${normalizedValue} `) ||
-    normalizedValue.startsWith(normalizedExpected) ||
-    normalizedExpected.startsWith(normalizedValue)
-  ) {
-    return true;
-  }
-
-  if (normalizedExpected.length >= 3 && normalizedValue.includes(normalizedExpected)) {
-    return true;
-  }
-  if (normalizedValue.length >= 3 && normalizedExpected.includes(normalizedValue)) {
-    return true;
-  }
-
-  return false;
-};
-
-const getAliasKeysFromGroups = (
-  name: string,
-  groups: string[][]
-): string[] => {
-  const key = toFilterKey(name);
-  if (!key) return [];
-
-  const aliases = new Set<string>([key]);
-  for (const group of groups) {
-    const normalizedGroup = group.map(toFilterKey).filter(Boolean);
-    const belongs = normalizedGroup.some(
-      (alias) =>
-        valuesMatch(alias, key) ||
-        (alias.length >= 4 && key.includes(alias)) ||
-        (key.length >= 4 && alias.includes(key))
-    );
-    if (belongs) {
-      normalizedGroup.forEach((alias) => aliases.add(alias));
-    }
-  }
-  return Array.from(aliases);
-};
-
-export const getMuscleAliasKeys = (name: string): string[] =>
-  getAliasKeysFromGroups(name, MUSCLE_ALIAS_GROUPS);
-
-export const getEquipmentAliasKeys = (name: string): string[] =>
-  getAliasKeysFromGroups(name, EQUIPMENT_ALIAS_GROUPS);
+export type { SearchableExercise } from "./exerciseFilterIndex";
+export {
+  EMPTY_FILTER_NAMES,
+  buildExerciseFilterIndex,
+  prepareNameFilter,
+  rankChipsFromIndex,
+  withSelectedChips,
+  idsToNames,
+  remapFilterSelectionIds,
+  DERIVED_MUSCLE_PREFIX,
+  DERIVED_EQUIPMENT_PREFIX,
+  type ExerciseFilterIndex,
+  type ExerciseFilterDraft,
+  type RankedFilterChips,
+} from "./exerciseFilterIndex";
+export {
+  getEquipmentAliasKeys,
+  getMuscleAliasKeys,
+  MUSCLE_ALIAS_GROUPS,
+  EQUIPMENT_ALIAS_GROUPS,
+} from "./exerciseAliasKeys";
+export {
+  normalizeSearchText,
+  tokenizeSearch,
+  toFilterKey,
+  valuesMatch,
+} from "./exerciseSearchText";
 
 const labelsMatchWithAliases = (
   left: string,
@@ -177,7 +56,9 @@ const labelsMatchWithAliases = (
   const leftAliases = getAliases(left);
   const rightAliases = getAliases(right);
   return leftAliases.some((leftAlias) =>
-    rightAliases.some((rightAlias) => valuesMatch(leftAlias, rightAlias))
+    rightAliases.some((rightAlias) =>
+      normalizedKeysMatch(leftAlias, rightAlias)
+    )
   );
 };
 
@@ -212,7 +93,7 @@ export const exerciseMatchesEquipment = (
 
 const scoreTokenAgainstHaystack = (
   queryToken: string,
-  haystackTokens: string[],
+  haystackTokens: readonly string[],
   haystackText: string
 ): number => {
   let best = 0;
@@ -232,6 +113,55 @@ const scoreTokenAgainstHaystack = (
   }
 
   return best;
+};
+
+/**
+ * Rank exercises for free-text search using precomputed fields when available.
+ * Multi-word queries require every token to match somewhere (AND).
+ */
+export const scoreIndexedExerciseSearch = (
+  search: IndexedSearchFields,
+  normalizedQuery: string,
+  queryTokens: string[]
+): number => {
+  if (!normalizedQuery) return 1;
+
+  const { nameText, nameTokens, extraText, extraTokens, fullText } = search;
+  const fullTokens = [...nameTokens, ...extraTokens];
+
+  if (nameText === normalizedQuery) return 200;
+  if (nameText.startsWith(normalizedQuery)) return 160;
+  if (nameText.includes(normalizedQuery)) return 120;
+  if (fullText.includes(normalizedQuery)) return 90;
+
+  if (queryTokens.length === 0) return 0;
+
+  let total = 0;
+  for (const queryToken of queryTokens) {
+    const nameHit = scoreTokenAgainstHaystack(queryToken, nameTokens, nameText);
+    const extraHit = scoreTokenAgainstHaystack(
+      queryToken,
+      extraTokens,
+      extraText
+    );
+    const best = Math.max(nameHit, Math.floor(extraHit * 0.7));
+
+    if (best === 0) return 0;
+    total += best;
+  }
+
+  const nameMatchedCount = queryTokens.filter(
+    (token) => scoreTokenAgainstHaystack(token, nameTokens, nameText) > 0
+  ).length;
+  total += nameMatchedCount * 8;
+
+  if (nameMatchedCount === queryTokens.length) {
+    total += 15;
+  }
+
+  if (total > 0 && fullTokens.length === 0) return 0;
+
+  return total;
 };
 
 /**
@@ -258,54 +188,78 @@ export const scoreExerciseSearch = (
   ];
   const extraText = normalizeSearchText(extraFields.join(" "));
   const extraTokens = tokenizeSearch(extraFields.join(" "));
-  const fullText = `${nameText} ${extraText}`.trim();
-  const fullTokens = [...nameTokens, ...extraTokens];
 
-  if (nameText === normalizedQuery) return 200;
-  if (nameText.startsWith(normalizedQuery)) return 160;
-  if (nameText.includes(normalizedQuery)) return 120;
-  if (fullText.includes(normalizedQuery)) return 90;
-
-  if (queryTokens.length === 0) return 0;
-
-  let total = 0;
-  for (const queryToken of queryTokens) {
-    const nameHit = scoreTokenAgainstHaystack(queryToken, nameTokens, nameText);
-    const extraHit = scoreTokenAgainstHaystack(queryToken, extraTokens, extraText);
-    const best = Math.max(nameHit, Math.floor(extraHit * 0.7));
-
-    // Every query token must match somewhere.
-    if (best === 0) return 0;
-    total += best;
-  }
-
-  // Prefer matches concentrated in the name.
-  const nameMatchedCount = queryTokens.filter(
-    (token) => scoreTokenAgainstHaystack(token, nameTokens, nameText) > 0
-  ).length;
-  total += nameMatchedCount * 8;
-
-  // Slight boost when all tokens appear as contiguous-ish name coverage.
-  if (nameMatchedCount === queryTokens.length) {
-    total += 15;
-  }
-
-  // Avoid scoring noise from extremely loose full-token overlap alone.
-  if (total > 0 && fullTokens.length === 0) return 0;
-
-  return total;
+  return scoreIndexedExerciseSearch(
+    {
+      nameText,
+      nameTokens,
+      extraText,
+      extraTokens,
+      fullText: `${nameText} ${extraText}`.trim(),
+    },
+    normalizedQuery,
+    queryTokens
+  );
 };
 
 export const filterAndSortExercises = <T extends SearchableExercise>(
   exercises: T[],
   options: {
     searchQuery: string;
-    selectedEquipmentNames: string[];
-    selectedMuscleNames: string[];
+    selectedEquipmentNames: readonly string[];
+    selectedMuscleNames: readonly string[];
+    index?: ExerciseFilterIndex<T>;
   }
 ): T[] => {
   const normalizedQuery = normalizeSearchText(options.searchQuery);
   const queryTokens = tokenizeSearch(options.searchQuery);
+
+  if (options.index && options.index.entries.length === exercises.length) {
+    const preparedEquipment = prepareNameFilter(
+      options.selectedEquipmentNames,
+      getEquipmentAliasKeys
+    );
+    const preparedMuscle = prepareNameFilter(
+      options.selectedMuscleNames,
+      getMuscleAliasKeys
+    );
+
+    const scored = options.index.entries
+      .map((entry) => {
+        const searchScore = scoreIndexedExerciseSearch(
+          entry.search,
+          normalizedQuery,
+          queryTokens
+        );
+        const matchesEquipment = indexedExerciseMatchesEquipment(
+          entry,
+          preparedEquipment
+        );
+        const matchesMuscle = indexedExerciseMatchesMuscle(
+          entry,
+          preparedMuscle
+        );
+
+        return {
+          exercise: entry.exercise,
+          searchScore,
+          originalIndex: entry.originalIndex,
+          visible: searchScore > 0 && matchesEquipment && matchesMuscle,
+        };
+      })
+      .filter((item) => item.visible);
+
+    if (normalizedQuery) {
+      scored.sort((a, b) => {
+        if (b.searchScore !== a.searchScore) {
+          return b.searchScore - a.searchScore;
+        }
+        return a.originalIndex - b.originalIndex;
+      });
+    }
+
+    return scored.map((item) => item.exercise);
+  }
 
   const scored = exercises
     .map((exercise, originalIndex) => {
@@ -336,15 +290,14 @@ export const filterAndSortExercises = <T extends SearchableExercise>(
     })
     .filter((item) => item.visible);
 
-  scored.sort((a, b) => {
-    if (!normalizedQuery) {
+  if (normalizedQuery) {
+    scored.sort((a, b) => {
+      if (b.searchScore !== a.searchScore) {
+        return b.searchScore - a.searchScore;
+      }
       return a.originalIndex - b.originalIndex;
-    }
-    if (b.searchScore !== a.searchScore) {
-      return b.searchScore - a.searchScore;
-    }
-    return a.originalIndex - b.originalIndex;
-  });
+    });
+  }
 
   return scored.map((item) => item.exercise);
 };
@@ -447,7 +400,6 @@ export const rankFilterOptionsByUsage = <T extends { id: string; name: string }>
     aliases.forEach((alias) => {
       total += usageByName.get(alias) || 0;
     });
-    // Also count exact key if aliases missed raw labels.
     total += usageByName.get(toFilterKey(name)) || 0;
     return total;
   };
@@ -459,7 +411,10 @@ export const rankFilterOptionsByUsage = <T extends { id: string; name: string }>
 
   const selectedSet = new Set(selectedIds);
   const topOptions = withScore
-    .sort((a, b) => b.score - a.score || a.option.name.localeCompare(b.option.name))
+    .sort(
+      (a, b) =>
+        b.score - a.score || a.option.name.localeCompare(b.option.name)
+    )
     .slice(0, maxOptions)
     .map((entry) => entry.option);
 

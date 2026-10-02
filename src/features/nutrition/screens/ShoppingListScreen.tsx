@@ -2,11 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
-  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,7 +14,9 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { ShoppingListItemResponseDto } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
+import { ShoppingListSkeleton } from "../components/ShoppingListSkeleton";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 
@@ -244,9 +244,7 @@ export default function ShoppingListScreen() {
           title="Lista de Compras"
           onBack={() => navigation.goBack()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <ShoppingListSkeleton />
       </SafeAreaView>
     );
   }
@@ -289,12 +287,7 @@ export default function ShoppingListScreen() {
         ]}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
-          />
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       />
 

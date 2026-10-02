@@ -68,7 +68,7 @@ export const RootNavigator = () => {
     if (hasWarmedUpCatalogRef.current) return;
     hasWarmedUpCatalogRef.current = true;
     void Promise.all([
-      prefetchExerciseCatalog({ force: true }),
+      prefetchExerciseCatalog(),
       prefetchProductCatalog({ force: true, pageSize: 24 }),
     ]);
   }, [isAuthenticated, isInitializing]);
@@ -86,7 +86,7 @@ export const RootNavigator = () => {
 
       if (!isReturningToForeground) return;
       void Promise.all([
-        prefetchExerciseCatalog({ force: true }),
+        prefetchExerciseCatalog(),
         prefetchProductCatalog({ force: true, pageSize: 24 }),
       ]);
     });

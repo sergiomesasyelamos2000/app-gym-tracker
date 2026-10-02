@@ -9,7 +9,6 @@ import {
   LayoutAnimation,
   Modal,
   Platform,
-  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -27,6 +26,7 @@ import type {
   UserMacroGoals,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -39,6 +39,7 @@ import ReusableCameraView from "../../common/components/ReusableCameraView";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import { DailyCalorieChart } from "../components/DailyCalorieChart";
 import { MacroDistributionChart } from "../components/MacroDistributionChart";
+import { MacrosDiarySkeleton } from "../components/MacrosDiarySkeleton";
 import * as nutritionService from "../services/nutritionService";
 import { MACRO_COLORS, MACRO_GRAMS_ORDER, MACRO_LABELS } from "../utils/macroColors";
 import {
@@ -661,12 +662,7 @@ export default function MacrosScreen({ navigation }: Props) {
           Platform.OS === "android" ? { paddingTop: insets.top } : null,
         ]}
       >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={APP_PURPLE} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Cargando...
-          </Text>
-        </View>
+        <MacrosDiarySkeleton />
       </SafeAreaView>
     );
   }
@@ -1006,12 +1002,7 @@ export default function MacrosScreen({ navigation }: Props) {
         showsHorizontalScrollIndicator={false}
         indicatorStyle={isDark ? "white" : "black"}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[APP_PURPLE]}
-            tintColor={APP_PURPLE}
-          />
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.header}>

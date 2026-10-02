@@ -3,25 +3,25 @@ import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
-  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import type { NutritionPlanResponseDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
+import type { NutritionPlanListItemDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { NutritionHeaderIconButton, NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import PlanCard from "../components/plans/PlanCard";
+import { PlanCardSkeleton } from "../components/plans/PlanCardSkeleton";
 import * as nutritionPlansService from "../services/nutritionPlansService";
 import { sortPlansByRecent } from "../utils/planHelpers";
 import { NutritionStackParamList } from "./NutritionStack";
@@ -123,9 +123,7 @@ export default function NutritionPlansListScreen({ navigation }: Props) {
           title="Planes Nutricionales"
           onBack={() => navigation.goBack()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <PlanCardSkeleton />
       </SafeAreaView>
     );
   }
@@ -153,12 +151,7 @@ export default function NutritionPlansListScreen({ navigation }: Props) {
           plans.length === 0 && styles.listContentEmpty,
         ]}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
-          />
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={renderEmpty}
         renderItem={({ item }) => (

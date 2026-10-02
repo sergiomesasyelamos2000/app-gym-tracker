@@ -9,7 +9,6 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -27,6 +26,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
+import { ProductListSkeleton } from "../components/product-search/ProductListSkeleton";
 import {
   CustomMealResponseDto as CustomMeal,
   CustomProductResponseDto as CustomProduct,
@@ -195,10 +195,10 @@ function AllProductsTab({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando productos...</Text>
-      </View>
+      <ProductListSkeleton
+        message="Cargando productos..."
+        showBrand={false}
+      />
     );
   }
 
@@ -379,10 +379,10 @@ function FavoritesTab({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Cargando favoritos...</Text>
-      </View>
+      <ProductListSkeleton
+        message="Cargando favoritos..."
+        showBrand={false}
+      />
     );
   }
 
@@ -551,12 +551,7 @@ function CustomProductsTab({
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>
-          Cargando productos personalizados...
-        </Text>
-      </View>
+      <ProductListSkeleton message="Cargando productos personalizados..." />
     );
   }
 

@@ -85,6 +85,7 @@ import {
 import ExerciseCard from "../components/ExerciseCard/ExerciseCard";
 import UndoSnackbar from "../components/ExerciseCard/UndoSnackbar";
 import { formatTime } from "../components/ExerciseCard/helpers";
+import { RoutineDetailSkeleton } from "../components/RoutineDetailSkeleton";
 import { RoutineHeader } from "../components/RoutineHeader";
 import { LiveRoutineMetrics } from "../components/RoutineMetrics";
 import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal";
@@ -97,7 +98,7 @@ import {
   type WorkoutHealthSnapshot,
 } from "../../health";
 import {
-  findAllRoutineSessions,
+  findRoutineSessions,
   getRoutineById,
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
@@ -1135,18 +1136,20 @@ export default function RoutineDetailScreen() {
     }
   }, [route.params?.start]);
 
-  // Load previous sessions for record detection
+  // Load previous sessions for record detection (scoped to this routine)
   useEffect(() => {
     const loadSessions = async () => {
+      const id = routineId || routine?.id || routineData?.id;
+      if (!id) return;
       try {
-        const sessions = await findAllRoutineSessions();
+        const sessions = await findRoutineSessions(id);
         setPreviousSessions(sessions);
       } catch (error) {
         console.error("Error loading sessions:", error);
       }
     };
     loadSessions();
-  }, []);
+  }, [routineId, routine?.id, routineData?.id]);
 
   // Persist sets/exercises when they change — not on every duration tick.
   useEffect(() => {
@@ -2310,9 +2313,6 @@ export default function RoutineDetailScreen() {
     </TouchableOpacity>
   ) : null;
 
-  const isSmallDevice = width < 360;
-  const loadingTextMaxWidth = Math.min(width * 0.8, 360);
-
   if (loading || isExercisesLoading) {
     return (
       <SafeAreaView
@@ -2326,24 +2326,7 @@ export default function RoutineDetailScreen() {
           title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
           onBack={sessionView ? handleExitSessionView : () => navigation.goBack()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size={isSmallDevice ? "small" : "large"}
-            color={theme.primary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              {
-                color: theme.textSecondary,
-                maxWidth: loadingTextMaxWidth,
-                fontSize: RFValue(isSmallDevice ? 14 : 16),
-              },
-            ]}
-          >
-            Cargando ejercicios...
-          </Text>
-        </View>
+        <RoutineDetailSkeleton />
       </SafeAreaView>
     );
   }

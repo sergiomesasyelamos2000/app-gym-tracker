@@ -16,7 +16,6 @@ import {
   Modal as RNModal,
   Platform,
   Pressable,
-  RefreshControl,
   StatusBar,
   StyleSheet,
   Text,
@@ -25,6 +24,7 @@ import {
   View,
 } from "react-native";
 import Modal from "react-native-modal";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
@@ -35,6 +35,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { notificationService } from "../../../services/notificationService";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
+import { RoutineListSkeleton } from "../components/RoutineListSkeleton";
 import {
   folderKey,
   parseRootKey,
@@ -1049,14 +1050,7 @@ export default function WorkoutScreen() {
 
   const renderEmpty = () => {
     if (loading) {
-      return (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            Cargando rutinas...
-          </Text>
-        </View>
-      );
+      return <RoutineListSkeleton />;
     }
 
     return (
@@ -1138,14 +1132,10 @@ export default function WorkoutScreen() {
           ListHeaderComponent={listHeader}
           ListEmptyComponent={renderEmpty}
           refreshControl={
-            <RefreshControl
-              key="workout-refresh-purple"
+            <AppRefreshControl
+              gestureHandler
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={theme.primary}
-              titleColor={theme.primary}
-              colors={[theme.primary]}
-              progressBackgroundColor={theme.card}
             />
           }
           contentContainerStyle={[

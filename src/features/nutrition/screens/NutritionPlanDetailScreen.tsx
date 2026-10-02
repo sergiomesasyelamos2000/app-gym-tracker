@@ -22,6 +22,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
 import MacroSummary from "../components/plans/MacroSummary";
+import { NutritionPlanDetailSkeleton } from "../components/plans/NutritionPlanDetailSkeleton";
 import PlanDaySection from "../components/plans/PlanDaySection";
 import * as nutritionPlansService from "../services/nutritionPlansService";
 import {
@@ -127,9 +128,7 @@ export default function NutritionPlanDetailScreen({ route, navigation }: Props) 
           title="Detalle del plan"
           onBack={() => navigation.goBack()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <NutritionPlanDetailSkeleton />
       </SafeAreaView>
     );
   }

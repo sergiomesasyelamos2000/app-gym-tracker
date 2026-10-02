@@ -13,6 +13,27 @@ import {
   filterAndSortExercises,
   type SearchableExercise,
 } from "../features/routine/utils/exerciseSearch";
+import { clearExerciseImageLookupCache } from "../features/routine/utils/exerciseImageLookupCache";
+import { warmExerciseCatalogThumbs } from "../features/routine/utils/prefetchExerciseThumbs";
+import {
+  EXERCISE_CACHE_KEY,
+  EXERCISE_CATALOG_TTL_MS,
+  applyNetworkExerciseCatalog,
+  clearExerciseCatalogStorage,
+  getCatalogWriteGeneration,
+  isExerciseCatalogFromOfflineCache,
+  isExerciseCatalogStale,
+  markExerciseCatalogOffline,
+  peekExerciseCatalog,
+  peekExerciseCatalogSnapshot,
+  readExerciseCatalog,
+  upsertExerciseInCatalog,
+} from "./exerciseCatalogCache";
+
+export {
+  peekExerciseCatalog,
+  invalidateExerciseCatalogMemory,
+} from "./exerciseCatalogCache";
 
 type ExerciseSearchFilters = {
   name?: string;
@@ -22,7 +43,6 @@ type ExerciseSearchFilters = {
 };
 
 const CACHE_KEYS = {
-  EXERCISES: "@exercises_cache_v2",
   EQUIPMENT: "@equipment_cache",
   EXERCISE_TYPES: "@exercise_types_cache",
   MUSCLES: "@muscles_cache",
@@ -30,16 +50,10 @@ const CACHE_KEYS = {
   API_URL: "@exercises_cache_api_url",
 };
 
-const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-const EXERCISE_CACHE_KEYS = [
-  CACHE_KEYS.EXERCISES,
+const AUX_CACHE_KEYS = [
   CACHE_KEYS.EQUIPMENT,
   CACHE_KEYS.EXERCISE_TYPES,
   CACHE_KEYS.MUSCLES,
-  CACHE_KEYS.LAST_SYNC,
-  CACHE_KEYS.API_URL,
-  `${CACHE_KEYS.EXERCISES}_from_cache`,
 ];
 
 const isStorageFullError = (error: unknown): boolean => {
@@ -53,6 +67,7 @@ const isStorageFullError = (error: unknown): boolean => {
 };
 
 let hasLoggedStorageFullWarning = false;
+let inFlightCatalogPrefetch: Promise<void> | null = null;
 
 const isNetworkError = (error: unknown): boolean => {
   if (error instanceof ApiError) return false;
@@ -82,18 +97,10 @@ const canUseStaleExerciseCache = (error: unknown): boolean => {
 const normalizeApiUrl = (value: string) =>
   value.trim().replace(/\/+$/, "").toLowerCase();
 
-async function markCacheApiUrl(): Promise<void> {
-  await safeSetItem(CACHE_KEYS.API_URL, normalizeApiUrl(ENV.API_URL));
-}
-
 async function isCacheFromCurrentApi(): Promise<boolean> {
   const stored = await AsyncStorage.getItem(CACHE_KEYS.API_URL);
   if (!stored) return false;
   return normalizeApiUrl(stored) === normalizeApiUrl(ENV.API_URL);
-}
-
-async function clearExerciseCatalogCache(): Promise<void> {
-  await AsyncStorage.multiRemove(EXERCISE_CACHE_KEYS);
 }
 
 async function safeSetItem(key: string, value: string): Promise<void> {
@@ -107,32 +114,18 @@ async function safeSetItem(key: string, value: string): Promise<void> {
           "[ExerciseService] AsyncStorage lleno. Se omite la escritura de cache temporalmente."
         );
       }
-      // Intento best-effort de liberar únicamente cache del catálogo.
       try {
-        await AsyncStorage.multiRemove(EXERCISE_CACHE_KEYS);
+        await AsyncStorage.multiRemove(AUX_CACHE_KEYS);
         await AsyncStorage.setItem(key, value);
       } catch {
-        // Mantener comportamiento resiliente: no romper el flujo por cache.
+        // Best-effort: do not break the main flow for cache writes.
       }
       return;
     }
-    // Otros errores de storage no deben romper el flujo principal.
     console.warn(
       `[ExerciseService] No se pudo guardar cache para ${key}:`,
       error
     );
-  }
-}
-
-async function refreshExercisesCacheInBackground(): Promise<void> {
-  try {
-    const freshData = await apiFetch<ExerciseRequestDto[]>("exercises");
-    await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(freshData));
-    await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
-    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
-    await markCacheApiUrl();
-  } catch {
-    // Best-effort refresh, ignore failures.
   }
 }
 
@@ -146,74 +139,58 @@ async function getCachedJson<T>(key: string): Promise<T | null> {
   }
 }
 
-async function getLastSyncTimestamp(): Promise<number | null> {
-  const value = await AsyncStorage.getItem(CACHE_KEYS.LAST_SYNC);
-  if (!value) return null;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : null;
+async function persistCatalogFromNetwork(
+  exercises: ExerciseRequestDto[],
+  generationAtFetchStart: number
+): Promise<void> {
+  await applyNetworkExerciseCatalog(exercises, generationAtFetchStart);
+  clearExerciseImageLookupCache();
+  warmExerciseCatalogThumbs();
 }
 
-async function shouldRevalidate(
-  maxAgeMs: number = CACHE_EXPIRY_MS
-): Promise<boolean> {
-  const lastSync = await getLastSyncTimestamp();
-  if (!lastSync) return true;
-  return Date.now() - lastSync > maxAgeMs;
-}
-
-/**
- * Check if cache is still valid
- */
-async function isCacheValid(key: string): Promise<boolean> {
+async function refreshExercisesCacheInBackground(): Promise<void> {
+  const generationAtFetchStart = getCatalogWriteGeneration();
   try {
-    const lastSync = await AsyncStorage.getItem(CACHE_KEYS.LAST_SYNC);
-    if (!lastSync) return false;
-
-    const timeSinceSync = Date.now() - parseInt(lastSync, 10);
-    return timeSinceSync < CACHE_EXPIRY_MS;
+    const freshData = await apiFetch<ExerciseRequestDto[]>("exercises");
+    await persistCatalogFromNetwork(freshData, generationAtFetchStart);
   } catch {
-    return false;
+    // Best-effort refresh, ignore failures.
   }
+}
+
+function revalidateExercisesIfStale(): void {
+  if (!isExerciseCatalogStale()) return;
+  void refreshExercisesCacheInBackground();
 }
 
 /**
  * Fetch exercises with cache-first strategy:
- * 1. Return cache immediately if available (fast UX)
- * 2. Refresh cache in background when stale
- * 3. If no cache, fetch from backend
+ * 1. Return memory immediately when available
+ * 2. Fall back to AsyncStorage (v4 / migrated v3)
+ * 3. Refresh in background when stale
+ * 4. If no cache, fetch from backend
  */
 export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
-  const cacheMatchesCurrentApi = await isCacheFromCurrentApi();
-  if (!cacheMatchesCurrentApi) {
-    await clearExerciseCatalogCache();
-  } else {
-    const cached = await getCachedJson<ExerciseRequestDto[]>(
-      CACHE_KEYS.EXERCISES
-    );
-    if (cached && cached.length > 0) {
-      await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
-      // Stale-while-revalidate in background.
-      void (async () => {
-        if (await shouldRevalidate()) {
-          await refreshExercisesCacheInBackground();
-        }
-      })();
-      return cached;
-    }
+  const memoryHit = peekExerciseCatalog();
+  if (memoryHit?.length) {
+    await markExerciseCatalogOffline(false);
+    revalidateExercisesIfStale();
+    return memoryHit;
+  }
+
+  const stored = await readExerciseCatalog();
+  if (stored?.exercises.length) {
+    await markExerciseCatalogOffline(false);
+    revalidateExercisesIfStale();
+    return stored.exercises;
   }
 
   try {
+    const generationAtFetchStart = getCatalogWriteGeneration();
     const data = await apiFetch<ExerciseRequestDto[]>("exercises");
-
-    await safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(data));
-    await safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString());
-    await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false");
-    await markCacheApiUrl();
-
+    await persistCatalogFromNetwork(data, generationAtFetchStart);
     return data;
   } catch (error: CaughtError) {
-    // Network failures and host outages (for example a suspended server)
-    // can still show the last catalog instead of the raw error page.
     if (!canUseStaleExerciseCache(error)) {
       const message =
         error instanceof Error && error.message
@@ -223,17 +200,23 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
     }
 
     try {
-      const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
+      const stale = await readExerciseCatalog();
+      if (stale?.exercises.length) {
+        await markExerciseCatalogOffline(true);
+        return stale.exercises;
+      }
+
+      // Last resort: raw v4 key in case memory was cleared mid-flight.
+      const cached = await AsyncStorage.getItem(EXERCISE_CACHE_KEY);
       if (cached) {
-        const exercises = JSON.parse(cached);
-        await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
+        const exercises = JSON.parse(cached) as ExerciseRequestDto[];
+        await markExerciseCatalogOffline(true);
         return exercises;
       }
     } catch (cacheError) {
       console.error("[ExerciseService] Cache read failed:", cacheError);
     }
 
-    // If both network and cache fail, surface a controlled error so UI can show retry state.
     const message =
       error instanceof Error && error.message
         ? error.message
@@ -242,50 +225,71 @@ export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
   }
 };
 
+async function runCatalogPrefetch(force: boolean): Promise<void> {
+  if (!force) {
+    const snapshot = peekExerciseCatalogSnapshot();
+    if (snapshot && !isExerciseCatalogStale()) {
+      warmExerciseCatalogThumbs();
+      return;
+    }
+    // Ensure storage-backed freshness check when memory is empty.
+    if (!snapshot) {
+      const stored = await readExerciseCatalog();
+      if (stored && !isExerciseCatalogStale()) {
+        warmExerciseCatalogThumbs();
+        return;
+      }
+    }
+  }
+
+  const generationAtFetchStart = getCatalogWriteGeneration();
+  const [exercises, equipment, muscles] = await Promise.all([
+    apiFetch<ExerciseRequestDto[]>("exercises"),
+    apiFetch<EquipmentDto[]>("exercises/equipment/all"),
+    apiFetch<MuscleDto[]>("exercises/muscles/all"),
+  ]);
+
+  await Promise.all([
+    persistCatalogFromNetwork(exercises, generationAtFetchStart),
+    safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(equipment)),
+    safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
+  ]);
+}
+
 /**
- * Warm-up catalog data after login/app boot:
- * refreshes exercises + filters and leaves everything cached.
+ * Warm-up catalog data after login/app boot.
+ * Soft path respects 24h TTL; force bypasses it (login/register only).
  */
 export const prefetchExerciseCatalog = async (options?: {
   force?: boolean;
 }): Promise<void> => {
-  try {
-    const force = options?.force === true;
-    if (!force && !(await shouldRevalidate())) {
-      return;
+  const force = options?.force === true;
+
+  if (inFlightCatalogPrefetch) {
+    if (!force) {
+      return inFlightCatalogPrefetch;
     }
-
-    const [exercises, equipment, muscles] = await Promise.all([
-      apiFetch<ExerciseRequestDto[]>("exercises"),
-      apiFetch<EquipmentDto[]>("exercises/equipment/all"),
-      apiFetch<MuscleDto[]>("exercises/muscles/all"),
-    ]);
-
-    await Promise.all([
-      safeSetItem(CACHE_KEYS.EXERCISES, JSON.stringify(exercises)),
-      safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(equipment)),
-      safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(muscles)),
-      safeSetItem(CACHE_KEYS.LAST_SYNC, Date.now().toString()),
-      safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "false"),
-      markCacheApiUrl(),
-    ]);
-  } catch {
-    // Best-effort prefetch. Existing cache continues to be used.
+    await inFlightCatalogPrefetch;
   }
+
+  inFlightCatalogPrefetch = (async () => {
+    try {
+      await runCatalogPrefetch(force);
+    } catch {
+      // Best-effort prefetch. Existing cache continues to be used.
+    } finally {
+      inFlightCatalogPrefetch = null;
+    }
+  })();
+
+  return inFlightCatalogPrefetch;
 };
 
 /**
  * Check if last fetch was from cache (offline mode)
  */
 export const isUsingCache = async (): Promise<boolean> => {
-  try {
-    const fromCache = await AsyncStorage.getItem(
-      `${CACHE_KEYS.EXERCISES}_from_cache`
-    );
-    return fromCache === "true";
-  } catch {
-    return false;
-  }
+  return isExerciseCatalogFromOfflineCache();
 };
 
 export const searchExercises = async (
@@ -318,13 +322,20 @@ export const searchExercises = async (
     const data = await apiFetch<ExerciseRequestDto[]>(endpoint);
     return data;
   } catch (error) {
-    // Fallback to local filtering if offline
-    const cached = await AsyncStorage.getItem(CACHE_KEYS.EXERCISES);
-    if (cached) {
-      const exercises: SearchableExercise[] = JSON.parse(cached);
-      await safeSetItem(`${CACHE_KEYS.EXERCISES}_from_cache`, "true");
+    const memoryHit = peekExerciseCatalog();
+    if (memoryHit?.length) {
+      await markExerciseCatalogOffline(true);
+      return filterAndSortExercises(memoryHit as SearchableExercise[], {
+        searchQuery: name,
+        selectedEquipmentNames: equipment ? [equipment] : [],
+        selectedMuscleNames: muscles,
+      });
+    }
 
-      return filterAndSortExercises(exercises, {
+    const stored = await readExerciseCatalog();
+    if (stored?.exercises.length) {
+      await markExerciseCatalogOffline(true);
+      return filterAndSortExercises(stored.exercises as SearchableExercise[], {
         searchQuery: name,
         selectedEquipmentNames: equipment ? [equipment] : [],
         selectedMuscleNames: muscles,
@@ -337,13 +348,16 @@ export const searchExercises = async (
 export const createExercise = async (
   exercise: CreateExerciseDto
 ): Promise<ExerciseRequestDto> => {
-  return apiFetch<ExerciseRequestDto>("exercises", {
+  const created = await apiFetch<ExerciseRequestDto>("exercises", {
     method: "POST",
     body: JSON.stringify(exercise),
     headers: {
       "Content-Type": "application/json",
     },
   });
+  upsertExerciseInCatalog(created);
+  clearExerciseImageLookupCache();
+  return created;
 };
 
 export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
@@ -351,16 +365,18 @@ export const fetchEquipment = async (): Promise<EquipmentDto[]> => {
   if (cacheMatchesCurrentApi) {
     const cached = await getCachedJson<EquipmentDto[]>(CACHE_KEYS.EQUIPMENT);
     if (cached && cached.length > 0) {
-      void (async () => {
-        try {
-          const fresh = await apiFetch<EquipmentDto[]>(
-            "exercises/equipment/all"
-          );
-          await safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(fresh));
-        } catch {
-          // Best effort
-        }
-      })();
+      if (isExerciseCatalogStale()) {
+        void (async () => {
+          try {
+            const fresh = await apiFetch<EquipmentDto[]>(
+              "exercises/equipment/all"
+            );
+            await safeSetItem(CACHE_KEYS.EQUIPMENT, JSON.stringify(fresh));
+          } catch {
+            // Best effort
+          }
+        })();
+      }
       return cached;
     }
   }
@@ -399,14 +415,16 @@ export const fetchMuscles = async (): Promise<MuscleDto[]> => {
   if (cacheMatchesCurrentApi) {
     const cached = await getCachedJson<MuscleDto[]>(CACHE_KEYS.MUSCLES);
     if (cached && cached.length > 0) {
-      void (async () => {
-        try {
-          const fresh = await apiFetch<MuscleDto[]>("exercises/muscles/all");
-          await safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(fresh));
-        } catch {
-          // Best effort
-        }
-      })();
+      if (isExerciseCatalogStale()) {
+        void (async () => {
+          try {
+            const fresh = await apiFetch<MuscleDto[]>("exercises/muscles/all");
+            await safeSetItem(CACHE_KEYS.MUSCLES, JSON.stringify(fresh));
+          } catch {
+            // Best effort
+          }
+        })();
+      }
       return cached;
     }
   }
@@ -423,3 +441,12 @@ export const fetchMuscles = async (): Promise<MuscleDto[]> => {
     throw error;
   }
 };
+
+/** @internal exposed for tests / logout cleanup */
+export async function resetExerciseCatalogCaches(): Promise<void> {
+  await clearExerciseCatalogStorage();
+  await AsyncStorage.multiRemove(AUX_CACHE_KEYS);
+}
+
+// Keep TTL constant exported for callers that need the same window.
+export { EXERCISE_CATALOG_TTL_MS };

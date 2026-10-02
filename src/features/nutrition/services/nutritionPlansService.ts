@@ -1,5 +1,6 @@
 import type {
   GenerateNutritionPlanRequestDto as GenerateNutritionPlanRequest,
+  NutritionPlanListItemDto as NutritionPlanListItem,
   NutritionPlanResponseDto as NutritionPlan,
   UpdateNutritionPlanDto as UpdateNutritionPlanRequest,
 } from "@sergiomesasyelamos2000/shared";
@@ -10,9 +11,9 @@ const PLAN_GENERATION_TIMEOUT_MS = 240000;
 
 export async function getNutritionPlans(
   userId?: string
-): Promise<NutritionPlan[]> {
+): Promise<NutritionPlanListItem[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch<NutritionPlan[]>(`nutrition/plans/${id}`, {
+  return apiFetch<NutritionPlanListItem[]>(`nutrition/plans/${id}`, {
     method: "GET",
   });
 }

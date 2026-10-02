@@ -8,7 +8,6 @@ import {
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   SafeAreaView,
   ScrollView,
@@ -21,6 +20,7 @@ import {
 import { LineChart } from "react-native-chart-kit";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
+import { ExerciseProgressSkeleton } from "../components/ExerciseProgressSkeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ExerciseProgressDataPoint,
@@ -417,10 +417,7 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
           title="Progreso del ejercicio"
           onBack={() => navigation.goBack()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Cargando datos...</Text>
-        </View>
+        <ExerciseProgressSkeleton />
       </SafeAreaView>
     );
   }

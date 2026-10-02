@@ -13,14 +13,12 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   FlatList,
   ImageStyle,
   Platform,
   Pressable,
-  RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -37,7 +35,9 @@ import CachedExerciseImage from "../components/CachedExerciseImage";
 import { getExerciseThumbnailUrl } from "../features/routine/utils/normalizeExerciseImage";
 import LiveClock from "../components/LiveClock";
 import { useTheme } from "../contexts/ThemeContext";
+import { AppRefreshControl } from "../features/common/components/AppRefreshControl";
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
+import { HomeScreenSkeleton } from "./HomeScreenSkeleton";
 import {
   findAllRoutineSessions,
   getRoutineById,
@@ -771,8 +771,8 @@ export default function HomeScreen() {
       ]}
     >
       <StatusBar
-        barStyle={initialLoading ? (isDark ? "light-content" : "dark-content") : "light-content"}
-        backgroundColor={initialLoading ? theme.backgroundSecondary : theme.primary}
+        barStyle="light-content"
+        backgroundColor={theme.primary}
         translucent={true}
       />
       <SafeAreaView
@@ -782,23 +782,13 @@ export default function HomeScreen() {
         ]}
       >
         {initialLoading ? (
-          <View style={styles.fullScreenLoading}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.fullScreenLoadingText, { color: theme.text }]}>
-              Cargando datos...
-            </Text>
-          </View>
+          <HomeScreenSkeleton />
         ) : (
           <ScrollView
             ref={scrollViewRef}
             style={styles.container}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[theme.primary]}
-                tintColor="#FFFFFF"
-              />
+              <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingTop: 0 }}

@@ -20,7 +20,6 @@ import {
   FlatList,
   Image,
   Modal,
-  RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -36,7 +35,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import {
+  CustomMealListItemDto as CustomMealListItem,
   CustomMealResponseDto as CustomMeal,
   CustomProductResponseDto as CustomProduct,
   FavoriteProductResponseDto as FavoriteProduct,
@@ -94,7 +95,7 @@ const dataCache = {
   allProducts: null as Product[] | null,
   favorites: null as FavoriteProduct[] | null,
   customProducts: null as CustomProduct[] | null,
-  customMeals: null as CustomMeal[] | null,
+  customMeals: null as CustomMealListItem[] | null,
   lastUpdate: {
     allProducts: 0,
     favorites: 0,
@@ -1188,13 +1189,7 @@ function CustomProductsTab({
   );
 
   const refreshControl = (
-    <RefreshControl
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-      colors={[theme.primary]}
-      tintColor={theme.primary}
-      progressBackgroundColor={theme.card}
-    />
+    <AppRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
   );
 
   const openCreateProduct = () => {
@@ -1266,7 +1261,7 @@ function CustomMealsTab({
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const userProfile = useNutritionStore((state) => state.userProfile);
-  const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+  const [customMeals, setCustomMeals] = useState<CustomMealListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedRef = useRef(false);
@@ -1336,15 +1331,13 @@ function CustomMealsTab({
     loadCustomMeals(true);
   };
 
-  const mealToListItem = (item: CustomMeal): Product => ({
+  const mealToListItem = (item: CustomMealListItem): Product => ({
     code: item.id,
     name: item.name,
     image: item.image ?? null,
     brand:
       item.description?.trim() ||
-      `${item.products?.length ?? 0} alimento${
-        (item.products?.length ?? 0) === 1 ? "" : "s"
-      }`,
+      `${item.productCount} alimento${item.productCount === 1 ? "" : "s"}`,
     grams: 100,
     calories: item.totalCalories,
     protein: item.totalProtein,
@@ -1359,8 +1352,24 @@ function CustomMealsTab({
     others: [],
   });
 
-  const handleMealPress = (item: CustomMeal) => {
-    navigation.navigate("EditMealScreen", { meal: item });
+  const openMealEditor = async (item: CustomMealListItem) => {
+    try {
+      const meal = await nutritionService.getCustomMealById(
+        item.id,
+        userProfile?.userId
+      );
+      navigation.navigate("EditMealScreen", { meal });
+    } catch (error) {
+      console.error("Error loading meal detail:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo cargar la comida. Inténtalo de nuevo."
+      );
+    }
+  };
+
+  const handleMealPress = (item: CustomMealListItem) => {
+    void openMealEditor(item);
   };
 
   const filteredMeals = customMeals.filter((m) =>
@@ -1384,7 +1393,7 @@ function CustomMealsTab({
     index,
     allowEntering,
   }: {
-    item: CustomMeal;
+    item: CustomMealListItem;
     index: number;
     allowEntering: boolean;
   }) => (
@@ -1398,7 +1407,7 @@ function CustomMealsTab({
           accessibilityLabel: "Editar comida",
           onPress: (e) => {
             e.stopPropagation();
-            navigation.navigate("EditMealScreen", { meal: item });
+            void openMealEditor(item);
           },
         }}
       />
@@ -1406,13 +1415,7 @@ function CustomMealsTab({
   );
 
   const refreshControl = (
-    <RefreshControl
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-      colors={[theme.primary]}
-      tintColor={theme.primary}
-      progressBackgroundColor={theme.card}
-    />
+    <AppRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
   );
 
   const openCreateMeal = () => {

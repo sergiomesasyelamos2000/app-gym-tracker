@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import type { NutritionPlanResponseDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
+import type { NutritionPlanListItemDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
 import { Theme } from "../../../../contexts/ThemeContext";
 import {
   formatPlanDate,

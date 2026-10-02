@@ -37,6 +37,7 @@ import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
+import { StatusPlanSkeleton } from "../components/StatusPlanSkeleton";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 
 type StatusScreenRouteProp = RouteProp<
@@ -142,9 +143,11 @@ export function StatusScreen() {
   if (isLoading || !subscription) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <ScreenHeader
+          title="Mi Suscripción"
+          onBack={() => navigation.goBack()}
+        />
+        <StatusPlanSkeleton />
       </SafeAreaView>
     );
   }

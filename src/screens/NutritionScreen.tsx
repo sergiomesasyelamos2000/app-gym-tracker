@@ -31,6 +31,7 @@ import { Theme, useTheme } from "../contexts/ThemeContext";
 import { HealthDisclaimerCard } from "../features/common/components/HealthDisclaimerCard";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
+import { NutritionChatSkeleton } from "../features/chat/components/NutritionChatSkeleton";
 import ImageModal from "../features/common/components/ImageModal";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
@@ -509,12 +510,7 @@ export default function NutritionScreen() {
           Platform.OS === "android" ? { paddingTop: insets.top } : null,
         ]}
       >
-        <View style={styles.fullScreenLoading}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.fullScreenLoadingText, { color: theme.text }]}>
-            Cargando nutrición...
-          </Text>
-        </View>
+        <NutritionChatSkeleton />
       </SafeAreaView>
     );
   }

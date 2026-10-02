@@ -4,6 +4,7 @@ import { apiFetch } from "../../../api/client";
 import {
   ChatMessageDto,
   ChatResponseDto,
+  CustomMealListItemDto as CustomMealListItem,
   CustomMealResponseDto as CustomMeal,
   CustomProductResponseDto as CustomProduct,
   DailyNutritionSummary,
@@ -912,9 +913,11 @@ export async function createCustomMeal(
   });
 }
 
-export async function getCustomMeals(userId?: string): Promise<CustomMeal[]> {
+export async function getCustomMeals(
+  userId?: string,
+): Promise<CustomMealListItem[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch<CustomMeal[]>(`nutrition/custom-meals/${id}`, {
+  return apiFetch<CustomMealListItem[]>(`nutrition/custom-meals/${id}`, {
     method: "GET",
   });
 }
@@ -983,9 +986,9 @@ export async function duplicateCustomMeal(mealId: string): Promise<CustomMeal> {
 export async function searchCustomMeals(
   query: string,
   userId?: string,
-): Promise<CustomMeal[]> {
+): Promise<CustomMealListItem[]> {
   const id = userId || getCurrentUserId();
-  return apiFetch<CustomMeal[]>(
+  return apiFetch<CustomMealListItem[]>(
     `nutrition/custom-meals/${id}/search?query=${encodeURIComponent(query)}`,
     {
       method: "GET",

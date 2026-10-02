@@ -3,6 +3,7 @@ import type { AuthTokensDto as AuthTokens } from "@sergiomesasyelamos2000/shared
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { invalidateExerciseCatalogMemory } from "../services/exerciseCatalogCache";
 
 interface AuthState {
   // State
@@ -91,6 +92,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Logout (clear state and storage)
       logout: async () => {
+        invalidateExerciseCatalogMemory();
         get().clearAuth();
         // AsyncStorage is cleared automatically by zustand persist
       },

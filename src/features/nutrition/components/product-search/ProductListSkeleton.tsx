@@ -1,11 +1,7 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import {
-  Animated,
-  Easing,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import React, { useMemo } from "react";
+import { View, useWindowDimensions } from "react-native";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { Bone, SkeletonRoot } from "../../../common/skeleton";
 import { createProductSearchStyles } from "./createProductSearchStyles";
 
 type Props = {
@@ -40,44 +36,19 @@ export function ProductListSkeleton({
   const isTinyScreen = width < 360;
   const imageSize = isSmallScreen ? Math.round(width * 0.17) : 72;
   const rowCount = getSkeletonCount(height, count ?? 5);
-  // Pulse only bones — keep cards opaque so they don't look muddy grey.
-  const boneOpacity = useRef(new Animated.Value(0.55)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(boneOpacity, {
-          toValue: 1,
-          duration: 850,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(boneOpacity, {
-          toValue: 0.55,
-          duration: 850,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [boneOpacity]);
 
   const pillWidths = isTinyScreen
     ? [48, 34, 34, 34]
     : isSmallScreen
-    ? [52, 38, 38, 36]
-    : [56, 40, 40, 36];
-
-  const Bone = ({
-    style,
-  }: {
-    style: React.ComponentProps<typeof Animated.View>["style"];
-  }) => <Animated.View style={[style, { opacity: boneOpacity }]} />;
+      ? [52, 38, 38, 36]
+      : [56, 40, 40, 36];
 
   return (
-    <View style={styles.skeletonRoot}>
+    <SkeletonRoot
+      style={styles.skeletonRoot}
+      message={message}
+      messagePosition="below"
+    >
       {Array.from({ length: rowCount }).map((_, index) => (
         <View key={`sk-${index}`} style={styles.skeletonCard}>
           <Bone
@@ -128,14 +99,6 @@ export function ProductListSkeleton({
           {showTrailing ? <Bone style={styles.skeletonTrailing} /> : null}
         </View>
       ))}
-      {message ? (
-        <Animated.Text
-          style={[styles.skeletonMessage, { opacity: boneOpacity }]}
-          numberOfLines={2}
-        >
-          {message}
-        </Animated.Text>
-      ) : null}
-    </View>
+    </SkeletonRoot>
   );
 }

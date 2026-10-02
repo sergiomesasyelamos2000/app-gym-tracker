@@ -2,14 +2,12 @@ import { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   FlatList,
   Image,
   ImageStyle,
   Platform,
-  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -23,7 +21,12 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { WebView } from "react-native-webview";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
+import {
+  ExerciseDetailSkeleton,
+  ExerciseMediaBone,
+} from "../components/ExerciseDetailSkeleton";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { ExerciseSet, SessionData, SessionExercise } from "../../../types";
 import {
@@ -473,18 +476,57 @@ interface HeaderProps {
   exercise: ExerciseRequestDto;
   fadeAnim: Animated.Value;
   theme: Theme;
+  mediaLoading?: boolean;
   onMediaLoadEnd?: () => void;
 }
 
-const Header = ({ exercise, fadeAnim, theme, onMediaLoadEnd }: HeaderProps) => {
+const Header = ({
+  exercise,
+  fadeAnim,
+  theme,
+  mediaLoading,
+  onMediaLoadEnd,
+}: HeaderProps) => {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const imageStyle = styles.exerciseImage as {
+    width: number;
+    height: number;
+    borderRadius: number;
+  };
+
   return (
     <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-      <ExerciseImage
-        exercise={exercise}
-        style={styles.exerciseImage}
-        onLoadEnd={onMediaLoadEnd}
-      />
+      <View
+        style={{
+          width: imageStyle.width,
+          height: imageStyle.height,
+          marginBottom: IS_SMALL_DEVICE ? 12 : 16,
+        }}
+      >
+        {mediaLoading ? (
+          <ExerciseMediaBone
+            width={imageStyle.width}
+            height={imageStyle.height}
+            borderRadius={imageStyle.borderRadius}
+          />
+        ) : null}
+        <ExerciseImage
+          exercise={exercise}
+          style={[
+            styles.exerciseImage,
+            mediaLoading
+              ? {
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  marginBottom: 0,
+                  opacity: 0,
+                }
+              : null,
+          ]}
+          onLoadEnd={onMediaLoadEnd}
+        />
+      </View>
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName} numberOfLines={2}>
           {exercise.name}
@@ -949,8 +991,8 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const [mediaLoading, setMediaLoading] = useState(hasMedia);
   const [refreshing, setRefreshing] = useState(false);
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
-  const isScreenLoading = loading || mediaLoading;
   const loadingMessage = "Cargando...";
+  const mediaSize = IS_VERY_SMALL_DEVICE ? 160 : IS_SMALL_DEVICE ? 180 : 200;
 
   // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
@@ -1094,23 +1136,18 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
         title="Detalle del ejercicio"
         onBack={() => navigation.goBack()}
       />
-      {isScreenLoading && (
-        <View style={styles.loadingOverlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>{loadingMessage}</Text>
-        </View>
-      )}
+      {loading ? (
+        <ExerciseDetailSkeleton
+          message={loadingMessage}
+          mediaWidth={mediaSize}
+          mediaHeight={mediaSize}
+        />
+      ) : (
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing && !isScreenLoading}
-            onRefresh={onRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
-            enabled={!isScreenLoading}
-          />
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -1118,6 +1155,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
           exercise={exercise}
           fadeAnim={fadeAnim}
           theme={theme}
+          mediaLoading={mediaLoading && hasMedia}
           onMediaLoadEnd={() => setMediaLoading(false)}
         />
 
@@ -1198,6 +1236,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 };

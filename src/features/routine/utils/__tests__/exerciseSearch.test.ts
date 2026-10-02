@@ -3,6 +3,8 @@ import {
   exerciseMatchesEquipment,
   exerciseMatchesMuscle,
   filterAndSortExercises,
+  getEquipmentAliasKeys,
+  getMuscleAliasKeys,
   scoreExerciseSearch,
   tokenizeSearch,
   normalizeSearchText,
@@ -40,6 +42,18 @@ describe("exerciseSearch", () => {
     expect(exerciseMatchesMuscle(chestPress, "Pecho")).toBe(true);
     expect(exerciseMatchesMuscle(cableFly, "Pectorales")).toBe(true);
     expect(exerciseMatchesMuscle(curl, "Pecho")).toBe(false);
+  });
+
+  it("expands muscle/equipment alias keys for common Spanish labels", () => {
+    expect(getMuscleAliasKeys("Pecho")).toEqual(
+      expect.arrayContaining(["pecho", "chest", "pectorales"])
+    );
+    expect(getEquipmentAliasKeys("Polea")).toEqual(
+      expect.arrayContaining(["polea", "cable"])
+    );
+    expect(getEquipmentAliasKeys("Mancuernas")).toEqual(
+      expect.arrayContaining(["mancuernas", "dumbbell"])
+    );
   });
 
   it("matches Cable filter to Polea equipment", () => {

@@ -7,19 +7,17 @@ import {
 } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Easing,
   FlatList,
-  Modal,
+  InteractionManager,
+  ListRenderItem,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -37,8 +35,13 @@ import {
   fetchMuscles,
   fetchExercises,
   isUsingCache,
+  peekExerciseCatalog,
 } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
+import { ExerciseFilterModal } from "../components/ExerciseFilterModal";
+import { ExerciseListSkeleton } from "../components/ExerciseListSkeleton";
+import { EXERCISE_LIST_ROW_STRIDE } from "../components/exerciseListLayout";
+import { useExerciseFilterCatalog } from "../components/useExerciseFilterCatalog";
 import { WorkoutStackParamList } from "../screens/WorkoutStack";
 import { useExerciseSelectionStore } from "../../../store/useExerciseSelectionStore";
 import {
@@ -46,14 +49,22 @@ import {
   normalizeExercisesImage,
 } from "../utils/normalizeExerciseImage";
 import {
-  buildCombinedEquipmentOptions,
-  buildCombinedMuscleOptions,
+  EMPTY_FILTER_NAMES,
   filterAndSortExercises,
+  idsToNames,
+  remapFilterSelectionIds,
+  DERIVED_EQUIPMENT_PREFIX,
+  DERIVED_MUSCLE_PREFIX,
+  type ExerciseFilterDraft,
+} from "../utils/exerciseSearch";
+import {
   getEquipmentAliasKeys,
   getMuscleAliasKeys,
-  rankFilterOptionsByUsage,
-  toFilterKey,
-} from "../utils/exerciseSearch";
+} from "../utils/exerciseAliasKeys";
+import {
+  prefetchExerciseThumbBatch,
+  waitForExerciseThumbBatch,
+} from "../utils/prefetchExerciseThumbs";
 import { GLOBAL_KEYBOARD_ACCESSORY_ID } from "../../../components/KeyboardDismissButton";
 
 type ExerciseListRouteProp = RouteProp<WorkoutStackParamList, "ExerciseList">;
@@ -68,6 +79,21 @@ type ExerciseListItem = ExerciseRequestDto & {
 
 const MAX_EQUIPMENT_FILTER_OPTIONS = 24;
 const MAX_MUSCLE_FILTER_OPTIONS = 24;
+const THUMB_PREFETCH_INITIAL = 18;
+const THUMB_PREFETCH_LOOKAHEAD = 8;
+const THUMB_PREFETCH_LIMIT = 30;
+const THUMB_REVEAL_WAIT_COUNT = 10;
+const THUMB_REVEAL_TIMEOUT_MS = 450;
+
+const EMPTY_FILTER_DRAFT: ExerciseFilterDraft = Object.freeze({
+  equipmentIds: EMPTY_FILTER_NAMES,
+  muscleIds: EMPTY_FILTER_NAMES,
+});
+
+const viewabilityConfig = {
+  itemVisiblePercentThreshold: 10,
+  minimumViewTime: 40,
+};
 
 export default function ExerciseList() {
   const { theme } = useTheme();
@@ -92,13 +118,10 @@ export default function ExerciseList() {
   );
   const [selectedMuscleIds, setSelectedMuscleIds] = useState<string[]>([]);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [tempEquipmentIds, setTempEquipmentIds] = useState<string[]>([]);
-  const [tempMuscleIds, setTempMuscleIds] = useState<string[]>([]);
+  const [modalSeed, setModalSeed] =
+    useState<ExerciseFilterDraft>(EMPTY_FILTER_DRAFT);
   const [equipmentOptions, setEquipmentOptions] = useState<EquipmentDto[]>([]);
   const [muscleOptions, setMuscleOptions] = useState<MuscleDto[]>([]);
-
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const modalTranslateY = useRef(new Animated.Value(300)).current;
 
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const inputAccessoryProps =
@@ -108,10 +131,20 @@ export default function ExerciseList() {
   const [selectedExercises, setSelectedExercises] = useState<
     ExerciseRequestDto[]
   >([]);
-  const [allExercises, setAllExercises] = useState<ExerciseListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const seededCatalogRef = useRef(peekExerciseCatalog());
+  const [allExercises, setAllExercises] = useState<ExerciseListItem[]>(() => {
+    const peeked = seededCatalogRef.current;
+    return peeked?.length ? (peeked as ExerciseListItem[]) : [];
+  });
+  const [loading, setLoading] = useState(() => seededCatalogRef.current == null);
+  const [listPaintReady, setListPaintReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ExerciseListItem>>(null);
+  const scrollOffsetRef = useRef(0);
+  const selectedIdSet = useMemo(
+    () => new Set(selectedExercises.map((item) => item.id)),
+    [selectedExercises]
+  );
 
   const consumePendingCreatedExercise = useExerciseSelectionStore(
     (state) => state.consumePendingCreatedExercise
@@ -123,41 +156,42 @@ export default function ExerciseList() {
     (state) => state.clearSelectionContext
   );
 
-  const combinedMuscleOptions = useMemo(
-    () => buildCombinedMuscleOptions(muscleOptions, allExercises),
-    [allExercises, muscleOptions]
-  );
-  const combinedEquipmentOptions = useMemo(
-    () => buildCombinedEquipmentOptions(equipmentOptions, allExercises),
-    [allExercises, equipmentOptions]
-  );
+  const {
+    filterIndex,
+    equipmentRanked,
+    muscleRanked,
+    equipmentById,
+    muscleById,
+  } = useExerciseFilterCatalog({
+    exercises: allExercises,
+    equipmentOptions,
+    muscleOptions,
+    listPaintReady,
+    maxEquipmentOptions: MAX_EQUIPMENT_FILTER_OPTIONS,
+    maxMuscleOptions: MAX_MUSCLE_FILTER_OPTIONS,
+  });
+
   const selectedEquipmentNames = useMemo(
-    () =>
-      combinedEquipmentOptions
-        .filter((item) => selectedEquipmentIds.includes(item.id))
-        .map((item) => item.name),
-    [combinedEquipmentOptions, selectedEquipmentIds]
+    () => idsToNames(equipmentById, selectedEquipmentIds),
+    [equipmentById, selectedEquipmentIds]
+  );
+  const selectedMuscleNames = useMemo(
+    () => idsToNames(muscleById, selectedMuscleIds),
+    [muscleById, selectedMuscleIds]
   );
   const selectedEquipmentFilters = useMemo(
     () =>
-      combinedEquipmentOptions.filter((item) =>
-        selectedEquipmentIds.includes(item.id)
-      ),
-    [combinedEquipmentOptions, selectedEquipmentIds]
-  );
-  const selectedMuscleNames = useMemo(
-    () =>
-      combinedMuscleOptions
-        .filter((item) => selectedMuscleIds.includes(item.id))
-        .map((item) => item.name),
-    [combinedMuscleOptions, selectedMuscleIds]
+      selectedEquipmentIds
+        .map((id) => equipmentById.get(id))
+        .filter((item): item is EquipmentDto => Boolean(item)),
+    [equipmentById, selectedEquipmentIds]
   );
   const selectedMuscleFilters = useMemo(
     () =>
-      combinedMuscleOptions.filter((item) =>
-        selectedMuscleIds.includes(item.id)
-      ),
-    [combinedMuscleOptions, selectedMuscleIds]
+      selectedMuscleIds
+        .map((id) => muscleById.get(id))
+        .filter((item): item is MuscleDto => Boolean(item)),
+    [muscleById, selectedMuscleIds]
   );
   const hasActiveFilters = Boolean(
     searchQuery.trim() ||
@@ -170,60 +204,48 @@ export default function ExerciseList() {
   const selectionFiltersCount =
     selectedEquipmentIds.length + selectedMuscleIds.length;
 
-  const displayedEquipmentOptions = useMemo(() => {
-    const usageByEquipment = new Map<string, number>();
+  const appliedFilterSignature = `${searchQuery}\0${selectedEquipmentIds.join(",")}\0${selectedMuscleIds.join(",")}`;
 
-    allExercises.forEach((exercise) => {
-      (exercise.equipments || []).forEach((equipmentName) => {
-        getEquipmentAliasKeys(equipmentName).forEach((key) => {
-          usageByEquipment.set(key, (usageByEquipment.get(key) || 0) + 1);
-        });
-        const rawKey = toFilterKey(equipmentName);
-        if (rawKey) {
-          usageByEquipment.set(
-            rawKey,
-            (usageByEquipment.get(rawKey) || 0) + 1
-          );
-        }
-      });
+  // Official options replace derived-* chip ids — keep applied filters working.
+  useEffect(() => {
+    if (equipmentRanked.all.length === 0) return;
+    setSelectedEquipmentIds((prev) => {
+      if (prev.length === 0) return prev;
+      const next = remapFilterSelectionIds(
+        prev,
+        equipmentRanked.all,
+        getEquipmentAliasKeys,
+        DERIVED_EQUIPMENT_PREFIX
+      );
+      if (
+        next.length === prev.length &&
+        next.every((id, index) => id === prev[index])
+      ) {
+        return prev;
+      }
+      return next;
     });
+  }, [equipmentRanked]);
 
-    return rankFilterOptionsByUsage(
-      combinedEquipmentOptions,
-      usageByEquipment,
-      tempEquipmentIds,
-      MAX_EQUIPMENT_FILTER_OPTIONS,
-      getEquipmentAliasKeys
-    );
-  }, [allExercises, combinedEquipmentOptions, tempEquipmentIds]);
-
-  const displayedMuscleOptions = useMemo(() => {
-    const usageByMuscle = new Map<string, number>();
-
-    allExercises.forEach((exercise) => {
-      [
-        ...(exercise.targetMuscles || []),
-        ...(exercise.secondaryMuscles || []),
-        ...(exercise.bodyParts || []),
-      ].forEach((muscleName) => {
-        getMuscleAliasKeys(muscleName).forEach((key) => {
-          usageByMuscle.set(key, (usageByMuscle.get(key) || 0) + 1);
-        });
-        const rawKey = toFilterKey(muscleName);
-        if (rawKey) {
-          usageByMuscle.set(rawKey, (usageByMuscle.get(rawKey) || 0) + 1);
-        }
-      });
+  useEffect(() => {
+    if (muscleRanked.all.length === 0) return;
+    setSelectedMuscleIds((prev) => {
+      if (prev.length === 0) return prev;
+      const next = remapFilterSelectionIds(
+        prev,
+        muscleRanked.all,
+        getMuscleAliasKeys,
+        DERIVED_MUSCLE_PREFIX
+      );
+      if (
+        next.length === prev.length &&
+        next.every((id, index) => id === prev[index])
+      ) {
+        return prev;
+      }
+      return next;
     });
-
-    return rankFilterOptionsByUsage(
-      combinedMuscleOptions,
-      usageByMuscle,
-      tempMuscleIds,
-      MAX_MUSCLE_FILTER_OPTIONS,
-      getMuscleAliasKeys
-    );
-  }, [allExercises, combinedMuscleOptions, tempMuscleIds]);
+  }, [muscleRanked]);
 
   const navigateToCreateExercise = () => {
     setSelectionContext({
@@ -249,12 +271,20 @@ export default function ExerciseList() {
   }, []);
 
   const loadExercises = useCallback(async () => {
+    const hasSeed = seededCatalogRef.current != null;
     try {
-      setLoading(true);
+      if (!hasSeed) {
+        setLoading(true);
+      }
       setError(null);
       setIsOfflineMode(false);
       const data = await fetchExercises();
-      setAllExercises(normalizeExercisesImage(data as ExerciseListItem[]));
+
+      // Same in-memory catalog already seeded — skip a second full normalize/render pass.
+      if (data !== seededCatalogRef.current) {
+        seededCatalogRef.current = data;
+        setAllExercises(normalizeExercisesImage(data as ExerciseListItem[]));
+      }
 
       const fromCache = await isUsingCache();
       setIsOfflineMode(fromCache);
@@ -268,12 +298,86 @@ export default function ExerciseList() {
   }, []);
 
   useEffect(() => {
-    loadFilterOptions();
-  }, [loadFilterOptions]);
+    if (!listPaintReady) return;
+    void loadFilterOptions();
+  }, [listPaintReady, loadFilterOptions]);
 
   useEffect(() => {
     loadExercises();
   }, [loadExercises]);
+
+  const revealListAfterThumbWarmup = useCallback(async () => {
+    const catalog = seededCatalogRef.current;
+    if (catalog?.length) {
+      prefetchExerciseThumbBatch(catalog, {
+        startIndex: 0,
+        count: THUMB_PREFETCH_INITIAL,
+        limit: THUMB_PREFETCH_LIMIT,
+      });
+      await waitForExerciseThumbBatch(catalog, {
+        startIndex: 0,
+        count: THUMB_REVEAL_WAIT_COUNT,
+        limit: THUMB_REVEAL_WAIT_COUNT,
+        timeoutMs: THUMB_REVEAL_TIMEOUT_MS,
+      });
+    }
+
+    setAllExercises((prev) =>
+      prev.length > 0 ? normalizeExercisesImage(prev) : prev
+    );
+    setListPaintReady(true);
+  }, []);
+
+  // Warm path: catalog already in memory — prefetch during skeleton, then reveal.
+  useEffect(() => {
+    if (!seededCatalogRef.current?.length) return;
+
+    let cancelled = false;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      void (async () => {
+        if (cancelled) return;
+        await revealListAfterThumbWarmup();
+      })();
+    });
+
+    return () => {
+      cancelled = true;
+      handle.cancel?.();
+    };
+  }, [revealListAfterThumbWarmup]);
+
+  // Cold path: catalog arrives after fetch while skeleton is still up.
+  useEffect(() => {
+    if (listPaintReady || loading) return;
+    if (seededCatalogRef.current?.length) return;
+    if (allExercises.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      prefetchExerciseThumbBatch(allExercises, {
+        startIndex: 0,
+        count: THUMB_PREFETCH_INITIAL,
+        limit: THUMB_PREFETCH_LIMIT,
+      });
+      await waitForExerciseThumbBatch(allExercises, {
+        startIndex: 0,
+        count: THUMB_REVEAL_WAIT_COUNT,
+        limit: THUMB_REVEAL_WAIT_COUNT,
+        timeoutMs: THUMB_REVEAL_TIMEOUT_MS,
+      });
+      if (cancelled) return;
+      setAllExercises((prev) => normalizeExercisesImage(prev));
+      setListPaintReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    allExercises,
+    listPaintReady,
+    loading,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -297,42 +401,130 @@ export default function ExerciseList() {
   );
 
   const filteredExercises = useMemo(() => {
-    if (!allExercises.length) return [];
+    if (!listPaintReady || !allExercises.length) return [];
 
     return filterAndSortExercises(allExercises, {
       searchQuery,
       selectedEquipmentNames,
       selectedMuscleNames,
+      index: filterIndex ?? undefined,
     });
   }, [
+    listPaintReady,
     allExercises,
     searchQuery,
     selectedEquipmentNames,
     selectedMuscleNames,
+    filterIndex,
   ]);
 
+  const filteredExercisesRef = useRef(filteredExercises);
+  filteredExercisesRef.current = filteredExercises;
+
+  const filteredHeadSignature = useMemo(
+    () =>
+      filteredExercises
+        .slice(0, THUMB_PREFETCH_INITIAL)
+        .map((item) => item.id)
+        .join(","),
+    [filteredExercises]
+  );
+
+  // Warm the first window of thumbs when the visible head actually changes.
   useEffect(() => {
+    if (!listPaintReady || !filteredHeadSignature) return;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      prefetchExerciseThumbBatch(filteredExercisesRef.current, {
+        startIndex: 0,
+        count: THUMB_PREFETCH_INITIAL,
+        limit: THUMB_PREFETCH_LIMIT,
+      });
+    });
+    return () => {
+      handle.cancel?.();
+    };
+  }, [listPaintReady, filteredHeadSignature]);
+
+  const onViewableItemsChanged = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<{ index: number | null }>;
+    }) => {
+      const data = filteredExercisesRef.current;
+      if (!data.length || viewableItems.length === 0) return;
+
+      const indices = viewableItems
+        .map((item) => item.index)
+        .filter((index): index is number => typeof index === "number");
+      if (indices.length === 0) return;
+
+      const first = Math.min(...indices);
+      const last = Math.max(...indices);
+      prefetchExerciseThumbBatch(data, {
+        startIndex: first,
+        count: last - first + 1 + THUMB_PREFETCH_LOOKAHEAD,
+        limit: THUMB_PREFETCH_LIMIT,
+      });
+    }
+  ).current;
+
+  const handleListScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!listPaintReady) return;
+    if (scrollOffsetRef.current <= 0) return;
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [searchQuery, selectedMuscleIds, selectedEquipmentIds]);
+    scrollOffsetRef.current = 0;
+  }, [appliedFilterSignature, listPaintReady]);
 
   const clearSearchQuery = () => {
     setSearchQuery("");
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    scrollOffsetRef.current = 0;
   };
 
-  const handleSelectExercise = (exercise: ExerciseRequestDto) => {
-    const normalizedExercise = normalizeExerciseImage(exercise);
+  const handleSelectExercise = useCallback(
+    (exercise: ExerciseRequestDto) => {
+      const normalizedExercise = normalizeExerciseImage(exercise);
 
-    if (singleSelection) {
-      setSelectedExercises([normalizedExercise]);
-    } else {
-      setSelectedExercises((prev) =>
-        prev.some((item) => item.id === normalizedExercise.id)
-          ? prev.filter((item) => item.id !== normalizedExercise.id)
-          : [...prev, normalizedExercise]
-      );
-    }
-  };
+      if (singleSelection) {
+        setSelectedExercises([normalizedExercise]);
+      } else {
+        setSelectedExercises((prev) =>
+          prev.some((item) => item.id === normalizedExercise.id)
+            ? prev.filter((item) => item.id !== normalizedExercise.id)
+            : [...prev, normalizedExercise]
+        );
+      }
+    },
+    [singleSelection]
+  );
+
+  const renderExerciseItem = useCallback<ListRenderItem<ExerciseListItem>>(
+    ({ item }) => (
+      <ExerciseItem
+        item={item}
+        isSelected={selectedIdSet.has(item.id)}
+        onSelect={handleSelectExercise}
+      />
+    ),
+    [handleSelectExercise, selectedIdSet]
+  );
+
+  const getExerciseItemLayout = useCallback(
+    (_: ArrayLike<ExerciseListItem> | null | undefined, index: number) => ({
+      length: EXERCISE_LIST_ROW_STRIDE,
+      offset: EXERCISE_LIST_ROW_STRIDE * index,
+      index,
+    }),
+    []
+  );
 
   const handleConfirm = () => {
     if (selectedExercises.length === 0) return;
@@ -407,93 +599,46 @@ export default function ExerciseList() {
     setSelectedMuscleIds([]);
   };
 
-  const openFiltersModal = () => {
-    setTempEquipmentIds(selectedEquipmentIds);
-    setTempMuscleIds(selectedMuscleIds);
-    overlayOpacity.setValue(0);
-    modalTranslateY.setValue(300);
+  const openFiltersModal = useCallback(() => {
+    setModalSeed({
+      equipmentIds: selectedEquipmentIds,
+      muscleIds: selectedMuscleIds,
+    });
     setShowFiltersModal(true);
-  };
+  }, [selectedEquipmentIds, selectedMuscleIds]);
 
-  const animateFiltersModalOpen = () => {
-    Animated.parallel([
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalTranslateY, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+  const closeFiltersModal = useCallback(() => {
+    setShowFiltersModal(false);
+  }, []);
 
-  const animateFiltersModalClose = (callback: () => void) => {
-    Animated.parallel([
-      Animated.timing(overlayOpacity, {
-        toValue: 0,
-        duration: 250,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalTranslateY, {
-        toValue: 300,
-        duration: 250,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      callback();
-    });
-  };
-
-  const closeFiltersModal = () => {
-    animateFiltersModalClose(() => setShowFiltersModal(false));
-  };
-
-  const applyFiltersModal = () => {
-    animateFiltersModalClose(() => {
-      setSelectedEquipmentIds(tempEquipmentIds);
-      setSelectedMuscleIds(tempMuscleIds);
-      setShowFiltersModal(false);
-    });
-  };
-
-  const removeEquipmentFilter = (id: string) => {
-    setSelectedEquipmentIds((prev) => prev.filter((item) => item !== id));
-  };
+  const applyFiltersModal = useCallback(
+    (draft: ExerciseFilterDraft) => {
+      setSelectedEquipmentIds(
+        remapFilterSelectionIds(
+          draft.equipmentIds,
+          equipmentRanked.all,
+          getEquipmentAliasKeys,
+          DERIVED_EQUIPMENT_PREFIX
+        )
+      );
+      setSelectedMuscleIds(
+        remapFilterSelectionIds(
+          draft.muscleIds,
+          muscleRanked.all,
+          getMuscleAliasKeys,
+          DERIVED_MUSCLE_PREFIX
+        )
+      );
+    },
+    [equipmentRanked.all, muscleRanked.all]
+  );
 
   const clearEquipmentFilters = () => {
     setSelectedEquipmentIds([]);
   };
 
-  const removeMuscleFilter = (id: string) => {
-    setSelectedMuscleIds((prev) => prev.filter((item) => item !== id));
-  };
-
   const clearMuscleFilters = () => {
     setSelectedMuscleIds([]);
-  };
-
-  const clearModalSelectionFilters = () => {
-    setTempEquipmentIds([]);
-    setTempMuscleIds([]);
-  };
-
-  const toggleTempEquipment = (id: string) => {
-    setTempEquipmentIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
-  };
-
-  const toggleTempMuscle = (id: string) => {
-    setTempMuscleIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
   };
 
   return (
@@ -507,12 +652,7 @@ export default function ExerciseList() {
         title="Listado de Ejercicios"
         onBack={() => navigation.goBack()}
       />
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Cargando ejercicios...</Text>
-        </View>
-      ) : error ? (
+      {error && allExercises.length === 0 ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadExercises}>
@@ -621,192 +761,59 @@ export default function ExerciseList() {
             </View>
           )}
 
-          <Modal
+          <ExerciseFilterModal
             visible={showFiltersModal}
-            transparent
-            animationType="none"
-            onRequestClose={closeFiltersModal}
-            onShow={animateFiltersModalOpen}
-            statusBarTranslucent={Platform.OS === "android"}
-          >
-            <TouchableWithoutFeedback onPress={closeFiltersModal}>
-              <Animated.View
-                style={[styles.modalOverlay, { opacity: overlayOpacity }]}
-              >
-                <TouchableWithoutFeedback>
-                  <Animated.View
-                    style={[
-                      styles.modalContent,
-                      { transform: [{ translateY: modalTranslateY }] },
-                    ]}
-                  >
-                    <View style={styles.modalHandle} />
-                    <Text style={styles.modalTitle}>Filtrar ejercicios</Text>
-
-                    <Text style={styles.modalSectionTitle}>Equipamiento</Text>
-                    <ScrollView
-                      style={styles.modalSectionScroll}
-                      contentContainerStyle={styles.modalChipsWrap}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.filterChip,
-                          tempEquipmentIds.length === 0 &&
-                            styles.filterChipActive,
-                        ]}
-                        activeOpacity={1}
-                        onPress={() => setTempEquipmentIds([])}
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            tempEquipmentIds.length === 0 &&
-                              styles.filterChipTextActive,
-                          ]}
-                        >
-                          Todos
-                        </Text>
-                      </TouchableOpacity>
-                      {displayedEquipmentOptions.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[
-                            styles.filterChip,
-                            tempEquipmentIds.includes(item.id) &&
-                              styles.filterChipActive,
-                          ]}
-                          activeOpacity={1}
-                          onPress={() => toggleTempEquipment(item.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.filterChipText,
-                              tempEquipmentIds.includes(item.id) &&
-                                styles.filterChipTextActive,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    <Text style={styles.modalSectionTitle}>Músculo</Text>
-                    <ScrollView
-                      style={styles.modalSectionScroll}
-                      contentContainerStyle={styles.modalChipsWrap}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.filterChip,
-                          tempMuscleIds.length === 0 && styles.filterChipActive,
-                        ]}
-                        activeOpacity={1}
-                        onPress={() => setTempMuscleIds([])}
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            tempMuscleIds.length === 0 &&
-                              styles.filterChipTextActive,
-                          ]}
-                        >
-                          Todos
-                        </Text>
-                      </TouchableOpacity>
-                      {displayedMuscleOptions.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[
-                            styles.filterChip,
-                            tempMuscleIds.includes(item.id) &&
-                              styles.filterChipActive,
-                          ]}
-                          activeOpacity={1}
-                          onPress={() => toggleTempMuscle(item.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.filterChipText,
-                              tempMuscleIds.includes(item.id) &&
-                                styles.filterChipTextActive,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    <View style={styles.modalButtonsRow}>
-                      <TouchableOpacity
-                        style={styles.modalSecondaryButton}
-                        onPress={clearModalSelectionFilters}
-                      >
-                        <Text style={styles.modalSecondaryButtonText}>
-                          Limpiar
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.modalSecondaryButton}
-                        onPress={closeFiltersModal}
-                      >
-                        <Text style={styles.modalSecondaryButtonText}>
-                          Cancelar
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.modalPrimaryButton}
-                        onPress={applyFiltersModal}
-                      >
-                        <Text style={styles.modalPrimaryButtonText}>
-                          Aplicar
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </Animated.View>
-                </TouchableWithoutFeedback>
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </Modal>
+            equipmentRanked={equipmentRanked}
+            muscleRanked={muscleRanked}
+            seed={modalSeed}
+            onApply={applyFiltersModal}
+            onClose={closeFiltersModal}
+          />
 
           <View style={styles.listContainer}>
-            <FlatList
-              ref={listRef}
-              data={filteredExercises}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item }) => (
-                <ExerciseItem
-                  item={item}
-                  isSelected={selectedExercises.some((ex) => ex.id === item.id)}
-                  onSelect={handleSelectExercise}
-                />
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>
-                    {hasActiveFilters
-                      ? "No hay ejercicios que coincidan con los filtros"
-                      : "No hay ejercicios disponibles"}
-                  </Text>
+            {!listPaintReady || (loading && allExercises.length === 0) ? (
+              <ExerciseListSkeleton />
+            ) : (
+              <FlatList
+                ref={listRef}
+                data={filteredExercises}
+                keyExtractor={(item) => item.id}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.listContent}
+                renderItem={renderExerciseItem}
+                extraData={selectedIdSet}
+                windowSize={5}
+                initialNumToRender={10}
+                maxToRenderPerBatch={8}
+                updateCellsBatchingPeriod={50}
+                removeClippedSubviews={false}
+                getItemLayout={getExerciseItemLayout}
+                onScroll={handleListScroll}
+                scrollEventThrottle={16}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      {hasActiveFilters
+                        ? "No hay ejercicios que coincidan con los filtros"
+                        : "No hay ejercicios disponibles"}
+                    </Text>
 
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity
-                      style={styles.createButton}
-                      onPress={navigateToCreateExercise}
-                    >
-                      <Text style={styles.createButtonText}>
-                        Crear ejercicio personalizado
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              }
-            />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={navigateToCreateExercise}
+                      >
+                        <Text style={styles.createButtonText}>
+                          Crear ejercicio personalizado
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                }
+              />
+            )}
           </View>
 
           {selectedExercises.length > 0 && (
@@ -926,27 +933,6 @@ const createStyles = (theme: Theme) =>
       justifyContent: "center",
       backgroundColor: `${theme.primary}22`,
     },
-    filterChip: {
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    filterChipActive: {
-      borderColor: theme.primary,
-      backgroundColor: `${theme.primary}20`,
-    },
-    filterChipText: {
-      color: theme.textSecondary,
-      fontSize: RFValue(13),
-      fontWeight: "500",
-    },
-    filterChipTextActive: {
-      color: theme.primary,
-      fontWeight: "700",
-    },
     clearFiltersButton: {
       alignSelf: "flex-start",
       paddingHorizontal: 10,
@@ -967,84 +953,6 @@ const createStyles = (theme: Theme) =>
     listContent: {
       paddingTop: 4,
       paddingBottom: 16,
-    },
-    modalOverlay: {
-      flex: 1,
-      justifyContent: "flex-end",
-      backgroundColor: theme.overlay,
-    },
-    modalContent: {
-      maxHeight: "80%",
-      backgroundColor: theme.card,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingHorizontal: 20,
-      paddingBottom: 40,
-    },
-    modalHandle: {
-      width: 40,
-      height: 4,
-      backgroundColor: theme.border,
-      borderRadius: 2,
-      alignSelf: "center",
-      marginTop: 12,
-      marginBottom: 16,
-    },
-    modalTitle: {
-      color: theme.text,
-      fontSize: RFValue(18),
-      fontWeight: "700",
-      textAlign: "center",
-      marginBottom: 20,
-    },
-    modalSectionTitle: {
-      color: theme.textSecondary,
-      fontSize: RFValue(13),
-      fontWeight: "700",
-      marginBottom: 8,
-      marginTop: 6,
-    },
-    modalSectionScroll: {
-      maxHeight: 180,
-      marginBottom: 4,
-    },
-    modalChipsWrap: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-      paddingBottom: 8,
-    },
-    modalButtonsRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      gap: 8,
-      marginTop: 16,
-    },
-    modalSecondaryButton: {
-      flex: 1,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
-      paddingVertical: 14,
-      alignItems: "center",
-    },
-    modalSecondaryButtonText: {
-      color: theme.textSecondary,
-      fontSize: RFValue(13),
-      fontWeight: "600",
-    },
-    modalPrimaryButton: {
-      flex: 1,
-      borderRadius: 12,
-      backgroundColor: theme.primary,
-      paddingVertical: 14,
-      alignItems: "center",
-    },
-    modalPrimaryButtonText: {
-      color: theme.onPrimary,
-      fontSize: RFValue(13),
-      fontWeight: "700",
     },
     confirmButton: {
       backgroundColor: theme.primary,

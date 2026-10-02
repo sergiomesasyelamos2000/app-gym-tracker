@@ -1,5 +1,6 @@
 import type {
   MealType,
+  NutritionPlanListItemDto as NutritionPlanListItem,
   NutritionPlanResponseDto as NutritionPlan,
   NutritionPlanStatus,
 } from "@sergiomesasyelamos2000/shared";
@@ -39,10 +40,15 @@ export function getPlanStatusColor(
   return theme.textSecondary;
 }
 
-export function sortPlansByRecent(plans: NutritionPlan[]): NutritionPlan[] {
+export function sortPlansByRecent<
+  T extends Pick<NutritionPlanListItem, "updatedAt">,
+>(plans: T[]): T[] {
   return [...plans].sort((a, b) => {
     const aTime = new Date(a.updatedAt).getTime();
     const bTime = new Date(b.updatedAt).getTime();
     return bTime - aTime;
   });
 }
+
+// Keep NutritionPlan alias available for detail helpers if needed
+export type { NutritionPlan, NutritionPlanListItem };

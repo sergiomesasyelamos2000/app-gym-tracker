@@ -61,6 +61,7 @@ import {
   type WeeklyActivitySuggestion,
 } from "../features/health";
 import * as nutritionService from "../features/nutrition/services/nutritionService";
+import { resetExerciseCatalogCaches } from "../services/exerciseService";
 import { calculateMacroGoals } from "../utils/macroCalculator";
 import {
   PRIVACY_POLICY_URL,
@@ -494,6 +495,9 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              // Drop in-memory exercise catalog before AsyncStorage wipe.
+              await resetExerciseCatalogCaches();
+
               // Get all keys from AsyncStorage
               const keys = await AsyncStorage.getAllKeys();
 

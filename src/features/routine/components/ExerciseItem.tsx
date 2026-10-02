@@ -6,6 +6,10 @@ import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { getStaticExerciseImageUrl } from "../utils/normalizeExerciseImage";
+import {
+  EXERCISE_LIST_ROW_HEIGHT,
+  EXERCISE_LIST_ROW_MARGIN_BOTTOM,
+} from "./exerciseListLayout";
 
 interface Props {
   item: ExerciseRequestDto;
@@ -24,12 +28,7 @@ const muscleLabel = (item: ExerciseRequestDto): string | null => {
   return label || null;
 };
 
-export default function ExerciseItem({
-  item,
-  isSelected,
-  onSelect,
-  onRedirect,
-}: Props) {
+function ExerciseItem({ item, isSelected, onSelect, onRedirect }: Props) {
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const staticImageUrl = getStaticExerciseImageUrl(item);
@@ -46,6 +45,7 @@ export default function ExerciseItem({
       <CachedExerciseImage
         imageUrl={staticImageUrl}
         style={styles.exerciseImage}
+        variant="thumb"
       />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseTitle} numberOfLines={2}>
@@ -80,17 +80,21 @@ export default function ExerciseItem({
   );
 }
 
+export default React.memo(ExerciseItem);
+
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
     exerciseItem: {
+      height: EXERCISE_LIST_ROW_HEIGHT,
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.card,
       borderRadius: 16,
       padding: 12,
-      marginBottom: 10,
+      marginBottom: EXERCISE_LIST_ROW_MARGIN_BOTTOM,
       borderWidth: 1,
       borderColor: theme.border,
+      overflow: "hidden",
     },
     selectedItem: {
       backgroundColor: theme.selection,

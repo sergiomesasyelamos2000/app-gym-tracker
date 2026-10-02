@@ -1,16 +1,23 @@
 import type {
+  PaginatedRoutineSessions,
   RoutineFolderResponseDto,
   RoutineLayoutRequestDto,
   RoutineSessionEntity,
+  RoutineSessionListItem,
   RoutineRequestDto,
   RoutineResponseDto,
 } from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../../../api/client";
 import type { CaughtError } from "../../../types";
+import { enrichSessionExercisesWithCatalogImages } from "../utils/enrichSessionExerciseImages";
 
 const ROUTINES_CACHE_KEY = "@routines_cache";
 const FOLDERS_CACHE_KEY = "@routine_folders_cache";
+const SESSIONS_CACHE_KEY = "@sessions_cache_v2";
+const LOCAL_SESSIONS_KEY = "@local_sessions";
+const DEFAULT_SESSIONS_PAGE_SIZE = 50;
+const MAX_SESSION_PAGES = 40; // safety ceiling: 40 × 50 = 2000 sessions
 
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto
@@ -320,31 +327,48 @@ export async function saveRoutineSession(
   });
 }
 
-const SESSIONS_CACHE_KEY = "@sessions_cache";
-const LOCAL_SESSIONS_KEY = "@local_sessions";
+export async function findRoutineSessionsPage(options?: {
+  limit?: number;
+  cursor?: string | null;
+}): Promise<PaginatedRoutineSessions> {
+  const limit = options?.limit ?? DEFAULT_SESSIONS_PAGE_SIZE;
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (options?.cursor) {
+    params.set("cursor", options.cursor);
+  }
+  return apiFetch<PaginatedRoutineSessions>(
+    `routines/sessions?${params.toString()}`,
+    { method: "GET" }
+  );
+}
 
+/**
+ * Fetches session history (paginated under the hood). Returns slim list items
+ * compatible with previous RoutineSessionEntity consumers for sets/history UX.
+ */
 export async function findAllRoutineSessions(): Promise<
-  RoutineSessionEntity[]
+  RoutineSessionListItem[]
 > {
-  let apiSessions: RoutineSessionEntity[] = [];
-  let localSessions: RoutineSessionEntity[] = [];
-  let apiSucceeded = false;
+  let apiSessions: RoutineSessionListItem[] = [];
+  let localSessions: RoutineSessionListItem[] = [];
 
-  // Try to fetch from API
   try {
-    apiSessions = await apiFetch<RoutineSessionEntity[]>("routines/sessions", {
-      method: "GET",
-    });
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const page = await findRoutineSessionsPage({
+        limit: DEFAULT_SESSIONS_PAGE_SIZE,
+        cursor,
+      });
+      apiSessions = [...apiSessions, ...page.items];
+      cursor = page.hasMore ? page.nextCursor : null;
+      pages += 1;
+    } while (cursor && pages < MAX_SESSION_PAGES);
 
-    // Cache for offline use
-    await AsyncStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(apiSessions));
-    apiSucceeded = true;
-
-    // If API succeeded, return only API sessions (don't mix with local pending)
-    return apiSessions;
+    const enriched = await enrichRoutineSessionsMedia(apiSessions);
+    await AsyncStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(enriched));
+    return enriched;
   } catch (error: CaughtError) {
-    // If network fails, load from cache
-
     try {
       const cached = await AsyncStorage.getItem(SESSIONS_CACHE_KEY);
       if (cached) {
@@ -354,25 +378,35 @@ export async function findAllRoutineSessions(): Promise<
       console.error("[RoutineService] Sessions cache read failed:", cacheError);
     }
 
-    // Only load local sessions if API failed (offline or error)
     try {
       const localStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
       if (localStr) {
         localSessions = JSON.parse(localStr);
       }
-    } catch (error) {
-      console.error("[RoutineService] Failed to load local sessions:", error);
+    } catch (loadError) {
+      console.error("[RoutineService] Failed to load local sessions:", loadError);
     }
 
-    // Combine and deduplicate (local sessions have priority)
     const allSessions = [...localSessions, ...apiSessions];
-    const uniqueSessions = allSessions.filter(
+    const unique = allSessions.filter(
       (session, index, self) =>
         index === self.findIndex((s) => s.id === session.id)
     );
-
-    return uniqueSessions;
+    return enrichRoutineSessionsMedia(unique);
   }
+}
+
+async function enrichRoutineSessionsMedia(
+  sessions: RoutineSessionListItem[]
+): Promise<RoutineSessionListItem[]> {
+  return Promise.all(
+    sessions.map(async (session) => {
+      const exercises = await enrichSessionExercisesWithCatalogImages(
+        session.exercises ?? []
+      );
+      return { ...session, exercises };
+    })
+  );
 }
 
 /**

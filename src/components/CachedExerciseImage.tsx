@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Image, ImageStyle, StyleProp } from "react-native";
 import { isAnimatedExerciseImage } from "../utils/exerciseImage";
+import { toCloudinaryListThumbUrl } from "../utils/cloudinaryThumbUrl";
 
 interface CachedExerciseImageProps {
   imageUrl: string | null | undefined;
@@ -9,13 +10,16 @@ interface CachedExerciseImageProps {
   onLoadEnd?: () => void;
   /** When true, GIFs are allowed (e.g. history fallback if no static exists). */
   allowAnimated?: boolean;
+  /** List rows use Cloudinary 200px thumbs; detail keeps the original URL. */
+  variant?: "full" | "thumb";
 }
 
 const DEFAULT_IMAGE = require("../../assets/not-image.png");
 
 const resolveImageUri = (
   imageUrl: string | null | undefined,
-  allowAnimated = false
+  allowAnimated = false,
+  variant: "full" | "thumb" = "full"
 ): string | null => {
   if (!imageUrl || !imageUrl.trim()) {
     return null;
@@ -46,6 +50,9 @@ const resolveImageUri = (
   }
 
   if (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")) {
+    if (variant === "thumb") {
+      return toCloudinaryListThumbUrl(trimmedUrl) ?? trimmedUrl;
+    }
     return trimmedUrl;
   }
 
@@ -57,23 +64,35 @@ export default function CachedExerciseImage({
   style,
   onLoadEnd,
   allowAnimated = false,
+  variant = "full",
 }: CachedExerciseImageProps) {
   const [hasError, setHasError] = useState(false);
   const resolvedUri = useMemo(
-    () => resolveImageUri(imageUrl, allowAnimated),
-    [imageUrl, allowAnimated]
+    () => resolveImageUri(imageUrl, allowAnimated, variant),
+    [imageUrl, allowAnimated, variant]
   );
   useEffect(() => {
     setHasError(false);
   }, [resolvedUri]);
 
   const source =
-    !hasError && resolvedUri ? ({ uri: resolvedUri } as const) : DEFAULT_IMAGE;
+    !hasError && resolvedUri
+      ? resolvedUri.startsWith("http")
+        ? ({ uri: resolvedUri, cache: "force-cache" as const } as const)
+        : ({ uri: resolvedUri } as const)
+      : DEFAULT_IMAGE;
+
+  const isRemoteHttp =
+    typeof resolvedUri === "string" && resolvedUri.startsWith("http");
+  const useDefaultSource =
+    variant !== "thumb" && isRemoteHttp;
 
   return (
     <Image
       source={source}
+      defaultSource={useDefaultSource ? DEFAULT_IMAGE : undefined}
       style={style}
+      fadeDuration={variant === "thumb" ? 0 : undefined}
       onLoadEnd={onLoadEnd}
       onError={() => setHasError(true)}
     />
