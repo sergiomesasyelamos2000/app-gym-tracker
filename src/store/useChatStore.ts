@@ -7,6 +7,7 @@ import {
   postPhoto,
   postText,
 } from '../features/nutrition/services/nutritionService';
+import { NUTRITION_CHAT_WELCOME } from '../features/chat/nutritionChatCopy';
 
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_MESSAGE_CHARS = 500;
@@ -92,7 +93,7 @@ interface ChatState {
 // Mensaje de bienvenida
 const getWelcomeMessage = (nextId: number): Message => ({
   id: nextId,
-  text: '¡Hola! Soy tu asistente de nutrición. ¿Cómo puedo ayudarte hoy?',
+  text: NUTRITION_CHAT_WELCOME,
   sender: 'bot',
 });
 

@@ -17,6 +17,7 @@ import {
 } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
+import { CheckoutSkeleton } from "../components/CheckoutSkeleton";
 import {
   getMySubscription,
   verifyPayment,
@@ -34,19 +35,65 @@ type CheckoutScreenRouteProp = RouteProp<
   "CheckoutScreen"
 >;
 
+type WebViewUrlEvent = {
+  nativeEvent: { url?: string };
+};
+
+const isIgnorableCheckoutUrl = (url: string) =>
+  !url || url === "about:blank";
+
 export function CheckoutScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const route = useRoute<CheckoutScreenRouteProp>();
   const params = route.params;
   const webViewRef = useRef<WebView>(null);
   const hasStartedVerificationRef = useRef(false);
+  const hasFinishedFirstLoadRef = useRef(false);
+  const latestStartUrlRef = useRef<string | null>(null);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [loading, setLoading] = useState(true);
+  const [showCheckoutSkeleton, setShowCheckoutSkeleton] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const { setSubscription } = useSubscriptionStore();
   const isIos = Platform.OS === "ios";
+
+  const handleLoadStart = (event: WebViewUrlEvent) => {
+    const url = event.nativeEvent?.url ?? "";
+    if (!isIgnorableCheckoutUrl(url)) {
+      latestStartUrlRef.current = url;
+    }
+    if (hasFinishedFirstLoadRef.current) return;
+    if (isIgnorableCheckoutUrl(url)) return;
+    setShowCheckoutSkeleton(true);
+  };
+
+  const finishFirstLoad = (event: WebViewUrlEvent) => {
+    const url = event.nativeEvent?.url ?? "";
+    if (isIgnorableCheckoutUrl(url)) return;
+    if (latestStartUrlRef.current && url !== latestStartUrlRef.current) {
+      return;
+    }
+    if (hasFinishedFirstLoadRef.current) return;
+    hasFinishedFirstLoadRef.current = true;
+    setShowCheckoutSkeleton(false);
+  };
+
+  const handleLoadError = (event: WebViewUrlEvent) => {
+    if (hasFinishedFirstLoadRef.current) return;
+    const url = event.nativeEvent?.url ?? "";
+    if (isIgnorableCheckoutUrl(url) && latestStartUrlRef.current) {
+      return;
+    }
+    hasFinishedFirstLoadRef.current = true;
+    setShowCheckoutSkeleton(false);
+  };
+
+  const resetCheckoutLoader = () => {
+    hasFinishedFirstLoadRef.current = false;
+    latestStartUrlRef.current = null;
+    setShowCheckoutSkeleton(true);
+  };
 
   const openStatusScreen = (success: boolean) => {
     const state = navigation.getState() as any;
@@ -141,8 +188,12 @@ export function CheckoutScreen() {
 
         await refreshSubscriptionWithRetries(params.planId);
 
+        // Keep verifying=true until replace unmounts this screen so the
+        // WebView does not remount uncovered during the transition.
         openStatusScreen(true);
       } catch (error: CaughtError) {
+        setVerifying(false);
+        resetCheckoutLoader();
         Alert.alert(
           "No se pudo confirmar la suscripción",
           getErrorMessage(error) ||
@@ -163,8 +214,6 @@ export function CheckoutScreen() {
             },
           ]
         );
-      } finally {
-        setVerifying(false);
       }
     }
 
@@ -271,25 +320,28 @@ export function CheckoutScreen() {
         onBack={handleCancel}
       />
 
-      <WebView
-        ref={webViewRef}
-        source={{ uri: params.checkoutUrl }}
-        style={styles.webView}
-        onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
-        onNavigationStateChange={handleNavigationStateChange}
-        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-        startInLoadingState
-        javaScriptEnabled
-        domStorageEnabled
-        thirdPartyCookiesEnabled
-      />
+      <View style={styles.body}>
+        <WebView
+          ref={webViewRef}
+          source={{ uri: params.checkoutUrl }}
+          style={styles.webView}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={finishFirstLoad}
+          onError={handleLoadError}
+          onHttpError={handleLoadError}
+          onNavigationStateChange={handleNavigationStateChange}
+          onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+          javaScriptEnabled
+          domStorageEnabled
+          thirdPartyCookiesEnabled
+        />
 
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      )}
+        {showCheckoutSkeleton ? (
+          <View style={styles.skeletonLayer}>
+            <CheckoutSkeleton />
+          </View>
+        ) : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -300,35 +352,16 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.background,
     },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    closeButton: {
-      padding: 8,
-    },
-    headerTitle: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: theme.text,
+    body: {
+      flex: 1,
     },
     webView: {
       flex: 1,
     },
-    loadingOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: theme.overlay,
-      justifyContent: "center",
-      alignItems: "center",
+    skeletonLayer: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.background,
+      zIndex: 2,
     },
     verifyingContainer: {
       flex: 1,

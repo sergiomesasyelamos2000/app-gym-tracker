@@ -97,7 +97,7 @@ export function SubscriptionLegalFooter({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 0,
     paddingTop: 24,
   },
   planLine: {

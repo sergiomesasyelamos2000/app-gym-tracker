@@ -23,6 +23,7 @@ export function NutritionChatSkeleton({
   return (
     <SkeletonRoot style={styles.root} message={message} messagePosition="below">
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
+        <Bone style={[styles.avatar, { backgroundColor: onPrimaryBone }]} />
         <View style={styles.headerTitles}>
           <Bone style={[styles.headerTitle, { backgroundColor: onPrimaryBone }]} />
           <Bone
@@ -56,14 +57,22 @@ const createStyles = (theme: Theme) =>
     header: {
       flexDirection: "row",
       alignItems: "center",
-      minHeight: 72,
+      minHeight: 68,
       paddingHorizontal: 16,
       paddingVertical: 12,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
     },
     headerIcon: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
     },
     headerTitles: {
       flex: 1,
@@ -71,12 +80,12 @@ const createStyles = (theme: Theme) =>
       paddingRight: 12,
     },
     headerTitle: {
-      width: "48%",
+      width: "40%",
       height: 16,
       borderRadius: 6,
     },
     headerSubtitle: {
-      width: "36%",
+      width: "55%",
       height: 10,
       borderRadius: 5,
     },

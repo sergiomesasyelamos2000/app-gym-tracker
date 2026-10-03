@@ -5,8 +5,8 @@ import {
   Alert,
   Dimensions,
   Platform,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityLevel,
   CreateUserNutritionProfileDto,
@@ -25,6 +26,7 @@ import {
   WeightUnit,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { useFocusedStatusBar } from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -35,13 +37,25 @@ import {
   getRecommendedWeightChangeRange,
 } from "../../../utils/macroCalculator";
 import { createUserProfile } from "../services/nutritionService";
+import {
+  finishNutritionProfileSetup,
+  leaveToPreviousScreen,
+} from "../utils/nutritionNavigation";
+import type { ProfileStackParamList } from "../../profile/screens/ProfileStack";
 import { NutritionStackParamList } from "./NutritionStack";
 import { CaughtError, getErrorMessage } from "../../../types";
 
 const { width } = Dimensions.get("window");
 
+type UserProfileSetupParams = Pick<
+  NutritionStackParamList & ProfileStackParamList,
+  "UserProfileSetupScreen"
+> &
+  Partial<Pick<NutritionStackParamList, "MacrosScreen">> &
+  Partial<Pick<ProfileStackParamList, "ProfileMain">>;
+
 type Props = NativeStackScreenProps<
-  NutritionStackParamList,
+  UserProfileSetupParams,
   "UserProfileSetupScreen"
 >;
 
@@ -49,7 +63,9 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const currentUser = useAuthStore((state) => state.user);
   const userId = route.params?.userId || currentUser?.id || "";
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const statusBarStyle = isDark ? "light-content" : "dark-content";
+  useFocusedStatusBar(statusBarStyle);
 
   // Validar que tenemos un userId válido
   React.useEffect(() => {
@@ -57,7 +73,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       Alert.alert(
         "Error",
         "No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        [{ text: "OK", onPress: () => leaveToPreviousScreen(navigation) }]
       );
     }
   }, [userId, navigation]);
@@ -150,7 +166,9 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      return;
     }
+    leaveToPreviousScreen(navigation);
   };
 
   const handleComplete = async () => {
@@ -191,8 +209,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       // Save to local store
       setUserProfile(savedProfile);
 
-      // Navigate to MacrosScreen
-      navigation.replace("MacrosScreen");
+      finishNutritionProfileSetup(navigation);
     } catch (error: CaughtError) {
       const errorMsg = getErrorMessage(error);
       let errorMessage =
@@ -921,11 +938,19 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      edges={["top"]}
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
+      <StatusBar
+        barStyle={statusBarStyle}
+        backgroundColor="transparent"
+        translucent
+      />
       <NutritionScreenHeader
         title="Configura tu Perfil"
         onBack={handleBack}
-        showLeading={currentStep > 1}
+        backgroundColor={theme.background}
       />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {renderProgressBar()}

@@ -7,7 +7,9 @@ import {
   Modal,
   ScrollView,
   Platform,
+  StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Crown, Check } from "lucide-react-native";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useNavigation } from "@react-navigation/native";
@@ -15,6 +17,13 @@ import type { BaseNavigation } from "../../../types";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { withOpacity } from "../../../utils/themeStyles";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
+import { useResponsive } from "../../../hooks/useResponsive";
+import {
+  SUBSCRIPTION_SECTION_GAP,
+  subscriptionColumnStyle,
+  subscriptionTypeScale,
+  type SubscriptionTypeScale,
+} from "../subscriptionLayout";
 
 interface PaywallScreenProps {
   visible: boolean;
@@ -32,8 +41,16 @@ export function PaywallScreen({
   message,
 }: PaywallScreenProps) {
   const navigation = useNavigation<BaseNavigation>();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isDark } = useTheme();
+  const { isSmallPhone } = useResponsive();
+  const type = useMemo(
+    () => subscriptionTypeScale(isSmallPhone),
+    [isSmallPhone]
+  );
+  const styles = useMemo(
+    () => createStyles(theme, type, isSmallPhone),
+    [theme, type, isSmallPhone]
+  );
 
   const handleUpgrade = () => {
     onClose();
@@ -56,6 +73,8 @@ export function PaywallScreen({
     "Experiencia sin anuncios",
   ];
 
+  const crownSize = isSmallPhone ? 48 : 64;
+
   return (
     <Modal
       visible={visible}
@@ -64,155 +83,155 @@ export function PaywallScreen({
       onRequestClose={onClose}
       statusBarTranslucent={Platform.OS === "android"}
     >
-      <View style={styles.container}>
-        <ScreenHeader title="Premium" mode="close" onBack={onClose} />
+      <SafeAreaView
+        style={styles.container}
+        edges={Platform.OS === "ios" ? ["bottom"] : ["top", "bottom"]}
+      >
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.backgroundSecondary}
+        />
+        <ScreenHeader
+          title="Premium"
+          mode="close"
+          onBack={onClose}
+          backgroundColor={theme.backgroundSecondary}
+        />
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.hero}>
-            <View style={styles.iconContainer}>
-              <Crown size={64} color={theme.warning} />
-            </View>
-            <Text style={styles.title}>{title || defaultTitle}</Text>
-            <Text style={styles.message}>{message || defaultMessage}</Text>
-          </View>
-
-          {feature && (
-            <View style={styles.featureContext}>
-              <Text style={styles.featureContextText}>
-                Estás intentando acceder a:{" "}
-                <Text style={styles.featureName}>{feature}</Text>
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>Premium incluye:</Text>
-            {premiumFeatures.map((feat, index) => (
-              <View key={index} style={styles.featureRow}>
-                <Check
-                  size={20}
-                  color={theme.success}
-                  style={styles.checkIcon}
-                />
-                <Text style={styles.featureText}>{feat}</Text>
+          <View style={styles.column}>
+            <View style={styles.hero}>
+              <View style={styles.iconContainer}>
+                <Crown size={crownSize} color={theme.warning} />
               </View>
-            ))}
-          </View>
-
-          <View style={styles.pricingPreview}>
-            <View style={styles.pricingOption}>
-              <Text style={styles.pricingLabel}>Mensual</Text>
-              <Text style={styles.pricingPrice}>0.99€/mes</Text>
+              <Text style={styles.title}>{title || defaultTitle}</Text>
+              <Text style={styles.message}>{message || defaultMessage}</Text>
             </View>
-            <View style={styles.pricingDivider} />
-            <View style={styles.pricingOption}>
-              <Text style={styles.pricingLabel}>Anual</Text>
-              <Text style={styles.pricingPrice}>9.99€/año</Text>
-              <Text style={styles.pricingSavings}>Ahorra 16%</Text>
+
+            {feature && (
+              <View style={styles.featureContext}>
+                <Text style={styles.featureContextText}>
+                  Estás intentando acceder a:{" "}
+                  <Text style={styles.featureName}>{feature}</Text>
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.featuresContainer}>
+              <Text style={styles.featuresTitle}>Premium incluye:</Text>
+              {premiumFeatures.map((feat, index) => (
+                <View key={index} style={styles.featureRow}>
+                  <Check
+                    size={20}
+                    color={theme.success}
+                    style={styles.checkIcon}
+                  />
+                  <Text style={styles.featureText}>{feat}</Text>
+                </View>
+              ))}
             </View>
+
+            <View style={styles.pricingPreview}>
+              <View style={styles.pricingOption}>
+                <Text style={styles.pricingLabel}>Mensual</Text>
+                <Text style={styles.pricingPrice}>0.99€/mes</Text>
+              </View>
+              <View style={styles.pricingDivider} />
+              <View style={styles.pricingOption}>
+                <Text style={styles.pricingLabel}>Anual</Text>
+                <Text style={styles.pricingPrice}>9.99€/año</Text>
+                <Text style={styles.pricingSavings}>Ahorra 16%</Text>
+              </View>
+            </View>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.upgradeButton}
+                onPress={handleUpgrade}
+                activeOpacity={0.8}
+              >
+                <Crown
+                  size={20}
+                  color={theme.onPrimary}
+                  style={styles.buttonIcon}
+                />
+                <Text style={styles.upgradeButtonText}>
+                  Actualizar a Premium
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.laterButton} onPress={onClose}>
+                <Text style={styles.laterButtonText}>Quizás más tarde</Text>
+              </TouchableOpacity>
+            </View>
+
+            <SubscriptionLegalFooter />
           </View>
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.upgradeButton}
-              onPress={handleUpgrade}
-              activeOpacity={0.8}
-            >
-              <Crown
-                size={20}
-                color={theme.onPrimary}
-                style={styles.buttonIcon}
-              />
-              <Text style={styles.upgradeButtonText}>Actualizar a Premium</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.laterButton} onPress={onClose}>
-              <Text style={styles.laterButtonText}>Quizás más tarde</Text>
-            </TouchableOpacity>
-          </View>
-
-          <SubscriptionLegalFooter />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
-const createStyles = (theme: Theme) =>
+const createStyles = (
+  theme: Theme,
+  type: SubscriptionTypeScale,
+  isSmallPhone: boolean
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    headerContent: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    headerTitle: {
-      marginLeft: 8,
-      fontSize: 18,
-      fontWeight: "600",
-      color: theme.text,
-    },
-    closeButton: {
-      padding: 4,
+      backgroundColor: theme.backgroundSecondary,
     },
     scrollView: {
       flex: 1,
     },
     scrollContent: {
+      paddingTop: 8,
       paddingBottom: 32,
+    },
+    column: {
+      ...subscriptionColumnStyle(),
+      paddingTop: SUBSCRIPTION_SECTION_GAP,
     },
     hero: {
       alignItems: "center",
-      paddingHorizontal: 24,
-      paddingTop: 32,
       paddingBottom: 24,
     },
     iconContainer: {
-      width: 120,
-      height: 120,
-      borderRadius: 60,
+      width: isSmallPhone ? 96 : 120,
+      height: isSmallPhone ? 96 : 120,
+      borderRadius: isSmallPhone ? 48 : 60,
       backgroundColor: withOpacity(theme.warning, 18),
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 24,
     },
     title: {
-      fontSize: 28,
+      fontSize: type.hero,
       fontWeight: "700",
       color: theme.text,
       textAlign: "center",
       marginBottom: 12,
     },
     message: {
-      fontSize: 16,
+      fontSize: type.body,
       color: theme.textSecondary,
       textAlign: "center",
-      lineHeight: 24,
+      lineHeight: type.bodyLineHeight,
     },
     featureContext: {
-      marginHorizontal: 24,
       marginBottom: 24,
       padding: 16,
       backgroundColor: theme.selection,
       borderRadius: 12,
     },
     featureContextText: {
-      fontSize: 14,
+      fontSize: type.feature,
       color: theme.info,
       textAlign: "center",
     },
@@ -220,11 +239,10 @@ const createStyles = (theme: Theme) =>
       fontWeight: "600",
     },
     featuresContainer: {
-      marginHorizontal: 24,
       marginBottom: 24,
     },
     featuresTitle: {
-      fontSize: 18,
+      fontSize: type.section,
       fontWeight: "600",
       color: theme.text,
       marginBottom: 16,
@@ -238,16 +256,17 @@ const createStyles = (theme: Theme) =>
       marginRight: 12,
     },
     featureText: {
-      fontSize: 15,
+      fontSize: type.feature,
       color: theme.textSecondary,
       flex: 1,
     },
     pricingPreview: {
       flexDirection: "row",
-      marginHorizontal: 24,
       marginBottom: 24,
-      backgroundColor: theme.backgroundSecondary,
+      backgroundColor: theme.card,
       borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
       padding: 16,
     },
     pricingOption: {
@@ -260,24 +279,23 @@ const createStyles = (theme: Theme) =>
       marginHorizontal: 16,
     },
     pricingLabel: {
-      fontSize: 12,
+      fontSize: type.caption,
       fontWeight: "500",
       color: theme.textSecondary,
       marginBottom: 4,
     },
     pricingPrice: {
-      fontSize: 18,
+      fontSize: type.section,
       fontWeight: "700",
       color: theme.text,
     },
     pricingSavings: {
       marginTop: 4,
-      fontSize: 12,
+      fontSize: type.caption,
       fontWeight: "600",
       color: theme.success,
     },
     actions: {
-      paddingHorizontal: 24,
       marginBottom: 16,
     },
     upgradeButton: {
@@ -288,12 +306,13 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 16,
       borderRadius: 12,
       marginBottom: 12,
+      minHeight: 48,
     },
     buttonIcon: {
       marginRight: 8,
     },
     upgradeButtonText: {
-      fontSize: 16,
+      fontSize: type.button,
       fontWeight: "600",
       color: theme.onPrimary,
     },
@@ -302,7 +321,7 @@ const createStyles = (theme: Theme) =>
       paddingVertical: 12,
     },
     laterButtonText: {
-      fontSize: 14,
+      fontSize: type.feature,
       fontWeight: "500",
       color: theme.textSecondary,
     },

@@ -6,8 +6,8 @@ import {
   Alert,
   Dimensions,
   Platform,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type {
   ActivityLevel,
   Gender,
@@ -26,6 +26,7 @@ import type {
   WeightGoal,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { useFocusedStatusBar } from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -36,12 +37,21 @@ import {
   getRecommendedWeightChangeRange,
 } from "../../../utils/macroCalculator";
 import { updateUserProfile } from "../services/nutritionService";
+import { leaveToPreviousScreen } from "../utils/nutritionNavigation";
+import type { ProfileStackParamList } from "../../profile/screens/ProfileStack";
 import { NutritionStackParamList } from "./NutritionStack";
 
 const { width, height } = Dimensions.get("window");
 
+type EditNutritionProfileParams = Pick<
+  NutritionStackParamList & ProfileStackParamList,
+  "EditNutritionProfileScreen"
+> &
+  Partial<Pick<NutritionStackParamList, "MacrosScreen">> &
+  Partial<Pick<ProfileStackParamList, "ProfileMain">>;
+
 type Props = NativeStackScreenProps<
-  NutritionStackParamList,
+  EditNutritionProfileParams,
   "EditNutritionProfileScreen"
 >;
 
@@ -49,8 +59,9 @@ export default function EditNutritionProfileScreen({
   navigation,
   route,
 }: Props) {
-  const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  const statusBarStyle = isDark ? "light-content" : "dark-content";
+  useFocusedStatusBar(statusBarStyle);
   const currentUser = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
@@ -98,10 +109,10 @@ export default function EditNutritionProfileScreen({
       Alert.alert(
         "Error",
         "No se encontró el perfil de nutrición. Por favor, completa la configuración inicial.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        [{ text: "OK", onPress: () => leaveToPreviousScreen(navigation) }]
       );
     }
-  }, [userProfile, currentUser]);
+  }, [userProfile, currentUser, navigation]);
 
   const activityLevels: {
     value: ActivityLevel;
@@ -174,7 +185,7 @@ export default function EditNutritionProfileScreen({
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      navigation.goBack();
+      leaveToPreviousScreen(navigation);
     }
   };
 
@@ -225,7 +236,7 @@ export default function EditNutritionProfileScreen({
         [
           {
             text: "OK",
-            onPress: () => navigation.goBack(),
+            onPress: () => leaveToPreviousScreen(navigation),
           },
         ]
       );
@@ -875,12 +886,18 @@ export default function EditNutritionProfileScreen({
   if (loading) {
     return (
       <SafeAreaView
+        edges={["top"]}
         style={[
           styles.container,
           styles.centerContent,
-          Platform.OS === "android" ? { paddingTop: insets.top } : null,
+          { backgroundColor: theme.background },
         ]}
       >
+        <StatusBar
+          barStyle={statusBarStyle}
+          backgroundColor="transparent"
+          translucent
+        />
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Actualizando perfil...</Text>
       </SafeAreaView>
@@ -889,14 +906,18 @@ export default function EditNutritionProfileScreen({
 
   return (
     <SafeAreaView
-      style={[
-        styles.container,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["top"]}
+      style={[styles.container, { backgroundColor: theme.background }]}
     >
+      <StatusBar
+        barStyle={statusBarStyle}
+        backgroundColor="transparent"
+        translucent
+      />
       <NutritionScreenHeader
         title="Editar Perfil de Nutrición"
         onBack={handleBack}
+        backgroundColor={theme.background}
       />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {renderProgressBar()}

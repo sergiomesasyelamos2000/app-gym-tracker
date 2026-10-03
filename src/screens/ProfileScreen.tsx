@@ -40,6 +40,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../contexts/ThemeContext";
+import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
 import {
   deleteAccount as deleteAccountService,
   logout as logoutService,
@@ -137,6 +138,8 @@ export default function ProfileScreen() {
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
+  const statusBarStyle = isDark ? "light-content" : "dark-content";
+  useFocusedStatusBar(statusBarStyle);
 
   // Subscription store
   const subscription = useSubscriptionStore((state) => state.subscription);
@@ -342,9 +345,8 @@ export default function ProfileScreen() {
 
   const handleEditNutritionProfile = () => {
     if (isProfileComplete()) {
-      navigation.navigate("Macros", {
-        screen: "EditNutritionProfileScreen",
-      });
+      // Stay on Perfil stack so back returns to ProfileMain (not Macros/Inicio).
+      navigation.navigate("EditNutritionProfileScreen");
     } else {
       Alert.alert(
         "Perfil de Nutrición",
@@ -355,9 +357,8 @@ export default function ProfileScreen() {
             text: "Configurar",
             onPress: () => {
               if (user?.id) {
-                navigation.navigate("Macros", {
-                  screen: "UserProfileSetupScreen",
-                  params: { userId: user.id },
+                navigation.navigate("UserProfileSetupScreen", {
+                  userId: user.id,
                 });
               }
             },
@@ -610,13 +611,14 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <SafeAreaView
+        edges={["top"]}
         style={[styles.container, { backgroundColor: theme.background }]}
       >
         <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={theme.background}
+          barStyle={statusBarStyle}
+          backgroundColor="transparent"
           hidden={false}
-          translucent={false}
+          translucent
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -627,13 +629,14 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
     >
       <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.backgroundSecondary}
+        barStyle={statusBarStyle}
+        backgroundColor="transparent"
         hidden={false}
-        translucent={false}
+        translucent
       />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}

@@ -2,10 +2,15 @@ import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import { Bone, SkeletonRoot } from "../../common/skeleton";
+import { useResponsive } from "../../../hooks/useResponsive";
 
 export function StatusPlanSkeleton() {
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { isSmallPhone } = useResponsive();
+  const styles = useMemo(
+    () => createStyles(theme, isSmallPhone),
+    [theme, isSmallPhone]
+  );
 
   return (
     <SkeletonRoot style={styles.root}>
@@ -37,11 +42,11 @@ export function StatusPlanSkeleton() {
   );
 }
 
-const createStyles = (theme: Theme) =>
+const createStyles = (theme: Theme, isSmallPhone: boolean) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: 0,
       paddingTop: 8,
     },
     card: {
@@ -49,7 +54,7 @@ const createStyles = (theme: Theme) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.border,
-      padding: 16,
+      padding: isSmallPhone ? 16 : 20,
       marginBottom: 16,
     },
     titleRow: {

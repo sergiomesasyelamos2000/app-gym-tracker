@@ -9,6 +9,7 @@ import {
   Linking,
   ActivityIndicator,
   Platform,
+  StatusBar,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,6 +40,14 @@ import type { SubscriptionStackParamList } from "./SubscriptionStack";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 import { StatusPlanSkeleton } from "../components/StatusPlanSkeleton";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
+import { useResponsive } from "../../../hooks/useResponsive";
+import {
+  SUBSCRIPTION_CARD_GAP,
+  SUBSCRIPTION_SECTION_GAP,
+  subscriptionColumnStyle,
+  subscriptionTypeScale,
+  type SubscriptionTypeScale,
+} from "../subscriptionLayout";
 
 type StatusScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
@@ -49,8 +58,16 @@ export function StatusScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const route = useRoute<StatusScreenRouteProp>();
   const { success } = route.params || {};
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isDark } = useTheme();
+  const { isSmallPhone } = useResponsive();
+  const type = useMemo(
+    () => subscriptionTypeScale(isSmallPhone),
+    [isSmallPhone]
+  );
+  const styles = useMemo(
+    () => createStyles(theme, type, isSmallPhone),
+    [theme, type, isSmallPhone]
+  );
   const isIos = Platform.OS === "ios";
   const {
     restoreApplePurchases,
@@ -143,11 +160,18 @@ export function StatusScreen() {
   if (isLoading || !subscription) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={theme.backgroundSecondary}
+        />
         <ScreenHeader
           title="Mi Suscripción"
           onBack={() => navigation.goBack()}
+          backgroundColor={theme.backgroundSecondary}
         />
-        <StatusPlanSkeleton />
+        <View style={styles.column}>
+          <StatusPlanSkeleton />
+        </View>
       </SafeAreaView>
     );
   }
@@ -157,216 +181,233 @@ export function StatusScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.backgroundSecondary}
+      />
       <ScreenHeader
         title="Mi Suscripción"
         onBack={() => navigation.goBack()}
+        backgroundColor={theme.backgroundSecondary}
       />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {success && (
-          <View style={styles.successBanner}>
-            <CheckCircle size={24} color={theme.success} />
-            <Text style={styles.successText}>
-              ¡Bienvenido a Premium! Tu suscripción está activa.
-            </Text>
-          </View>
-        )}
+        <View style={styles.column}>
+          {success && (
+            <View style={styles.successBanner}>
+              <CheckCircle size={24} color={theme.success} />
+              <Text style={styles.successText}>
+                ¡Bienvenido a Premium! Tu suscripción está activa.
+              </Text>
+            </View>
+          )}
 
-        <View style={[styles.card, isPremium && styles.premiumCard]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.planName}>{planMetadata.name}</Text>
-            {isPremium && (
-              <View style={styles.premiumBadge}>
-                <Text style={styles.premiumBadgeText}>Premium</Text>
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.planDescription}>{planMetadata.description}</Text>
-
-          {isPremium && (
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <CreditCard size={20} color={theme.textSecondary} />
-                <Text style={styles.detailLabel}>Precio:</Text>
-                <Text style={styles.detailValue}>
-                  {planMetadata.price.toFixed(2)}€
-                  {planMetadata.interval &&
-                    planMetadata.interval !== "lifetime" && (
-                      <>/{planMetadata.interval === "month" ? "mes" : "año"}</>
-                    )}
-                  {planMetadata.interval === "lifetime" && " (pago único)"}
-                </Text>
-              </View>
-
-              {subscription.currentPeriodEnd &&
-                subscription.plan !== SubscriptionPlan.LIFETIME && (
-                  <View style={styles.detailRow}>
-                    <Calendar size={20} color={theme.textSecondary} />
-                    <Text style={styles.detailLabel}>
-                      {isCanceled ? "Expira:" : "Se renueva:"}
-                    </Text>
-                    <Text style={styles.detailValue}>
-                      {new Date(
-                        subscription.currentPeriodEnd
-                      ).toLocaleDateString("es-ES")}
-                      {daysRemaining !== undefined &&
-                        ` (${daysRemaining} días)`}
-                    </Text>
-                  </View>
-                )}
-
-              {isCanceled && (
-                <View style={styles.canceledNotice}>
-                  <Text style={styles.canceledText}>
-                    Tu suscripción se cancelará al final del período de
-                    facturación.
-                  </Text>
+          <View style={[styles.card, isPremium && styles.premiumCard]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.planName}>{planMetadata.name}</Text>
+              {isPremium && (
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumBadgeText}>Premium</Text>
                 </View>
               )}
             </View>
-          )}
 
-          <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>Funciones Incluidas:</Text>
-            <FeatureList features={planMetadata.features} />
-          </View>
+            <Text style={styles.planDescription}>
+              {planMetadata.description}
+            </Text>
 
-          <View style={styles.actions}>
-            {!isPremium && (
-              <UpgradeButton
-                onPress={handleChangePlan}
-                variant="primary"
-                size="large"
-                style={styles.actionButton}
-              />
-            )}
+            {isPremium && (
+              <View style={styles.detailsContainer}>
+                <View style={styles.detailRow}>
+                  <CreditCard size={20} color={theme.textSecondary} />
+                  <Text style={styles.detailLabel}>Precio:</Text>
+                  <Text style={styles.detailValue}>
+                    {planMetadata.price.toFixed(2)}€
+                    {planMetadata.interval &&
+                      planMetadata.interval !== "lifetime" && (
+                        <>
+                          /{planMetadata.interval === "month" ? "mes" : "año"}
+                        </>
+                      )}
+                    {planMetadata.interval === "lifetime" && " (pago único)"}
+                  </Text>
+                </View>
 
-            {isPremium &&
-              !isIos &&
-              !isCanceled &&
-              subscription.plan !== SubscriptionPlan.LIFETIME && (
-                <>
-                  <TouchableOpacity
-                    style={[styles.button, styles.buttonSecondary]}
-                    onPress={handleManageSubscription}
-                    disabled={actionLoading}
-                  >
-                    <Text style={styles.buttonTextSecondary}>
-                      Gestionar Suscripción
+                {subscription.currentPeriodEnd &&
+                  subscription.plan !== SubscriptionPlan.LIFETIME && (
+                    <View style={styles.detailRow}>
+                      <Calendar size={20} color={theme.textSecondary} />
+                      <Text style={styles.detailLabel}>
+                        {isCanceled ? "Expira:" : "Se renueva:"}
+                      </Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(
+                          subscription.currentPeriodEnd
+                        ).toLocaleDateString("es-ES")}
+                        {daysRemaining !== undefined &&
+                          ` (${daysRemaining} días)`}
+                      </Text>
+                    </View>
+                  )}
+
+                {isCanceled && (
+                  <View style={styles.canceledNotice}>
+                    <Text style={styles.canceledText}>
+                      Tu suscripción se cancelará al final del período de
+                      facturación.
                     </Text>
-                    <ArrowRight size={20} color={theme.text} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.button, styles.buttonDanger]}
-                    onPress={handleCancelSubscription}
-                    disabled={actionLoading}
-                  >
-                    <Text style={styles.buttonTextDanger}>
-                      Cancelar Suscripción
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-
-            {isPremium && isCanceled && !isIos && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary]}
-                onPress={handleReactivateSubscription}
-                disabled={actionLoading}
-              >
-                <Text style={styles.buttonTextPrimary}>
-                  Reactivar Suscripción
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {isPremium && !isIos && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonOutline]}
-                onPress={handleChangePlan}
-                disabled={actionLoading}
-              >
-                <Text style={styles.buttonTextOutline}>
-                  Ver Todos los Planes
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {isIos && (
-              <View style={styles.iosNotice}>
-                <Text style={styles.iosNoticeText}>
-                  Las compras de Premium en iPhone y iPad se hacen con App
-                  Store. Las renovaciones, cancelaciones y reembolsos se
-                  gestionan desde Apple.
-                </Text>
+                  </View>
+                )}
               </View>
             )}
 
-            {isIos &&
-              isPremium &&
-              subscription.plan !== SubscriptionPlan.LIFETIME && (
+            <View style={styles.featuresSection}>
+              <Text style={styles.featuresTitle}>Funciones Incluidas:</Text>
+              <FeatureList features={planMetadata.features} />
+            </View>
+
+            <View style={styles.actions}>
+              {!isPremium && (
+                <UpgradeButton
+                  onPress={handleChangePlan}
+                  variant="primary"
+                  size="large"
+                  style={styles.actionButton}
+                />
+              )}
+
+              {isPremium &&
+                !isIos &&
+                !isCanceled &&
+                subscription.plan !== SubscriptionPlan.LIFETIME && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.button, styles.buttonSecondary]}
+                      onPress={handleManageSubscription}
+                      disabled={actionLoading}
+                    >
+                      <Text style={styles.buttonTextSecondary}>
+                        Gestionar Suscripción
+                      </Text>
+                      <ArrowRight size={20} color={theme.text} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.button, styles.buttonDanger]}
+                      onPress={handleCancelSubscription}
+                      disabled={actionLoading}
+                    >
+                      <Text style={styles.buttonTextDanger}>
+                        Cancelar Suscripción
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+              {isPremium && isCanceled && !isIos && (
                 <TouchableOpacity
-                  style={[styles.button, styles.buttonSecondary]}
-                  onPress={openAppleSubscriptionManagement}
-                  disabled={actionLoading || appleIapLoading}
+                  style={[styles.button, styles.buttonPrimary]}
+                  onPress={handleReactivateSubscription}
+                  disabled={actionLoading}
                 >
-                  <Text style={styles.buttonTextSecondary}>
-                    Gestionar en App Store
+                  <Text style={styles.buttonTextPrimary}>
+                    Reactivar Suscripción
                   </Text>
-                  <ArrowRight size={20} color={theme.text} />
                 </TouchableOpacity>
               )}
 
-            {isIos && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonOutline]}
-                onPress={restoreApplePurchases}
-                disabled={actionLoading || appleIapLoading}
-              >
-                <Text style={styles.buttonTextOutline}>Restaurar compras</Text>
-              </TouchableOpacity>
-            )}
+              {isPremium && !isIos && (
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonOutline]}
+                  onPress={handleChangePlan}
+                  disabled={actionLoading}
+                >
+                  <Text style={styles.buttonTextOutline}>
+                    Ver Todos los Planes
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-            {isIos && isPremium && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonOutline]}
-                onPress={handleChangePlan}
-                disabled={actionLoading || appleIapLoading}
-              >
-                <Text style={styles.buttonTextOutline}>
-                  Ver todos los planes
-                </Text>
-              </TouchableOpacity>
+              {isIos && (
+                <View style={styles.iosNotice}>
+                  <Text style={styles.iosNoticeText}>
+                    Las compras de Premium en iPhone y iPad se hacen con App
+                    Store. Las renovaciones, cancelaciones y reembolsos se
+                    gestionan desde Apple.
+                  </Text>
+                </View>
+              )}
+
+              {isIos &&
+                isPremium &&
+                subscription.plan !== SubscriptionPlan.LIFETIME && (
+                  <TouchableOpacity
+                    style={[styles.button, styles.buttonSecondary]}
+                    onPress={openAppleSubscriptionManagement}
+                    disabled={actionLoading || appleIapLoading}
+                  >
+                    <Text style={styles.buttonTextSecondary}>
+                      Gestionar en App Store
+                    </Text>
+                    <ArrowRight size={20} color={theme.text} />
+                  </TouchableOpacity>
+                )}
+
+              {isIos && (
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonOutline]}
+                  onPress={restoreApplePurchases}
+                  disabled={actionLoading || appleIapLoading}
+                >
+                  <Text style={styles.buttonTextOutline}>
+                    Restaurar compras
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {isIos && isPremium && (
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonOutline]}
+                  onPress={handleChangePlan}
+                  disabled={actionLoading || appleIapLoading}
+                >
+                  <Text style={styles.buttonTextOutline}>
+                    Ver todos los planes
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {(actionLoading || appleIapLoading) && (
+              <View style={styles.actionLoadingOverlay}>
+                <ActivityIndicator size="small" color={theme.primary} />
+              </View>
             )}
           </View>
 
-          {(actionLoading || appleIapLoading) && (
-            <View style={styles.actionLoadingOverlay}>
-              <ActivityIndicator size="small" color={theme.primary} />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.footer}>
-          <SubscriptionLegalFooter
-            onRestorePurchases={restoreApplePurchases}
-            restoreDisabled={actionLoading || appleIapLoading}
-          />
-          <Text style={[styles.footerText, { marginTop: 16 }]}>
-            ¿Preguntas? Contáctanos en evofit.support@gmail.com
-          </Text>
+          <View style={styles.footer}>
+            <SubscriptionLegalFooter
+              onRestorePurchases={restoreApplePurchases}
+              restoreDisabled={actionLoading || appleIapLoading}
+            />
+            <Text style={[styles.footerText, { marginTop: 16 }]}>
+              ¿Preguntas? Contáctanos en evofit.support@gmail.com
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: Theme) =>
+const createStyles = (
+  theme: Theme,
+  type: SubscriptionTypeScale,
+  isSmallPhone: boolean
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -376,44 +417,32 @@ const createStyles = (theme: Theme) =>
       flex: 1,
     },
     scrollContent: {
+      paddingTop: 8,
       paddingBottom: 32,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
+    column: {
+      ...subscriptionColumnStyle(),
+      paddingTop: SUBSCRIPTION_SECTION_GAP,
     },
     successBanner: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: withOpacity(theme.success, 18),
       padding: 16,
-      marginHorizontal: 16,
-      marginTop: 16,
+      marginBottom: SUBSCRIPTION_CARD_GAP,
       borderRadius: 12,
     },
     successText: {
       marginLeft: 12,
-      fontSize: 14,
+      fontSize: type.feature,
       fontWeight: "600",
       color: theme.success,
       flex: 1,
     },
-    header: {
-      alignItems: "center",
-      paddingVertical: 24,
-    },
-    title: {
-      marginTop: 12,
-      fontSize: 28,
-      fontWeight: "700",
-      color: theme.text,
-    },
     card: {
       backgroundColor: theme.card,
-      marginHorizontal: 16,
       borderRadius: 16,
-      padding: 24,
+      padding: isSmallPhone ? 16 : 20,
       shadowColor: theme.shadowColor,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
@@ -431,9 +460,11 @@ const createStyles = (theme: Theme) =>
       marginBottom: 8,
     },
     planName: {
-      fontSize: 24,
+      fontSize: type.title,
       fontWeight: "700",
       color: theme.text,
+      flex: 1,
+      marginRight: 8,
     },
     premiumBadge: {
       backgroundColor: withOpacity(theme.warning, 18),
@@ -442,12 +473,12 @@ const createStyles = (theme: Theme) =>
       borderRadius: 12,
     },
     premiumBadgeText: {
-      fontSize: 12,
+      fontSize: type.caption,
       fontWeight: "600",
       color: theme.warning,
     },
     planDescription: {
-      fontSize: 14,
+      fontSize: type.feature,
       color: theme.textSecondary,
       marginBottom: 16,
     },
@@ -461,12 +492,12 @@ const createStyles = (theme: Theme) =>
     },
     detailLabel: {
       marginLeft: 8,
-      fontSize: 14,
+      fontSize: type.feature,
       color: theme.textSecondary,
       marginRight: 8,
     },
     detailValue: {
-      fontSize: 14,
+      fontSize: type.feature,
       fontWeight: "600",
       color: theme.text,
       flex: 1,
@@ -478,14 +509,14 @@ const createStyles = (theme: Theme) =>
       marginTop: 8,
     },
     canceledText: {
-      fontSize: 13,
+      fontSize: type.caption + 1,
       color: theme.error,
     },
     featuresSection: {
       marginBottom: 20,
     },
     featuresTitle: {
-      fontSize: 16,
+      fontSize: type.body,
       fontWeight: "600",
       color: theme.text,
       marginBottom: 12,
@@ -502,6 +533,7 @@ const createStyles = (theme: Theme) =>
       justifyContent: "center",
       paddingVertical: 14,
       borderRadius: 12,
+      minHeight: 48,
     },
     buttonPrimary: {
       backgroundColor: theme.primary,
@@ -519,23 +551,23 @@ const createStyles = (theme: Theme) =>
     },
     buttonTextPrimary: {
       color: theme.onPrimary,
-      fontSize: 16,
+      fontSize: type.button,
       fontWeight: "600",
     },
     buttonTextSecondary: {
       color: theme.text,
-      fontSize: 16,
+      fontSize: type.button,
       fontWeight: "600",
       marginRight: 8,
     },
     buttonTextDanger: {
       color: theme.error,
-      fontSize: 16,
+      fontSize: type.button,
       fontWeight: "600",
     },
     buttonTextOutline: {
       color: theme.text,
-      fontSize: 16,
+      fontSize: type.button,
       fontWeight: "600",
     },
     actionLoadingOverlay: {
@@ -557,18 +589,18 @@ const createStyles = (theme: Theme) =>
       borderColor: theme.border,
     },
     iosNoticeText: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: type.feature,
+      lineHeight: Math.round(type.feature * 1.45),
       textAlign: "center",
       color: theme.text,
     },
     footer: {
-      paddingHorizontal: 24,
-      paddingTop: 24,
+      paddingHorizontal: 0,
+      paddingTop: 0,
       alignItems: "center",
     },
     footerText: {
-      fontSize: 12,
+      fontSize: type.caption,
       color: theme.textTertiary,
       textAlign: "center",
     },

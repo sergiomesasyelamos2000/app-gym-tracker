@@ -1,6 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { Crown } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MealType,
@@ -18,7 +17,6 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,20 +24,18 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
-import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../contexts/ThemeContext";
 import { withOpacity } from "../utils/themeStyles";
-import { HealthDisclaimerCard } from "../features/common/components/HealthDisclaimerCard";
 import { AddRecognizedFoodModal } from "../features/chat/components/AddRecognizedFoodModal";
 import { ChatInput } from "../features/chat/components/ChatInput";
 import { MessageBubble } from "../features/chat/components/MessageBubble";
 import { NutritionChatEmptyState } from "../features/chat/components/NutritionChatEmptyState";
+import { NutritionChatHeader } from "../features/chat/components/NutritionChatHeader";
 import { NutritionChatSkeleton } from "../features/chat/components/NutritionChatSkeleton";
 import ImageModal from "../features/common/components/ImageModal";
 import {
   LOW_QUERY_THRESHOLD,
-  NUTRITION_CHAT_TITLE,
-  nutritionChatSubtitle,
+  nutritionChatQuotaBadge,
 } from "../features/chat/nutritionChatCopy";
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
@@ -188,9 +184,9 @@ export default function NutritionScreen() {
     });
   }, [navigation]);
 
-  const subtitle = useMemo(() => {
-    if (isPremium) return undefined;
-    return nutritionChatSubtitle(remainingCalls, dailyLimit);
+  const quotaBadge = useMemo(() => {
+    if (isPremium) return null;
+    return nutritionChatQuotaBadge(remainingCalls, dailyLimit);
   }, [isPremium, remainingCalls, dailyLimit]);
 
   const showCrown =
@@ -551,66 +547,11 @@ export default function NutritionScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View
-          style={[
-            styles.brandHeader,
-            {
-              backgroundColor: theme.primary,
-              shadowColor: theme.primary,
-            },
-          ]}
-        >
-          <View style={styles.brandHeaderRow}>
-            <View style={styles.brandHeaderText}>
-              <Text
-                style={[styles.brandTitle, { color: theme.onPrimary }]}
-                numberOfLines={1}
-              >
-                {NUTRITION_CHAT_TITLE}
-              </Text>
-              {subtitle ? (
-                <Text
-                  style={[
-                    styles.brandSubtitle,
-                    { color: withOpacity(theme.onPrimary, 78) },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {subtitle}
-                </Text>
-              ) : (
-                <Text
-                  style={[
-                    styles.brandSubtitle,
-                    { color: withOpacity(theme.onPrimary, 78) },
-                  ]}
-                  numberOfLines={1}
-                >
-                  Asistente de nutrición
-                </Text>
-              )}
-            </View>
-            <View style={styles.headerActions}>
-              {showCrown ? (
-                <TouchableOpacity
-                  style={styles.headerHit}
-                  onPress={openPlans}
-                  accessibilityRole="button"
-                  accessibilityLabel="Actualizar a Premium"
-                >
-                  <Crown size={20} color="#FBBF24" />
-                </TouchableOpacity>
-              ) : null}
-              <View style={styles.headerHit}>
-                <HealthDisclaimerCard
-                  variant="icon"
-                  iconColor={theme.onPrimary}
-                  iconSize={24}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
+        <NutritionChatHeader
+          quotaBadge={quotaBadge}
+          showCrown={showCrown}
+          onPressPlans={openPlans}
+        />
 
         <View style={styles.chatWrapper}>
           <FlatList
@@ -690,44 +631,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  brandHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    elevation: 4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-  },
-  brandHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 52,
-  },
-  brandHeaderText: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
-  },
-  brandTitle: {
-    fontSize: RFValue(20),
-    fontWeight: "800",
-  },
-  brandSubtitle: {
-    fontSize: RFValue(12),
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerHit: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
   },
   chatWrapper: {
     flex: 1,
