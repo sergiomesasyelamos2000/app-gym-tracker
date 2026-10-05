@@ -33,6 +33,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 import { notificationService } from "../../../services/notificationService";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
 import { RoutineListSkeleton } from "../components/RoutineListSkeleton";
@@ -1477,80 +1478,76 @@ export default function WorkoutScreen() {
         </View>
       </Modal>
 
-      <RNModal
+      <AppDialog
         visible={isRenameModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeRenameFolderModal}
+        onDismiss={closeRenameFolderModal}
+        maxWidth={360}
+        testID="rename-folder"
       >
-        <View style={styles.renameOverlay}>
-          <View style={[styles.renameCard, { backgroundColor: theme.card }]}>
-            <Text style={[styles.renameTitle, { color: theme.text }]}>
-              {renameMode === "create" ? "Nuevo grupo" : "Nombre del grupo"}
+        <Text style={[styles.renameTitle, { color: theme.text }]}>
+          {renameMode === "create" ? "Nuevo grupo" : "Nombre del grupo"}
+        </Text>
+        <TextInput
+          value={renameDraft}
+          onChangeText={setRenameDraft}
+          autoFocus
+          placeholder="Grupo"
+          placeholderTextColor={theme.inputPlaceholder}
+          style={[
+            styles.renameInput,
+            {
+              color: theme.text,
+              borderColor: theme.inputBorder,
+              backgroundColor: theme.inputBackground,
+            },
+          ]}
+        />
+        <View style={styles.renameActions}>
+          <TouchableOpacity
+            onPress={closeRenameFolderModal}
+            style={styles.renameButton}
+          >
+            <Text style={{ color: theme.textSecondary, fontWeight: "600" }}>
+              Cancelar
             </Text>
-            <TextInput
-              value={renameDraft}
-              onChangeText={setRenameDraft}
-              autoFocus
-              placeholder="Grupo"
-              placeholderTextColor={theme.inputPlaceholder}
-              style={[
-                styles.renameInput,
-                {
-                  color: theme.text,
-                  borderColor: theme.inputBorder,
-                  backgroundColor: theme.inputBackground,
-                },
-              ]}
-            />
-            <View style={styles.renameActions}>
-              <TouchableOpacity
-                onPress={closeRenameFolderModal}
-                style={styles.renameButton}
-              >
-                <Text style={{ color: theme.textSecondary, fontWeight: "600" }}>
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  void (async () => {
-                    try {
-                      if (renameMode === "create") {
-                        const created = await createRoutineFolder(renameDraft);
-                        insertFolder({
-                          id: created.id,
-                          title: created.title,
-                          routineIds: created.routineIds ?? [],
-                        });
-                      } else if (renameFolderId) {
-                        await renameRoutineFolder(renameFolderId, renameDraft);
-                        renameFolder(renameFolderId, renameDraft);
-                      }
-                      closeRenameFolderModal();
-                    } catch (error: CaughtError) {
-                      Alert.alert(
-                        "Error",
-                        getErrorMessage(error) ||
-                          "No se pudo guardar el grupo. Inténtalo de nuevo."
-                      );
-                    }
-                  })();
-                }}
-                style={[
-                  styles.renameButton,
-                  styles.renameSave,
-                  { backgroundColor: theme.primary },
-                ]}
-              >
-                <Text style={{ color: theme.onPrimary, fontWeight: "700" }}>
-                  Guardar
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              void (async () => {
+                try {
+                  if (renameMode === "create") {
+                    const created = await createRoutineFolder(renameDraft);
+                    insertFolder({
+                      id: created.id,
+                      title: created.title,
+                      routineIds: created.routineIds ?? [],
+                    });
+                  } else if (renameFolderId) {
+                    await renameRoutineFolder(renameFolderId, renameDraft);
+                    renameFolder(renameFolderId, renameDraft);
+                  }
+                  closeRenameFolderModal();
+                } catch (error: CaughtError) {
+                  Alert.alert(
+                    "Error",
+                    getErrorMessage(error) ||
+                      "No se pudo guardar el grupo. Inténtalo de nuevo."
+                  );
+                }
+              })();
+            }}
+            style={[
+              styles.renameButton,
+              styles.renameSave,
+              { backgroundColor: theme.primary },
+            ]}
+          >
+            <Text style={{ color: theme.onPrimary, fontWeight: "700" }}>
+              Guardar
+            </Text>
+          </TouchableOpacity>
         </View>
-      </RNModal>
+      </AppDialog>
 
       <RNModal
         visible={Boolean(processingMessage)}
@@ -1947,16 +1944,6 @@ const createStyles = (theme: Theme) =>
     modalOptionText: {
       fontSize: RFValue(15),
       fontWeight: "600",
-    },
-    renameOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.45)",
-      justifyContent: "center",
-      paddingHorizontal: 24,
-    },
-    renameCard: {
-      borderRadius: 16,
-      padding: 20,
     },
     renameTitle: {
       fontSize: RFValue(17),

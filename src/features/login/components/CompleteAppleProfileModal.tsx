@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 
 export function isApplePrivateRelayEmail(email?: string | null): boolean {
   if (!email) return false;
@@ -129,129 +128,114 @@ export default function CompleteAppleProfileModal({
   };
 
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent={Platform.OS === "android"}
+      onDismiss={() => {
+        if (!saving) onClose?.();
+      }}
+      dismissOnBack={!saving && !!onClose}
+      testID="complete-apple-profile"
     >
-      <View style={styles.backdrop}>
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <Text style={[styles.title, { color: theme.text }]}>
-            Completa tu perfil
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Apple no compartió tu nombre completo. Indica cómo quieres
-            aparecer en EvoFit.
-          </Text>
+      <Text style={[styles.title, { color: theme.text }]}>
+        Completa tu perfil
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+        Apple no compartió tu nombre completo. Indica cómo quieres aparecer en
+        EvoFit.
+      </Text>
 
-          {isRelayEmail ? (
-            <Text style={[styles.hint, { color: theme.textTertiary }]}>
-              Tu correo está oculto con Apple Private Relay. Puedes dejarlo así
-              o añadir un correo real (opcional).
-            </Text>
-          ) : null}
+      {isRelayEmail ? (
+        <Text style={[styles.hint, { color: theme.textTertiary }]}>
+          Tu correo está oculto con Apple Private Relay. Puedes dejarlo así o
+          añadir un correo real (opcional).
+        </Text>
+      ) : null}
 
-          <Text style={[styles.label, { color: theme.textSecondary }]}>
-            Nombre
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                backgroundColor: theme.inputBackground,
-                borderColor: theme.inputBorder,
-              },
-            ]}
-            value={name}
-            onChangeText={setName}
-            placeholder="Tu nombre"
-            placeholderTextColor={theme.textTertiary}
-            autoCapitalize="words"
-            editable={!saving}
-          />
+      <Text style={[styles.label, { color: theme.textSecondary }]}>Nombre</Text>
+      <TextInput
+        style={[
+          styles.input,
+          {
+            color: theme.text,
+            backgroundColor: theme.inputBackground,
+            borderColor: theme.inputBorder,
+          },
+        ]}
+        value={name}
+        onChangeText={setName}
+        placeholder="Tu nombre"
+        placeholderTextColor={theme.textTertiary}
+        autoCapitalize="words"
+        editable={!saving}
+      />
 
-          <Text style={[styles.label, { color: theme.textSecondary }]}>
-            Email {isRelayEmail ? "(opcional)" : ""}
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                backgroundColor: theme.inputBackground,
-                borderColor: theme.inputBorder,
-              },
-            ]}
-            value={email}
-            onChangeText={setEmail}
-            placeholder={
-              isRelayEmail
-                ? "Tu correo real (opcional)"
-                : initialEmail || "tu@email.com"
-            }
-            placeholderTextColor={theme.textTertiary}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            editable={!saving}
-          />
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        Email {isRelayEmail ? "(opcional)" : ""}
+      </Text>
+      <TextInput
+        style={[
+          styles.input,
+          {
+            color: theme.text,
+            backgroundColor: theme.inputBackground,
+            borderColor: theme.inputBorder,
+          },
+        ]}
+        value={email}
+        onChangeText={setEmail}
+        placeholder={
+          isRelayEmail
+            ? "Tu correo real (opcional)"
+            : initialEmail || "tu@email.com"
+        }
+        placeholderTextColor={theme.textTertiary}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        editable={!saving}
+      />
 
-          {error ? (
-            <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
-          ) : null}
+      {error ? (
+        <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
+      ) : null}
 
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1 },
-            ]}
-            onPress={handleSave}
-            disabled={saving}
-            activeOpacity={0.85}
+      <TouchableOpacity
+        style={[
+          styles.primaryButton,
+          { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1 },
+        ]}
+        onPress={handleSave}
+        disabled={saving}
+        activeOpacity={0.85}
+      >
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Guardar</Text>
+        )}
+      </TouchableOpacity>
+
+      {onClose ? (
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={onClose}
+          disabled={saving}
+        >
+          <Text
+            style={[styles.secondaryButtonText, { color: theme.textSecondary }]}
           >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Guardar</Text>
-            )}
-          </TouchableOpacity>
-
-          {onClose ? (
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={onClose}
-              disabled={saving}
-            >
-              <Text
-                style={[styles.secondaryButtonText, { color: theme.textSecondary }]}
-              >
-                Ahora no
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-    </Modal>
+            Ahora no
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </AppDialog>
   );
 }
 
 const createStyles = (
-  theme: { primary: string },
+  _theme: { primary: string },
   _isDark: boolean
 ) =>
   StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      justifyContent: "center",
-      padding: 24,
-    },
-    card: {
-      borderRadius: 16,
-      padding: 20,
-    },
     title: {
       fontSize: 20,
       fontWeight: "700",

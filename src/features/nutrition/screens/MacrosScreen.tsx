@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CommonActions, useFocusEffect } from "@react-navigation/native";
+import { CommonActions, useFocusEffect, useIsFocused } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,8 +9,8 @@ import {
   LayoutAnimation,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,14 +19,16 @@ import {
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type {
   FoodEntryResponseDto,
   MealType,
   UserMacroGoals,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { useFocusedStatusBar } from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
+import { AppDialog } from "../../../ui/modal";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNavigationStore } from "../../../store/useNavigationStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -120,7 +122,9 @@ type FoodEntry = FoodEntryResponseDto;
 
 export default function MacrosScreen({ navigation }: Props) {
   const { theme, isDark } = useTheme();
-  const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
+  const statusBarStyle = isDark ? "light-content" : "dark-content";
+  useFocusedStatusBar(statusBarStyle);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -168,7 +172,6 @@ export default function MacrosScreen({ navigation }: Props) {
   const [actionBarAnim] = useState(new Animated.Value(0));
   const [addButtonAnim] = useState(new Animated.Value(1));
   const calendarSlideAnim = useRef(new Animated.Value(0)).current;
-  const calendarModalAnim = useRef(new Animated.Value(0)).current;
   const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   const isSelectionMode = selectedEntries.size > 0;
@@ -306,25 +309,6 @@ export default function MacrosScreen({ navigation }: Props) {
     void loadEntriesForDate(selectedDate, { refreshSessions: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, user?.id]);
-
-  // Animar apertura/cierre del calendario con efecto fluido
-  useEffect(() => {
-    if (showCalendar) {
-      Animated.spring(calendarModalAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 80,
-        friction: 10,
-      }).start();
-    } else {
-      Animated.timing(calendarModalAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-        easing: Easing.in(Easing.ease),
-      }).start();
-    }
-  }, [showCalendar]);
 
   const loadEntriesForDate = async (
     date: string,
@@ -656,12 +640,17 @@ export default function MacrosScreen({ navigation }: Props) {
   if (checkingProfile) {
     return (
       <SafeAreaView
-        style={[
-          styles.safeArea,
-          { backgroundColor: theme.background },
-          Platform.OS === "android" ? { paddingTop: insets.top } : null,
-        ]}
+        edges={["top"]}
+        style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
+        {isFocused ? (
+          <StatusBar
+            barStyle={statusBarStyle}
+            backgroundColor="transparent"
+            hidden={false}
+            translucent
+          />
+        ) : null}
         <MacrosDiarySkeleton />
       </SafeAreaView>
     );
@@ -671,12 +660,17 @@ export default function MacrosScreen({ navigation }: Props) {
   if (showSetupPrompt && !hasProfile) {
     return (
       <SafeAreaView
-        style={[
-          styles.safeArea,
-          { backgroundColor: theme.background },
-          Platform.OS === "android" ? { paddingTop: insets.top } : null,
-        ]}
+        edges={["top"]}
+        style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
+        {isFocused ? (
+          <StatusBar
+            barStyle={statusBarStyle}
+            backgroundColor="transparent"
+            hidden={false}
+            translucent
+          />
+        ) : null}
         <View
           style={[
             styles.setupPromptContainer,
@@ -961,11 +955,17 @@ export default function MacrosScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["top"]}
+      style={[styles.safeArea, { backgroundColor: theme.background }]}
     >
+      {isFocused ? (
+        <StatusBar
+          barStyle={statusBarStyle}
+          backgroundColor="transparent"
+          hidden={false}
+          translucent
+        />
+      ) : null}
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={APP_PURPLE} />
@@ -1109,190 +1109,150 @@ export default function MacrosScreen({ navigation }: Props) {
       </Modal>
 
       {/* Calendar Modal */}
-      <Modal
+      <AppDialog
         visible={showCalendar}
-        transparent
-        animationType="fade"
-        statusBarTranslucent={Platform.OS === "android"}
+        onDismiss={() => setShowCalendar(false)}
+        dismissOnBackdrop
+        avoidKeyboard={false}
+        maxWidth={400}
+        contentStyle={styles.calendarModalContent}
+        testID="macros-calendar"
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowCalendar(false)}
-        >
-          <Animated.View
-            style={[
-              styles.modalOverlayBackground,
-              {
-                opacity: calendarModalAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 1],
-                }),
-              },
-            ]}
-          />
-        </TouchableOpacity>
-        <View style={styles.modalContent} pointerEvents="box-none">
-          <Animated.View
-            style={[
-              styles.calendarModalContainer,
-              {
-                transform: [
-                  {
-                    scale: calendarModalAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    }),
-                  },
-                  {
-                    translateY: calendarModalAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [50, 0],
-                    }),
-                  },
-                ],
-                opacity: calendarModalAnim,
-              },
-            ]}
-            pointerEvents="auto"
+        <View style={styles.calendarModalHeader}>
+          <Text style={styles.calendarModalTitle}>Seleccionar Fecha</Text>
+          <TouchableOpacity
+            onPress={() => setShowCalendar(false)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <View style={styles.calendarModalHeader}>
-              <Text style={styles.calendarModalTitle}>Seleccionar Fecha</Text>
-              <TouchableOpacity
-                onPress={() => setShowCalendar(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={24} color={theme.text} />
-              </TouchableOpacity>
-            </View>
+            <Ionicons name="close" size={24} color={theme.text} />
+          </TouchableOpacity>
+        </View>
 
-            {!isToday && (
-              <TouchableOpacity
-                style={styles.todayButton}
-                onPress={handleTodayPress}
-                activeOpacity={0.7}
-              >
+        {!isToday && (
+          <TouchableOpacity
+            style={styles.todayButton}
+            onPress={handleTodayPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="today-outline"
+              size={20}
+              color={theme.primary}
+            />
+            <Text style={styles.todayButtonText}>Ir a Hoy</Text>
+          </TouchableOpacity>
+        )}
+
+        <Animated.View
+          style={{
+            transform: [{ translateX: calendarSlideAnim }],
+            opacity: calendarSlideAnim.interpolate({
+              inputRange: [-30, 0, 30],
+              outputRange: [0.7, 1, 0.7],
+            }),
+          }}
+        >
+          <Calendar
+            key={calendarKey}
+            current={selectedDate}
+            onDayPress={handleDateSelect}
+            markedDates={{
+              [selectedDate]: {
+                selected: true,
+                selectedColor: theme.primary,
+                selectedTextColor: theme.onPrimary,
+              },
+              [new Date().toISOString().split("T")[0]]: {
+                marked: true,
+                dotColor: theme.primary,
+                selected:
+                  selectedDate === new Date().toISOString().split("T")[0],
+                selectedColor: theme.primary,
+              },
+            }}
+            enableSwipeMonths={true}
+            hideExtraDays={false}
+            disableAllTouchEventsForDisabledDays={true}
+            monthFormat={"MMMM yyyy"}
+            onMonthChange={(month) => {
+              // Determinar dirección del swipe
+              const currentMonthDate = new Date(currentMonth);
+              const newMonthDate = new Date(month.dateString);
+              const direction = newMonthDate > currentMonthDate ? 1 : -1;
+
+              // Animar desde el lado correspondiente con timing suave
+              calendarSlideAnim.setValue(direction * 30);
+              Animated.timing(calendarSlideAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic),
+              }).start();
+
+              setCurrentMonth(month.dateString);
+            }}
+            renderArrow={(direction) => (
+              <View style={styles.arrowButton}>
                 <Ionicons
-                  name="today-outline"
-                  size={20}
+                  name={
+                    direction === "left"
+                      ? "chevron-back"
+                      : "chevron-forward"
+                  }
+                  size={24}
                   color={theme.primary}
                 />
-                <Text style={styles.todayButtonText}>Ir a Hoy</Text>
-              </TouchableOpacity>
+              </View>
             )}
+            theme={{
+              backgroundColor: theme.card,
+              calendarBackground: theme.card,
+              textSectionTitleColor: theme.textSecondary,
+              selectedDayBackgroundColor: theme.primary,
+              selectedDayTextColor: theme.onPrimary,
+              todayTextColor: theme.primary,
+              dayTextColor: theme.text,
+              textDisabledColor: theme.textTertiary,
+              dotColor: theme.primary,
+              selectedDotColor: theme.onPrimary,
+              arrowColor: theme.primary,
+              monthTextColor: theme.text,
+              indicatorColor: theme.primary,
+              textDayFontFamily: "System",
+              textMonthFontFamily: "System",
+              textDayHeaderFontFamily: "System",
+              textDayFontWeight: "400",
+              textMonthFontWeight: "700",
+              textDayHeaderFontWeight: "600",
+              textDayFontSize: 16,
+              textMonthFontSize: 18,
+              textDayHeaderFontSize: 13,
+            }}
+            style={styles.calendar}
+          />
+        </Animated.View>
 
-            <Animated.View
-              style={{
-                transform: [{ translateX: calendarSlideAnim }],
-                opacity: calendarSlideAnim.interpolate({
-                  inputRange: [-30, 0, 30],
-                  outputRange: [0.7, 1, 0.7],
-                }),
-              }}
-            >
-              <Calendar
-                key={calendarKey}
-                current={selectedDate}
-                onDayPress={handleDateSelect}
-                markedDates={{
-                  [selectedDate]: {
-                    selected: true,
-                    selectedColor: theme.primary,
-                    selectedTextColor: theme.onPrimary,
-                  },
-                  [new Date().toISOString().split("T")[0]]: {
-                    marked: true,
-                    dotColor: theme.primary,
-                    selected:
-                      selectedDate === new Date().toISOString().split("T")[0],
-                    selectedColor: theme.primary,
-                  },
-                }}
-                enableSwipeMonths={true}
-                hideExtraDays={false}
-                disableAllTouchEventsForDisabledDays={true}
-                monthFormat={"MMMM yyyy"}
-                onMonthChange={(month) => {
-                  // Determinar dirección del swipe
-                  const currentMonthDate = new Date(currentMonth);
-                  const newMonthDate = new Date(month.dateString);
-                  const direction = newMonthDate > currentMonthDate ? 1 : -1;
-
-                  // Animar desde el lado correspondiente con timing suave
-                  calendarSlideAnim.setValue(direction * 30);
-                  Animated.timing(calendarSlideAnim, {
-                    toValue: 0,
-                    duration: 250,
-                    useNativeDriver: true,
-                    easing: Easing.out(Easing.cubic),
-                  }).start();
-
-                  setCurrentMonth(month.dateString);
-                }}
-                renderArrow={(direction) => (
-                  <View style={styles.arrowButton}>
-                    <Ionicons
-                      name={
-                        direction === "left"
-                          ? "chevron-back"
-                          : "chevron-forward"
-                      }
-                      size={24}
-                      color={theme.primary}
-                    />
-                  </View>
-                )}
-                theme={{
-                  backgroundColor: theme.card,
-                  calendarBackground: theme.card,
-                  textSectionTitleColor: theme.textSecondary,
-                  selectedDayBackgroundColor: theme.primary,
-                  selectedDayTextColor: theme.onPrimary,
-                  todayTextColor: theme.primary,
-                  dayTextColor: theme.text,
-                  textDisabledColor: theme.textTertiary,
-                  dotColor: theme.primary,
-                  selectedDotColor: theme.onPrimary,
-                  arrowColor: theme.primary,
-                  monthTextColor: theme.text,
-                  indicatorColor: theme.primary,
-                  textDayFontFamily: "System",
-                  textMonthFontFamily: "System",
-                  textDayHeaderFontFamily: "System",
-                  textDayFontWeight: "400",
-                  textMonthFontWeight: "700",
-                  textDayHeaderFontWeight: "600",
-                  textDayFontSize: 16,
-                  textMonthFontSize: 18,
-                  textDayHeaderFontSize: 13,
-                }}
-                style={styles.calendar}
-              />
-            </Animated.View>
-
-            <View style={styles.calendarFooter}>
-              <Text style={styles.selectedDateText}>
-                {selectedDate === new Date().toISOString().split("T")[0]
-                  ? "Hoy"
-                  : formatDisplayDate()}
-              </Text>
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={() => {
-                  LayoutAnimation.configureNext(
-                    LayoutAnimation.Presets.easeInEaseOut
-                  );
-                  setShowCalendar(false);
-                  loadEntriesForDate(selectedDate);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+        <View style={styles.calendarFooter}>
+          <Text style={styles.selectedDateText}>
+            {selectedDate === new Date().toISOString().split("T")[0]
+              ? "Hoy"
+              : formatDisplayDate()}
+          </Text>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={() => {
+              LayoutAnimation.configureNext(
+                LayoutAnimation.Presets.easeInEaseOut
+              );
+              setShowCalendar(false);
+              loadEntriesForDate(selectedDate);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.confirmButtonText}>Confirmar</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </AppDialog>
 
       <Animated.View
         style={[styles.floatingActionBar, actionBarStyle]}
@@ -1662,18 +1622,9 @@ const createStyles = (theme: Theme) =>
       shadowOpacity: 0.3,
       shadowRadius: 8,
     },
-    modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    modalOverlayBackground: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.5)",
-    },
-    modalContent: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 16,
+    calendarModalContent: {
+      padding: 0,
+      overflow: "hidden",
     },
     calendarModalHeader: {
       flexDirection: "row",
@@ -1726,23 +1677,5 @@ const createStyles = (theme: Theme) =>
     arrowButton: {
       padding: 8,
       borderRadius: 8,
-    },
-    calendarModalContainer: {
-      backgroundColor: theme.card,
-      borderRadius: 24,
-      width: "100%",
-      maxWidth: 400,
-      overflow: "hidden",
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.shadowColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 8,
-        },
-      }),
     },
   });

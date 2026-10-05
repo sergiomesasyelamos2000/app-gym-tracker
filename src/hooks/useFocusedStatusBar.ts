@@ -1,23 +1,26 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
-import { Platform, StatusBar, type StatusBarStyle } from "react-native";
+import { StatusBar, type StatusBarStyle } from "react-native";
 
 /**
- * Apply StatusBar style while the screen is focused.
- * With app.json `edgeToEdgeEnabled: true`, never force `translucent={false}` —
- * that leaves Android without a visible status bar after the screen is popped.
+ * Push a StatusBar stack entry while the screen is focused and pop it on blur.
+ * Prefer push/pop over StatusBar.set* — the legacy setters are overwritten when
+ * another tab's mounted <StatusBar> remounts (common with lazy bottom tabs).
+ *
+ * With app.json `edgeToEdgeEnabled: true`, never force `translucent={false}`.
  */
 export function useFocusedStatusBar(barStyle: StatusBarStyle): void {
   useFocusEffect(
     useCallback(() => {
-      StatusBar.setHidden(false);
-      StatusBar.setBarStyle(barStyle, true);
-      if (Platform.OS === "android") {
-        StatusBar.setTranslucent(true);
-        StatusBar.setBackgroundColor("transparent");
-      }
+      const entry = StatusBar.pushStackEntry({
+        animated: true,
+        hidden: false,
+        barStyle,
+        translucent: true,
+        backgroundColor: "transparent",
+      });
       return () => {
-        StatusBar.setHidden(false);
+        StatusBar.popStackEntry(entry);
       };
     }, [barStyle])
   );

@@ -1,4 +1,4 @@
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -25,6 +25,7 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../contexts/ThemeContext";
+import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
 import { withOpacity } from "../utils/themeStyles";
 import { AddRecognizedFoodModal } from "../features/chat/components/AddRecognizedFoodModal";
 import { ChatInput } from "../features/chat/components/ChatInput";
@@ -164,6 +165,8 @@ export default function NutritionScreen() {
   const addLocalFoodEntry = useNutritionStore((state) => state.addFoodEntry);
 
   const { theme } = useTheme();
+  const isFocused = useIsFocused();
+  useFocusedStatusBar("light-content");
   const navigation = useNavigation<BaseNavigation>();
 
   const {
@@ -524,10 +527,14 @@ export default function NutritionScreen() {
         edges={["top"]}
         style={[styles.safeArea, { backgroundColor: theme.primary }]}
       >
-        <StatusBar
-          barStyle="light-content"
-          backgroundColor={theme.primary}
-        />
+        {isFocused ? (
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="transparent"
+            hidden={false}
+            translucent
+          />
+        ) : null}
         <NutritionChatSkeleton />
       </SafeAreaView>
     );
@@ -538,10 +545,14 @@ export default function NutritionScreen() {
       edges={["top"]}
       style={[styles.safeArea, { backgroundColor: theme.primary }]}
     >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.primary}
-      />
+      {isFocused ? (
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="transparent"
+          hidden={false}
+          translucent
+        />
+      ) : null}
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

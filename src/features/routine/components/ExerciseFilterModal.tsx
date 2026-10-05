@@ -8,8 +8,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Animated,
-  Easing,
   Modal,
   Platform,
   ScrollView,
@@ -68,8 +66,6 @@ function ExerciseFilterModalComponent({
     useState(equipmentRanked);
   const [sessionMuscleRanked, setSessionMuscleRanked] = useState(muscleRanked);
 
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const modalTranslateY = useRef(new Animated.Value(300)).current;
   const wasVisibleRef = useRef(false);
 
   useEffect(() => {
@@ -80,18 +76,9 @@ function ExerciseFilterModalComponent({
       setTempMuscleIds(seed.muscleIds.length ? [...seed.muscleIds] : EMPTY_IDS);
       setSessionEquipmentRanked(equipmentRanked);
       setSessionMuscleRanked(muscleRanked);
-      overlayOpacity.setValue(0);
-      modalTranslateY.setValue(300);
     }
     wasVisibleRef.current = visible;
-  }, [
-    visible,
-    seed,
-    equipmentRanked,
-    muscleRanked,
-    overlayOpacity,
-    modalTranslateY,
-  ]);
+  }, [visible, seed, equipmentRanked, muscleRanked]);
 
   // If the user opens before idle index finishes, fill chips once when ready.
   useEffect(() => {
@@ -141,56 +128,17 @@ function ExerciseFilterModalComponent({
     [sessionMuscleRanked, tempMuscleIds]
   );
 
-  const animateOpen = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalTranslateY, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [overlayOpacity, modalTranslateY]);
-
-  const animateClose = useCallback(
-    (callback: () => void) => {
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: 250,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(modalTranslateY, {
-          toValue: 300,
-          duration: 250,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        callback();
-      });
-    },
-    [overlayOpacity, modalTranslateY]
-  );
-
   const handleClose = useCallback(() => {
-    animateClose(onClose);
-  }, [animateClose, onClose]);
+    onClose();
+  }, [onClose]);
 
   const handleApply = useCallback(() => {
     onApply({
       equipmentIds: tempEquipmentIds,
       muscleIds: tempMuscleIds,
     });
-    animateClose(onClose);
-  }, [animateClose, onApply, onClose, tempEquipmentIds, tempMuscleIds]);
+    onClose();
+  }, [onApply, onClose, tempEquipmentIds, tempMuscleIds]);
 
   const clearDraft = useCallback(() => {
     setTempEquipmentIds(EMPTY_IDS);
@@ -221,22 +169,14 @@ function ExerciseFilterModalComponent({
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="slide"
       onRequestClose={handleClose}
-      onShow={animateOpen}
       statusBarTranslucent={Platform.OS === "android"}
     >
       <TouchableWithoutFeedback onPress={handleClose}>
-        <Animated.View
-          style={[styles.modalOverlay, { opacity: overlayOpacity }]}
-        >
+        <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                styles.modalContent,
-                { transform: [{ translateY: modalTranslateY }] },
-              ]}
-            >
+            <View style={styles.modalContent}>
               <View style={styles.modalHandle} />
               <Text style={styles.modalTitle}>Filtrar ejercicios</Text>
 
@@ -302,9 +242,9 @@ function ExerciseFilterModalComponent({
                   <Text style={styles.modalPrimaryButtonText}>Aplicar</Text>
                 </TouchableOpacity>
               </View>
-            </Animated.View>
+            </View>
           </TouchableWithoutFeedback>
-        </Animated.View>
+        </View>
       </TouchableWithoutFeedback>
     </Modal>
   );

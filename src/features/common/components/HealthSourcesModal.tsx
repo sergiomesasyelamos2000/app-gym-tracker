@@ -1,15 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Modal,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 import {
   HEALTH_DISCLAIMER,
   HEALTH_SOURCES,
@@ -26,95 +24,67 @@ export function HealthSourcesModal({ visible, onClose }: Props) {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      onDismiss={() => onClose()}
+      dismissOnBackdrop
+      scrollable
+      testID="health-sources"
     >
-      <View style={styles.backdrop}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.text }]}>
+          {HEALTH_DISCLAIMER.title}
+        </Text>
+        <TouchableOpacity
           onPress={onClose}
+          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Cerrar aviso"
-        />
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
-              {HEALTH_DISCLAIMER.title}
-            </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={24} color={theme.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}
-          >
-            <Text style={[styles.summary, { color: theme.textSecondary }]}>
-              {HEALTH_DISCLAIMER.summary}
-            </Text>
-            <Text style={[styles.consult, { color: theme.textSecondary }]}>
-              {HEALTH_DISCLAIMER.consultProfessional}
-            </Text>
-
-            <Text style={[styles.sourcesTitle, { color: theme.text }]}>
-              Fuentes
-            </Text>
-
-            {HEALTH_SOURCES.map((source) => (
-              <TouchableOpacity
-                key={source.id}
-                style={[
-                  styles.sourceRow,
-                  {
-                    backgroundColor: theme.background,
-                    borderColor: theme.border,
-                  },
-                ]}
-                onPress={() => openExternalUrl(source.url)}
-              >
-                <View style={styles.sourceContent}>
-                  <Text style={[styles.sourceLabel, { color: theme.text }]}>
-                    {source.label}
-                  </Text>
-                  <Text
-                    style={[styles.sourceCitation, { color: theme.primary }]}
-                  >
-                    {source.citation}
-                  </Text>
-                </View>
-                <Ionicons
-                  name="open-outline"
-                  size={18}
-                  color={theme.primary}
-                />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        >
+          <Ionicons name="close" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      <Text style={[styles.summary, { color: theme.textSecondary }]}>
+        {HEALTH_DISCLAIMER.summary}
+      </Text>
+      <Text style={[styles.consult, { color: theme.textSecondary }]}>
+        {HEALTH_DISCLAIMER.consultProfessional}
+      </Text>
+
+      <Text style={[styles.sourcesTitle, { color: theme.text }]}>
+        Fuentes
+      </Text>
+
+      {HEALTH_SOURCES.map((source) => (
+        <TouchableOpacity
+          key={source.id}
+          style={[
+            styles.sourceRow,
+            {
+              backgroundColor: theme.background,
+              borderColor: theme.border,
+            },
+          ]}
+          onPress={() => openExternalUrl(source.url)}
+        >
+          <View style={styles.sourceContent}>
+            <Text style={[styles.sourceLabel, { color: theme.text }]}>
+              {source.label}
+            </Text>
+            <Text style={[styles.sourceCitation, { color: theme.primary }]}>
+              {source.citation}
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color={theme.primary} />
+        </TouchableOpacity>
+      ))}
+    </AppDialog>
   );
 }
 
-const createStyles = (theme: Theme) =>
+const createStyles = (_theme: Theme) =>
   StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      justifyContent: "center",
-      padding: 20,
-    },
-    card: {
-      borderRadius: 16,
-      maxHeight: "85%",
-      padding: 20,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -126,9 +96,6 @@ const createStyles = (theme: Theme) =>
       fontWeight: "700",
       flex: 1,
       marginRight: 12,
-    },
-    content: {
-      paddingBottom: 4,
     },
     summary: {
       fontSize: 14,

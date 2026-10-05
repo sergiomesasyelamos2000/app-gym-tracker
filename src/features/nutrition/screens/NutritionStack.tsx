@@ -88,7 +88,7 @@ export type NutritionStackParamList = {
 const Stack = createNativeStackNavigator<NutritionStackParamList>();
 
 export default function NutritionStack() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
     <Stack.Navigator
@@ -98,6 +98,9 @@ export default function NutritionStack() {
         headerTintColor: theme.text,
         contentStyle: { backgroundColor: theme.backgroundSecondary },
         headerShadowVisible: false,
+        statusBarStyle: isDark ? "light" : "dark",
+        statusBarTranslucent: true,
+        statusBarBackgroundColor: "transparent",
       }}
     >
       <Stack.Screen

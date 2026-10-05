@@ -26,7 +26,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   TextInput,
   ScrollView,
   StatusBar,
@@ -41,6 +40,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../contexts/ThemeContext";
 import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
+import { AppDialog } from "../ui/modal";
 import {
   deleteAccount as deleteAccountService,
   logout as logoutService,
@@ -1511,144 +1511,134 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      <Modal
+      <AppDialog
         visible={isEditModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeEditProfileModal}
-        statusBarTranslucent={Platform.OS === "android"}
+        onDismiss={() => {
+          if (!isSavingProfile) closeEditProfileModal();
+        }}
+        dismissOnBack={!isSavingProfile}
+        maxWidth={400}
+        testID="edit-profile"
       >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Editar perfil
-            </Text>
+        <Text style={[styles.modalTitle, { color: theme.text }]}>
+          Editar perfil
+        </Text>
 
-            <TouchableOpacity
-              style={styles.modalAvatarContainer}
-              onPress={handlePickProfileImage}
+        <TouchableOpacity
+          style={styles.modalAvatarContainer}
+          onPress={handlePickProfileImage}
+        >
+          {editedPicture ? (
+            <Image
+              source={{ uri: editedPicture }}
+              style={[styles.modalAvatar, { borderColor: theme.primary }]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.modalAvatarPlaceholder,
+                { backgroundColor: theme.primary },
+              ]}
             >
-              {editedPicture ? (
-                <Image
-                  source={{ uri: editedPicture }}
-                  style={[styles.modalAvatar, { borderColor: theme.primary }]}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.modalAvatarPlaceholder,
-                    { backgroundColor: theme.primary },
-                  ]}
-                >
-                  <User color="#FFFFFF" size={28} />
-                </View>
-              )}
-              <Text
-                style={[styles.modalAvatarHint, { color: theme.textSecondary }]}
-              >
-                Cambiar foto
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
-                Nombre
-              </Text>
-              <TextInput
-                value={editedName}
-                onChangeText={setEditedName}
-                placeholder="Tu nombre"
-                placeholderTextColor={theme.textTertiary}
-                style={[
-                  styles.modalInput,
-                  {
-                    color: theme.text,
-                    borderColor: theme.border,
-                    backgroundColor: theme.backgroundSecondary,
-                  },
-                ]}
-              />
+              <User color="#FFFFFF" size={28} />
             </View>
-
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
-                Email
-              </Text>
-              <TextInput
-                value={editedEmail}
-                onChangeText={setEditedEmail}
-                placeholder="email@ejemplo.com"
-                placeholderTextColor={theme.textTertiary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={[
-                  styles.modalInput,
-                  {
-                    color: theme.text,
-                    borderColor: theme.border,
-                    backgroundColor: theme.backgroundSecondary,
-                  },
-                ]}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  {
-                    backgroundColor: theme.backgroundSecondary,
-                    borderColor: theme.border,
-                  },
-                ]}
-                onPress={closeEditProfileModal}
-                disabled={isSavingProfile}
-              >
-                <Text
-                  style={[
-                    styles.modalButtonText,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.primary }]}
-                onPress={handleSaveProfile}
-                disabled={isSavingProfile}
-              >
-                {isSavingProfile ? (
-                  <ActivityIndicator size="small" color={theme.onPrimary} />
-                ) : (
-                  <Text
-                    style={[styles.modalButtonText, { color: theme.onPrimary }]}
-                  >
-                    Guardar
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isPrivacyModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsPrivacyModalVisible(false)}
-        statusBarTranslucent={Platform.OS === "android"}
-      >
-        <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalCard,
-              styles.privacyModalCard,
-              { backgroundColor: theme.card },
-            ]}
+          )}
+          <Text
+            style={[styles.modalAvatarHint, { color: theme.textSecondary }]}
           >
+            Cambiar foto
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.modalField}>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+            Nombre
+          </Text>
+          <TextInput
+            value={editedName}
+            onChangeText={setEditedName}
+            placeholder="Tu nombre"
+            placeholderTextColor={theme.textTertiary}
+            style={[
+              styles.modalInput,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
+            ]}
+          />
+        </View>
+
+        <View style={styles.modalField}>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+            Email
+          </Text>
+          <TextInput
+            value={editedEmail}
+            onChangeText={setEditedEmail}
+            placeholder="email@ejemplo.com"
+            placeholderTextColor={theme.textTertiary}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={[
+              styles.modalInput,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.backgroundSecondary,
+              },
+            ]}
+          />
+        </View>
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity
+            style={[
+              styles.modalButton,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={closeEditProfileModal}
+            disabled={isSavingProfile}
+          >
+            <Text
+              style={[
+                styles.modalButtonText,
+                { color: theme.textSecondary },
+              ]}
+            >
+              Cancelar
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: theme.primary }]}
+            onPress={handleSaveProfile}
+            disabled={isSavingProfile}
+          >
+            {isSavingProfile ? (
+              <ActivityIndicator size="small" color={theme.onPrimary} />
+            ) : (
+              <Text
+                style={[styles.modalButtonText, { color: theme.onPrimary }]}
+              >
+                Guardar
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </AppDialog>
+
+      <AppDialog
+        visible={isPrivacyModalVisible}
+        onDismiss={() => setIsPrivacyModalVisible(false)}
+        maxWidth={400}
+        contentStyle={styles.privacyModalCard}
+        testID="privacy-data"
+      >
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Privacidad y datos
             </Text>
@@ -1796,9 +1786,7 @@ export default function ProfileScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
+      </AppDialog>
 
       <HealthSourcesModal
         visible={isHealthSourcesModalVisible}
@@ -2006,23 +1994,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 4,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    borderRadius: 16,
-    padding: 20,
-  },
-  privacyModalCard: {
-    maxHeight: "82%",
-  },
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 16,
+  },
+  privacyModalCard: {
+    maxHeight: "82%",
   },
   privacyScroll: {
     maxHeight: 520,

@@ -2,9 +2,6 @@ import type { MealType } from "@sergiomesasyelamos2000/shared";
 import React from "react";
 import {
   ActivityIndicator,
-  Dimensions,
-  Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +10,7 @@ import {
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 import { ADD_FOOD_MODAL_COPY } from "../nutritionChatCopy";
 
 type Props = {
@@ -27,8 +25,6 @@ type Props = {
   onSave: () => void;
 };
 
-const { width } = Dimensions.get("window");
-
 export function AddRecognizedFoodModal({
   visible,
   foodName,
@@ -40,136 +36,114 @@ export function AddRecognizedFoodModal({
   onCancel,
   onSave,
 }: Props) {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onCancel}
-      statusBarTranslucent={Platform.OS === "android"}
+      onDismiss={() => {
+        if (!saving) onCancel();
+      }}
+      dismissOnBack={!saving}
+      maxWidth={340}
+      testID="add-recognized-food"
     >
-      <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderWidth: isDark ? 1 : 0,
-            },
-          ]}
-        >
-          <Text style={[styles.title, { color: theme.text }]}>
-            {ADD_FOOD_MODAL_COPY.title}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            {foodName || "Alimento"}
-          </Text>
+      <Text style={[styles.title, { color: theme.text }]}>
+        {ADD_FOOD_MODAL_COPY.title}
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+        {foodName || "Alimento"}
+      </Text>
 
-          <Text style={[styles.label, { color: theme.textSecondary }]}>
-            {ADD_FOOD_MODAL_COPY.mealLabel}
-          </Text>
-          <View style={styles.mealTypesRow}>
-            {ADD_FOOD_MODAL_COPY.meals.map((item) => {
-              const selected = mealType === item.key;
-              return (
-                <TouchableOpacity
-                  key={item.key}
-                  style={[
-                    styles.mealChip,
-                    {
-                      borderColor: selected ? theme.primary : theme.border,
-                      backgroundColor: selected
-                        ? theme.primary
-                        : theme.backgroundSecondary,
-                    },
-                  ]}
-                  onPress={() => onChangeMealType(item.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Text
-                    style={{
-                      color: selected ? theme.onPrimary : theme.text,
-                      fontWeight: "600",
-                      fontSize: RFValue(12),
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.label, { color: theme.textSecondary }]}>
-            {ADD_FOOD_MODAL_COPY.gramsLabel}
-          </Text>
-          <TextInput
-            value={grams}
-            onChangeText={onChangeGrams}
-            keyboardType="numeric"
-            placeholder={ADD_FOOD_MODAL_COPY.gramsPlaceholder}
-            placeholderTextColor={theme.inputPlaceholder}
-            style={[
-              styles.gramsInput,
-              {
-                color: theme.text,
-                borderColor: theme.inputBorder,
-                backgroundColor: theme.inputBackground,
-              },
-            ]}
-          />
-
-          <View style={styles.buttons}>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {ADD_FOOD_MODAL_COPY.mealLabel}
+      </Text>
+      <View style={styles.mealTypesRow}>
+        {ADD_FOOD_MODAL_COPY.meals.map((item) => {
+          const selected = mealType === item.key;
+          return (
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: theme.primary }]}
-              onPress={onSave}
-              disabled={saving}
+              key={item.key}
+              style={[
+                styles.mealChip,
+                {
+                  borderColor: selected ? theme.primary : theme.border,
+                  backgroundColor: selected
+                    ? theme.primary
+                    : theme.backgroundSecondary,
+                },
+              ]}
+              onPress={() => onChangeMealType(item.key)}
               accessibilityRole="button"
-              accessibilityLabel={ADD_FOOD_MODAL_COPY.save}
+              accessibilityState={{ selected }}
             >
-              {saving ? (
-                <ActivityIndicator size="small" color={theme.onPrimary} />
-              ) : (
-                <Text style={[styles.primaryText, { color: theme.onPrimary }]}>
-                  {ADD_FOOD_MODAL_COPY.save}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={onCancel}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={ADD_FOOD_MODAL_COPY.cancel}
-            >
-              <Text style={[styles.secondaryText, { color: theme.text }]}>
-                {ADD_FOOD_MODAL_COPY.cancel}
+              <Text
+                style={{
+                  color: selected ? theme.onPrimary : theme.text,
+                  fontWeight: "600",
+                  fontSize: RFValue(12),
+                }}
+              >
+                {item.label}
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          );
+        })}
       </View>
-    </Modal>
+
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {ADD_FOOD_MODAL_COPY.gramsLabel}
+      </Text>
+      <TextInput
+        value={grams}
+        onChangeText={onChangeGrams}
+        keyboardType="numeric"
+        placeholder={ADD_FOOD_MODAL_COPY.gramsPlaceholder}
+        placeholderTextColor={theme.inputPlaceholder}
+        style={[
+          styles.gramsInput,
+          {
+            color: theme.text,
+            borderColor: theme.inputBorder,
+            backgroundColor: theme.inputBackground,
+          },
+        ]}
+      />
+
+      <View style={styles.buttons}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.primary }]}
+          onPress={onSave}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={ADD_FOOD_MODAL_COPY.save}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={theme.onPrimary} />
+          ) : (
+            <Text style={[styles.primaryText, { color: theme.onPrimary }]}>
+              {ADD_FOOD_MODAL_COPY.save}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onCancel}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={ADD_FOOD_MODAL_COPY.cancel}
+        >
+          <Text style={[styles.secondaryText, { color: theme.text }]}>
+            {ADD_FOOD_MODAL_COPY.cancel}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </AppDialog>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  card: {
-    width: Math.min(width - 40, 340),
-    borderRadius: 24,
-    padding: 24,
-  },
   title: {
     fontSize: RFValue(20),
     fontWeight: "700",

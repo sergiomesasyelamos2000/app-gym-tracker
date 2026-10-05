@@ -2,14 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { exportToCSV, exportToPDF } from "../../../utils/exportUtils";
 
@@ -27,8 +26,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const close = () => setModalVisible(false);
+
   const handleExportCSV = async () => {
-    setModalVisible(false);
+    close();
     setLoading(true);
     try {
       await exportToCSV(content, title.replace(/\s+/g, "_"));
@@ -38,7 +39,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   };
 
   const handleExportPDF = async () => {
-    setModalVisible(false);
+    close();
     setLoading(true);
     try {
       await exportToPDF(content, title, user?.name);
@@ -64,103 +65,68 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         )}
       </TouchableOpacity>
 
-      <Modal
+      <AppDialog
         visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-        statusBarTranslucent={Platform.OS === "android"}
+        onDismiss={close}
+        dismissOnBackdrop
+        title="Exportar Dieta"
+        testID="export-format"
       >
+        <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+          Selecciona el formato de exportación
+        </Text>
+
         <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setModalVisible(false)}
+          style={[styles.optionButton, { backgroundColor: theme.background }]}
+          onPress={handleExportPDF}
         >
-          <View
-            style={[styles.modalContent, { backgroundColor: theme.card }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Exportar Dieta
-            </Text>
+          <Ionicons name="document-text" size={24} color={theme.primary} />
+          <View style={styles.optionTextContainer}>
+            <Text style={[styles.optionTitle, { color: theme.text }]}>PDF</Text>
             <Text
-              style={[styles.modalSubtitle, { color: theme.textSecondary }]}
+              style={[styles.optionDescription, { color: theme.textSecondary }]}
             >
-              Selecciona el formato de exportación
+              Formato profesional con diseño
             </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                { backgroundColor: theme.background },
-              ]}
-              onPress={handleExportPDF}
-            >
-              <Ionicons name="document-text" size={24} color={theme.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: theme.text }]}>
-                  PDF
-                </Text>
-                <Text
-                  style={[
-                    styles.optionDescription,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Formato profesional con diseño
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={theme.textTertiary}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.optionButton,
-                { backgroundColor: theme.background },
-              ]}
-              onPress={handleExportCSV}
-            >
-              <Ionicons name="grid" size={24} color={theme.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: theme.text }]}>
-                  CSV
-                </Text>
-                <Text
-                  style={[
-                    styles.optionDescription,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Para Excel o Google Sheets
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={theme.textTertiary}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: theme.border }]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text
-                style={[
-                  styles.cancelButtonText,
-                  { color: theme.textSecondary },
-                ]}
-              >
-                Cancelar
-              </Text>
-            </TouchableOpacity>
           </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.textTertiary}
+          />
         </TouchableOpacity>
-      </Modal>
+
+        <TouchableOpacity
+          style={[styles.optionButton, { backgroundColor: theme.background }]}
+          onPress={handleExportCSV}
+        >
+          <Ionicons name="grid" size={24} color={theme.primary} />
+          <View style={styles.optionTextContainer}>
+            <Text style={[styles.optionTitle, { color: theme.text }]}>CSV</Text>
+            <Text
+              style={[styles.optionDescription, { color: theme.textSecondary }]}
+            >
+              Para Excel o Google Sheets
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.textTertiary}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.cancelButton, { borderColor: theme.border }]}
+          onPress={close}
+        >
+          <Text
+            style={[styles.cancelButtonText, { color: theme.textSecondary }]}
+          >
+            Cancelar
+          </Text>
+        </TouchableOpacity>
+      </AppDialog>
     </>
   );
 };
@@ -180,30 +146,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "85%",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
   modalSubtitle: {
     fontSize: 14,
     marginBottom: 20,
+    textAlign: "center",
   },
   optionButton: {
     flexDirection: "row",

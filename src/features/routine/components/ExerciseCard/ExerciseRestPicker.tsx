@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { AppDialog } from "../../../../ui/modal";
 import { formatTime, parseTime } from "./helpers";
 
 interface Props {
@@ -129,24 +129,13 @@ const ExerciseRestPicker = ({
         </Text>
       </TouchableOpacity>
 
-      <Modal
+      <AppDialog
         visible={showPicker}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setShowPicker(false)}
+        onDismiss={() => setShowPicker(false)}
+        maxWidth={modalWidth}
+        contentStyle={{ padding: modalPadding }}
+        testID="exercise-rest-picker"
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor: theme.card,
-                width: modalWidth,
-                padding: modalPadding,
-              },
-            ]}
-          >
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Tiempo de descanso
             </Text>
@@ -424,9 +413,7 @@ const ExerciseRestPicker = ({
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
+      </AppDialog>
     </>
   );
 };
@@ -441,26 +428,6 @@ const styles = StyleSheet.create({
   timerValue: {
     fontWeight: "600",
     letterSpacing: 0.2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    borderRadius: 16,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 14,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   modalTitle: {
     fontSize: 20,

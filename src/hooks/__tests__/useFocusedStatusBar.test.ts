@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react-native";
-import { Platform, StatusBar } from "react-native";
+import { StatusBar } from "react-native";
 
 const focusCleanups: Array<() => void> = [];
 
@@ -15,32 +15,39 @@ jest.mock("@react-navigation/native", () => ({
 import { useFocusedStatusBar } from "../useFocusedStatusBar";
 
 describe("useFocusedStatusBar", () => {
+  const stackEntry = {
+    barStyle: "dark-content" as const,
+    translucent: true,
+    backgroundColor: "transparent",
+    hidden: false,
+  };
+
   beforeEach(() => {
     focusCleanups.length = 0;
-    Object.defineProperty(Platform, "OS", { configurable: true, value: "android" });
-    jest.spyOn(StatusBar, "setHidden").mockImplementation(jest.fn());
-    jest.spyOn(StatusBar, "setBarStyle").mockImplementation(jest.fn());
-    jest.spyOn(StatusBar, "setTranslucent").mockImplementation(jest.fn());
-    jest.spyOn(StatusBar, "setBackgroundColor").mockImplementation(jest.fn());
+    jest.spyOn(StatusBar, "pushStackEntry").mockReturnValue(stackEntry);
+    jest.spyOn(StatusBar, "popStackEntry").mockImplementation(jest.fn());
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it("keeps the status bar visible and edge-to-edge friendly on focus", () => {
+  it("pushes an edge-to-edge stack entry on focus", () => {
     renderHook(() => useFocusedStatusBar("dark-content"));
 
-    expect(StatusBar.setHidden).toHaveBeenCalledWith(false);
-    expect(StatusBar.setBarStyle).toHaveBeenCalledWith("dark-content", true);
-    expect(StatusBar.setTranslucent).toHaveBeenCalledWith(true);
-    expect(StatusBar.setBackgroundColor).toHaveBeenCalledWith("transparent");
+    expect(StatusBar.pushStackEntry).toHaveBeenCalledWith({
+      animated: true,
+      hidden: false,
+      barStyle: "dark-content",
+      translucent: true,
+      backgroundColor: "transparent",
+    });
   });
 
-  it("keeps the status bar visible on blur cleanup", () => {
+  it("pops the stack entry on blur cleanup", () => {
     renderHook(() => useFocusedStatusBar("light-content"));
     focusCleanups.forEach((cleanup) => cleanup());
 
-    expect(StatusBar.setHidden).toHaveBeenCalledWith(false);
+    expect(StatusBar.popStackEntry).toHaveBeenCalledWith(stackEntry);
   });
 });

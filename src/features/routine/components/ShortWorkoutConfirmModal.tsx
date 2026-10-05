@@ -1,27 +1,19 @@
 import { AlertTriangle } from "lucide-react-native";
 import React from "react";
-import {
-  Dimensions,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 
 interface Props {
   visible: boolean;
-  duration: number; // en segundos
+  duration: number;
   /** When true, copy focuses on missing completed sets instead of short duration. */
   noCompletedSets?: boolean;
   onContinue: () => void;
   onDiscard: () => void;
   onSave: () => void;
 }
-
-const { width } = Dimensions.get("window");
 
 export const ShortWorkoutConfirmModal = ({
   visible,
@@ -31,7 +23,7 @@ export const ShortWorkoutConfirmModal = ({
   onDiscard,
   onSave,
 }: Props) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -44,9 +36,7 @@ export const ShortWorkoutConfirmModal = ({
     : "¿Entrenamiento corto?";
 
   const message = noCompletedSets ? (
-    <>
-      No has completado ninguna serie. ¿Qué deseas hacer?
-    </>
+    <>No has completado ninguna serie. ¿Qué deseas hacer?</>
   ) : (
     <>
       Tu entrenamiento ha durado solo{" "}
@@ -58,99 +48,65 @@ export const ShortWorkoutConfirmModal = ({
   );
 
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
+      onDismiss={() => onContinue()}
+      maxWidth={340}
+      contentStyle={styles.content}
+      testID="short-workout-confirm"
     >
-      <View style={styles.overlay}>
-        <View
+      <View style={styles.iconContainer}>
+        <AlertTriangle size={48} color="#F59E0B" />
+      </View>
+
+      <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+
+      <Text style={[styles.message, { color: theme.textSecondary }]}>
+        {message}
+      </Text>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.primary }]}
+          onPress={onContinue}
+        >
+          <Text style={[styles.buttonTextPrimary, { color: theme.onPrimary }]}>
+            Continuar entrenando
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[
-            styles.container,
+            styles.button,
             {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderWidth: isDark ? 1 : 0,
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              borderColor: theme.primary,
             },
           ]}
+          onPress={onSave}
         >
-          <View style={styles.iconContainer}>
-            <AlertTriangle size={48} color="#F59E0B" />
-          </View>
-
-          <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-
-          <Text style={[styles.message, { color: theme.textSecondary }]}>
-            {message}
+          <Text style={[styles.buttonTextSecondary, { color: theme.primary }]}>
+            Guardar de todas formas
           </Text>
+        </TouchableOpacity>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: theme.primary }]}
-              onPress={onContinue}
-            >
-              <Text style={[styles.buttonTextPrimary, { color: theme.onPrimary }]}>
-                Continuar entrenando
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                {
-                  backgroundColor: "transparent",
-                  borderWidth: 1,
-                  borderColor: theme.primary,
-                },
-              ]}
-              onPress={onSave}
-            >
-              <Text
-                style={[styles.buttonTextSecondary, { color: theme.primary }]}
-              >
-                Guardar de todas formas
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, { marginTop: 8 }]}
-              onPress={onDiscard}
-            >
-              <Text
-                style={[styles.buttonTextDestructive, { color: theme.error }]}
-              >
-                Descartar entrenamiento
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 8 }]}
+          onPress={onDiscard}
+        >
+          <Text style={[styles.buttonTextDestructive, { color: theme.error }]}>
+            Descartar entrenamiento
+          </Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </AppDialog>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
+  content: {
     alignItems: "center",
-    padding: 20,
-  },
-  container: {
-    width: Math.min(width - 40, 340),
-    borderRadius: 24,
-    padding: 24,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
   },
   iconContainer: {
     marginBottom: 16,

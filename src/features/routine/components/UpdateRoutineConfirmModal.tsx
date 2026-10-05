@@ -1,15 +1,9 @@
 import { Plus } from "lucide-react-native";
 import React from "react";
-import {
-  Dimensions,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { AppDialog } from "../../../ui/modal";
 
 interface Props {
   visible: boolean;
@@ -18,113 +12,77 @@ interface Props {
   onKeepOriginal: () => void;
 }
 
-const { width } = Dimensions.get("window");
-
 export const UpdateRoutineConfirmModal = ({
   visible,
   addedCount,
   onUpdate,
   onKeepOriginal,
 }: Props) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const addedLabel =
     addedCount === 1
       ? "Has añadido un ejercicio."
       : `Has añadido ${addedCount} ejercicios.`;
 
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
+      onDismiss={() => onKeepOriginal()}
+      maxWidth={340}
+      contentStyle={styles.content}
+      testID="update-routine-confirm"
     >
-      <View style={styles.overlay}>
-        <View
+      <View
+        style={[
+          styles.iconContainer,
+          { backgroundColor: `${theme.primary}1A` },
+        ]}
+      >
+        <Plus size={48} color={theme.primary} />
+      </View>
+
+      <Text style={[styles.title, { color: theme.text }]}>
+        Ejercicio añadido
+      </Text>
+
+      <Text style={[styles.message, { color: theme.textSecondary }]}>
+        {addedLabel} ¿Quieres actualizar la rutina o mantener la rutina
+        original?
+      </Text>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.primary }]}
+          onPress={onUpdate}
+        >
+          <Text style={[styles.buttonTextPrimary, { color: theme.onPrimary }]}>
+            Actualizar rutina
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[
-            styles.container,
+            styles.button,
             {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderWidth: isDark ? 1 : 0,
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              borderColor: theme.primary,
             },
           ]}
+          onPress={onKeepOriginal}
         >
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: `${theme.primary}1A` },
-            ]}
-          >
-            <Plus size={48} color={theme.primary} />
-          </View>
-
-          <Text style={[styles.title, { color: theme.text }]}>
-            Ejercicio añadido
+          <Text style={[styles.buttonTextSecondary, { color: theme.primary }]}>
+            Mantener original
           </Text>
-
-          <Text style={[styles.message, { color: theme.textSecondary }]}>
-            {addedLabel} ¿Quieres actualizar la rutina o mantener la rutina
-            original?
-          </Text>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: theme.primary }]}
-              onPress={onUpdate}
-            >
-              <Text
-                style={[styles.buttonTextPrimary, { color: theme.onPrimary }]}
-              >
-                Actualizar rutina
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                {
-                  backgroundColor: "transparent",
-                  borderWidth: 1,
-                  borderColor: theme.primary,
-                },
-              ]}
-              onPress={onKeepOriginal}
-            >
-              <Text
-                style={[styles.buttonTextSecondary, { color: theme.primary }]}
-              >
-                Mantener original
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </AppDialog>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
+  content: {
     alignItems: "center",
-    padding: 20,
-  },
-  container: {
-    width: Math.min(width - 40, 340),
-    borderRadius: 24,
-    padding: 24,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
   },
   iconContainer: {
     marginBottom: 16,
