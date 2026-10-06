@@ -28,7 +28,6 @@ import {
   Image,
   TextInput,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Switch,
   Text,
@@ -39,7 +38,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../contexts/ThemeContext";
-import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../hooks/useFocusedStatusBar";
 import { AppDialog } from "../ui/modal";
 import {
   deleteAccount as deleteAccountService,
@@ -138,8 +140,7 @@ export default function ProfileScreen() {
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
-  const statusBarStyle = isDark ? "light-content" : "dark-content";
-  useFocusedStatusBar(statusBarStyle);
+  useFocusedStatusBar(themeBarStyle(isDark));
 
   // Subscription store
   const subscription = useSubscriptionStore((state) => state.subscription);
@@ -614,12 +615,6 @@ export default function ProfileScreen() {
         edges={["top"]}
         style={[styles.container, { backgroundColor: theme.background }]}
       >
-        <StatusBar
-          barStyle={statusBarStyle}
-          backgroundColor="transparent"
-          hidden={false}
-          translucent
-        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -632,12 +627,6 @@ export default function ProfileScreen() {
       edges={["top"]}
       style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
     >
-      <StatusBar
-        barStyle={statusBarStyle}
-        backgroundColor="transparent"
-        hidden={false}
-        translucent
-      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View

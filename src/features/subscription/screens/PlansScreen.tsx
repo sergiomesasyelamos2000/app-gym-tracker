@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  StatusBar,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +16,10 @@ import { useSubscription } from "../hooks/useSubscription";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useAppleIapCheckout } from "../hooks/useAppleIapCheckout";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import {
   SubscriptionPlan,
   PLAN_METADATA,
@@ -38,6 +41,7 @@ export function PlansScreen() {
   const navigation = useNavigation<BaseNavigation>();
   const { subscription } = useSubscription();
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const { isSmallPhone } = useResponsive();
   const type = useMemo(
     () => subscriptionTypeScale(isSmallPhone),
@@ -98,10 +102,6 @@ export function PlansScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.backgroundSecondary}
-      />
       <ScreenHeader
         title="Elige tu Plan"
         onBack={() => navigation.goBack()}

@@ -14,6 +14,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { NutritionPlanListItemDto as NutritionPlan } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { NutritionHeaderIconButton, NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
@@ -32,7 +36,8 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function NutritionPlansListScreen({ navigation }: Props) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const user = useAuthStore((state) => state.user);
   const hasProfile = useNutritionStore((state) => state.hasProfile);
   const styles = React.useMemo(() => createStyles(theme), [theme]);

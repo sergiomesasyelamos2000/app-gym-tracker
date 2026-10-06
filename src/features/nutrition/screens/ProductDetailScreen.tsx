@@ -27,6 +27,10 @@ import type {
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
+import {
   NutritionHeaderIconButton,
   NutritionScreenHeader,
 } from "../components/NutritionScreenHeader";
@@ -132,7 +136,8 @@ const MEALS_CONFIG: {
 ];
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const {
     producto: rawProducto,

@@ -21,7 +21,6 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleProp,
   StyleSheet,
   Text,
@@ -42,6 +41,7 @@ import {
   findAllRoutineSessions,
   getRoutineById,
 } from "../features/routine/services/routineService";
+import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -353,6 +353,7 @@ export default function HomeScreen() {
     () => pickMotivationalQuote()
   );
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar("light-content");
   const user = useAuthStore((state) => state.user);
   const welcomeMessage = useAuthStore((state) => state.welcomeMessage);
   const clearWelcomeMessage = useAuthStore((state) => state.clearWelcomeMessage);
@@ -770,11 +771,6 @@ export default function HomeScreen() {
         },
       ]}
     >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.primary}
-        translucent={true}
-      />
       <SafeAreaView
         style={[
           styles.safeArea,

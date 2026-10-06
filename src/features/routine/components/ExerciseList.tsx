@@ -28,6 +28,10 @@ import type {
   MuscleDto,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -96,7 +100,8 @@ const viewabilityConfig = {
 };
 
 export default function ExerciseList() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const route = useRoute<ExerciseListRouteProp>();
   const navigation = useNavigation<NavigationProp<WorkoutStackParamList>>();

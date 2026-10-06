@@ -16,6 +16,10 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { HealthDisclaimerCard } from "../../common/components/HealthDisclaimerCard";
@@ -30,7 +34,8 @@ type Props = NativeStackScreenProps<
 const DURATION_OPTIONS = [7, 14, 21, 30];
 
 export default function GenerateNutritionPlanScreen({ navigation }: Props) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [durationDays, setDurationDays] = useState(7);

@@ -19,6 +19,10 @@ import {
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { ExerciseProgressSkeleton } from "../components/ExerciseProgressSkeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -83,7 +87,8 @@ const getDataForWindow = (
 
 export default function ExerciseProgressScreen({ route, navigation }: Props) {
   const { exercise } = route.params;
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const androidTop =
     Platform.OS === "android" ? { paddingTop: insets.top } : null;

@@ -14,6 +14,10 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { withOpacity } from "../../../utils/themeStyles";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -31,7 +35,8 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const navigation = useNavigation<BaseNavigation>();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isProfileComplete = useNutritionStore(
     (state) => state.isProfileComplete

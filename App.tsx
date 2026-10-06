@@ -6,7 +6,7 @@ import {
 } from "@react-navigation/native";
 import Constants from "expo-constants";
 import React, { useEffect, useMemo } from "react";
-import { LogBox, Platform, StatusBar, TextInput } from "react-native";
+import { LogBox, Platform, TextInput } from "react-native";
 import "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
@@ -194,7 +194,6 @@ function AppContent() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer theme={navigationTheme}>
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         <RootNavigator />
       </NavigationContainer>
       <Toast config={toastConfig} />

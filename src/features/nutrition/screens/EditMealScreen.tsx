@@ -12,7 +12,6 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -29,6 +28,10 @@ import type {
   UpdateCustomMealDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme, Theme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import {
   NutritionHeaderIconButton,
   NutritionScreenHeader,
@@ -140,6 +143,7 @@ const toFrontendMealProduct = (
 
 export default function EditMealScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<EditMealScreenNavigationProp>();
   const route = useRoute<EditMealScreenRouteProp>();
@@ -581,12 +585,6 @@ export default function EditMealScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.background}
-        hidden={false}
-        translucent={false}
-      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -19,6 +19,10 @@ import {
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../components/ScreenHeader";
 import {
   DataType,
@@ -28,7 +32,8 @@ import {
 import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
 
 export default function ExportDataScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const navigation = useNavigation<BaseNavigation>();
   const [loading, setLoading] = useState(false);
   const { isPremium, features } = useSubscriptionStore();

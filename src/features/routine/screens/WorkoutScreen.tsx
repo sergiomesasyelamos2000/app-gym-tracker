@@ -16,7 +16,6 @@ import {
   Modal as RNModal,
   Platform,
   Pressable,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -33,6 +32,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppDialog } from "../../../ui/modal";
 import { notificationService } from "../../../services/notificationService";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
@@ -109,6 +112,7 @@ function getRoutineExercisePreview(
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   useSubscription();
   const { isPremium, features } = useSubscriptionStore(
@@ -1087,13 +1091,6 @@ export default function WorkoutScreen() {
           : { paddingTop: Math.max(insets.top, 8) },
       ]}
     >
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.backgroundSecondary}
-        hidden={false}
-        translucent={false}
-      />
-
       <View style={styles.listWrapper}>
         <DraggableFlatList
           data={loading || listData.length === 0 ? [] : listData}

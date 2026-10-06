@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CommonActions, useFocusEffect, useIsFocused } from "@react-navigation/native";
+import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,7 +10,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,7 +25,10 @@ import type {
   UserMacroGoals,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
-import { useFocusedStatusBar } from "../../../hooks/useFocusedStatusBar";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { AppDialog } from "../../../ui/modal";
 import { useAuthStore } from "../../../store/useAuthStore";
@@ -122,9 +124,7 @@ type FoodEntry = FoodEntryResponseDto;
 
 export default function MacrosScreen({ navigation }: Props) {
   const { theme, isDark } = useTheme();
-  const isFocused = useIsFocused();
-  const statusBarStyle = isDark ? "light-content" : "dark-content";
-  useFocusedStatusBar(statusBarStyle);
+  useFocusedStatusBar(themeBarStyle(isDark));
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const user = useAuthStore((state) => state.user);
   const userProfile = useNutritionStore((state) => state.userProfile);
@@ -643,14 +643,6 @@ export default function MacrosScreen({ navigation }: Props) {
         edges={["top"]}
         style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
-        {isFocused ? (
-          <StatusBar
-            barStyle={statusBarStyle}
-            backgroundColor="transparent"
-            hidden={false}
-            translucent
-          />
-        ) : null}
         <MacrosDiarySkeleton />
       </SafeAreaView>
     );
@@ -663,14 +655,6 @@ export default function MacrosScreen({ navigation }: Props) {
         edges={["top"]}
         style={[styles.safeArea, { backgroundColor: theme.background }]}
       >
-        {isFocused ? (
-          <StatusBar
-            barStyle={statusBarStyle}
-            backgroundColor="transparent"
-            hidden={false}
-            translucent
-          />
-        ) : null}
         <View
           style={[
             styles.setupPromptContainer,
@@ -958,14 +942,6 @@ export default function MacrosScreen({ navigation }: Props) {
       edges={["top"]}
       style={[styles.safeArea, { backgroundColor: theme.background }]}
     >
-      {isFocused ? (
-        <StatusBar
-          barStyle={statusBarStyle}
-          backgroundColor="transparent"
-          hidden={false}
-          translucent
-        />
-      ) : null}
       {(loadingProduct || duplicating) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={APP_PURPLE} />

@@ -21,6 +21,10 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { WebView } from "react-native-webview";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import {
@@ -972,7 +976,8 @@ const HistoryCard = ({
 // ============================================================================
 export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const { exercise } = route.params;
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 

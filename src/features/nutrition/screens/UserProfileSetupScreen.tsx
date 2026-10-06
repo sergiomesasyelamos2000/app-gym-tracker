@@ -6,7 +6,6 @@ import {
   Dimensions,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -26,7 +25,10 @@ import {
   WeightUnit,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { useFocusedStatusBar } from "../../../hooks/useFocusedStatusBar";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNutritionStore } from "../../../store/useNutritionStore";
@@ -64,8 +66,7 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
   const userId = route.params?.userId || currentUser?.id || "";
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
   const { theme, isDark } = useTheme();
-  const statusBarStyle = isDark ? "light-content" : "dark-content";
-  useFocusedStatusBar(statusBarStyle);
+  useFocusedStatusBar(themeBarStyle(isDark));
 
   // Validar que tenemos un userId válido
   React.useEffect(() => {
@@ -942,11 +943,6 @@ export default function UserProfileSetupScreen({ navigation, route }: Props) {
       edges={["top"]}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <StatusBar
-        barStyle={statusBarStyle}
-        backgroundColor="transparent"
-        translucent
-      />
       <NutritionScreenHeader
         title="Configura tu Perfil"
         onBack={handleBack}

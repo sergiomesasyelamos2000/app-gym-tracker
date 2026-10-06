@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Platform,
-  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Crown, Check } from "lucide-react-native";
@@ -15,6 +14,10 @@ import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { useNavigation } from "@react-navigation/native";
 import type { BaseNavigation } from "../../../types";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useOverlayStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { withOpacity } from "../../../utils/themeStyles";
 import { SubscriptionLegalFooter } from "../components/SubscriptionLegalFooter";
 import { useResponsive } from "../../../hooks/useResponsive";
@@ -42,6 +45,7 @@ export function PaywallScreen({
 }: PaywallScreenProps) {
   const navigation = useNavigation<BaseNavigation>();
   const { theme, isDark } = useTheme();
+  useOverlayStatusBar(themeBarStyle(isDark), visible);
   const { isSmallPhone } = useResponsive();
   const type = useMemo(
     () => subscriptionTypeScale(isSmallPhone),
@@ -87,10 +91,6 @@ export function PaywallScreen({
         style={styles.container}
         edges={Platform.OS === "ios" ? ["bottom"] : ["top", "bottom"]}
       >
-        <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={theme.backgroundSecondary}
-        />
         <ScreenHeader
           title="Premium"
           mode="close"

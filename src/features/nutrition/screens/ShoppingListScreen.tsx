@@ -14,6 +14,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import type { ShoppingListItemResponseDto } from "@sergiomesasyelamos2000/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { ShoppingListSkeleton } from "../components/ShoppingListSkeleton";
@@ -23,7 +27,8 @@ import * as nutritionService from "../services/nutritionService";
 type ShoppingListItem = ShoppingListItemResponseDto;
 
 export default function ShoppingListScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const navigation = useNavigation();
   const userProfile = useNutritionStore((state) => state.userProfile);
   const [items, setItems] = useState<ShoppingListItem[]>([]);

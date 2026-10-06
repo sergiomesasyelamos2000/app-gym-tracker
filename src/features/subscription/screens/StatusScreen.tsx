@@ -9,7 +9,6 @@ import {
   Linking,
   ActivityIndicator,
   Platform,
-  StatusBar,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +32,10 @@ import {
   PLAN_METADATA,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { withOpacity } from "../../../utils/themeStyles";
 import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
@@ -59,6 +62,7 @@ export function StatusScreen() {
   const route = useRoute<StatusScreenRouteProp>();
   const { success } = route.params || {};
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const { isSmallPhone } = useResponsive();
   const type = useMemo(
     () => subscriptionTypeScale(isSmallPhone),
@@ -160,10 +164,6 @@ export function StatusScreen() {
   if (isLoading || !subscription) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <StatusBar
-          barStyle={isDark ? "light-content" : "dark-content"}
-          backgroundColor={theme.backgroundSecondary}
-        />
         <ScreenHeader
           title="Mi Suscripción"
           onBack={() => navigation.goBack()}
@@ -181,10 +181,6 @@ export function StatusScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.backgroundSecondary}
-      />
       <ScreenHeader
         title="Mi Suscripción"
         onBack={() => navigation.goBack()}

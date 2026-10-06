@@ -27,6 +27,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ENV } from "../../../environments/environment";
 import { prefetchProductCatalog } from "../../nutrition/services/nutritionService";
 import { prefetchExerciseCatalog } from "../../../services/exerciseService";
@@ -87,6 +91,7 @@ export default function AuthScreen() {
     useState<UserResponseDto | null>(null);
   const [savingAppleProfile, setSavingAppleProfile] = useState(false);
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;

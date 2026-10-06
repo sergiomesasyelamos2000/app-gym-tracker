@@ -27,6 +27,10 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import {
   createExercise,
@@ -46,6 +50,7 @@ interface DropdownOption {
 
 export default function CreateExerciseScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NavigationProp<WorkoutStackParamList, "CreateExercise">>();

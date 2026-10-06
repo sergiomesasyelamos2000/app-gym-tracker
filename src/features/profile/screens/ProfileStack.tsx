@@ -1,5 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { nativeStackStatusBarStyle } from "../../../hooks/useFocusedStatusBar";
 import ProfileScreen from "../../../screens/ProfileScreen";
 import ExportDataScreen from "../../common/screens/ExportDataScreen";
 import EditNutritionProfileScreen from "../../nutrition/screens/EditNutritionProfileScreen";
@@ -21,10 +23,15 @@ export type ProfileStackParamList = {
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export default function ProfileStack() {
+  const { isDark } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        statusBarStyle: nativeStackStatusBarStyle(isDark),
+        statusBarTranslucent: true,
+        statusBarBackgroundColor: "transparent",
       }}
     >
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />

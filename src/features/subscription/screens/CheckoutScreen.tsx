@@ -29,6 +29,10 @@ import { getErrorMessage } from "../../../types";
 import type { BaseNavigation, CaughtError } from "../../../types";
 import type { SubscriptionStackParamList } from "./SubscriptionStack";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 
 type CheckoutScreenRouteProp = RouteProp<
   SubscriptionStackParamList,
@@ -50,7 +54,8 @@ export function CheckoutScreen() {
   const hasStartedVerificationRef = useRef(false);
   const hasFinishedFirstLoadRef = useRef(false);
   const latestStartUrlRef = useRef<string | null>(null);
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [showCheckoutSkeleton, setShowCheckoutSkeleton] = useState(true);

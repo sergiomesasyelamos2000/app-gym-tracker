@@ -28,6 +28,10 @@ import type {
 } from "@sergiomesasyelamos2000/shared";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { updateRoutineOffline } from "../../../services/offlineRoutineService";
 import {
@@ -63,6 +67,7 @@ const sortSetsByOrder = (sets: SetRequestDto[] = []): SetRequestDto[] =>
 
 export default function RoutineEditScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<WorkoutStackParamList, "RoutineEdit">>();
   const navigation =

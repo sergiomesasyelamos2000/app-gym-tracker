@@ -22,7 +22,6 @@ import {
   Modal,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -35,6 +34,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import {
   CustomMealListItemDto as CustomMealListItem,
@@ -1483,6 +1486,7 @@ type ProductDetailScreenRouteProp = RouteProp<
 // Componente Principal
 export default function ProductListScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
@@ -1639,12 +1643,6 @@ export default function ProductListScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.background}
-        hidden={false}
-        translucent={false}
-      />
       <View style={styles.container}>
         <ProductSearchHeader onBack={() => navigation.goBack()} />
 

@@ -49,6 +49,10 @@ import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
 import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { notificationService } from "../../../services/notificationService";
 import { playRestCompleteFeedback } from "../../../services/restTimerFeedback";
@@ -152,7 +156,8 @@ const sortSetsMapByOrder = (setsMap: {
 const DETAIL_LIST_TOP_PADDING = 8;
 
 export default function RoutineDetailScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const keyboardHeight = useKeyboardHeight();

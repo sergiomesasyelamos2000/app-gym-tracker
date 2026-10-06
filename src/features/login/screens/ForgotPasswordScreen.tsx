@@ -16,6 +16,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { CaughtError, getErrorMessage } from "../../../types";
 import { forgotPassword, resetPassword } from "../services/authService";
@@ -30,6 +34,7 @@ export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
 
   const prefilledEmail = (route.params as RouteParams | undefined)?.email || "";
 

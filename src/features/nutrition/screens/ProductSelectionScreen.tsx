@@ -14,7 +14,6 @@ import {
   Image,
   Platform,
   SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -25,6 +24,10 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { ProductListSkeleton } from "../components/product-search/ProductListSkeleton";
 import {
@@ -595,6 +598,7 @@ function CustomProductsTab({
 // Componente Principal
 export default function ProductSelectionScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
@@ -695,12 +699,6 @@ export default function ProductSelectionScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.background}
-        hidden={false}
-        translucent={false}
-      />
       <View style={styles.container}>
         {/* Header */}
         <NutritionScreenHeader

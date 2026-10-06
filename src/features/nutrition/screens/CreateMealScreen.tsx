@@ -12,7 +12,6 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -29,6 +28,10 @@ import type {
   MappedProduct as Product,
 } from "@sergiomesasyelamos2000/shared";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
+import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
@@ -129,6 +132,7 @@ const toFrontendMealProduct = (
 
 export default function CreateMealScreen() {
   const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<NutritionStackParamList>>();
@@ -545,12 +549,6 @@ export default function CreateMealScreen() {
         Platform.OS === "android" ? { paddingTop: insets.top } : null,
       ]}
     >
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={theme.background}
-        hidden={false}
-        translucent={false}
-      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

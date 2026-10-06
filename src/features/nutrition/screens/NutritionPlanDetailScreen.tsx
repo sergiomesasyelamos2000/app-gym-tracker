@@ -15,6 +15,10 @@ import type { NutritionPlanResponseDto as NutritionPlan } from "@sergiomesasyela
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
+  themeBarStyle,
+  useFocusedStatusBar,
+} from "../../../hooks/useFocusedStatusBar";
+import {
   NutritionHeaderIconButton,
   NutritionScreenHeader,
 } from "../components/NutritionScreenHeader";
@@ -39,7 +43,8 @@ type Props = NativeStackScreenProps<
 
 export default function NutritionPlanDetailScreen({ route, navigation }: Props) {
   const { planId } = route.params;
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  useFocusedStatusBar(themeBarStyle(isDark));
   const user = useAuthStore((state) => state.user);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
