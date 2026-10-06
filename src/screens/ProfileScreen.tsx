@@ -18,7 +18,6 @@ import {
   Trash2,
   User,
   Utensils,
-  Watch,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { BaseNavigation } from "../types/common";
@@ -33,7 +32,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -55,11 +53,12 @@ import { useNutritionStore } from "../store/useNutritionStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { HealthSourcesModal } from "../features/common/components/HealthSourcesModal";
 import {
+  ACCOUNT_DELETE_SUBSCRIPTION_NOTICE,
   computeWeeklyActivitySuggestion,
   getBurnedInsightsCached,
   getRestSummaryCached,
+  HealthConnectionSection,
   useHealthConnectionStore,
-  type HealthAuthorizationStatus,
   type RestSummary,
   type WeeklyActivitySuggestion,
 } from "../features/health";
@@ -71,19 +70,6 @@ import {
   TERMS_OF_USE_URL,
 } from "../features/common/constants/legalUrls";
 import { openExternalUrl } from "../features/common/utils/openExternalUrl";
-
-function healthStatusLabel(status: HealthAuthorizationStatus): string {
-  switch (status) {
-    case "granted":
-      return "Conectado";
-    case "denied":
-      return "Permiso denegado";
-    case "unavailable":
-      return "No disponible en este dispositivo";
-    default:
-      return "Toca para conectar reloj o banda";
-  }
-}
 
 const AI_DATA_SHARING_DETAILS = [
   {
@@ -164,18 +150,8 @@ export default function ProfileScreen() {
   const refreshHealthStatus = useHealthConnectionStore(
     (state) => state.refreshStatus
   );
-  const connectHealth = useHealthConnectionStore((state) => state.connect);
-  const writeWorkoutsToHub = useHealthConnectionStore(
-    (state) => state.writeWorkoutsToHub
-  );
-  const setWriteWorkoutsToHub = useHealthConnectionStore(
-    (state) => state.setWriteWorkoutsToHub
-  );
   const showRestHints = useHealthConnectionStore(
     (state) => state.showRestHints
-  );
-  const setShowRestHints = useHealthConnectionStore(
-    (state) => state.setShowRestHints
   );
   const lastDismissedSuggestionAt = useHealthConnectionStore(
     (state) => state.lastDismissedSuggestionAt
@@ -184,7 +160,6 @@ export default function ProfileScreen() {
     (state) => state.dismissSuggestion
   );
   const setUserProfile = useNutritionStore((state) => state.setUserProfile);
-  const [isConnectingHealth, setIsConnectingHealth] = useState(false);
   const [tdeeSuggestion, setTdeeSuggestion] =
     useState<WeeklyActivitySuggestion | null>(null);
   const [restSummary, setRestSummary] = useState<RestSummary | null>(null);
@@ -272,30 +247,6 @@ export default function ProfileScreen() {
       };
     }, [])
   );
-
-  const handleConnectHealth = async () => {
-    setIsConnectingHealth(true);
-    try {
-      const status = await connectHealth();
-      if (status === "unavailable") {
-        Alert.alert(
-          "Salud no disponible",
-          Platform.OS === "ios"
-            ? "Apple Salud no está disponible. Necesitas un build nativo (no Expo Go) y un dispositivo compatible."
-            : "Health Connect no está disponible. Instálalo desde Play Store y usa un build nativo de EvoFit."
-        );
-      } else if (status === "denied") {
-        Alert.alert(
-          "Permiso denegado",
-          Platform.OS === "ios"
-            ? "Activa el acceso en Ajustes > Salud > Acceso de apps y datos > EvoFit."
-            : "Concede permisos de frecuencia cardiaca y calorías en Health Connect."
-        );
-      }
-    } finally {
-      setIsConnectingHealth(false);
-    }
-  };
 
   const handleApplyTdeeSuggestion = async (
     mode: "calories" | "activity"
@@ -568,7 +519,7 @@ export default function ProfileScreen() {
 
     Alert.alert(
       "Eliminar cuenta",
-      "Esta acción eliminará permanentemente tu cuenta y tus datos asociados. No se puede deshacer.",
+      ACCOUNT_DELETE_SUBSCRIPTION_NOTICE,
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -1119,6 +1070,11 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <HealthConnectionSection
+          restSummary={restSummary}
+          onRestSummaryChange={setRestSummary}
+        />
+
         {/* Data Settings */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
@@ -1198,119 +1154,6 @@ export default function ProfileScreen() {
               </View>
               <ChevronRight color={theme.textTertiary} size={20} />
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderBottomColor: theme.divider },
-              ]}
-              onPress={() => void handleConnectHealth()}
-              disabled={isConnectingHealth}
-            >
-              <View
-                style={[
-                  styles.settingIconContainer,
-                  { backgroundColor: theme.error + "20" },
-                ]}
-              >
-                <Watch color={theme.error} size={20} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Reloj y banda de salud
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  {isConnectingHealth
-                    ? "Conectando..."
-                    : healthStatusLabel(healthStatus)}
-                </Text>
-              </View>
-              {isConnectingHealth ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <ChevronRight color={theme.textTertiary} size={20} />
-              )}
-            </TouchableOpacity>
-
-            <View
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderBottomColor: theme.divider },
-              ]}
-            >
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Exportar entrenos al hub
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Escribe cada sesión en Apple Salud / Health Connect
-                </Text>
-              </View>
-              <Switch
-                value={writeWorkoutsToHub}
-                onValueChange={setWriteWorkoutsToHub}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor="#fff"
-              />
-            </View>
-
-            <View
-              style={[
-                styles.settingRow,
-                styles.settingRowBorder,
-                { borderBottomColor: theme.divider },
-              ]}
-            >
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Consejos de descanso
-                </Text>
-                <Text
-                  style={[
-                    styles.settingSubtitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  {showRestHints && restSummary
-                    ? [
-                        restSummary.sleepHoursLastNight != null
-                          ? `Sueño ~${restSummary.sleepHoursLastNight} h`
-                          : null,
-                        restSummary.stepsLast7Days != null
-                          ? `${restSummary.stepsLast7Days.toLocaleString("es-ES")} pasos (7d)`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || "Sin datos de sueño/pasos todavía"
-                    : "Mostrar sueño y pasos del hub de salud"}
-                </Text>
-              </View>
-              <Switch
-                value={showRestHints}
-                onValueChange={(value) => {
-                  setShowRestHints(value);
-                  if (!value) {
-                    setRestSummary(null);
-                    return;
-                  }
-                  void getRestSummaryCached({ force: true }).then(setRestSummary);
-                }}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor="#fff"
-              />
-            </View>
 
             <TouchableOpacity
               style={[

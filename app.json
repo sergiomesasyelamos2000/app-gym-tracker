@@ -30,9 +30,9 @@
         "UIViewControllerBasedStatusBarAppearance": false,
         "NSPhotoLibraryUsageDescription": "EvoFit necesita acceso a tu fototeca para que puedas, por ejemplo, elegir una foto para tu perfil o subir una imagen de una comida para estimar calorías y macronutrientes y guardarla en tu diario nutricional.",
         "NSCameraUsageDescription": "EvoFit necesita acceso a la cámara para escanear códigos de barras de productos alimenticios y para fotografiar comidas, estimar calorías y macronutrientes, y guardarlas en tu diario nutricional.",
-        "NSMicrophoneUsageDescription": "EvoFit solicita acceso al micrófono solo cuando grabas contenido multimedia que lo requiera dentro de la app.",
-        "NSHealthShareUsageDescription": "EvoFit lee tu frecuencia cardiaca y energía activa de Apple Salud durante el entrenamiento para mostrar pulsaciones y calorías estimadas.",
-        "NSHealthUpdateUsageDescription": "EvoFit puede escribir datos de entrenamiento en Apple Salud para mantener tus métricas sincronizadas."
+        "NSHealthShareUsageDescription": "EvoFit lee de Apple Salud tu frecuencia cardiaca y energía activa durante el entrenamiento, y tu sueño y pasos para consejos de descanso.",
+        "NSHealthUpdateUsageDescription": "EvoFit puede guardar en Apple Salud el entrenamiento completado y las calorías activas de la sesión, si activas esa opción.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -46,7 +46,6 @@
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
@@ -73,8 +72,7 @@
         "expo-camera",
         {
           "cameraPermission": "EvoFit necesita acceso a la cámara para escanear códigos de barras de productos alimenticios y para fotografiar comidas, estimar calorías y macronutrientes, y guardarlas en tu diario nutricional.",
-          "microphonePermission": "EvoFit solicita acceso al micrófono solo cuando grabas contenido multimedia que lo requiera dentro de la app.",
-          "recordAudioAndroid": true
+          "recordAudioAndroid": false
         }
       ],
       [
@@ -104,12 +102,14 @@
       [
         "apple-health",
         {
-          "healthSharePermission": "EvoFit lee tu frecuencia cardiaca y energía activa de Apple Salud durante el entrenamiento para mostrar pulsaciones y calorías.",
-          "healthUpdatePermission": "EvoFit puede escribir entrenamientos en Apple Salud para sincronizar tus métricas.",
-          "backgroundDelivery": false
+          "healthSharePermission": "EvoFit lee de Apple Salud tu frecuencia cardiaca y energía activa durante el entrenamiento, y tu sueño y pasos para consejos de descanso.",
+          "healthUpdatePermission": "EvoFit puede guardar en Apple Salud el entrenamiento completado y las calorías activas de la sesión, si activas esa opción.",
+          "backgroundDelivery": false,
+          "healthKitRequired": false
         }
       ],
       "react-native-health-connect",
+      "./plugins/withHealthUsageStrings",
       "./plugins/withWorkoutLiveActivity",
       "./plugins/withIosPodFixes",
       "@react-native-community/datetimepicker"

@@ -10,6 +10,11 @@ import type { HealthAuthorizationStatus } from "./types";
 type HealthConnectionState = {
   status: HealthAuthorizationStatus;
   lastCheckedAt: number | null;
+  /**
+   * True after the user taps connect. HealthKit often leaves read grants
+   * opaque (`undetermined`); this avoids a false "tap to connect" subtitle.
+   */
+  hasRequestedAuthorization: boolean;
   /** After saving a workout, also write it to Apple Salud / Health Connect. */
   writeWorkoutsToHub: boolean;
   /** Show sleep/steps rest hint on Profile when available. */
@@ -28,6 +33,7 @@ export const useHealthConnectionStore = create<HealthConnectionState>()(
     (set) => ({
       status: "undetermined",
       lastCheckedAt: null,
+      hasRequestedAuthorization: false,
       writeWorkoutsToHub: true,
       showRestHints: true,
       lastDismissedSuggestionAt: null,
@@ -37,6 +43,7 @@ export const useHealthConnectionStore = create<HealthConnectionState>()(
         return status;
       },
       connect: async () => {
+        set({ hasRequestedAuthorization: true });
         const status = await requestHealthAuthorization();
         set({ status, lastCheckedAt: Date.now() });
         return status;
@@ -52,6 +59,7 @@ export const useHealthConnectionStore = create<HealthConnectionState>()(
       partialize: (state) => ({
         status: state.status,
         lastCheckedAt: state.lastCheckedAt,
+        hasRequestedAuthorization: state.hasRequestedAuthorization,
         writeWorkoutsToHub: state.writeWorkoutsToHub,
         showRestHints: state.showRestHints,
         lastDismissedSuggestionAt: state.lastDismissedSuggestionAt,

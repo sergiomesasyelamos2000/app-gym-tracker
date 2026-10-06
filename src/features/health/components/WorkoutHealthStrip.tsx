@@ -13,7 +13,7 @@ type Props = {
 function sourceLabel(source: HealthMetricsSource): string {
   switch (source) {
     case "healthkit":
-      return "Salud";
+      return "Apple Salud";
     case "health_connect":
       return "Health Connect";
     case "met_estimate":
