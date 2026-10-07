@@ -38,12 +38,19 @@ import { AppRefreshControl } from "../features/common/components/AppRefreshContr
 import type { WorkoutStackParamList } from "../features/routine/screens/WorkoutStack";
 import { HomeScreenSkeleton } from "./HomeScreenSkeleton";
 import {
+  fetchAllRoutineSessionsUncached,
   findAllRoutineSessions,
+  findRoutineSessionsAfter,
+  findRoutineSessionsPage,
   getRoutineById,
+  persistEnrichedSessionsCache,
+  readCachedRoutineSessions,
 } from "../features/routine/services/routineService";
 import { useFocusedStatusBar } from "../hooks/useFocusedStatusBar";
 import { useResponsive } from "../hooks/useResponsive";
 import { useAuthStore } from "../store/useAuthStore";
+import { useNavigationStore } from "../store/useNavigationStore";
+import { runHomeInitialLoad } from "./homeFirstLoad";
 
 // Types for session exercises (from backend)
 interface SessionExercise {
@@ -259,6 +266,56 @@ const normalizeSessionExercise = (
   };
 };
 
+const mapSessionsWithTotals = (
+  sessionsData: Array<Record<string, unknown> & { exercises?: unknown }>
+): SessionWithTotals[] =>
+  sessionsData.map((session): SessionWithTotals => {
+    const sessionExercises: SessionExercise[] = (
+      (session.exercises as RawSessionExercise[] | undefined) || []
+    ).map((exercise, index) => normalizeSessionExercise(exercise, index));
+
+    const calculatedWeight =
+      sessionExercises.reduce(
+        (sum: number, e) =>
+          sum +
+          (e.sets || []).reduce((acc: number, s) => {
+            if (!s.completed) return acc;
+            return (
+              acc +
+              toSafeNumber((s as { weight?: unknown }).weight) *
+                toSafeNumber((s as { reps?: unknown }).reps)
+            );
+          }, 0),
+        0
+      ) || 0;
+
+    const totalReps =
+      sessionExercises.reduce((sum: number, e) => {
+        const exerciseTotalReps = (e.sets || []).reduce((acc: number, s) => {
+          if (!s.completed) return acc;
+          return acc + toSafeNumber((s as { reps?: unknown }).reps);
+        }, 0);
+        return sum + exerciseTotalReps;
+      }, 0) || 0;
+
+    const sessionTotalWeight = toSafeNumber(session.totalWeight);
+    const sessionTotalTime = toSafeNumber(session.totalTime);
+    const sessionCompletedSets = toSafeNumber(session.completedSets);
+
+    return {
+      ...(session as object),
+      id: String(session.id ?? ""),
+      exercises: sessionExercises,
+      totalTime: sessionTotalTime,
+      totalWeight: sessionTotalWeight || calculatedWeight,
+      completedSets: sessionCompletedSets,
+      totalReps,
+      createdAt:
+        (session.createdAt as Date | string | undefined) ||
+        new Date().toISOString(),
+    };
+  });
+
 const countCompletedSets = (exercise: SessionExercise): number =>
   (exercise.sets || []).filter((set) => set.completed).length;
 
@@ -357,6 +414,7 @@ export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const welcomeMessage = useAuthStore((state) => state.welcomeMessage);
   const clearWelcomeMessage = useAuthStore((state) => state.clearWelcomeMessage);
+  const markHomeReady = useNavigationStore((state) => state.markHomeReady);
   const responsive = useResponsive();
 
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -364,6 +422,28 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+  const firstLoadInFlightRef = useRef(false);
+  const mountedRef = useRef(true);
+  const loadEpochRef = useRef(useNavigationStore.getState().homeGateEpoch);
+  /** Drops stale first-load background paints after a newer refresh. */
+  const paintGenerationRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return useNavigationStore.subscribe((state, prevState) => {
+      if (state.homeGateEpoch === prevState.homeGateEpoch) return;
+      firstLoadInFlightRef.current = false;
+      loadEpochRef.current = state.homeGateEpoch;
+      setInitialLoading(true);
+      setSessions([]);
+    });
+  }, []);
 
   const weeklyStats = useMemo(() => computeWeeklyStats(sessions), [sessions]);
   const weeklyDurationLabel = weeklyDurationUnit(weeklyStats.durationSeconds);
@@ -411,79 +491,99 @@ export default function HomeScreen() {
     }
   }, [initialLoading, welcomeMessage, clearWelcomeMessage]);
 
-  // Cargar datos
-  const fetchData = useCallback(async () => {
+  const applySessions = useCallback(
+    (sessionsData: Parameters<typeof mapSessionsWithTotals>[0]) => {
+      if (!mountedRef.current) return;
+      setSessions(mapSessionsWithTotals(sessionsData));
+    },
+    []
+  );
+
+  /** Later focus / pull-to-refresh: full history, never re-locks tabs. */
+  const refreshFullHistory = useCallback(async () => {
     if (!user?.id) {
-      setInitialLoading(false);
       setRefreshing(false);
       return;
     }
 
+    const generation = ++paintGenerationRef.current;
+
     try {
       const sessionsData = await findAllRoutineSessions();
-
-      const sessionsWithTotals = sessionsData.map(
-        (session): SessionWithTotals => {
-          const sessionExercises: SessionExercise[] = (
-            (session.exercises as RawSessionExercise[] | undefined) || []
-          ).map((exercise, index) => normalizeSessionExercise(exercise, index));
-
-          const calculatedWeight =
-            sessionExercises.reduce(
-              (sum: number, e) =>
-                sum +
-                (e.sets || []).reduce((acc: number, s) => {
-                  if (!s.completed) return acc;
-                  return (
-                    acc +
-                    toSafeNumber((s as { weight?: unknown }).weight) *
-                      toSafeNumber((s as { reps?: unknown }).reps)
-                  );
-                }, 0),
-              0
-            ) || 0;
-
-          const totalReps =
-            sessionExercises.reduce((sum: number, e) => {
-              const exerciseTotalReps = (e.sets || []).reduce((acc: number, s) => {
-                if (!s.completed) return acc;
-                return acc + toSafeNumber((s as { reps?: unknown }).reps);
-              }, 0);
-              return sum + exerciseTotalReps;
-            }, 0) || 0;
-
-          const sessionTotalWeight = toSafeNumber(
-            (session as { totalWeight?: unknown }).totalWeight
-          );
-          const sessionTotalTime = toSafeNumber(
-            (session as { totalTime?: unknown }).totalTime
-          );
-          const sessionCompletedSets = toSafeNumber(
-            (session as { completedSets?: unknown }).completedSets
-          );
-
-          return {
-            ...session,
-            exercises: sessionExercises,
-            totalTime: sessionTotalTime,
-            totalWeight: sessionTotalWeight || calculatedWeight,
-            completedSets: sessionCompletedSets,
-            totalReps,
-            createdAt:
-              (session as { createdAt?: Date | string }).createdAt ||
-              new Date().toISOString(),
-          };
-        }
-      );
-
-      setSessions(sessionsWithTotals);
+      if (
+        !mountedRef.current ||
+        paintGenerationRef.current !== generation
+      ) {
+        return;
+      }
+      applySessions(sessionsData as Parameters<typeof mapSessionsWithTotals>[0]);
     } catch (error) {
       console.error("Error fetching data", error);
     } finally {
-      setInitialLoading(false);
-      setRefreshing(false);
+      if (mountedRef.current) {
+        setRefreshing(false);
+      }
     }
-  }, [user?.id]);
+  }, [user?.id, applySessions]);
+
+  const runFirstHomeLoad = useCallback(async () => {
+    if (firstLoadInFlightRef.current) return;
+    firstLoadInFlightRef.current = true;
+
+    const epoch = useNavigationStore.getState().homeGateEpoch;
+    loadEpochRef.current = epoch;
+    const generation = ++paintGenerationRef.current;
+
+    const isCurrent = () =>
+      mountedRef.current &&
+      useNavigationStore.getState().homeGateEpoch === epoch;
+
+    await runHomeInitialLoad(
+      {
+        userId: user?.id ?? null,
+        epoch,
+        isCurrent,
+        readCache: readCachedRoutineSessions,
+        fetchFirstPage: () => findRoutineSessionsPage({ limit: 50 }),
+        refreshFullHistory: async () => {
+          const pages = await fetchAllRoutineSessionsUncached();
+          if (!isCurrent()) {
+            return pages;
+          }
+          return persistEnrichedSessionsCache(pages);
+        },
+        completeFromFirstPage: async (page) => {
+          const rest =
+            page.hasMore && page.nextCursor
+              ? await findRoutineSessionsAfter(page.nextCursor)
+              : [];
+          const all = [...page.items, ...rest];
+          if (!isCurrent()) {
+            return all;
+          }
+          return persistEnrichedSessionsCache(all);
+        },
+      },
+      {
+        onReady: (sessionsData) => {
+          applySessions(
+            sessionsData as Parameters<typeof mapSessionsWithTotals>[0]
+          );
+          setInitialLoading(false);
+          setRefreshing(false);
+          markHomeReady(epoch);
+        },
+        onBackground: (sessionsData) => {
+          if (paintGenerationRef.current !== generation) {
+            return;
+          }
+          applySessions(
+            sessionsData as Parameters<typeof mapSessionsWithTotals>[0]
+          );
+        },
+      }
+    );
+  }, [user?.id, applySessions, markHomeReady]);
 
   useFocusEffect(
     useCallback(() => {
@@ -493,14 +593,20 @@ export default function HomeScreen() {
         duration: 800,
         useNativeDriver: true,
       }).start();
-      fetchData();
-    }, [fetchData])
+
+      const { homeReady } = useNavigationStore.getState();
+      if (!homeReady) {
+        void runFirstHomeLoad();
+      } else {
+        void refreshFullHistory();
+      }
+    }, [runFirstHomeLoad, refreshFullHistory, fadeAnim])
   );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData();
-  }, [fetchData]);
+    void refreshFullHistory();
+  }, [refreshFullHistory]);
 
   const handleStartWorkout = () => {
     // Animación de press

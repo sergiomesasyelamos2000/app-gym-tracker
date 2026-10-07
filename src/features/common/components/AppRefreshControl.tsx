@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Platform,
   RefreshControl as NativeRefreshControl,
   type RefreshControlProps,
 } from "react-native";
@@ -15,6 +16,24 @@ export type AppRefreshControlProps = RefreshControlProps & {
 };
 
 /**
+ * On iOS + New Architecture, UIRefreshControl often ignores the initial tintColor.
+ * First commit omits tint; the next frame applies the brand color so Fabric treats
+ * it as an update. Android receives the color immediately.
+ */
+function useIosDeferredTint(color: string): string | undefined {
+  const [deferred, setDeferred] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    const frame = requestAnimationFrame(() => setDeferred(color));
+    return () => cancelAnimationFrame(frame);
+  }, [color]);
+
+  if (Platform.OS !== "ios") return color;
+  return deferred;
+}
+
+/**
  * Themed pull-to-refresh. Uses RN RefreshControl by default (stable on Android).
  * Pass gestureHandler for RNGH-backed lists (iOS tint + gesture ref wiring).
  */
@@ -28,6 +47,7 @@ export function AppRefreshControl({
 }: AppRefreshControlProps) {
   const { theme } = useTheme();
   const spinnerColor = tintColor ?? theme.primary;
+  const iosTintColor = useIosDeferredTint(spinnerColor);
   const Control = gestureHandler
     ? GestureHandlerRefreshControl ?? NativeRefreshControl
     : NativeRefreshControl;
@@ -35,7 +55,7 @@ export function AppRefreshControl({
   return (
     <Control
       {...rest}
-      tintColor={spinnerColor}
+      tintColor={Platform.OS === "ios" ? iosTintColor : spinnerColor}
       titleColor={titleColor ?? spinnerColor}
       colors={colors ?? [spinnerColor]}
       progressBackgroundColor={progressBackgroundColor ?? theme.card}

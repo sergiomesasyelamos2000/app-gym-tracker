@@ -19,6 +19,18 @@ const LOCAL_SESSIONS_KEY = "@local_sessions";
 const DEFAULT_SESSIONS_PAGE_SIZE = 50;
 const MAX_SESSION_PAGES = 40; // safety ceiling: 40 × 50 = 2000 sessions
 
+/** Bumped on logout so in-flight enrich cannot write the previous user's sessions. */
+let sessionsCacheWriteEpoch = 0;
+
+/**
+ * Drop the sessions cache and invalidate in-flight persist writers.
+ * Call from clearAuth / logout.
+ */
+export function invalidateRoutineSessionsCacheWrites(): void {
+  sessionsCacheWriteEpoch += 1;
+  void AsyncStorage.removeItem(SESSIONS_CACHE_KEY);
+}
+
 export async function saveRoutine(
   routineRequestDto: RoutineRequestDto
 ): Promise<RoutineResponseDto> {
@@ -343,6 +355,90 @@ export async function findRoutineSessionsPage(options?: {
 }
 
 /**
+ * Reads `@sessions_cache_v2`. Returns null when missing, corrupt, or non-array.
+ * An empty array is a valid cached empty history.
+ */
+export async function readCachedRoutineSessions(): Promise<
+  RoutineSessionListItem[] | null
+> {
+  try {
+    const cached = await AsyncStorage.getItem(SESSIONS_CACHE_KEY);
+    if (cached == null) {
+      return null;
+    }
+    const parsed = JSON.parse(cached);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as RoutineSessionListItem[];
+  } catch (cacheError) {
+    console.error("[RoutineService] Sessions cache read failed:", cacheError);
+    return null;
+  }
+}
+
+/**
+ * Fetches remaining session pages after an already-loaded first page cursor.
+ * No enrich and no cache write — Home first-paint path only.
+ */
+export async function findRoutineSessionsAfter(
+  cursor: string
+): Promise<RoutineSessionListItem[]> {
+  let apiSessions: RoutineSessionListItem[] = [];
+  let nextCursor: string | null = cursor;
+  let pages = 0;
+  const maxPages = MAX_SESSION_PAGES - 1;
+
+  while (nextCursor && pages < maxPages) {
+    const page = await findRoutineSessionsPage({
+      limit: DEFAULT_SESSIONS_PAGE_SIZE,
+      cursor: nextCursor,
+    });
+    apiSessions = [...apiSessions, ...page.items];
+    nextCursor = page.hasMore ? page.nextCursor : null;
+    pages += 1;
+  }
+
+  return apiSessions;
+}
+
+/**
+ * Enrich session media then write the full list to `@sessions_cache_v2`.
+ * Never call with a partial first page. Skips the write if logout invalidated
+ * the cache while enrich was in flight.
+ */
+export async function persistEnrichedSessionsCache(
+  sessions: RoutineSessionListItem[]
+): Promise<RoutineSessionListItem[]> {
+  const writeEpoch = sessionsCacheWriteEpoch;
+  const enriched = await enrichRoutineSessionsMedia(sessions);
+  if (writeEpoch !== sessionsCacheWriteEpoch) {
+    return enriched;
+  }
+  await AsyncStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(enriched));
+  return enriched;
+}
+
+/** All pages, no enrich / no cache write — for Home background with epoch guards. */
+export async function fetchAllRoutineSessionsUncached(): Promise<
+  RoutineSessionListItem[]
+> {
+  let apiSessions: RoutineSessionListItem[] = [];
+  let cursor: string | null = null;
+  let pages = 0;
+  do {
+    const page = await findRoutineSessionsPage({
+      limit: DEFAULT_SESSIONS_PAGE_SIZE,
+      cursor,
+    });
+    apiSessions = [...apiSessions, ...page.items];
+    cursor = page.hasMore ? page.nextCursor : null;
+    pages += 1;
+  } while (cursor && pages < MAX_SESSION_PAGES);
+  return apiSessions;
+}
+
+/**
  * Fetches session history (paginated under the hood). Returns slim list items
  * compatible with previous RoutineSessionEntity consumers for sets/history UX.
  */
@@ -353,29 +449,17 @@ export async function findAllRoutineSessions(): Promise<
   let localSessions: RoutineSessionListItem[] = [];
 
   try {
-    let cursor: string | null = null;
-    let pages = 0;
-    do {
-      const page = await findRoutineSessionsPage({
-        limit: DEFAULT_SESSIONS_PAGE_SIZE,
-        cursor,
-      });
-      apiSessions = [...apiSessions, ...page.items];
-      cursor = page.hasMore ? page.nextCursor : null;
-      pages += 1;
-    } while (cursor && pages < MAX_SESSION_PAGES);
-
-    const enriched = await enrichRoutineSessionsMedia(apiSessions);
-    await AsyncStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(enriched));
-    return enriched;
+    const writeEpochAtStart = sessionsCacheWriteEpoch;
+    apiSessions = await fetchAllRoutineSessionsUncached();
+    // Logout during fetch bumps the epoch and clears the key — do not rewrite.
+    if (writeEpochAtStart !== sessionsCacheWriteEpoch) {
+      return apiSessions;
+    }
+    return await persistEnrichedSessionsCache(apiSessions);
   } catch (error: CaughtError) {
-    try {
-      const cached = await AsyncStorage.getItem(SESSIONS_CACHE_KEY);
-      if (cached) {
-        apiSessions = JSON.parse(cached);
-      }
-    } catch (cacheError) {
-      console.error("[RoutineService] Sessions cache read failed:", cacheError);
+    const cached = await readCachedRoutineSessions();
+    if (cached) {
+      apiSessions = cached;
     }
 
     try {

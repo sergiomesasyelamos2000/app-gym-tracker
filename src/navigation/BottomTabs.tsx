@@ -1,5 +1,6 @@
 // navigation/BottomTabs.tsx
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { PlatformPressable } from "@react-navigation/elements";
 import { BarChart3, Dumbbell, Heart, Home, User } from "lucide-react-native";
 import React from "react";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
@@ -10,11 +11,13 @@ import WorkoutStack from "../features/routine/screens/WorkoutStack";
 import HomeScreen from "../screens/HomeScreen";
 import NutritionScreen from "../screens/NutritionScreen";
 import { useNavigationStore } from "../store/useNavigationStore";
+import { shouldBlockHomeTabPress } from "./homeTabGate";
 
 const Tab = createBottomTabNavigator();
 
 export const BottomTabs = () => {
   const hiddenTabs = useNavigationStore((state) => state.hiddenTabs);
+  const homeReady = useNavigationStore((state) => state.homeReady);
   const { theme } = useTheme();
 
   const isTabBarLockedForPayment = (route: any) => {
@@ -36,33 +39,54 @@ export const BottomTabs = () => {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          switch (route.name) {
-            case "Inicio":
-              return <Home color={color} size={size} />;
-            case "Entreno":
-              return <Dumbbell color={color} size={size} />;
-            case "Nutrición":
-              return <Heart color={color} size={size} />;
-            case "Macros":
-              return <BarChart3 color={color} size={size} />;
-            case "Perfil":
-              return <User color={color} size={size} />;
-            default:
-              return null;
+      screenListeners={({ route }) => ({
+        tabPress: (e) => {
+          if (shouldBlockHomeTabPress(route.name, homeReady)) {
+            e.preventDefault();
           }
         },
-        tabBarActiveTintColor: theme.tabBarActive,
-        tabBarInactiveTintColor: theme.tabBarInactive,
-        headerShown: false,
-        tabBarStyle: {
-          display: shouldHideTabBar(route) ? "none" : "flex",
-          backgroundColor: theme.tabBarBackground,
-          borderTopColor: theme.tabBarBorder,
-          borderTopWidth: 1,
-        },
       })}
+      screenOptions={({ route }) => {
+        const blocked = shouldBlockHomeTabPress(route.name, homeReady);
+        return {
+          tabBarIcon: ({ color, size }) => {
+            switch (route.name) {
+              case "Inicio":
+                return <Home color={color} size={size} />;
+              case "Entreno":
+                return <Dumbbell color={color} size={size} />;
+              case "Nutrición":
+                return <Heart color={color} size={size} />;
+              case "Macros":
+                return <BarChart3 color={color} size={size} />;
+              case "Perfil":
+                return <User color={color} size={size} />;
+              default:
+                return null;
+            }
+          },
+          tabBarActiveTintColor: theme.tabBarActive,
+          tabBarInactiveTintColor: theme.tabBarInactive,
+          headerShown: false,
+          tabBarStyle: {
+            display: shouldHideTabBar(route) ? "none" : "flex",
+            backgroundColor: theme.tabBarBackground,
+            borderTopColor: theme.tabBarBorder,
+            borderTopWidth: 1,
+          },
+          tabBarButton: (props) => (
+            <PlatformPressable
+              {...props}
+              disabled={blocked}
+              accessibilityState={{
+                ...props.accessibilityState,
+                disabled: blocked,
+              }}
+              style={[props.style, blocked ? { opacity: 0.4 } : null]}
+            />
+          ),
+        };
+      }}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
       <Tab.Screen name="Entreno" component={WorkoutStack} />
