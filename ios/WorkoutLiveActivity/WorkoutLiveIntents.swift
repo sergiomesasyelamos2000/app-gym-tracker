@@ -2,7 +2,7 @@ import AppIntents
 import ActivityKit
 import Foundation
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 struct WorkoutLiveAddRestIntent: AppIntent {
   static var title: LocalizedStringResource = "Add 15s rest"
 
@@ -12,7 +12,7 @@ struct WorkoutLiveAddRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 struct WorkoutLiveSubtractRestIntent: AppIntent {
   static var title: LocalizedStringResource = "Subtract 15s rest"
 
@@ -22,7 +22,7 @@ struct WorkoutLiveSubtractRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 struct WorkoutLiveSkipRestIntent: AppIntent {
   static var title: LocalizedStringResource = "Skip rest"
 
@@ -32,7 +32,7 @@ struct WorkoutLiveSkipRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 struct WorkoutLiveCompleteSetIntent: AppIntent {
   static var title: LocalizedStringResource = "Complete set"
 
@@ -42,7 +42,7 @@ struct WorkoutLiveCompleteSetIntent: AppIntent {
   }
 }
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 enum WorkoutLiveIntentHandler {
   @MainActor
   static func applyRestDelta(_ delta: Int) async {

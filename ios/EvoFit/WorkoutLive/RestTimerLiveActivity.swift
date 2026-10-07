@@ -5,10 +5,10 @@ import React
 @objc(RestTimerLiveActivity)
 class RestTimerLiveActivity: NSObject {
 
-  /// Boxed so the class can link against iOS 15.1; ActivityKit types need 16.1+.
+  /// Boxed so the class can link against iOS 15.1; ActivityContent APIs need 16.2+.
   private var currentActivityBox: Any?
 
-  @available(iOS 16.1, *)
+  @available(iOS 16.2, *)
   private var currentActivity: Activity<WorkoutLiveAttributes>? {
     get { currentActivityBox as? Activity<WorkoutLiveAttributes> }
     set { currentActivityBox = newValue }
@@ -29,7 +29,7 @@ class RestTimerLiveActivity: NSObject {
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolver(false)
       return
     }
@@ -77,7 +77,7 @@ class RestTimerLiveActivity: NSObject {
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolver(false)
       return
     }
@@ -121,7 +121,7 @@ class RestTimerLiveActivity: NSObject {
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
     Task { @MainActor in
-      if #available(iOS 16.1, *) {
+      if #available(iOS 16.2, *) {
         await endAll()
       }
       resolver(true)
@@ -187,7 +187,7 @@ class RestTimerLiveActivity: NSObject {
     _ resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolver(false)
       return
     }
@@ -209,7 +209,7 @@ class RestTimerLiveActivity: NSObject {
     _ resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolver(NSNull())
       return
     }
@@ -238,7 +238,7 @@ class RestTimerLiveActivity: NSObject {
     getCurrentWorkoutLiveState(resolver, rejecter: rejecter)
   }
 
-  @available(iOS 16.1, *)
+  @available(iOS 16.2, *)
   private func makeState(
     exerciseName: String?,
     nextSetSummary: String?,
@@ -261,7 +261,7 @@ class RestTimerLiveActivity: NSObject {
     )
   }
 
-  @available(iOS 16.1, *)
+  @available(iOS 16.2, *)
   @MainActor
   private func endAll() async {
     for activity in Activity<WorkoutLiveAttributes>.activities {
@@ -270,7 +270,7 @@ class RestTimerLiveActivity: NSObject {
     currentActivity = nil
   }
 
-  @available(iOS 16.1, *)
+  @available(iOS 16.2, *)
   private func persistState(_ state: WorkoutLiveAttributes.ContentState, startedAt: Date) {
     let payload: [String: Any] = [
       "exerciseName": state.exerciseName,

@@ -15,6 +15,7 @@ private enum LiveTheme {
   static let completeGreen = Color(red: 0.22, green: 0.78, blue: 0.35)
 }
 
+@available(iOS 16.2, *)
 @main
 struct WorkoutLiveActivityBundle: WidgetBundle {
   var body: some Widget {
@@ -22,6 +23,7 @@ struct WorkoutLiveActivityBundle: WidgetBundle {
   }
 }
 
+@available(iOS 16.2, *)
 struct WorkoutLiveActivityWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: WorkoutLiveAttributes.self) { context in
@@ -106,6 +108,7 @@ struct WorkoutLiveActivityWidget: Widget {
 
 // MARK: - Lock screen / banner
 
+@available(iOS 16.2, *)
 struct WorkoutLiveLockScreenView: View {
   let context: ActivityViewContext<WorkoutLiveAttributes>
 
