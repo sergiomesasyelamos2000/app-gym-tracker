@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -16,18 +17,38 @@ import {
   Modal as RNModal,
   Platform,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import Modal from "react-native-modal";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from "react-native-reanimated";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
 import DraggableFlatList, {
   RenderItemParams,
-  ScaleDecorator,
 } from "react-native-draggable-flatlist";
+import {
+  applyRoutineListDrag,
+  isOrphanedNested,
+  type DragListItem,
+} from "../utils/applyRoutineListDrag";
+import {
+  beginLocalEdit,
+  currentLayoutEpoch,
+  currentServerGeneration,
+  enqueue,
+  fail,
+  markLayoutSaved,
+  shouldApplyServerLayout,
+} from "../utils/routineLayoutGate";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
@@ -86,7 +107,49 @@ type ListItem =
       routine: RoutineResponseDto;
     };
 
-const FOLDER_HOVER_MS = 400;
+const FOLDER_HOVER_MS = 200;
+const DRAG_LONG_PRESS_MS = 250;
+
+type FolderDropSurfaceProps = {
+  folderId: string;
+  armedFolderId: SharedValue<string | null>;
+  armedBorderColor: string;
+  armedBackgroundColor: string;
+  idleBackgroundColor: string;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+};
+
+/**
+ * Color-only drop-target highlight. Uses a shared value so mid-drag updates
+ * do not remeasure list cells (avoids overlap from setState + growing rows).
+ */
+function FolderDropSurface({
+  folderId,
+  armedFolderId,
+  armedBorderColor,
+  armedBackgroundColor,
+  idleBackgroundColor,
+  style,
+  children,
+}: FolderDropSurfaceProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const armed = armedFolderId.value === folderId;
+    return {
+      borderColor: armed ? armedBorderColor : "transparent",
+      backgroundColor: armed ? armedBackgroundColor : idleBackgroundColor,
+    };
+  }, [
+    folderId,
+    armedBorderColor,
+    armedBackgroundColor,
+    idleBackgroundColor,
+  ]);
+
+  return (
+    <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>
+  );
+}
 
 function getRoutineExercisePreview(
   routine: RoutineResponseDto,
@@ -144,10 +207,28 @@ export default function WorkoutScreen() {
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
   const [renameMode, setRenameMode] = useState<"create" | "rename">("rename");
   const [refreshing, setRefreshing] = useState(false);
+  /** Bumps after drag end so DraggableFlatList drops stale cell transforms. */
+  const [listRemountKey, setListRemountKey] = useState(0);
+  const listRef = useRef<{
+    scrollToOffset?: (params: { offset: number; animated?: boolean }) => void;
+  } | null>(null);
+  const listScrollYRef = useRef(0);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
+
+  const bumpListRemount = useCallback(() => {
+    pendingScrollRestoreRef.current = listScrollYRef.current;
+    setListRemountKey((key) => key + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    const y = pendingScrollRestoreRef.current;
+    if (y == null) return;
+    pendingScrollRestoreRef.current = null;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset?.({ offset: y, animated: false });
+    });
+  }, [listRemountKey]);
   const [processingMessage, setProcessingMessage] = useState<string | null>(
-    null
-  );
-  const [folderDropTargetId, setFolderDropTargetId] = useState<string | null>(
     null
   );
   const { workoutInProgress, clearWorkoutInProgress, patchWorkoutInProgress } =
@@ -170,7 +251,7 @@ export default function WorkoutScreen() {
     removeRoutineFromFolder,
     renameFolder,
     dissolveFolder,
-    setRootOrder,
+    replaceLayout,
     toggleFolderExpanded,
     getFolderIdForRoutine,
   } = useRoutineFolderStore(
@@ -186,7 +267,7 @@ export default function WorkoutScreen() {
       removeRoutineFromFolder: state.removeRoutineFromFolder,
       renameFolder: state.renameFolder,
       dissolveFolder: state.dissolveFolder,
-      setRootOrder: state.setRootOrder,
+      replaceLayout: state.replaceLayout,
       toggleFolderExpanded: state.toggleFolderExpanded,
       getFolderIdForRoutine: state.getFolderIdForRoutine,
     }))
@@ -203,6 +284,13 @@ export default function WorkoutScreen() {
     null
   );
   const folderDropTargetIdRef = useRef<string | null>(null);
+  const armedFolderId = useSharedValue<string | null>(null);
+  const layoutSnapshotRef = useRef<{
+    folders: RoutineFolder[];
+    rootOrder: RootKey[];
+    expandedFolderIds: string[];
+    routines: RoutineResponseDto[];
+  } | null>(null);
 
   const styles = useMemo(() => createStyles(theme), [theme]);
   const routinesById = useMemo(() => {
@@ -248,7 +336,6 @@ export default function WorkoutScreen() {
   }, [folders, rootOrder, routinesById, expandedFolderIds]);
 
   listDataRef.current = listData;
-  folderDropTargetIdRef.current = folderDropTargetId;
 
   useEffect(() => {
     if (hasConsumedTerminationMarkerRef.current) return;
@@ -392,7 +479,12 @@ export default function WorkoutScreen() {
   );
 
   const persistRoutineLayout = useCallback(
-    async (nextRootOrder: RootKey[], nextFolders: RoutineFolder[]) => {
+    async (
+      nextRootOrder: RootKey[],
+      nextFolders: RoutineFolder[],
+      ownedRoutineIds: string[],
+      editEpoch: number
+    ) => {
       const layoutFolders = nextFolders.map((folder) => ({
         id: folder.id,
         title: folder.title,
@@ -404,7 +496,6 @@ export default function WorkoutScreen() {
         return { type: parsed.type, id: parsed.id };
       });
 
-      // Ensure every owned routine is represented (API requires full coverage).
       const mentioned = new Set<string>();
       layoutRoot.forEach((item) => {
         if (item.type === "routine") mentioned.add(item.id);
@@ -412,18 +503,26 @@ export default function WorkoutScreen() {
       layoutFolders.forEach((folder) => {
         folder.routineIds.forEach((id) => mentioned.add(id));
       });
-      routines.forEach((routine) => {
-        if (!mentioned.has(routine.id)) {
-          layoutRoot.push({ type: "routine", id: routine.id });
+      ownedRoutineIds.forEach((id) => {
+        if (!mentioned.has(id)) {
+          layoutRoot.push({ type: "routine", id });
         }
       });
 
       try {
-        await saveRoutineLayout({
-          rootOrder: layoutRoot,
-          folders: layoutFolders,
+        await enqueue(async () => {
+          await saveRoutineLayout({
+            rootOrder: layoutRoot,
+            folders: layoutFolders,
+          });
+          markLayoutSaved(editEpoch);
         });
       } catch (error: CaughtError) {
+        if (fail(editEpoch) && layoutSnapshotRef.current) {
+          const snap = layoutSnapshotRef.current;
+          replaceLayout(snap.folders, snap.rootOrder, snap.expandedFolderIds);
+          setRoutines(snap.routines);
+        }
         Alert.alert(
           "Error",
           getErrorMessage(error) ||
@@ -431,18 +530,50 @@ export default function WorkoutScreen() {
         );
       }
     },
-    [routines]
+    [replaceLayout]
   );
 
+  const toDragListItem = useCallback((item: ListItem): DragListItem => {
+    if (item.type === "folder") {
+      return { key: item.key, type: "folder", folderId: item.folder.id };
+    }
+    if (item.type === "nested") {
+      return {
+        key: item.key,
+        type: "nested",
+        folderId: item.folderId,
+        routineId: item.routine.id,
+      };
+    }
+    return {
+      key: item.key,
+      type: "routine",
+      routineId: item.routine.id,
+    };
+  }, []);
+
   const fetchRoutines = useCallback(async () => {
+    const fetchEpoch = currentLayoutEpoch();
+    const fetchGeneration = currentServerGeneration();
     try {
       const [data, apiFolders] = await Promise.all([
         findAllRoutines(),
         fetchRoutineFolders(),
       ]);
 
+      if (draggingKeyRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const localState = useRoutineFolderStore.getState();
+      const allowLayoutHydrate = shouldApplyServerLayout(
+        fetchEpoch,
+        fetchGeneration
+      );
       const shouldMigrate =
+        allowLayoutHydrate &&
         !localState.migratedLocalFolders &&
         apiFolders.length === 0 &&
         localState.folders.length > 0;
@@ -522,16 +653,40 @@ export default function WorkoutScreen() {
         }
       }
 
-      if (apiFolders.length > 0 || localState.migratedLocalFolders) {
-        const hydrated = buildRootOrderFromApi(data, apiFolders);
-        setRoutines(data);
-        hydrateFromApi(hydrated.folders, hydrated.rootOrder);
-        if (!localState.migratedLocalFolders) {
-          markLocalFoldersMigrated();
+      if (allowLayoutHydrate) {
+        if (apiFolders.length > 0 || localState.migratedLocalFolders) {
+          const hydrated = buildRootOrderFromApi(data, apiFolders);
+          setRoutines(data);
+          hydrateFromApi(hydrated.folders, hydrated.rootOrder);
+          if (!localState.migratedLocalFolders) {
+            markLocalFoldersMigrated();
+          }
+        } else {
+          setRoutines(data);
+          syncWithRoutines(data.map((routine) => routine.id));
         }
       } else {
-        setRoutines(data);
-        syncWithRoutines(data.map((routine) => routine.id));
+        // Keep optimistic layout; still refresh routine payloads in store order.
+        const orderIds: string[] = [];
+        localState.rootOrder.forEach((key) => {
+          const parsed = parseRootKey(key);
+          if (parsed.type === "routine") {
+            orderIds.push(parsed.id);
+            return;
+          }
+          const folder = localState.folders.find((f) => f.id === parsed.id);
+          folder?.routineIds.forEach((id) => orderIds.push(id));
+        });
+        const byId = new Map(data.map((routine) => [routine.id, routine]));
+        const ordered: RoutineResponseDto[] = [];
+        orderIds.forEach((id) => {
+          const routine = byId.get(id);
+          if (routine) ordered.push(routine);
+        });
+        data.forEach((routine) => {
+          if (!orderIds.includes(routine.id)) ordered.push(routine);
+        });
+        setRoutines(ordered);
       }
       prefetchRoutineDetails(data);
     } catch (err) {
@@ -564,9 +719,9 @@ export default function WorkoutScreen() {
       clearTimeout(folderHoverTimerRef.current);
       folderHoverTimerRef.current = null;
     }
-    setFolderDropTargetId(null);
     folderDropTargetIdRef.current = null;
-  }, []);
+    armedFolderId.value = null;
+  }, [armedFolderId]);
 
   const openCreateFolderModal = () => {
     setRenameMode("create");
@@ -588,95 +743,78 @@ export default function WorkoutScreen() {
     setRenameMode("rename");
   };
 
-  const applyFlatListToStore = useCallback(
-    (data: ListItem[], options?: { forceAddToFolderId?: string | null }) => {
-      const nextFolderContents = new Map<string, string[]>();
-      folders.forEach((folder) => nextFolderContents.set(folder.id, []));
+  const handleRootDragEnd = useCallback(
+    ({ data, from, to }: { data: ListItem[]; from: number; to: number }) => {
+      const dropFolderId = folderDropTargetIdRef.current;
+      clearFolderHover();
 
-      const nextRootOrder: RootKey[] = [];
-      let i = 0;
-
-      while (i < data.length) {
-        const item = data[i];
-
-        if (item.type === "folder") {
-          nextRootOrder.push(folderKey(item.folder.id));
-          if (!nextFolderContents.has(item.folder.id)) {
-            nextFolderContents.set(item.folder.id, []);
-          }
-          let j = i + 1;
-          while (j < data.length && data[j].type === "nested") {
-            const nested = data[j] as Extract<ListItem, { type: "nested" }>;
-            if (nested.folderId !== item.folder.id) break;
-            nextFolderContents.get(item.folder.id)!.push(nested.routine.id);
-            j += 1;
-          }
-          i = j;
-          continue;
-        }
-
-        if (item.type === "nested") {
-          // Orphaned nested (dragged out of its folder block) → root.
-          nextRootOrder.push(routineKey(item.routine.id));
-          i += 1;
-          continue;
-        }
-
-        nextRootOrder.push(routineKey(item.routine.id));
-        i += 1;
-      }
-
-      const forceFolderId = options?.forceAddToFolderId;
       const draggedKey = draggingKeyRef.current;
-      if (forceFolderId && draggedKey) {
-        const draggedItem = listDataRef.current.find((row) => row.key === draggedKey);
-        const routineId =
-          draggedItem?.type === "routine" || draggedItem?.type === "nested"
-            ? draggedItem.routine.id
-            : null;
+      // Prefer post-drag row from `data` (order after gesture).
+      const draggedItem =
+        data.find((row) => row.key === draggedKey) ??
+        listDataRef.current.find((row) => row.key === draggedKey);
 
-        if (routineId) {
-          // Remove from all folders / root, then append to target folder.
-          nextFolderContents.forEach((ids, id) => {
-            nextFolderContents.set(
-              id,
-              ids.filter((rid) => rid !== routineId)
-            );
-          });
-          const filteredRoot = nextRootOrder.filter(
-            (key) => key !== routineKey(routineId)
-          );
-          nextRootOrder.length = 0;
-          nextRootOrder.push(...filteredRoot);
-          const targetIds = nextFolderContents.get(forceFolderId) ?? [];
-          if (!targetIds.includes(routineId)) {
-            targetIds.push(routineId);
-          }
-          nextFolderContents.set(forceFolderId, targetIds);
-          if (!nextRootOrder.includes(folderKey(forceFolderId))) {
-            nextRootOrder.unshift(folderKey(forceFolderId));
-          }
-        }
+      if (!draggedItem) {
+        draggingKeyRef.current = null;
+        bumpListRemount();
+        return;
       }
 
-      const nextFolders = folders.map((folder) => ({
-        ...folder,
-        routineIds: nextFolderContents.get(folder.id) ?? [],
-      }));
+      const flat = data.map(toDragListItem);
+      const draggedDrag = toDragListItem(draggedItem);
+      const orphanedOut =
+        draggedDrag.type === "nested" &&
+        isOrphanedNested(flat, draggedDrag);
 
-      setRootOrder(nextRootOrder);
-      useRoutineFolderStore.setState({ folders: nextFolders });
+      // Dwell on the origin folder while pulling out must not re-join.
+      const canDropOnFolder =
+        Boolean(dropFolderId) &&
+        (draggedItem.type === "routine" || draggedItem.type === "nested") &&
+        !(orphanedOut && dropFolderId === draggedDrag.folderId);
+
+      if (from === to && !canDropOnFolder && !orphanedOut) {
+        draggingKeyRef.current = null;
+        bumpListRemount();
+        return;
+      }
+
+      const storeState = useRoutineFolderStore.getState();
+      const editEpoch = beginLocalEdit();
+      layoutSnapshotRef.current = {
+        folders: storeState.folders,
+        rootOrder: storeState.rootOrder,
+        expandedFolderIds: storeState.expandedFolderIds,
+        routines,
+      };
+
+      const result = applyRoutineListDrag({
+        flat,
+        dragged: draggedDrag,
+        dropFolderId: canDropOnFolder ? dropFolderId : null,
+        folders: storeState.folders,
+        allRoutineIds: routines.map((routine) => routine.id),
+      });
+
+      let nextExpanded = storeState.expandedFolderIds;
+      if (
+        result.expandFolderId &&
+        !nextExpanded.includes(result.expandFolderId)
+      ) {
+        nextExpanded = [...nextExpanded, result.expandFolderId];
+      }
+
+      replaceLayout(result.folders, result.rootOrder, nextExpanded);
+      bumpListRemount();
 
       const orderedIds: string[] = [];
-      nextRootOrder.forEach((key) => {
+      result.rootOrder.forEach((key) => {
         const parsed = parseRootKey(key);
         if (parsed.type === "routine") {
           orderedIds.push(parsed.id);
           return;
         }
-        (nextFolderContents.get(parsed.id) ?? []).forEach((id) =>
-          orderedIds.push(id)
-        );
+        const folder = result.folders.find((f) => f.id === parsed.id);
+        folder?.routineIds.forEach((id) => orderedIds.push(id));
       });
 
       setRoutines((prev) => {
@@ -693,33 +831,22 @@ export default function WorkoutScreen() {
         return next;
       });
 
-      void persistRoutineLayout(nextRootOrder, nextFolders);
-    },
-    [folders, persistRoutineLayout, setRootOrder]
-  );
-
-  const handleRootDragEnd = useCallback(
-    ({ data, from, to }: { data: ListItem[]; from: number; to: number }) => {
-      const dropFolderId = folderDropTargetIdRef.current;
-      clearFolderHover();
-
-      const draggedKey = draggingKeyRef.current;
-      const draggedItem = listDataRef.current.find((row) => row.key === draggedKey);
-      const canDropOnFolder =
-        Boolean(dropFolderId) &&
-        (draggedItem?.type === "routine" || draggedItem?.type === "nested");
-
-      if (from === to && !canDropOnFolder) {
-        draggingKeyRef.current = null;
-        return;
-      }
-
-      applyFlatListToStore(data, {
-        forceAddToFolderId: canDropOnFolder ? dropFolderId : null,
-      });
+      void persistRoutineLayout(
+        result.rootOrder,
+        result.folders,
+        routines.map((routine) => routine.id),
+        editEpoch
+      );
       draggingKeyRef.current = null;
     },
-    [applyFlatListToStore, clearFolderHover]
+    [
+      bumpListRemount,
+      clearFolderHover,
+      persistRoutineLayout,
+      replaceLayout,
+      routines,
+      toDragListItem,
+    ]
   );
 
   const openRoutineOptions = (routine: RoutineResponseDto) => {
@@ -869,35 +996,35 @@ export default function WorkoutScreen() {
         ]}
       >
         <View style={styles.cardTopRow}>
-          {options.drag ? (
-            <TouchableOpacity
-              style={styles.dragHandle}
-              onLongPress={options.drag}
-              delayLongPress={180}
-              disabled={Boolean(processingMessage)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Reordenar rutina"
-              accessibilityHint="Mantén pulsado y arrastra para cambiar el orden o soltar sobre un grupo"
-            >
-              <MaterialIcons
-                name="drag-indicator"
-                size={20}
-                color={theme.textTertiary}
-              />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.dragHandleSpacer} />
-          )}
+          <Pressable
+            style={styles.dragHandle}
+            onLongPress={options.drag}
+            delayLongPress={DRAG_LONG_PRESS_MS}
+            disabled={Boolean(processingMessage) || !options.drag}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Reordenar rutina"
+            accessibilityHint="Mantén pulsado y arrastra para cambiar el orden"
+          >
+            <MaterialIcons
+              name="drag-indicator"
+              size={20}
+              color={theme.textTertiary}
+            />
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={styles.routineBody}
-            activeOpacity={0.7}
+            disabled={Boolean(processingMessage)}
             onPress={() =>
               navigation.navigate("RoutineDetail", {
                 routineId: routine.id,
                 routine: details ?? routine,
               })
             }
+            onLongPress={options.drag}
+            delayLongPress={DRAG_LONG_PRESS_MS}
+            accessibilityLabel="Rutina"
+            accessibilityHint="Toca para abrir. Mantén pulsado para reordenar."
           >
             <Text
               style={[
@@ -917,9 +1044,9 @@ export default function WorkoutScreen() {
             >
               {preview}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={styles.moreButton}
             onPress={() => openRoutineOptions(routine)}
             disabled={Boolean(processingMessage)}
@@ -930,7 +1057,7 @@ export default function WorkoutScreen() {
               size={22}
               color={theme.textTertiary}
             />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <TouchableOpacity
@@ -1093,9 +1220,28 @@ export default function WorkoutScreen() {
     >
       <View style={styles.listWrapper}>
         <DraggableFlatList
+          ref={listRef as any}
+          key={`routine-list-${listRemountKey}`}
           data={loading || listData.length === 0 ? [] : listData}
+          extraData={{
+            rootOrder,
+            folders,
+            expandedFolderIds,
+            listRemountKey,
+          }}
           keyExtractor={(item) => item.key}
-          activationDistance={12}
+          onScroll={(event) => {
+            listScrollYRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+          activationDistance={8}
+          dragHitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          animationConfig={{
+            damping: 22,
+            stiffness: 280,
+            mass: 0.35,
+            overshootClamping: true,
+          }}
           onDragBegin={(index) => {
             draggingKeyRef.current = listDataRef.current[index]?.key ?? null;
             clearFolderHover();
@@ -1105,8 +1251,8 @@ export default function WorkoutScreen() {
               clearTimeout(folderHoverTimerRef.current);
               folderHoverTimerRef.current = null;
             }
-            setFolderDropTargetId(null);
             folderDropTargetIdRef.current = null;
+            armedFolderId.value = null;
 
             const item = listDataRef.current[index];
             const dragged = listDataRef.current.find(
@@ -1119,9 +1265,10 @@ export default function WorkoutScreen() {
 
             if (!canHoverFolder || !item || item.type !== "folder") return;
 
+            // Shared value + ref only — no React setState mid-drag (avoids overlap).
             folderHoverTimerRef.current = setTimeout(() => {
-              setFolderDropTargetId(item.folder.id);
               folderDropTargetIdRef.current = item.folder.id;
+              armedFolderId.value = item.folder.id;
             }, FOLDER_HOVER_MS);
           }}
           onDragEnd={({ data, from, to }) => {
@@ -1147,123 +1294,165 @@ export default function WorkoutScreen() {
             isActive,
           }: RenderItemParams<ListItem>) => {
             if (item.type === "folder") {
-              const isDropTarget = folderDropTargetId === item.folder.id;
               const isExpanded = expandedFolderIds.includes(item.folder.id);
               const count = item.folder.routineIds.length;
               const showEmptyHint = isExpanded && count === 0;
 
+              const startFolderDrag = () => {
+                if (processingMessage) return;
+                // Immediate drag: applyRoutineListDrag preserves folder.routineIds
+                // even if nested rows visually separate during the gesture.
+                drag();
+              };
+
               return (
-                <ScaleDecorator>
-                  <View
-                    style={[
-                      styles.folderCard,
-                      isExpanded && styles.folderCardExpanded,
-                      {
-                        backgroundColor: isDropTarget
-                          ? theme.selection
-                          : isDark
-                            ? theme.surfaceElevated
-                            : theme.backgroundSecondary,
-                        borderColor: isDropTarget
-                          ? theme.primary
-                          : "transparent",
-                        opacity: isActive ? 0.94 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.folderHeader}>
-                      <TouchableOpacity
-                        style={styles.dragHandle}
-                        onLongPress={drag}
-                        delayLongPress={180}
-                        disabled={Boolean(processingMessage)}
-                        accessibilityLabel="Reordenar grupo"
-                      >
-                        <MaterialIcons
-                          name="drag-indicator"
-                          size={20}
-                          color={theme.textTertiary}
-                        />
-                      </TouchableOpacity>
+                <FolderDropSurface
+                  folderId={item.folder.id}
+                  armedFolderId={armedFolderId}
+                  armedBorderColor={theme.primary}
+                  armedBackgroundColor={theme.selection}
+                  idleBackgroundColor={
+                    isDark ? theme.surfaceElevated : theme.backgroundSecondary
+                  }
+                  style={[
+                    styles.folderCard,
+                    isExpanded && styles.folderCardExpanded,
+                    {
+                      opacity: isActive ? 0.94 : 1,
+                      zIndex: isActive ? 10 : 0,
+                      elevation: isActive ? 4 : 0,
+                    },
+                  ]}
+                >
+                  <View style={styles.folderHeader}>
+                    <Pressable
+                      style={styles.dragHandle}
+                      onLongPress={startFolderDrag}
+                      delayLongPress={DRAG_LONG_PRESS_MS}
+                      disabled={Boolean(processingMessage)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Reordenar grupo"
+                      accessibilityHint="Mantén pulsado y arrastra para cambiar el orden"
+                    >
+                      <MaterialIcons
+                        name="drag-indicator"
+                        size={20}
+                        color={theme.textTertiary}
+                      />
+                    </Pressable>
 
-                      <TouchableOpacity
-                        style={styles.folderHeaderBody}
-                        onPress={() => toggleFolderExpanded(item.folder.id)}
-                        activeOpacity={0.75}
-                      >
-                        <MaterialIcons
-                          name={isExpanded ? "folder-open" : "folder"}
-                          size={22}
-                          color={theme.primary}
-                        />
-                        <View style={styles.folderTextWrap}>
-                          <Text
-                            style={[styles.folderTitle, { color: theme.text }]}
-                            numberOfLines={1}
-                          >
-                            {item.folder.title}
-                          </Text>
-                          {isDropTarget ? (
-                            <Text
-                              style={[
-                                styles.folderDropHint,
-                                { color: theme.primary },
-                              ]}
-                            >
-                              Soltar para añadir
-                            </Text>
-                          ) : null}
-                        </View>
-                        <View
-                          style={[
-                            styles.folderCountBadge,
-                            { backgroundColor: theme.selection },
-                          ]}
+                    <Pressable
+                      style={styles.folderHeaderBody}
+                      onPress={() => toggleFolderExpanded(item.folder.id)}
+                      onLongPress={startFolderDrag}
+                      delayLongPress={DRAG_LONG_PRESS_MS}
+                      disabled={Boolean(processingMessage)}
+                      accessibilityLabel="Grupo"
+                      accessibilityHint="Toca para abrir. Mantén pulsado para reordenar."
+                    >
+                      <MaterialIcons
+                        name={isExpanded ? "folder-open" : "folder"}
+                        size={22}
+                        color={theme.primary}
+                      />
+                      <View style={styles.folderTextWrap}>
+                        <Text
+                          style={[styles.folderTitle, { color: theme.text }]}
+                          numberOfLines={1}
                         >
-                          <Text
-                            style={[
-                              styles.folderCountText,
-                              { color: theme.primary },
-                            ]}
-                          >
-                            {count}
-                          </Text>
-                        </View>
-                        <MaterialIcons
-                          name={isExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                          size={22}
-                          color={theme.textTertiary}
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.moreButton}
-                        onPress={() => openFolderOptions(item.folder)}
-                      >
-                        <MaterialIcons
-                          name="more-horiz"
-                          size={22}
-                          color={theme.textTertiary}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    {showEmptyHint ? (
-                      <Text
+                          {item.folder.title}
+                        </Text>
+                      </View>
+                      <View
                         style={[
-                          styles.folderEmptyHint,
-                          { color: theme.textTertiary },
+                          styles.folderCountBadge,
+                          { backgroundColor: theme.selection },
                         ]}
                       >
-                        Arrastra rutinas aquí para agruparlas
-                      </Text>
-                    ) : null}
+                        <Text
+                          style={[
+                            styles.folderCountText,
+                            { color: theme.primary },
+                          ]}
+                        >
+                          {count}
+                        </Text>
+                      </View>
+                      <MaterialIcons
+                        name={
+                          isExpanded
+                            ? "keyboard-arrow-up"
+                            : "keyboard-arrow-down"
+                        }
+                        size={22}
+                        color={theme.textTertiary}
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.moreButton}
+                      onPress={() => openFolderOptions(item.folder)}
+                    >
+                      <MaterialIcons
+                        name="more-horiz"
+                        size={22}
+                        color={theme.textTertiary}
+                      />
+                    </Pressable>
                   </View>
-                </ScaleDecorator>
+
+                  {showEmptyHint ? (
+                    <Text
+                      style={[
+                        styles.folderEmptyHint,
+                        { color: theme.textTertiary },
+                      ]}
+                    >
+                      Arrastra rutinas aquí para agruparlas
+                    </Text>
+                  ) : null}
+                </FolderDropSurface>
               );
             }
 
             if (item.type === "nested") {
+              // Defensive: only use nested chrome when this row still sits under
+              // its folder in the committed list (avoids orphan purple-rail cards).
+              const nestedIndex = listData.findIndex(
+                (row) => row.key === item.key
+              );
+              let underParent = false;
+              for (let i = nestedIndex - 1; i >= 0; i -= 1) {
+                const prev = listData[i];
+                if (
+                  prev.type === "folder" &&
+                  prev.folder.id === item.folderId
+                ) {
+                  underParent = true;
+                  break;
+                }
+                if (
+                  prev.type === "nested" &&
+                  prev.folderId === item.folderId
+                ) {
+                  continue;
+                }
+                break;
+              }
+
+              if (!underParent) {
+                return (
+                  <View
+                    style={{
+                      zIndex: isActive ? 10 : 0,
+                      elevation: isActive ? 4 : 0,
+                    }}
+                  >
+                    {renderRoutineCard(item.routine, { drag, isActive })}
+                  </View>
+                );
+              }
+
               const folder = folders.find((f) => f.id === item.folderId);
               const isLastNested =
                 !!folder &&
@@ -1271,37 +1460,42 @@ export default function WorkoutScreen() {
                   item.routine.id;
 
               return (
-                <ScaleDecorator>
-                  <View
-                    style={[
-                      styles.nestedListWrap,
-                      {
-                        backgroundColor: isDark
-                          ? theme.surfaceElevated
-                          : theme.backgroundSecondary,
-                        borderLeftColor: theme.primary,
-                      },
-                      isLastNested && styles.nestedListWrapLast,
-                    ]}
-                  >
-                    {renderRoutineCard(item.routine, {
-                      drag,
-                      isActive,
-                      nested: true,
-                      isLastNested,
-                    })}
-                  </View>
-                </ScaleDecorator>
+                <View
+                  style={[
+                    styles.nestedListWrap,
+                    {
+                      backgroundColor: isDark
+                        ? theme.surfaceElevated
+                        : theme.backgroundSecondary,
+                      borderLeftColor: theme.primary,
+                      zIndex: isActive ? 10 : 0,
+                      elevation: isActive ? 4 : 0,
+                    },
+                    isLastNested && styles.nestedListWrapLast,
+                  ]}
+                >
+                  {renderRoutineCard(item.routine, {
+                    drag,
+                    isActive,
+                    nested: true,
+                    isLastNested,
+                  })}
+                </View>
               );
             }
 
             return (
-              <ScaleDecorator>
+              <View
+                style={{
+                  zIndex: isActive ? 10 : 0,
+                  elevation: isActive ? 4 : 0,
+                }}
+              >
                 {renderRoutineCard(item.routine, {
                   drag,
                   isActive,
                 })}
-              </ScaleDecorator>
+              </View>
             );
           }}
         />
@@ -1737,7 +1931,7 @@ const createStyles = (theme: Theme) =>
       marginBottom: 12,
     },
     nestedListWrap: {
-      marginTop: -4,
+      marginTop: 0,
       marginBottom: 0,
       paddingTop: 4,
       borderLeftWidth: 3,
@@ -1780,11 +1974,6 @@ const createStyles = (theme: Theme) =>
     folderTitle: {
       fontSize: RFValue(15),
       fontWeight: "700",
-    },
-    folderDropHint: {
-      fontSize: RFValue(11),
-      marginTop: 2,
-      fontWeight: "600",
     },
     folderCountBadge: {
       minWidth: 24,

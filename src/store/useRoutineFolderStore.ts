@@ -35,6 +35,12 @@ type RoutineFolderState = {
   renameFolder: (folderId: string, title: string) => void;
   dissolveFolder: (folderId: string) => void;
   setRootOrder: (rootOrder: RootKey[]) => void;
+  replaceLayout: (
+    folders: RoutineFolder[],
+    rootOrder: RootKey[],
+    expandedFolderIds?: string[]
+  ) => void;
+  setFolderExpanded: (folderId: string, expanded: boolean) => void;
   toggleFolderExpanded: (folderId: string) => void;
   getFolderIdForRoutine: (routineId: string) => string | null;
 };
@@ -297,6 +303,36 @@ export const useRoutineFolderStore = create<RoutineFolderState>()(
       },
 
       setRootOrder: (rootOrder) => set({ rootOrder }),
+
+      replaceLayout: (folders, rootOrder, expandedFolderIds) => {
+        set((state) => ({
+          folders,
+          rootOrder,
+          expandedFolderIds:
+            expandedFolderIds !== undefined
+              ? expandedFolderIds
+              : state.expandedFolderIds,
+        }));
+      },
+
+      setFolderExpanded: (folderId, expanded) => {
+        set((state) => {
+          const isOpen = state.expandedFolderIds.includes(folderId);
+          if (expanded && !isOpen) {
+            return {
+              expandedFolderIds: [...state.expandedFolderIds, folderId],
+            };
+          }
+          if (!expanded && isOpen) {
+            return {
+              expandedFolderIds: state.expandedFolderIds.filter(
+                (id) => id !== folderId
+              ),
+            };
+          }
+          return state;
+        });
+      },
 
       toggleFolderExpanded: (folderId) => {
         set((state) => ({
