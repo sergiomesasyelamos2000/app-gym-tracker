@@ -15,6 +15,10 @@
 		A10000000000000000000012 /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* RestTimerLiveActivity.swift */; };
 		A10000000000000000000013 /* RestTimerLiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* RestTimerLiveActivityModule.swift */; };
 		A10000000000000000000014 /* RestTimerLiveActivityBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* RestTimerLiveActivityBridge.m */; };
+		CF7C2144AA76499FA08A7C8F /* WorkoutLiveActivity.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = E93080E092584DF4A3E31695 /* WorkoutLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		03C19A34D3EA43BE9551349E /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */; };
+		DD6BF2E6B12D47B5AACD2B2F /* WorkoutLiveIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */; };
+		35942C9D9F3F4BBA86E1A4AB /* WorkoutLiveAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* WorkoutLiveAttributes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,10 +34,22 @@
 		A10000000000000000000002 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivity.swift; path = EvoFit/WorkoutLive/RestTimerLiveActivity.swift; sourceTree = "<group>"; };
 		A10000000000000000000003 /* RestTimerLiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestTimerLiveActivityModule.swift; path = EvoFit/WorkoutLive/RestTimerLiveActivityModule.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* RestTimerLiveActivityBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = RestTimerLiveActivityBridge.m; path = EvoFit/WorkoutLive/RestTimerLiveActivityBridge.m; sourceTree = "<group>"; };
+		E93080E092584DF4A3E31695 /* WorkoutLiveActivity.appex */ = {isa = PBXFileReference; name = "WorkoutLiveActivity.appex"; path = "WorkoutLiveActivity.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
+		943B78C6A8FE447E9FAE2ED4 /* Info.plist */ = {isa = PBXFileReference; name = "Info.plist"; path = "WorkoutLiveActivity/Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; explicitFileType = undefined; includeInIndex = 0; };
+		7DB9F1EF9D88417093634C31 /* WorkoutLiveActivity.entitlements */ = {isa = PBXFileReference; name = "WorkoutLiveActivity.entitlements"; path = "WorkoutLiveActivity/WorkoutLiveActivity.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; name = "WorkoutLiveActivityWidget.swift"; path = "WorkoutLiveActivity/WorkoutLiveActivityWidget.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */ = {isa = PBXFileReference; name = "WorkoutLiveIntents.swift"; path = "WorkoutLiveActivity/WorkoutLiveIntents.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A007EE5EC6E94D64871B2A96 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -90,6 +106,7 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
+				4E4DBB4E927943BCB03F87EC /* WorkoutLiveActivity */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -100,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* EvoFit.app */,
+				E93080E092584DF4A3E31695 /* WorkoutLiveActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,6 +129,17 @@
 			);
 			name = Supporting;
 			path = EvoFit/Supporting;
+			sourceTree = "<group>";
+		};
+		4E4DBB4E927943BCB03F87EC /* WorkoutLiveActivity */ = {
+			isa = "PBXGroup";
+			children = (
+				943B78C6A8FE447E9FAE2ED4 /* Info.plist */,
+				7DB9F1EF9D88417093634C31 /* WorkoutLiveActivity.entitlements */,
+				FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */,
+				A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */,
+			);
+			name = WorkoutLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -126,15 +155,33 @@
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
+				6591E4C48149432D86F6D9C2 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B7080A09B5DA4DE999869E50 /* PBXTargetDependency */,
 			);
 			name = EvoFit;
 			productName = EvoFit;
 			productReference = 13B07F961A680F5B00A75B9A /* EvoFit.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DB393DA35F6A47B59DFA24F8 /* "WorkoutLiveActivity" */ = {
+			isa = PBXNativeTarget;
+			name = "WorkoutLiveActivity";
+			productName = "WorkoutLiveActivity";
+			productReference = E93080E092584DF4A3E31695;
+			productType = "com.apple.product-type.app-extension";
+			buildConfigurationList = E98095B4B59B47938F687737;
+			buildPhases = (
+				B96E62EF64654E5EAEB1CB5D /* Sources */,
+				A007EE5EC6E94D64871B2A96 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
 		};
 /* End PBXNativeTarget section */
 
@@ -163,6 +210,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* EvoFit */,
+				DB393DA35F6A47B59DFA24F8 /* "WorkoutLiveActivity" */,
 			);
 		};
 /* End PBXProject section */
@@ -254,6 +302,16 @@
 				A10000000000000000000012 /* RestTimerLiveActivity.swift in Sources */,
 				A10000000000000000000013 /* RestTimerLiveActivityModule.swift in Sources */,
 				A10000000000000000000014 /* RestTimerLiveActivityBridge.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B96E62EF64654E5EAEB1CB5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				03C19A34D3EA43BE9551349E /* WorkoutLiveActivityWidget.swift in Sources */,
+				DD6BF2E6B12D47B5AACD2B2F /* WorkoutLiveIntents.swift in Sources */,
+				35942C9D9F3F4BBA86E1A4AB /* WorkoutLiveAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -433,6 +491,44 @@
 			};
 			name = Release;
 		};
+		1D9A9717DF1A4783A45AE728 /* Debug */ = {
+			name = Debug;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "WorkoutLiveActivity";
+				SKIP_INSTALL = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.smy862.app.WorkoutLiveActivity";
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = WorkoutLiveActivity/WorkoutLiveActivity.entitlements;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_VERSION = 5.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				MARKETING_VERSION = 1.0.1;
+				CURRENT_PROJECT_VERSION = 71;
+			};
+		};
+		CEBC8E848F0E4F3BA021D69C /* Release */ = {
+			name = Release;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "WorkoutLiveActivity";
+				SKIP_INSTALL = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.smy862.app.WorkoutLiveActivity";
+				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = WorkoutLiveActivity/WorkoutLiveActivity.entitlements;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_VERSION = 5.0;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				MARKETING_VERSION = 1.0.1;
+				CURRENT_PROJECT_VERSION = 71;
+			};
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -454,7 +550,48 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		E98095B4B59B47938F687737 /* Build configuration list for PBXNativeTarget "WorkoutLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D9A9717DF1A4783A45AE728 /* Debug */,
+				CEBC8E848F0E4F3BA021D69C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6591E4C48149432D86F6D9C2 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF7C2144AA76499FA08A7C8F /* WorkoutLiveActivity.appex in Copy Files */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Embed Foundation Extensions";
+			dstPath = "";
+			dstSubfolderSpec = 13;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B7080A09B5DA4DE999869E50 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DB393DA35F6A47B59DFA24F8 /* "WorkoutLiveActivity" */;
+			targetProxy = AD970B4AC8B64AB39B02AB9A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		AD970B4AC8B64AB39B02AB9A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DB393DA35F6A47B59DFA24F8;
+			remoteInfo = "WorkoutLiveActivity";
+		};
+/* End PBXContainerItemProxy section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

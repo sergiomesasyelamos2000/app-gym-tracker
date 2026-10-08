@@ -42,12 +42,13 @@ const CustomToast = ({
   const { width } = useWindowDimensions();
 
   // Clamp progress: nunca negativo, nunca mayor a 1
-  // FIX: no ocultar botones cuando progress <= 0; los botones siempre deben ser accesibles
   const safeProgress = Math.max(0, Math.min(1, progress));
 
   const ringRadius = 27;
   const ringStroke = 6;
   const ringCircumference = 2 * Math.PI * ringRadius;
+  // Numeric offset avoids Animated SVG Circle unmount crashes (RNSVG NPE).
+  const ringStrokeDashoffset = ringCircumference * (1 - safeProgress);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "test") {
@@ -55,22 +56,23 @@ const CustomToast = ({
       return;
     }
 
-    Animated.timing(animatedProgress, {
+    const animation = Animated.timing(animatedProgress, {
       toValue: safeProgress,
       duration: 260,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
-    }).start();
+    });
+    animation.start();
+
+    return () => {
+      animation.stop();
+      animatedProgress.stopAnimation();
+    };
   }, [safeProgress, animatedProgress]);
 
   const interpolatedWidth = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
-  });
-
-  const interpolatedRingOffset = animatedProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [ringCircumference, 0],
   });
 
   const progressTint =
@@ -130,7 +132,6 @@ const CustomToast = ({
   return (
     <View style={[styles.toastContainer, { width: width * 0.93 }]}>
       <View style={styles.topRow}>
-        {/* Sección izquierda: anillo + título */}
         <View style={styles.timerSection}>
           <View style={styles.ringWrapper}>
             <Svg
@@ -147,7 +148,7 @@ const CustomToast = ({
                 strokeWidth={ringStroke}
                 fill="transparent"
               />
-              <AnimatedCircle
+              <Circle
                 cx={ringRadius + ringStroke}
                 cy={ringRadius + ringStroke}
                 r={ringRadius}
@@ -155,8 +156,8 @@ const CustomToast = ({
                 strokeWidth={ringStroke}
                 strokeLinecap="round"
                 fill="transparent"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={interpolatedRingOffset}
+                strokeDasharray={`${ringCircumference} ${ringCircumference}`}
+                strokeDashoffset={ringStrokeDashoffset}
                 transform={`rotate(-90 ${ringRadius + ringStroke} ${
                   ringRadius + ringStroke
                 })`}
@@ -177,13 +178,7 @@ const CustomToast = ({
           </View>
         </View>
 
-        {/* Sección derecha: controles */}
         <View style={styles.controls}>
-          {/* 
-            FIX: Botones −15s y +15s siempre visibles mientras el toast esté montado.
-            Antes estaban dentro de {safeProgress > 0 && ...}, lo que los ocultaba
-            cuando el tiempo llegaba a 0, impidiendo añadir tiempo en el último segundo.
-          */}
           <View style={styles.timeActions}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -203,14 +198,6 @@ const CustomToast = ({
             </TouchableOpacity>
           </View>
 
-          {/*
-            FIX: Botón "Omitir" en lugar de "X".
-            - Texto claro: el usuario sabe que omite el descanso.
-            - Siempre visible cuando onCancel está disponible.
-            - Llama directamente a handleCancel, que invoca onCancel()
-              → handleCancelRestTimer en RoutineDetailScreen
-              → limpia countdownRef, cancela notificación, llama endRestTimerLive().
-          */}
           {(onCancel || onDismissKeyboard) && (
             <View style={styles.cancelRow}>
               {onCancel && (
@@ -239,7 +226,6 @@ const CustomToast = ({
         </View>
       </View>
 
-      {/* Barra de progreso: se muestra siempre que haya progreso > 0 */}
       {safeProgress > 0 && (
         <View style={styles.progressBarContainer}>
           <Animated.View
@@ -253,8 +239,6 @@ const CustomToast = ({
     </View>
   );
 };
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
@@ -339,8 +323,6 @@ const createStyles = (theme: Theme, isDark: boolean) =>
       fontWeight: "700",
       fontSize: 13,
     },
-    // FIX: cancelButton redimensionado para acomodar el texto "Omitir"
-    // en lugar del símbolo "X" que requería solo 32x32px
     cancelRow: {
       flexDirection: "row",
       alignItems: "center",

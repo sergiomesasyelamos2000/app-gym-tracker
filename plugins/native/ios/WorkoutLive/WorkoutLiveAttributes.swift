@@ -1,6 +1,5 @@
 import ActivityKit
 import Foundation
-import SwiftUI
 
 @available(iOS 16.2, *)
 public struct WorkoutLiveAttributes: ActivityAttributes {

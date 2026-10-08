@@ -3,13 +3,17 @@ const {
   withEntitlementsPlist,
   withInfoPlist,
   withXcodeProject,
-  IOSConfig,
 } = require("expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
+const {
+  APP_GROUP,
+  EXTENSION_NAME,
+  detectAppFolderName,
+  ensureWorkoutLiveActivityTarget,
+  syncNativeSources,
+} = require("./workoutLiveActivityXcode");
 
-const APP_GROUP = "group.com.smy862.app";
-const EXTENSION_NAME = "WorkoutLiveActivity";
 const EXTENSION_BUNDLE_SUFFIX = ".WorkoutLiveActivity";
 
 /**
@@ -17,11 +21,15 @@ const EXTENSION_BUNDLE_SUFFIX = ".WorkoutLiveActivity";
  * - Info.plist Live Activities flags
  * - App Group entitlement on main app
  * - EAS appExtensions metadata
- * - Android FGS permissions / service merge notes (android/ already patched)
- * - Ensures bridge Swift sources exist under ios/EvoFit/WorkoutLive
+ * - Copy canonical native sources into ios/ (survives prebuild --clean)
+ * - Embed WorkoutLiveActivity Widget Extension target
+ * - Android FGS permissions / service merge
  */
 const withWorkoutLiveActivity = (config) => {
   const bundleIdentifier = config.ios?.bundleIdentifier ?? "com.smy862.app";
+  const extensionBundleId = `${bundleIdentifier}${EXTENSION_BUNDLE_SUFFIX}`;
+  const marketingVersion = String(config.version ?? "1.0.0");
+  const currentProjectVersion = String(config.ios?.buildNumber ?? "1");
 
   config.extra = config.extra ?? {};
   config.extra.eas = config.extra.eas ?? {};
@@ -42,7 +50,7 @@ const withWorkoutLiveActivity = (config) => {
           ext.targetName === EXTENSION_NAME
             ? {
                 ...ext,
-                bundleIdentifier: `${bundleIdentifier}${EXTENSION_BUNDLE_SUFFIX}`,
+                bundleIdentifier: extensionBundleId,
                 entitlements: {
                   "com.apple.security.application-groups": [APP_GROUP],
                 },
@@ -55,7 +63,7 @@ const withWorkoutLiveActivity = (config) => {
           ),
           {
             targetName: EXTENSION_NAME,
-            bundleIdentifier: `${bundleIdentifier}${EXTENSION_BUNDLE_SUFFIX}`,
+            bundleIdentifier: extensionBundleId,
             entitlements: {
               "com.apple.security.application-groups": [APP_GROUP],
             },
@@ -77,6 +85,24 @@ const withWorkoutLiveActivity = (config) => {
         APP_GROUP,
       ];
     }
+    return nextConfig;
+  });
+
+  config = withDangerousMod(config, [
+    "ios",
+    async (nextConfig) => {
+      syncNativeSources(nextConfig.modRequest.projectRoot);
+      return nextConfig;
+    },
+  ]);
+
+  config = withXcodeProject(config, (nextConfig) => {
+    ensureWorkoutLiveActivityTarget(nextConfig.modResults, {
+      bundleIdentifier: extensionBundleId,
+      marketingVersion,
+      currentProjectVersion,
+      appFolderName: detectAppFolderName(nextConfig.modRequest.projectRoot),
+    });
     return nextConfig;
   });
 

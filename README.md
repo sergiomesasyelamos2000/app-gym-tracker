@@ -164,7 +164,7 @@ El plugin declara la extensión en `extra.eas.build.experimental.ios.appExtensio
 5. Prueba completar serie y los controles de descanso desde el widget.
 6. Al acabar el descanso, la notificación local “Descanso Completado” (si el toggle de Perfil está activo).
 
-**Nota:** si en iOS el Lock Screen no muestra el widget pero el build es correcto, suele ser App Group / provisioning de la extensión, o que el **Widget Extension target** no esté embebido en el proyecto nativo que compila EAS. La metadata de `appExtensions` cubre firmas; el target del widget debe existir en el proyecto Xcode generado/commiteado.
+**Nota:** el target `WorkoutLiveActivity` queda embebido en el `project.pbxproj` commitado y también lo recrea `plugins/withWorkoutLiveActivity.js` tras `expo prebuild --clean` (fuentes canónicas en `plugins/native/ios/`). La metadata `appExtensions` de EAS firma `com.smy862.app.WorkoutLiveActivity`. Si el Lock Screen sigue vacío en un IPA, revisa App Group / provisioning de la extensión y que el IPA contenga `PlugIns/WorkoutLiveActivity.appex`.
 
 ### Identifiers de referencia
 

@@ -107,6 +107,11 @@ import {
 } from "../services/routineService";
 import { calculateVolume, initializeSets } from "../utils/routineHelpers";
 import {
+  planLeaveRest,
+  shouldAbortLeaveSideEffects,
+  type LeaveRestReason,
+} from "../utils/leaveRestPlan";
+import {
   buildNextSetSummary,
   buildLiveCompletionFingerprint,
   findNextIncompleteSet,
@@ -225,6 +230,16 @@ export default function RoutineDetailScreen() {
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const restTimerEndTimeRef = useRef<number | null>(null);
   const restTimeRemainingRef = useRef(0);
+  const restEpochRef = useRef(0);
+  const restActiveRef = useRef(false);
+  const leaveRestInFlightRef = useRef(false);
+  const activeNotificationIdRef = useRef<string | null>(null);
+  const leaveRestRef = useRef<
+    (options: {
+      reason: LeaveRestReason;
+      nativeAlreadyUpdated?: boolean;
+    }) => Promise<void>
+  >(async () => undefined);
   const workoutStartTimeRef = useRef<number | null>(null);
   const liveExerciseIdRef = useRef<string | null>(null);
   const liveSnapshotRef = useRef<WorkoutLiveSnapshot | null>(null);
@@ -567,10 +582,13 @@ export default function RoutineDetailScreen() {
     void notificationService.cancelAllRestTimers();
     void endWorkoutLive();
     if (countdownRef.current) clearInterval(countdownRef.current);
+    restActiveRef.current = false;
+    restEpochRef.current += 1;
     setRestTimerEndTime(null);
     restTimerEndTimeRef.current = null;
     setShowRestToast(false);
     setRestTimeRemaining(0);
+    activeNotificationIdRef.current = null;
     setActiveNotificationId(null);
     setPendingTerminationAt(null);
   }, [
@@ -652,11 +670,20 @@ export default function RoutineDetailScreen() {
     currentExerciseNameRef.current = currentExerciseName;
   }, [currentExerciseName]);
 
+  useEffect(() => {
+    activeNotificationIdRef.current = activeNotificationId;
+  }, [activeNotificationId]);
+
   const clearRestCountdownInterval = useCallback(() => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
       countdownRef.current = null;
     }
+  }, []);
+
+  const assignRestNotificationId = useCallback((id: string | null) => {
+    activeNotificationIdRef.current = id;
+    setActiveNotificationId(id);
   }, []);
 
   /** Tick from absolute end time so UI stays in sync with the notification. */
@@ -678,23 +705,10 @@ export default function RoutineDetailScreen() {
 
       if (remaining <= 0) {
         clearRestCountdownInterval();
-        setShowRestToast(false);
-        setActiveNotificationId(null);
-        setRestTimerEndTime(null);
-        restTimerEndTimeRef.current = null;
-        // Keep workout Live Activity; only leave rest mode.
-        const startedAt =
-          workoutStartTimeRef.current ??
-          Date.now() - durationRef.current * 1000;
-        void updateWorkoutLive({
-          workoutStartedAtMs: startedAt,
-          exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
-          imageUrl: undefined,
-          nextSetSummary: undefined,
-          isResting: false,
-          restEndAtMs: null,
+        void leaveRestRef.current({
+          reason: "expired",
+          nativeAlreadyUpdated: false,
         });
-        void playRestCompleteFeedback();
       }
     }, 250);
   }, [clearRestCountdownInterval]);
@@ -1263,6 +1277,9 @@ export default function RoutineDetailScreen() {
       Math.floor((endTimestampMs - Date.now()) / 1000)
     );
 
+    restActiveRef.current = true;
+    restEpochRef.current += 1;
+    const epochAtStart = restEpochRef.current;
     setShowRestToast(true);
     setRestTimeRemaining(newTime);
     setTotalRestTime((prev) => Math.max(newTime, prev || newTime));
@@ -1284,11 +1301,18 @@ export default function RoutineDetailScreen() {
         liveState.exerciseName || currentExerciseName,
         endTimestampMs
       );
-      setActiveNotificationId(notificationId);
+      if (shouldAbortLeaveSideEffects(epochAtStart, restEpochRef.current)) {
+        if (notificationId) {
+          await notificationService.cancelRestTimer(notificationId);
+        }
+        return true;
+      }
+      assignRestNotificationId(notificationId);
     }
 
     return true;
   }, [
+    assignRestNotificationId,
     currentExerciseName,
     restTimerNotificationsEnabled,
     startRestCountdownInterval,
@@ -1323,23 +1347,10 @@ export default function RoutineDetailScreen() {
             const remaining = Math.floor((endTime - now) / 1000);
 
             if (remaining <= 0) {
-              // Time has passed
-              setShowRestToast(false);
-              setActiveNotificationId(null);
-              setRestTimerEndTime(null);
-              restTimerEndTimeRef.current = null;
-              setRestTimeRemaining(0);
-              const startedAt =
-                workoutStartTimeRef.current ??
-                Date.now() - durationRef.current * 1000;
-              void updateWorkoutLive({
-                workoutStartedAtMs: startedAt,
-                exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
-                isResting: false,
-                restEndAtMs: null,
+              await leaveRestRef.current({
+                reason: "expired",
+                nativeAlreadyUpdated: false,
               });
-              if (countdownRef.current) clearInterval(countdownRef.current);
-              void playRestCompleteFeedback();
             } else if (!syncedFromNative) {
               // Update remaining time from the shared absolute end timestamp.
               setRestTimeRemaining(Math.max(0, remaining));
@@ -1690,6 +1701,74 @@ export default function RoutineDetailScreen() {
     });
   };
 
+  const leaveRest = useCallback(
+    async (options: {
+      reason: LeaveRestReason;
+      nativeAlreadyUpdated?: boolean;
+    }) => {
+      if (leaveRestInFlightRef.current) return;
+
+      const hasRest =
+        restActiveRef.current ||
+        restTimerEndTimeRef.current != null ||
+        activeNotificationIdRef.current != null;
+      if (!hasRest) return;
+
+      leaveRestInFlightRef.current = true;
+      restActiveRef.current = false;
+      const epochAtLeave = ++restEpochRef.current;
+      const plan = planLeaveRest({
+        reason: options.reason,
+        nativeAlreadyUpdated: options.nativeAlreadyUpdated ?? false,
+        notificationId: activeNotificationIdRef.current,
+        epoch: epochAtLeave,
+      });
+
+      clearRestCountdownInterval();
+      restTimerEndTimeRef.current = null;
+      restTimeRemainingRef.current = 0;
+      setRestTimerEndTime(null);
+      setShowRestToast(false);
+      setRestTimeRemaining(0);
+      assignRestNotificationId(null);
+      setCurrentExerciseImageUrl(null);
+      setCurrentNextSetSummary(null);
+
+      try {
+        if (plan.cancelNotificationId) {
+          await notificationService.cancelRestTimer(plan.cancelNotificationId);
+          if (shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)) {
+            return;
+          }
+        }
+
+        if (
+          plan.syncLiveActivity &&
+          !shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)
+        ) {
+          void updateWorkoutLive({
+            workoutStartedAtMs: getWorkoutStartTime(),
+            exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
+            isResting: false,
+            restEndAtMs: null,
+          });
+        }
+
+        if (
+          plan.playFeedback &&
+          !shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)
+        ) {
+          void playRestCompleteFeedback();
+        }
+      } finally {
+        leaveRestInFlightRef.current = false;
+      }
+    },
+    [assignRestNotificationId, clearRestCountdownInterval, getWorkoutStartTime]
+  );
+
+  leaveRestRef.current = leaveRest;
+
   const handleStartRestTimer = async (
     restSeconds: number,
     exerciseId: string,
@@ -1721,6 +1800,9 @@ export default function RoutineDetailScreen() {
       restSeconds,
       exerciseName ?? "no-exercise"
     );
+    restActiveRef.current = true;
+    restEpochRef.current += 1;
+    const epochAtStart = restEpochRef.current;
     setTotalRestTime(restSeconds);
     setRestTimeRemaining(restSeconds);
     const endTime = Date.now() + restSeconds * 1000;
@@ -1751,12 +1833,25 @@ export default function RoutineDetailScreen() {
         exerciseName,
         endTime
       );
-      setActiveNotificationId(notificationId);
+      if (shouldAbortLeaveSideEffects(epochAtStart, restEpochRef.current)) {
+        if (notificationId) {
+          await notificationService.cancelRestTimer(notificationId);
+        }
+        return;
+      }
+      assignRestNotificationId(notificationId);
     }
   };
 
   const applyRestTimerDelta = useCallback(
     async (deltaSeconds: number, syncNativeLiveActivity = true) => {
+      if (
+        leaveRestInFlightRef.current ||
+        (!restActiveRef.current && restTimerEndTimeRef.current == null)
+      ) {
+        return;
+      }
+
       const currentRemaining = restTimerEndTimeRef.current
         ? Math.max(
             0,
@@ -1764,6 +1859,15 @@ export default function RoutineDetailScreen() {
           )
         : restTimeRemainingRef.current;
       const newTime = Math.max(0, currentRemaining + deltaSeconds);
+
+      if (newTime <= 0) {
+        await leaveRest({ reason: "expired", nativeAlreadyUpdated: false });
+        return;
+      }
+
+      restActiveRef.current = true;
+      restEpochRef.current += 1;
+      const epochAtDelta = restEpochRef.current;
 
       setRestTimeRemaining(newTime);
       if (deltaSeconds > 0) {
@@ -1786,6 +1890,9 @@ export default function RoutineDetailScreen() {
           isResting: true,
           restEndAtMs: endTime,
         });
+        if (shouldAbortLeaveSideEffects(epochAtDelta, restEpochRef.current)) {
+          return;
+        }
       }
 
       if (restTimerNotificationsEnabled) {
@@ -1794,14 +1901,22 @@ export default function RoutineDetailScreen() {
           currentExerciseName,
           endTime
         );
-        setActiveNotificationId(notificationId);
+        if (shouldAbortLeaveSideEffects(epochAtDelta, restEpochRef.current)) {
+          if (notificationId) {
+            await notificationService.cancelRestTimer(notificationId);
+          }
+          return;
+        }
+        assignRestNotificationId(notificationId);
       }
     },
     [
+      assignRestNotificationId,
       currentExerciseName,
       currentExerciseImageUrl,
       currentNextSetSummary,
       getWorkoutStartTime,
+      leaveRest,
       restTimerNotificationsEnabled,
       startRestCountdownInterval,
     ]
@@ -1817,26 +1932,12 @@ export default function RoutineDetailScreen() {
 
   const handleCancelRestTimer = useCallback(
     async (syncNativeLiveActivity = true) => {
-      clearRestCountdownInterval();
-      if (activeNotificationId) {
-        await notificationService.cancelRestTimer(activeNotificationId);
-        setActiveNotificationId(null);
-      }
-      setRestTimerEndTime(null);
-      restTimerEndTimeRef.current = null;
-      setShowRestToast(false);
-      setCurrentExerciseImageUrl(null);
-      setCurrentNextSetSummary(null);
-      if (syncNativeLiveActivity) {
-        void updateWorkoutLive({
-          workoutStartedAtMs: getWorkoutStartTime(),
-          exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
-          isResting: false,
-          restEndAtMs: null,
-        });
-      }
+      await leaveRest({
+        reason: "skip",
+        nativeAlreadyUpdated: !syncNativeLiveActivity,
+      });
     },
-    [activeNotificationId, clearRestCountdownInterval, getWorkoutStartTime]
+    [leaveRest]
   );
 
   const handleOpenFromLive = useCallback(() => {
@@ -1946,7 +2047,7 @@ export default function RoutineDetailScreen() {
               1000;
 
       if (resolvedEndMs <= Date.now()) {
-        await handleCancelRestTimer(false);
+        await leaveRest({ reason: "skip", nativeAlreadyUpdated: true });
         return;
       }
 
@@ -1954,6 +2055,10 @@ export default function RoutineDetailScreen() {
         0,
         Math.floor((resolvedEndMs - Date.now()) / 1000)
       );
+
+      restActiveRef.current = true;
+      restEpochRef.current += 1;
+      const epochAtSync = restEpochRef.current;
 
       setRestTimeRemaining(newTime);
       setTotalRestTime((prev) =>
@@ -1976,6 +2081,9 @@ export default function RoutineDetailScreen() {
           isResting: true,
           restEndAtMs: resolvedEndMs,
         });
+        if (shouldAbortLeaveSideEffects(epochAtSync, restEpochRef.current)) {
+          return;
+        }
       }
 
       if (restTimerNotificationsEnabled) {
@@ -1984,15 +2092,22 @@ export default function RoutineDetailScreen() {
           currentExerciseName,
           resolvedEndMs
         );
-        setActiveNotificationId(notificationId);
+        if (shouldAbortLeaveSideEffects(epochAtSync, restEpochRef.current)) {
+          if (notificationId) {
+            await notificationService.cancelRestTimer(notificationId);
+          }
+          return;
+        }
+        assignRestNotificationId(notificationId);
       }
     },
     [
+      assignRestNotificationId,
       currentExerciseName,
       currentExerciseImageUrl,
       currentNextSetSummary,
       getWorkoutStartTime,
-      handleCancelRestTimer,
+      leaveRest,
       restTimerNotificationsEnabled,
       startRestCountdownInterval,
     ]
