@@ -28,11 +28,7 @@ export function ExerciseListSkeleton({
   const rowCount = getSkeletonCount(height, count ?? 6);
 
   return (
-    <SkeletonRoot
-      style={styles.root}
-      message={message}
-      messagePosition="below"
-    >
+    <SkeletonRoot style={styles.root} message={message}>
       {Array.from({ length: rowCount }).map((_, index) => (
         <View key={`ex-sk-${index}`} style={styles.row}>
           <Bone style={styles.image} />

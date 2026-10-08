@@ -1,6 +1,10 @@
 import Constants from "expo-constants";
 import { AppState, Linking, Platform } from "react-native";
 import type { AppStateStatus } from "react-native";
+import {
+  presentedRestCompleteIds,
+  scheduledRestCompleteIds,
+} from "./restCompleteNotifications";
 
 let Notifications: any = null;
 try {
@@ -68,6 +72,8 @@ class NotificationService {
   private notificationIds: Map<string, string> = new Map();
   private autoDismissTimers: Map<string, ReturnType<typeof setTimeout>> =
     new Map();
+  /** Bumped by clearRestNotifications so in-flight startRestTimer self-cancels. */
+  private restScheduleGeneration = 0;
 
   /**
    * Request notification permissions with better handling
@@ -137,6 +143,7 @@ class NotificationService {
     if (!areNotificationsAvailable) {
       return null;
     }
+    const generationAtStart = this.restScheduleGeneration;
     try {
       // Ensure permissions before scheduling
       const hasPermissions = await this.requestPermissions();
@@ -145,8 +152,16 @@ class NotificationService {
         return null;
       }
 
+      if (generationAtStart !== this.restScheduleGeneration) {
+        return null;
+      }
+
       // Cancel ALL existing rest timer notifications to prevent duplicates
       await this.cancelAllRestTimers();
+
+      if (generationAtStart !== this.restScheduleGeneration) {
+        return null;
+      }
 
       const timerId = `rest-timer-${Date.now()}`;
       const isAppInForeground = currentAppState === "active";
@@ -194,6 +209,11 @@ class NotificationService {
         identifier: timerId,
       });
 
+      if (generationAtStart !== this.restScheduleGeneration) {
+        await this.cancelRestTimer(timerId);
+        return null;
+      }
+
       this.notificationIds.set(timerId, notificationId);
 
       // Auto-dismiss logic remains relevant for cleanup
@@ -218,7 +238,7 @@ class NotificationService {
   }
 
   /**
-   * Cancel a specific rest timer
+   * Cancel a specific rest timer (scheduled + dismiss if already in tray).
    */
   async cancelRestTimer(timerId: string) {
     if (!areNotificationsAvailable) {
@@ -226,6 +246,11 @@ class NotificationService {
     }
     try {
       await Notifications.cancelScheduledNotificationAsync(timerId);
+      try {
+        await Notifications.dismissNotificationAsync(timerId);
+      } catch {
+        // Ignore dismissal errors (may not be presented yet).
+      }
       this.notificationIds.delete(timerId);
 
       const dismissTimer = this.autoDismissTimers.get(timerId);
@@ -249,12 +274,8 @@ class NotificationService {
       const scheduledNotifications =
         await Notifications.getAllScheduledNotificationsAsync();
 
-      for (const notification of scheduledNotifications) {
-        if (notification.content.data?.type === "rest-complete") {
-          await Notifications.cancelScheduledNotificationAsync(
-            notification.identifier
-          );
-        }
+      for (const id of scheduledRestCompleteIds(scheduledNotifications)) {
+        await Notifications.cancelScheduledNotificationAsync(id);
       }
 
       this.autoDismissTimers.forEach((timer) => clearTimeout(timer));
@@ -262,6 +283,46 @@ class NotificationService {
       this.notificationIds.clear();
     } catch (error) {
       console.error("Error canceling all rest timers:", error);
+    }
+  }
+
+  /**
+   * Workout-end cleanup: bump schedule generation, cancel scheduled
+   * rest-complete alerts, and dismiss any already presented.
+   */
+  async clearRestNotifications(knownIds: string[] = []) {
+    this.restScheduleGeneration += 1;
+    if (!areNotificationsAvailable) {
+      return;
+    }
+
+    try {
+      await this.cancelAllRestTimers();
+
+      const uniqueKnown = [
+        ...new Set(knownIds.filter((id) => typeof id === "string" && id)),
+      ];
+      for (const id of uniqueKnown) {
+        await this.cancelRestTimer(id);
+      }
+
+      let presentedIds: string[] = [];
+      try {
+        const presented = await Notifications.getPresentedNotificationsAsync();
+        presentedIds = presentedRestCompleteIds(presented);
+      } catch {
+        presentedIds = [];
+      }
+
+      for (const id of new Set([...uniqueKnown, ...presentedIds])) {
+        try {
+          await Notifications.dismissNotificationAsync(id);
+        } catch {
+          // Ignore dismissal errors.
+        }
+      }
+    } catch (error) {
+      console.error("Error clearing rest notifications:", error);
     }
   }
 
@@ -538,6 +599,7 @@ export const {
   startRestTimer,
   cancelRestTimer,
   cancelAllRestTimers,
+  clearRestNotifications,
   scheduleReminder,
   scheduleReminderAfterSeconds,
   scheduleDailyReminder,

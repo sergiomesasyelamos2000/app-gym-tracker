@@ -5,6 +5,7 @@ import type {
   RoutineResponseDto,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { nativeStackStatusBarStyle } from "../../../hooks/useFocusedStatusBar";
 import ExerciseListScreen from "../components/ExerciseList";
 import WorkoutScreen from "../screens/WorkoutScreen";
 import CreateExerciseScreen from "./CreateExerciseScreen";
@@ -56,13 +57,16 @@ export type WorkoutStackParamList = {
 const Stack = createNativeStackNavigator<WorkoutStackParamList>();
 
 export default function WorkoutStack() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: theme.backgroundSecondary },
+        statusBarStyle: nativeStackStatusBarStyle(isDark),
+        statusBarTranslucent: true,
+        statusBarBackgroundColor: "transparent",
       }}
     >
       <Stack.Screen

@@ -10,7 +10,7 @@ type Props = {
   showTrailing?: boolean;
   /** Show brand/subtitle stub line. Default true. */
   showBrand?: boolean;
-  /** Optional status line under the list of skeletons */
+  /** Spoken-only loading context for assistive tech. */
   message?: string;
 };
 
@@ -44,11 +44,7 @@ export function ProductListSkeleton({
       : [56, 40, 40, 36];
 
   return (
-    <SkeletonRoot
-      style={styles.skeletonRoot}
-      message={message}
-      messagePosition="below"
-    >
+    <SkeletonRoot style={styles.skeletonRoot} message={message}>
       {Array.from({ length: rowCount }).map((_, index) => (
         <View key={`sk-${index}`} style={styles.skeletonCard}>
           <Bone

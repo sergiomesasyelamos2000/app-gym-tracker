@@ -14,4 +14,3 @@ export {
 } from "./SkeletonPulseContext";
 export { SkeletonRoot } from "./SkeletonRoot";
 export { Bone } from "./Bone";
-export { SkeletonMessage } from "./SkeletonMessage";

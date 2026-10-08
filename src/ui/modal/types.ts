@@ -14,6 +14,12 @@ export type AppDialogProps = {
   avoidKeyboard?: boolean;
   maxWidth?: number;
   scrollable?: boolean;
+  /**
+   * When true, the card is a View (not Pressable) so horizontal
+   * pan gestures inside (e.g. CalendarList) are not stolen.
+   * Backdrop dismiss still works via an absolute-fill Pressable.
+   */
+  releaseCardPress?: boolean;
   contentStyle?: object;
   testID?: string;
 };

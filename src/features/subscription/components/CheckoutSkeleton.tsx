@@ -14,11 +14,7 @@ export function CheckoutSkeleton() {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <SkeletonRoot
-      style={styles.root}
-      message={MESSAGE}
-      messagePosition="below"
-    >
+    <SkeletonRoot style={styles.root} message={MESSAGE}>
       <Bone style={styles.amount} />
       <Bone style={styles.amountMeta} />
 

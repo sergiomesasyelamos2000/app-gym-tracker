@@ -8,7 +8,6 @@ import {
   Image,
   ImageStyle,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +15,10 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { WebView } from "react-native-webview";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
@@ -1132,10 +1134,8 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["bottom", "left", "right"]}
+      style={[styles.safeArea, { paddingTop: insets.top }]}
     >
       <ScreenHeader
         title="Detalle del ejercicio"

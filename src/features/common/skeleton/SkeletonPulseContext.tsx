@@ -7,7 +7,7 @@ export function useSkeletonPulseContext(): Animated.Value {
   const value = useContext(SkeletonPulseContext);
   if (!value) {
     throw new Error(
-      "Bone/SkeletonMessage must be rendered inside SkeletonRoot"
+      "Bone must be rendered inside SkeletonRoot"
     );
   }
   return value;

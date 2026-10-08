@@ -22,7 +22,7 @@ export function HomeScreenSkeleton({
   const onCard = skeletonBoneColor(theme, "card");
 
   return (
-    <SkeletonRoot style={styles.root} message={message} messagePosition="below">
+    <SkeletonRoot style={styles.root} message={message}>
       <View style={styles.header}>
         <Bone style={[styles.greeting, { backgroundColor: onPrimary }]} />
         <Bone style={[styles.name, { backgroundColor: onPrimary }]} />

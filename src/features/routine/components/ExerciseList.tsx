@@ -13,7 +13,6 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -27,13 +26,16 @@ import type {
   ExerciseRequestDto,
   MuscleDto,
 } from "@sergiomesasyelamos2000/shared";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   themeBarStyle,
   useFocusedStatusBar,
 } from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fetchEquipment,
   fetchMuscles,
@@ -648,10 +650,8 @@ export default function ExerciseList() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["bottom", "left", "right"]}
+      style={[styles.safeArea, { paddingTop: insets.top }]}
     >
       <ScreenHeader
         title="Listado de Ejercicios"

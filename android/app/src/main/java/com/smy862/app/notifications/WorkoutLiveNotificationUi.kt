@@ -170,8 +170,7 @@ internal object WorkoutLiveNotificationUi {
 
       val totalMs = max(1L, model.restSecondsDefault * 1000L)
       val remainingMs = max(0L, model.restEndAtMs - now)
-      val elapsedMs = max(0L, totalMs - remainingMs)
-      val progress = ((elapsedMs * 1000L) / totalMs).toInt().coerceIn(0, 1000)
+      val progress = ((remainingMs * 1000L) / totalMs).toInt().coerceIn(0, 1000)
       views.setProgressBar(R.id.workout_live_rest_progress, 1000, progress, false)
 
       views.setChronometer(

@@ -12,7 +12,6 @@ import {
   Image,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,7 +24,10 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   themeBarStyle,
@@ -446,10 +448,8 @@ export default function CreateExerciseScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["bottom", "left", "right"]}
+      style={[styles.safeArea, { paddingTop: insets.top }]}
     >
       <ScreenHeader
         title="Crear ejercicio"

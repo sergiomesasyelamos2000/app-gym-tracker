@@ -60,6 +60,7 @@ import {
 import { AppDialog } from "../../../ui/modal";
 import { notificationService } from "../../../services/notificationService";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
+import { endWorkoutLive } from "../../../services/workoutLiveService";
 import { RoutineListSkeleton } from "../components/RoutineListSkeleton";
 import {
   folderKey,
@@ -405,6 +406,8 @@ export default function WorkoutScreen() {
   };
 
   const handleDiscardWorkout = () => {
+    void notificationService.clearRestNotifications();
+    void endWorkoutLive();
     clearWorkoutInProgress();
     setShowWorkoutBanner(false);
   };

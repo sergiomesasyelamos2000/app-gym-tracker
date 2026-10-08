@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Easing,
   LayoutAnimation,
   Modal,
   Platform,
@@ -16,7 +15,7 @@ import {
   UIManager,
   View,
 } from "react-native";
-import { Calendar, LocaleConfig } from "react-native-calendars";
+import { CalendarList, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type {
@@ -138,8 +137,8 @@ export default function MacrosScreen({ navigation }: Props) {
     (state) => state.setTabVisibility
   );
 
-  const [calendarKey, setCalendarKey] = useState(0);
   const [showSetupPrompt, setShowSetupPrompt] = useState(false);
+  const [calendarWidth, setCalendarWidth] = useState(0);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
     new Set()
@@ -171,8 +170,6 @@ export default function MacrosScreen({ navigation }: Props) {
   // Animation logic moved to MacroDistributionChart
   const [actionBarAnim] = useState(new Animated.Value(0));
   const [addButtonAnim] = useState(new Animated.Value(1));
-  const calendarSlideAnim = useRef(new Animated.Value(0)).current;
-  const [currentMonth, setCurrentMonth] = useState(selectedDate);
 
   const isSelectionMode = selectedEntries.size > 0;
   const isAllNotEatenSelected = Array.from(selectedEntries).every((id) =>
@@ -571,7 +568,6 @@ export default function MacrosScreen({ navigation }: Props) {
       )
     );
     setSelectedDate(day.dateString);
-    setCalendarKey((prev) => prev + 1);
   };
 
   const handleTodayPress = () => {
@@ -584,7 +580,6 @@ export default function MacrosScreen({ navigation }: Props) {
       )
     );
     setSelectedDate(today);
-    setCalendarKey((prev) => prev + 1);
   };
 
   const formatDisplayDate = () => {
@@ -1090,6 +1085,7 @@ export default function MacrosScreen({ navigation }: Props) {
         onDismiss={() => setShowCalendar(false)}
         dismissOnBackdrop
         avoidKeyboard={false}
+        releaseCardPress
         maxWidth={400}
         contentStyle={styles.calendarModalContent}
         testID="macros-calendar"
@@ -1119,94 +1115,82 @@ export default function MacrosScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
-        <Animated.View
-          style={{
-            transform: [{ translateX: calendarSlideAnim }],
-            opacity: calendarSlideAnim.interpolate({
-              inputRange: [-30, 0, 30],
-              outputRange: [0.7, 1, 0.7],
-            }),
+        <View
+          style={styles.calendar}
+          onLayout={(event) => {
+            const nextWidth = event.nativeEvent.layout.width;
+            if (nextWidth > 0 && nextWidth !== calendarWidth) {
+              setCalendarWidth(nextWidth);
+            }
           }}
         >
-          <Calendar
-            key={calendarKey}
-            current={selectedDate}
-            onDayPress={handleDateSelect}
-            markedDates={{
-              [selectedDate]: {
-                selected: true,
-                selectedColor: theme.primary,
-                selectedTextColor: theme.onPrimary,
-              },
-              [new Date().toISOString().split("T")[0]]: {
-                marked: true,
+          {calendarWidth > 0 ? (
+            <CalendarList
+              key={calendarWidth}
+              current={selectedDate}
+              horizontal
+              pagingEnabled
+              calendarWidth={calendarWidth}
+              hideArrows={false}
+              hideExtraDays={false}
+              calendarStyle={{ paddingLeft: 0, paddingRight: 0 }}
+              onDayPress={handleDateSelect}
+              markedDates={{
+                [selectedDate]: {
+                  selected: true,
+                  selectedColor: theme.primary,
+                  selectedTextColor: theme.onPrimary,
+                },
+                [new Date().toISOString().split("T")[0]]: {
+                  marked: true,
+                  dotColor: theme.primary,
+                  selected:
+                    selectedDate === new Date().toISOString().split("T")[0],
+                  selectedColor: theme.primary,
+                },
+              }}
+              disableAllTouchEventsForDisabledDays={true}
+              monthFormat={"MMMM yyyy"}
+              renderArrow={(direction) => (
+                <View style={styles.arrowButton}>
+                  <Ionicons
+                    name={
+                      direction === "left"
+                        ? "chevron-back"
+                        : "chevron-forward"
+                    }
+                    size={24}
+                    color={theme.primary}
+                  />
+                </View>
+              )}
+              theme={{
+                backgroundColor: theme.card,
+                calendarBackground: theme.card,
+                textSectionTitleColor: theme.textSecondary,
+                selectedDayBackgroundColor: theme.primary,
+                selectedDayTextColor: theme.onPrimary,
+                todayTextColor: theme.primary,
+                dayTextColor: theme.text,
+                textDisabledColor: theme.textTertiary,
                 dotColor: theme.primary,
-                selected:
-                  selectedDate === new Date().toISOString().split("T")[0],
-                selectedColor: theme.primary,
-              },
-            }}
-            enableSwipeMonths={true}
-            hideExtraDays={false}
-            disableAllTouchEventsForDisabledDays={true}
-            monthFormat={"MMMM yyyy"}
-            onMonthChange={(month) => {
-              // Determinar dirección del swipe
-              const currentMonthDate = new Date(currentMonth);
-              const newMonthDate = new Date(month.dateString);
-              const direction = newMonthDate > currentMonthDate ? 1 : -1;
-
-              // Animar desde el lado correspondiente con timing suave
-              calendarSlideAnim.setValue(direction * 30);
-              Animated.timing(calendarSlideAnim, {
-                toValue: 0,
-                duration: 250,
-                useNativeDriver: true,
-                easing: Easing.out(Easing.cubic),
-              }).start();
-
-              setCurrentMonth(month.dateString);
-            }}
-            renderArrow={(direction) => (
-              <View style={styles.arrowButton}>
-                <Ionicons
-                  name={
-                    direction === "left"
-                      ? "chevron-back"
-                      : "chevron-forward"
-                  }
-                  size={24}
-                  color={theme.primary}
-                />
-              </View>
-            )}
-            theme={{
-              backgroundColor: theme.card,
-              calendarBackground: theme.card,
-              textSectionTitleColor: theme.textSecondary,
-              selectedDayBackgroundColor: theme.primary,
-              selectedDayTextColor: theme.onPrimary,
-              todayTextColor: theme.primary,
-              dayTextColor: theme.text,
-              textDisabledColor: theme.textTertiary,
-              dotColor: theme.primary,
-              selectedDotColor: theme.onPrimary,
-              arrowColor: theme.primary,
-              monthTextColor: theme.text,
-              indicatorColor: theme.primary,
-              textDayFontFamily: "System",
-              textMonthFontFamily: "System",
-              textDayHeaderFontFamily: "System",
-              textDayFontWeight: "400",
-              textMonthFontWeight: "700",
-              textDayHeaderFontWeight: "600",
-              textDayFontSize: 16,
-              textMonthFontSize: 18,
-              textDayHeaderFontSize: 13,
-            }}
-            style={styles.calendar}
-          />
-        </Animated.View>
+                selectedDotColor: theme.onPrimary,
+                arrowColor: theme.primary,
+                monthTextColor: theme.text,
+                indicatorColor: theme.primary,
+                textDayFontFamily: "System",
+                textMonthFontFamily: "System",
+                textDayHeaderFontFamily: "System",
+                textDayFontWeight: "400",
+                textMonthFontWeight: "700",
+                textDayHeaderFontWeight: "600",
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 13,
+              }}
+            />
+          ) : null}
+        </View>
 
         <View style={styles.calendarFooter}>
           <Text style={styles.selectedDateText}>

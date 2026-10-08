@@ -1,42 +1,47 @@
 import React from "react";
 import { StyleProp, View, ViewStyle } from "react-native";
-import { SkeletonMessage } from "./SkeletonMessage";
 import { SkeletonPulseProvider } from "./SkeletonPulseContext";
 import { useSkeletonPulse } from "./useSkeletonPulse";
 
+const DEFAULT_ACCESSIBILITY_LABEL = "Cargando";
+
 type SkeletonRootProps = {
   children: React.ReactNode;
+  /** Spoken-only loading context for assistive tech (not shown visually). */
   message?: string;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
-  /** Place the status message above children (default) or below. */
-  messagePosition?: "above" | "below";
 };
+
+function resolveAccessibilityLabel(
+  accessibilityLabel?: string,
+  message?: string
+): string {
+  const explicit = accessibilityLabel?.trim();
+  if (explicit) return explicit;
+  const fromMessage = message?.trim();
+  if (fromMessage) return fromMessage;
+  return DEFAULT_ACCESSIBILITY_LABEL;
+}
 
 export function SkeletonRoot({
   children,
   message,
   accessibilityLabel,
   style,
-  messagePosition = "above",
 }: SkeletonRootProps) {
   const pulse = useSkeletonPulse();
-  const label = accessibilityLabel ?? message;
+  const label = resolveAccessibilityLabel(accessibilityLabel, message);
 
   return (
     <SkeletonPulseProvider value={pulse}>
       <View
         style={style}
+        accessible
         accessibilityLabel={label}
         accessibilityState={{ busy: true }}
       >
-        {message && messagePosition === "above" ? (
-          <SkeletonMessage>{message}</SkeletonMessage>
-        ) : null}
         {children}
-        {message && messagePosition === "below" ? (
-          <SkeletonMessage>{message}</SkeletonMessage>
-        ) : null}
       </View>
     </SkeletonPulseProvider>
   );

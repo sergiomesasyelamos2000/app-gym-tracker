@@ -21,7 +21,7 @@ export function NutritionChatSkeleton({
   const onCard = skeletonBoneColor(theme, "card");
 
   return (
-    <SkeletonRoot style={styles.root} message={message} messagePosition="below">
+    <SkeletonRoot style={styles.root} message={message}>
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <Bone style={[styles.avatar, { backgroundColor: onPrimaryBone }]} />
         <View style={styles.headerTitles}>

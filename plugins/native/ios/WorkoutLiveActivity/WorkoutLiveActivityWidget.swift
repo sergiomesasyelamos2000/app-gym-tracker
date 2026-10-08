@@ -308,12 +308,12 @@ struct WorkoutLiveLockScreenView: View {
         end: end,
         restSecondsDefault: context.state.restSecondsDefault
       ) {
-        ProgressView(timerInterval: range, countsDown: false)
+        ProgressView(timerInterval: range, countsDown: true)
           .tint(LiveTheme.brand)
           .labelsHidden()
           .scaleEffect(x: 1, y: 0.55, anchor: .center)
       } else {
-        ProgressView(value: 1)
+        ProgressView(value: 0)
           .tint(LiveTheme.brand)
           .labelsHidden()
           .scaleEffect(x: 1, y: 0.55, anchor: .center)

@@ -85,6 +85,43 @@ describe("AppDialog", () => {
     UNSAFE_getByType(Modal).props.onRequestClose();
     expect(onDismiss).not.toHaveBeenCalled();
   });
+
+  it("dismisses on backdrop when releaseCardPress is enabled", () => {
+    const onDismiss = jest.fn();
+    const { getByTestId } = render(
+      <AppDialog
+        visible
+        onDismiss={onDismiss}
+        dismissOnBackdrop
+        releaseCardPress
+        testID="dialog"
+      >
+        <Text>Body</Text>
+      </AppDialog>
+    );
+    // Absolute-fill backdrop has no laid-out size in RN Testing Library.
+    fireEvent.press(
+      getByTestId("dialog-overlay", { includeHiddenElements: true })
+    );
+    expect(onDismiss).toHaveBeenCalledWith("backdrop");
+  });
+
+  it("does not dismiss when pressing card content with releaseCardPress", () => {
+    const onDismiss = jest.fn();
+    const { getByText } = render(
+      <AppDialog
+        visible
+        onDismiss={onDismiss}
+        dismissOnBackdrop
+        releaseCardPress
+        testID="dialog"
+      >
+        <Text>Calendar body</Text>
+      </AppDialog>
+    );
+    fireEvent.press(getByText("Calendar body"));
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
 });
 
 describe("AppSheet", () => {

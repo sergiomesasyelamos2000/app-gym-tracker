@@ -4,7 +4,7 @@ import {
 } from "../leaveRestPlan";
 
 describe("planLeaveRest", () => {
-  it("skip cancels the notification, skips feedback, and syncs live activity", () => {
+  it("skip cancels and dismisses the notification, skips feedback, and syncs live activity", () => {
     expect(
       planLeaveRest({
         reason: "skip",
@@ -14,13 +14,14 @@ describe("planLeaveRest", () => {
       })
     ).toEqual({
       cancelNotificationId: "rest-42",
+      dismissNotificationId: "rest-42",
       syncLiveActivity: true,
       playFeedback: false,
       epoch: 7,
     });
   });
 
-  it("expired plays feedback, syncs live activity, and cancels the notification", () => {
+  it("expired plays feedback, syncs live activity, and cancels/dismisses the notification", () => {
     expect(
       planLeaveRest({
         reason: "expired",
@@ -30,13 +31,14 @@ describe("planLeaveRest", () => {
       })
     ).toEqual({
       cancelNotificationId: "rest-99",
+      dismissNotificationId: "rest-99",
       syncLiveActivity: true,
       playFeedback: true,
       epoch: 3,
     });
   });
 
-  it("does not sync live activity when native already updated, but still cancels the notification", () => {
+  it("does not sync live activity when native already updated, but still cancels/dismisses", () => {
     expect(
       planLeaveRest({
         reason: "skip",
@@ -46,6 +48,7 @@ describe("planLeaveRest", () => {
       })
     ).toEqual({
       cancelNotificationId: "rest-1",
+      dismissNotificationId: "rest-1",
       syncLiveActivity: false,
       playFeedback: false,
       epoch: 11,
@@ -61,15 +64,18 @@ describe("planLeaveRest", () => {
     ).toBe(false);
   });
 
-  it("returns a null cancel id when there is no notification", () => {
+  it("returns null cancel and dismiss ids when there is no notification", () => {
     expect(
       planLeaveRest({
         reason: "skip",
         nativeAlreadyUpdated: false,
         notificationId: null,
         epoch: 1,
-      }).cancelNotificationId
-    ).toBeNull();
+      })
+    ).toMatchObject({
+      cancelNotificationId: null,
+      dismissNotificationId: null,
+    });
 
     expect(
       planLeaveRest({
@@ -77,8 +83,11 @@ describe("planLeaveRest", () => {
         nativeAlreadyUpdated: false,
         notificationId: null,
         epoch: 2,
-      }).cancelNotificationId
-    ).toBeNull();
+      })
+    ).toMatchObject({
+      cancelNotificationId: null,
+      dismissNotificationId: null,
+    });
   });
 });
 

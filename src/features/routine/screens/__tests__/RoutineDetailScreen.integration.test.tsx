@@ -51,6 +51,7 @@ jest.mock("../../../../services/notificationService", () => ({
     cancelAllNotifications: jest.fn(),
     scheduleRestTimerNotification: jest.fn(),
     cancelAllRestTimers: jest.fn(),
+    clearRestNotifications: jest.fn(),
     startRestTimer: jest.fn().mockResolvedValue("notif-1"),
     cancelRestTimer: jest.fn(),
   },

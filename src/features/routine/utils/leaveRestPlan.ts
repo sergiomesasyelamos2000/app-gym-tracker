@@ -7,12 +7,14 @@ export function planLeaveRest(input: {
   epoch: number;
 }): {
   cancelNotificationId: string | null;
+  dismissNotificationId: string | null;
   syncLiveActivity: boolean;
   playFeedback: boolean;
   epoch: number;
 } {
   return {
     cancelNotificationId: input.notificationId,
+    dismissNotificationId: input.notificationId,
     syncLiveActivity: !input.nativeAlreadyUpdated,
     playFeedback: input.reason === "expired",
     epoch: input.epoch,

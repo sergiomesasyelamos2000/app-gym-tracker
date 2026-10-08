@@ -9,15 +9,17 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
   Dimensions,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Theme, useTheme } from "../../../contexts/ThemeContext";
 import {
   themeBarStyle,
@@ -25,7 +27,6 @@ import {
 } from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { ExerciseProgressSkeleton } from "../components/ExerciseProgressSkeleton";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ExerciseProgressDataPoint,
   ProgressStats,
@@ -90,9 +91,8 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   const { theme, isDark } = useTheme();
   useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
-  const androidTop =
-    Platform.OS === "android" ? { paddingTop: insets.top } : null;
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const safeAreaStyle = [styles.container, { paddingTop: insets.top }];
 
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>(30);
@@ -417,7 +417,10 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, androidTop]}>
+      <SafeAreaView
+        edges={["bottom", "left", "right"]}
+        style={safeAreaStyle}
+      >
         <ScreenHeader
           title="Progreso del ejercicio"
           onBack={() => navigation.goBack()}
@@ -431,7 +434,10 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
     const hasHistoricalData = allProgressData.length > 0;
 
     return (
-      <SafeAreaView style={[styles.container, androidTop]}>
+      <SafeAreaView
+        edges={["bottom", "left", "right"]}
+        style={safeAreaStyle}
+      >
         <ScreenHeader
           title="Progreso del ejercicio"
           onBack={() => navigation.goBack()}
@@ -470,7 +476,10 @@ export default function ExerciseProgressScreen({ route, navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, androidTop]}>
+    <SafeAreaView
+      edges={["bottom", "left", "right"]}
+      style={safeAreaStyle}
+    >
       <ScreenHeader
         title="Progreso del ejercicio"
         onBack={() => navigation.goBack()}

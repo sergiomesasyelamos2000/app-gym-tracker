@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -30,6 +31,7 @@ export function AppDialog({
   avoidKeyboard = true,
   maxWidth = MODAL_DIALOG_MAX_WIDTH,
   scrollable = false,
+  releaseCardPress = false,
   contentStyle,
   testID,
 }: AppDialogProps) {
@@ -58,18 +60,47 @@ export function AppDialog({
     children
   );
 
-  const card = (
-    <Pressable
-      accessibilityViewIsModal
-      style={[chrome.card, { width: cardWidth, maxHeight }, contentStyle]}
-      onPress={(e) => e.stopPropagation()}
-    >
+  const cardChrome = [
+    chrome.card,
+    { width: cardWidth, maxHeight },
+    contentStyle,
+  ];
+
+  const cardInner = (
+    <>
       {title ? <Text style={chrome.title}>{title}</Text> : null}
       {body}
+    </>
+  );
+
+  const card = releaseCardPress ? (
+    <View accessibilityViewIsModal style={cardChrome}>
+      {cardInner}
+    </View>
+  ) : (
+    <Pressable
+      accessibilityViewIsModal
+      style={cardChrome}
+      onPress={(e) => e.stopPropagation()}
+    >
+      {cardInner}
     </Pressable>
   );
 
-  const content = (
+  const content = releaseCardPress ? (
+    <View style={chrome.overlay}>
+      <Pressable
+        style={StyleSheet.absoluteFillObject}
+        testID={testID ? `${testID}-overlay` : undefined}
+        onPress={() => {
+          if (dismissOnBackdrop) dismiss("backdrop");
+        }}
+        accessible={false}
+        accessibilityRole="none"
+      />
+      {card}
+    </View>
+  ) : (
     <Pressable
       style={chrome.overlay}
       testID={testID ? `${testID}-overlay` : undefined}

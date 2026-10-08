@@ -6,8 +6,6 @@ import {
   Alert,
   FlatList,
   Modal,
-  Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,7 +17,10 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import type {
   ExerciseRequestDto,
@@ -652,10 +653,8 @@ export default function RoutineEditScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" ? { paddingTop: insets.top } : null,
-      ]}
+      edges={["bottom", "left", "right"]}
+      style={[styles.safeArea, { paddingTop: insets.top }]}
     >
       <ScreenHeader title="Editar rutina" onBack={() => navigation.goBack()} />
       <View style={styles.container}>

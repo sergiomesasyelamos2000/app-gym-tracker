@@ -41,10 +41,7 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { RFValue } from "react-native-responsive-fontsize";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import CachedExerciseImage from "../../../components/CachedExerciseImage";
@@ -1500,9 +1497,26 @@ export default function RoutineDetailScreen() {
     return exercisesState.filter((exercise) => !originalIds.has(exercise.id));
   };
 
+  const endRestForWorkoutExit = useCallback(() => {
+    const knownId = activeNotificationIdRef.current;
+    restEpochRef.current += 1;
+    restActiveRef.current = false;
+    clearRestCountdownInterval();
+    restTimerEndTimeRef.current = null;
+    restTimeRemainingRef.current = 0;
+    setRestTimerEndTime(null);
+    setShowRestToast(false);
+    setRestTimeRemaining(0);
+    assignRestNotificationId(null);
+    void notificationService.clearRestNotifications(
+      knownId ? [knownId] : []
+    );
+  }, [assignRestNotificationId, clearRestCountdownInterval]);
+
   const processFinishRoutine = async (updateRoutineTemplate = true) => {
     if (isSaving) return;
     setIsSaving(true);
+    endRestForWorkoutExit();
 
     try {
       // Debug: Check auth state before saving
@@ -1511,6 +1525,14 @@ export default function RoutineDetailScreen() {
       const token = useAuthStore.getState().accessToken;
 
       if (!currentUser?.id) {
+        // Rest alerts already cleared; leave Live Activity in non-rest mode
+        // without ending the workout session (user stays on screen).
+        void updateWorkoutLive({
+          workoutStartedAtMs: getWorkoutStartTime(),
+          exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
+          isResting: false,
+          restEndAtMs: null,
+        });
         Alert.alert(
           "Error de Sesión",
           "No se encontró información del usuario. Por favor, cierra sesión y vuelve a iniciar sesión."
@@ -1529,7 +1551,6 @@ export default function RoutineDetailScreen() {
         });
       }
 
-      await notificationService.cancelAllRestTimers();
       void endWorkoutLive();
 
       const routineToSave = buildRoutinePayload();
@@ -1632,13 +1653,12 @@ export default function RoutineDetailScreen() {
   const handleDiscardWorkout = () => {
     if (isSaving) return;
     setShowShortWorkoutModal(false);
+    endRestForWorkoutExit();
     setStarted(false);
     void endWorkoutLive();
     clearWorkoutInProgress();
     workoutStartTimeRef.current = null;
     setHasInitializedFromStore(false);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    setShowRestToast(false);
     navigation.goBack();
   };
 
@@ -1735,8 +1755,10 @@ export default function RoutineDetailScreen() {
       setCurrentNextSetSummary(null);
 
       try {
-        if (plan.cancelNotificationId) {
-          await notificationService.cancelRestTimer(plan.cancelNotificationId);
+        const notificationId =
+          plan.cancelNotificationId ?? plan.dismissNotificationId;
+        if (notificationId) {
+          await notificationService.cancelRestTimer(notificationId);
           if (shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)) {
             return;
           }
@@ -2434,28 +2456,17 @@ export default function RoutineDetailScreen() {
     </TouchableOpacity>
   ) : null;
 
-  if (loading || isExercisesLoading) {
-    return (
-      <SafeAreaView
-        edges={["top", "left", "right"]}
-        style={[
-          styles.safeArea,
-          { backgroundColor: theme.backgroundSecondary },
-        ]}
-      >
-        <ScreenHeader
-          title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
-          onBack={sessionView ? handleExitSessionView : () => navigation.goBack()}
-        />
-        <RoutineDetailSkeleton />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView
-      edges={["top", "left", "right"]}
-      style={[styles.safeArea, { backgroundColor: theme.backgroundSecondary }]}
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: theme.backgroundSecondary,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
     >
       <ScreenHeader
         title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
@@ -2463,6 +2474,10 @@ export default function RoutineDetailScreen() {
           sessionView ? handleExitSessionView : () => navigation.goBack()
         }
       />
+      {loading || isExercisesLoading ? (
+        <RoutineDetailSkeleton />
+      ) : (
+        <>
       {started && (
         <LiveRoutineMetrics
           getStartTime={getWorkoutStartTime}
@@ -2690,7 +2705,9 @@ export default function RoutineDetailScreen() {
           </Text>
         </View>
       </Modal>
-    </SafeAreaView>
+        </>
+      )}
+    </View>
   );
 }
 
