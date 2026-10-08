@@ -249,7 +249,7 @@ export default function RoutineDetailScreen() {
   const savePauseStartedAtRef = useRef<number | null>(null);
   const durationRef = useRef(0);
   const healthSnapshotRef = useRef<WorkoutHealthSnapshot | null>(null);
-  const slideAnim = useRef(new Animated.Value(100)).current;
+  const slideAnim = useRef(new Animated.Value(180)).current;
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [previousSessions, setPreviousSessions] = useState<
     RoutineSessionEntity[]
@@ -1246,7 +1246,7 @@ export default function RoutineDetailScreen() {
       }).start();
     } else {
       Animated.timing(slideAnim, {
-        toValue: 100,
+        toValue: 180,
         duration: 300,
         useNativeDriver: true,
       }).start();
@@ -2401,14 +2401,14 @@ export default function RoutineDetailScreen() {
     };
   }, [showRestToast, keyboardHeight]);
 
-  const toastBottom =
-    keyboardHeight > 0
-      ? keyboardHeight + 8
-      : Math.max(insets.bottom, 12) + 8;
+  const toastBottom = keyboardHeight > 0 ? keyboardHeight : 0;
+  const restBarContentPadding =
+    keyboardHeight > 0 ? 12 : Math.max(insets.bottom, 12);
 
   const showAddExerciseRow = started && !sessionView && !reorderMode;
 
-  const listBottomPadding = Math.max(insets.bottom, 16) + 32;
+  const listBottomPadding =
+    Math.max(insets.bottom, 16) + 32 + (showRestToast ? 120 : 0);
 
   const addExerciseRow = showAddExerciseRow ? (
     <TouchableOpacity
@@ -2618,10 +2618,10 @@ export default function RoutineDetailScreen() {
               minutes: Math.floor(restTimeRemaining / 60),
               seconds: restTimeRemaining % 60,
             })}
-            text2={currentExerciseName}
             progress={
               totalRestTime > 0 ? restTimeRemaining / totalRestTime : 0
             }
+            contentPaddingBottom={restBarContentPadding}
             onCancel={handleCancelRestTimer}
             onAddTime={handleAddRestTime}
             onSubtractTime={handleSubtractRestTime}
@@ -2729,7 +2729,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 0,
     right: 0,
-    alignItems: "center",
+    alignItems: "stretch",
     zIndex: 9999,
   },
   savingOverlay: {

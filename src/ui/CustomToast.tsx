@@ -7,31 +7,30 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { Theme, useTheme } from "../contexts/ThemeContext";
 
 interface CustomToastProps {
   text1: string;
-  text2?: string;
   progress?: number;
   onCancel?: () => void;
   onAddTime?: () => void;
   onSubtractTime?: () => void;
   onDismissKeyboard?: () => void;
+  /** Extra padding inside the bar. Parent passes home-indicator inset when docked. */
+  contentPaddingBottom?: number;
 }
 
 const CustomToast = ({
   text1,
-  text2,
   progress = 1,
   onCancel,
   onAddTime,
   onSubtractTime,
   onDismissKeyboard,
+  contentPaddingBottom = 12,
 }: CustomToastProps) => {
   const { theme, isDark } = useTheme();
   const styles = React.useMemo(
@@ -39,16 +38,8 @@ const CustomToast = ({
     [theme, isDark]
   );
   const animatedProgress = useRef(new Animated.Value(progress)).current;
-  const { width } = useWindowDimensions();
 
-  // Clamp progress: nunca negativo, nunca mayor a 1
   const safeProgress = Math.max(0, Math.min(1, progress));
-
-  const ringRadius = 27;
-  const ringStroke = 6;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  // Numeric offset avoids Animated SVG Circle unmount crashes (RNSVG NPE).
-  const ringStrokeDashoffset = ringCircumference * (1 - safeProgress);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "test") {
@@ -74,13 +65,6 @@ const CustomToast = ({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
-
-  const progressTint =
-    safeProgress > 0.5
-      ? theme.primary
-      : safeProgress > 0.2
-      ? theme.warning
-      : theme.error;
 
   const handleAddTime = async () => {
     if (onAddTime) {
@@ -130,112 +114,66 @@ const CustomToast = ({
   };
 
   return (
-    <View style={[styles.toastContainer, { width: width * 0.93 }]}>
-      <View style={styles.topRow}>
-        <View style={styles.timerSection}>
-          <View style={styles.ringWrapper}>
-            <Svg
-              width={(ringRadius + ringStroke) * 2}
-              height={(ringRadius + ringStroke) * 2}
-            >
-              <Circle
-                cx={ringRadius + ringStroke}
-                cy={ringRadius + ringStroke}
-                r={ringRadius}
-                stroke={
-                  isDark ? "rgba(255,255,255,0.15)" : "rgba(15,23,42,0.12)"
-                }
-                strokeWidth={ringStroke}
-                fill="transparent"
-              />
-              <Circle
-                cx={ringRadius + ringStroke}
-                cy={ringRadius + ringStroke}
-                r={ringRadius}
-                stroke={progressTint}
-                strokeWidth={ringStroke}
-                strokeLinecap="round"
-                fill="transparent"
-                strokeDasharray={`${ringCircumference} ${ringCircumference}`}
-                strokeDashoffset={ringStrokeDashoffset}
-                transform={`rotate(-90 ${ringRadius + ringStroke} ${
-                  ringRadius + ringStroke
-                })`}
-              />
-            </Svg>
-            <Text style={styles.timerText}>{text1}</Text>
-          </View>
-
-          <View style={styles.textContainer}>
-            <Text numberOfLines={1} style={styles.toastTitle}>
-              Descanso
-            </Text>
-            {text2 ? (
-              <Text numberOfLines={1} style={styles.toastSubtext}>
-                {text2}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.controls}>
-          <View style={styles.timeActions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleSubtractTime}
-              accessibilityLabel="Restar 15 segundos"
-              activeOpacity={0.8}
-            >
-              <Text style={styles.actionButtonText}>−15s</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleAddTime}
-              accessibilityLabel="Añadir 15 segundos"
-              activeOpacity={0.8}
-            >
-              <Text style={styles.actionButtonText}>+15s</Text>
-            </TouchableOpacity>
-          </View>
-
-          {(onCancel || onDismissKeyboard) && (
-            <View style={styles.cancelRow}>
-              {onCancel && (
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleCancel}
-                  accessibilityLabel="Omitir descanso"
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.cancelButtonText}>Omitir</Text>
-                </TouchableOpacity>
-              )}
-              {onDismissKeyboard && (
-                <TouchableOpacity
-                  style={styles.keyboardDismissButton}
-                  onPress={onDismissKeyboard}
-                  accessibilityLabel="Ocultar teclado"
-                  accessibilityRole="button"
-                  activeOpacity={0.85}
-                >
-                  <Icon name="keyboard-hide" size={18} color={theme.text} />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
+    <View
+      style={[
+        styles.toastContainer,
+        { paddingBottom: contentPaddingBottom },
+      ]}
+    >
+      <View style={styles.progressTrack}>
+        <Animated.View
+          testID="rest-progress-fill"
+          style={[
+            styles.progressFill,
+            {
+              width: interpolatedWidth,
+              backgroundColor: theme.primary,
+            },
+          ]}
+        />
       </View>
 
-      {safeProgress > 0 && (
-        <View style={styles.progressBarContainer}>
-          <Animated.View
-            style={[
-              styles.progressBar,
-              { width: interpolatedWidth, backgroundColor: progressTint },
-            ]}
-          />
-        </View>
-      )}
+      <Text style={styles.timerText}>{text1}</Text>
+
+      <View style={styles.controlsRow}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.flexButton]}
+          onPress={handleSubtractTime}
+          accessibilityLabel="Restar 15 segundos"
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>−15</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.flexButton]}
+          onPress={handleAddTime}
+          accessibilityLabel="Añadir 15 segundos"
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>+15</Text>
+        </TouchableOpacity>
+        {onCancel ? (
+          <TouchableOpacity
+            style={[styles.skipButton, styles.flexButton]}
+            onPress={handleCancel}
+            accessibilityLabel="Omitir descanso"
+            activeOpacity={0.85}
+          >
+            <Text style={styles.skipButtonText}>Omitir</Text>
+          </TouchableOpacity>
+        ) : null}
+        {onDismissKeyboard ? (
+          <TouchableOpacity
+            style={styles.keyboardDismissButton}
+            onPress={onDismissKeyboard}
+            accessibilityLabel="Ocultar teclado"
+            accessibilityRole="button"
+            activeOpacity={0.85}
+          >
+            <Icon name="keyboard-hide" size={18} color={theme.text} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 };
@@ -243,127 +181,77 @@ const CustomToast = ({
 const createStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
     toastContainer: {
-      backgroundColor: theme.surfaceElevated,
-      borderRadius: 18,
-      padding: 14,
-      alignSelf: "center",
-      borderWidth: 1,
-      borderColor: isDark ? theme.border : `${theme.primary}44`,
-      elevation: 10,
-      shadowColor: theme.shadowColor,
-      shadowOpacity: isDark ? 0.35 : 0.14,
-      shadowOffset: { width: 0, height: 10 },
-      shadowRadius: 14,
-    },
-    topRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: 12,
       width: "100%",
+      backgroundColor: theme.surface,
+      paddingTop: 12,
+      paddingHorizontal: 16,
+      shadowColor: theme.shadowColor,
+      shadowOpacity: isDark ? 0.4 : 0.12,
+      shadowOffset: { width: 0, height: -4 },
+      shadowRadius: 12,
+      elevation: 16,
     },
-    timerSection: {
-      flexDirection: "row",
-      alignItems: "center",
-      flex: 1,
-      gap: 12,
+    progressTrack: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      backgroundColor: theme.border,
+      overflow: "hidden",
     },
-    ringWrapper: {
-      width: 66,
-      height: 66,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 33,
-      backgroundColor: isDark ? "rgba(255,255,255,0.04)" : `${theme.primary}1F`,
+    progressFill: {
+      height: "100%",
     },
     timerText: {
-      position: "absolute",
       color: theme.text,
-      fontSize: 11,
+      fontSize: 34,
       fontWeight: "800",
+      textAlign: "center",
+      marginTop: 8,
+      marginBottom: 14,
+      fontVariant: ["tabular-nums"],
       letterSpacing: 0.5,
     },
-    textContainer: {
-      flex: 1,
-      justifyContent: "center",
-      paddingTop: 8,
-    },
-    toastTitle: {
-      color: theme.text,
-      fontSize: 16,
-      fontWeight: "800",
-      marginBottom: 2,
-    },
-    toastSubtext: {
-      color: theme.textSecondary,
-      fontSize: 13,
-      fontWeight: "500",
-    },
-    controls: {
-      alignItems: "flex-end",
-      gap: 8,
-    },
-    timeActions: {
+    controlsRow: {
       flexDirection: "row",
-      gap: 8,
+      alignItems: "center",
+      gap: 10,
+    },
+    flexButton: {
+      flex: 1,
     },
     actionButton: {
-      backgroundColor: isDark ? "#262B3E" : `${theme.primary}24`,
+      backgroundColor: isDark ? theme.surfaceElevated : theme.divider,
       borderRadius: 12,
-      paddingVertical: 7,
-      paddingHorizontal: 12,
-      minWidth: 58,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: isDark ? "#353C56" : `${theme.primary}55`,
     },
     actionButtonText: {
       color: theme.text,
       fontWeight: "700",
-      fontSize: 13,
+      fontSize: 16,
     },
-    cancelRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    cancelButton: {
-      backgroundColor: isDark ? "#2A3047" : `${theme.primary}22`,
-      borderRadius: 11,
-      paddingVertical: 6,
-      paddingHorizontal: 14,
+    skipButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: isDark ? "#3B4565" : `${theme.primary}45`,
     },
-    cancelButtonText: {
-      color: theme.textSecondary,
+    skipButtonText: {
+      color: theme.onPrimary,
       fontWeight: "700",
-      fontSize: 13,
+      fontSize: 16,
     },
     keyboardDismissButton: {
-      backgroundColor: isDark ? "#2A3047" : `${theme.primary}22`,
-      borderRadius: 11,
-      width: 34,
-      height: 34,
+      backgroundColor: isDark ? theme.surfaceElevated : theme.divider,
+      borderRadius: 12,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: isDark ? "#3B4565" : `${theme.primary}45`,
-    },
-    progressBarContainer: {
-      width: "100%",
-      height: 6,
-      backgroundColor: isDark ? "#2A3047" : `${theme.primary}20`,
-      borderRadius: 999,
-      marginTop: 12,
-      overflow: "hidden",
-    },
-    progressBar: {
-      height: "100%",
-      borderRadius: 999,
     },
   });
 
