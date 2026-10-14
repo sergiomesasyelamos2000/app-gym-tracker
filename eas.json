@@ -14,7 +14,8 @@
         "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
         "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
         "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
       },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2"
@@ -40,7 +41,8 @@
         "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
         "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
         "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
       }
     },
     "production": {
@@ -53,7 +55,8 @@
         "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
         "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
         "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
       },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2"

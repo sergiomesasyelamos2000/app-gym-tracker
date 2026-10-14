@@ -10,7 +10,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "eas-build-post-install": "node scripts/eas-android-post-install.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -51,7 +52,6 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.56.4",
     "react-native": "0.81.5",
-    "react-native-async-storage": "^0.0.1",
     "react-native-calendar-strip": "^2.2.6",
     "react-native-calendars": "^1.1313.0",
     "react-native-chart-kit": "^6.12.0",

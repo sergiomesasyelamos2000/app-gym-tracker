@@ -48,9 +48,12 @@ import { MACRO_COLORS, MACRO_GRAMS_ORDER, MACRO_LABELS } from "../utils/macroCol
 import {
   deleteFoodEntry,
   getProductDetail,
-  scanBarcode,
 } from "../services/nutritionService";
 import { getBurnedInsightsCached } from "../../health";
+import {
+  BARCODE_COPY,
+  lookupScannedBarcode,
+} from "../utils/barcodeLookupFlow";
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -150,6 +153,7 @@ export default function MacrosScreen({ navigation }: Props) {
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [cameraKey, setCameraKey] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -537,21 +541,60 @@ export default function MacrosScreen({ navigation }: Props) {
 
   const handleBarCodeScanned = async (code: string) => {
     setShowScanner(false);
-    try {
-      const producto = await scanBarcode(code);
+    setCameraKey((prev) => prev + 1);
 
-      if (producto) {
-        navigation.navigate("ProductDetailScreen", { producto });
-      } else {
-        Alert.alert(
-          "Producto no encontrado",
-          "No se pudo encontrar el producto con ese código de barras"
-        );
-      }
-    } catch (error) {
-      console.error("Error escaneando código:", error);
-      Alert.alert("Error", "No se pudo escanear el código de barras");
+    const outcome = await lookupScannedBarcode(code);
+
+    if (outcome.kind === "found") {
+      navigation.navigate("ProductDetailScreen", {
+        producto: outcome.product,
+      });
+      return;
     }
+
+    if (outcome.kind === "invalid_code") {
+      Alert.alert(BARCODE_COPY.invalidTitle, BARCODE_COPY.invalidBody, [
+        { text: BARCODE_COPY.close, style: "cancel" },
+      ]);
+      return;
+    }
+
+    if (outcome.kind === "lookup_failed") {
+      Alert.alert(
+        BARCODE_COPY.lookupFailedTitle,
+        BARCODE_COPY.lookupFailedBody,
+        [
+          { text: BARCODE_COPY.cancel, style: "cancel" },
+          {
+            text: BARCODE_COPY.retry,
+            onPress: () => {
+              void handleBarCodeScanned(code);
+            },
+          },
+          {
+            text: BARCODE_COPY.createProduct,
+            onPress: () =>
+              navigation.navigate("CreateProductScreen", { barcode: code }),
+          },
+        ],
+      );
+      return;
+    }
+
+    Alert.alert(
+      BARCODE_COPY.notFoundTitle,
+      BARCODE_COPY.notFoundBody(outcome.code),
+      [
+        { text: BARCODE_COPY.cancel, style: "cancel" },
+        {
+          text: BARCODE_COPY.createProduct,
+          onPress: () =>
+            navigation.navigate("CreateProductScreen", {
+              barcode: outcome.code,
+            }),
+        },
+      ],
+    );
   };
 
   const toggleMeal = (meal: MealType) => {
@@ -1069,13 +1112,20 @@ export default function MacrosScreen({ navigation }: Props) {
       <Modal
         visible={showScanner}
         animationType="slide"
-        onRequestClose={() => setShowScanner(false)}
+        onRequestClose={() => {
+          setShowScanner(false);
+          setCameraKey((prev) => prev + 1);
+        }}
         presentationStyle="fullScreen"
         statusBarTranslucent={Platform.OS === "android"}
       >
         <ReusableCameraView
+          key={cameraKey}
           onBarCodeScanned={handleBarCodeScanned}
-          onCloseCamera={() => setShowScanner(false)}
+          onCloseCamera={() => {
+            setShowScanner(false);
+            setCameraKey((prev) => prev + 1);
+          }}
         />
       </Modal>
 

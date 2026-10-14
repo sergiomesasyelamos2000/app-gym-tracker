@@ -210,6 +210,13 @@ DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 #   * For example: A user cannot expect ${Hostname} to be expanded, as it is an environment variable and will be
 #     treated as '${Hostname}' itself on the command line.
 
+# EAS Linux + AGP 8.11 can leave autolinked RN modules with zero variants when
+# configure-on-demand is forced on. eas.json gradleCommand cannot carry flags.
+# See https://github.com/expo/eas-cli/issues/3311
+if [ "$EAS_BUILD" = "true" ]; then
+    set -- --no-configure-on-demand "$@"
+fi
+
 set -- \
         "-Dorg.gradle.appname=$APP_BASE_NAME" \
         -classpath "$CLASSPATH" \

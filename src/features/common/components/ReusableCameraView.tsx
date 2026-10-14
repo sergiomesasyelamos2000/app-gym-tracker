@@ -16,12 +16,36 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { withOpacity } from "../../../utils/themeStyles";
+import {
+  confirmRetailBarcodeRead,
+  isFallbackBarcodeType,
+  isRetailBarcodeType,
+  normalizeRetailBarcode,
+  type ConfirmBarcodeState,
+} from "../../nutrition/utils/retailBarcode";
+import { BARCODE_COPY } from "../../nutrition/utils/barcodeLookupFlow";
 
 const { width } = Dimensions.get("window");
 const SCAN_AREA_SIZE = Math.min(width * 0.7, 300);
+const FALLBACK_TYPES_AFTER_MS = 4000;
+const CONFIRM_WINDOW_MS = 1500;
+
+const RETAIL_BARCODE_TYPES = [
+  "ean13",
+  "ean8",
+  "upc_a",
+  "itf14",
+] as const;
+
+const EXTENDED_BARCODE_TYPES = [
+  ...RETAIL_BARCODE_TYPES,
+  "code128",
+  "datamatrix",
+  "qr",
+] as const;
 
 type Props = {
-  onBarCodeScanned?: (data: string) => void;
+  onBarCodeScanned?: (data: string, meta?: { type: string }) => void;
   onCloseCamera?: () => void;
 };
 
@@ -34,45 +58,84 @@ export default function ReusableCameraView({
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allowFallbackTypes, setAllowFallbackTypes] = useState(false);
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScannedRef = useRef(false);
+  const confirmStateRef = useRef<ConfirmBarcodeState>({
+    candidate: null,
+    firstSeenAt: null,
+  });
 
-  // Limpiar al desmontar
   useEffect(() => {
+    fallbackTimerRef.current = setTimeout(() => {
+      setAllowFallbackTypes(true);
+    }, FALLBACK_TYPES_AFTER_MS);
+
     return () => {
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
+      }
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
       }
       hasScannedRef.current = false;
     };
   }, []);
 
-  // Manejar botón de retroceso en Android
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
         onCloseCamera?.();
         return true;
-      }
+      },
     );
     return () => backHandler.remove();
   }, [onCloseCamera]);
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    // Evitar escaneos duplicados
+  const handleBarCodeScanned = ({
+    data,
+    type,
+  }: {
+    data: string;
+    type?: string;
+  }) => {
     if (hasScannedRef.current || scanned || !data) {
+      return;
+    }
+
+    const typeKey = (type ?? "").toLowerCase();
+    const isRetail = isRetailBarcodeType(typeKey);
+    const isFallback = isFallbackBarcodeType(typeKey);
+
+    if (!isRetail && !(allowFallbackTypes && isFallback)) {
+      return;
+    }
+
+    const normalized = normalizeRetailBarcode(data);
+    if (!normalized.ok) {
+      return;
+    }
+
+    const confirmation = confirmRetailBarcodeRead(
+      confirmStateRef.current,
+      normalized.canonical,
+      Date.now(),
+      CONFIRM_WINDOW_MS,
+    );
+    confirmStateRef.current = confirmation.next;
+
+    if (!confirmation.accepted) {
       return;
     }
 
     hasScannedRef.current = true;
     setScanned(true);
-
     Vibration.vibrate(100);
 
-    // Dar feedback visual antes de cerrar
     scanTimeoutRef.current = setTimeout(() => {
-      onBarCodeScanned?.(data);
+      onBarCodeScanned?.(normalized.canonical, { type: typeKey || "unknown" });
     }, 200);
   };
 
@@ -95,7 +158,6 @@ export default function ReusableCameraView({
     }
   };
 
-  // Loading state
   if (!permission) {
     return (
       <View style={styles.loadingContainer}>
@@ -105,7 +167,6 @@ export default function ReusableCameraView({
     );
   }
 
-  // Permission denied
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
@@ -152,7 +213,6 @@ export default function ReusableCameraView({
     );
   }
 
-  // Error state
   if (error) {
     return (
       <View style={styles.errorContainer}>
@@ -180,7 +240,7 @@ export default function ReusableCameraView({
   }
 
   const renderCorner = (
-    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
+    position: "topLeft" | "topRight" | "bottomLeft" | "bottomRight",
   ) => {
     const styleMap = {
       topLeft: [
@@ -215,25 +275,12 @@ export default function ReusableCameraView({
         facing="back"
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
-          barcodeTypes: [
-            "ean13",
-            "ean8",
-            "upc_a",
-            "upc_e",
-            "code128",
-            "code39",
-            "qr",
-            "aztec",
-            "pdf417",
-            "datamatrix",
-            "itf14",
-            "codabar",
-            "code93",
-          ],
+          barcodeTypes: allowFallbackTypes
+            ? [...EXTENDED_BARCODE_TYPES]
+            : [...RETAIL_BARCODE_TYPES],
         }}
       />
 
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -254,7 +301,6 @@ export default function ReusableCameraView({
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Overlay */}
       <View style={styles.overlay}>
         <View style={[styles.overlaySection, styles.overlayTop]} />
 
@@ -292,6 +338,7 @@ export default function ReusableCameraView({
             <Text style={styles.instructionText}>
               Coloca el código de barras dentro del marco
             </Text>
+            <Text style={styles.hintText}>{BARCODE_COPY.cameraHint}</Text>
           </View>
 
           <View style={[styles.overlaySection, styles.overlaySide]} />
@@ -307,12 +354,13 @@ export default function ReusableCameraView({
         </View>
       </View>
 
-      {/* Indicador de escaneo exitoso */}
       {scanned && (
         <View style={styles.scannedOverlay}>
           <View style={styles.scannedIndicator}>
-            <Icon name="check-circle" size={64} color="#4CAF50" />
-            <Text style={styles.scannedText}>¡Código escaneado!</Text>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={[styles.scannedText, { color: theme.primary }]}>
+              {BARCODE_COPY.searching}
+            </Text>
           </View>
         </View>
       )}
@@ -455,6 +503,13 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
+  hintText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
   bottomInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -586,7 +641,6 @@ const styles = StyleSheet.create({
   scannedText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#4CAF50",
     marginTop: 12,
   },
 });

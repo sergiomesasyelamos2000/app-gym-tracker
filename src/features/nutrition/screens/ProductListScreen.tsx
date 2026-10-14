@@ -48,7 +48,6 @@ import {
   MappedProduct as Product,
 } from "@sergiomesasyelamos2000/shared";
 import { useNutritionStore } from "../../../store/useNutritionStore";
-import { CaughtError } from "../../../types";
 import {
   canCreateCustomMeal,
   canCreateCustomProduct,
@@ -65,6 +64,10 @@ import { SearchStatusBanner } from "../components/product-search/SearchStatusBan
 import { SwapListShell } from "../components/product-search/SwapListShell";
 import { useDebouncedSwapKey } from "../components/product-search/useDebouncedSwapKey";
 import * as nutritionService from "../services/nutritionService";
+import {
+  BARCODE_COPY,
+  lookupScannedBarcode,
+} from "../utils/barcodeLookupFlow";
 import { NutritionStackParamList } from "./NutritionStack";
 
 const Tab = createMaterialTopTabNavigator();
@@ -1548,66 +1551,65 @@ export default function ProductListScreen() {
 
   const handleBarCodeScanned = async (code: string) => {
     setShowCamera(false);
-    // Incrementar key para forzar remontaje la próxima vez
     setCameraKey((prev) => prev + 1);
 
-    if (!code || code.trim().length === 0) {
-      Alert.alert("Error", "Código de barras no válido");
+    const outcome = await lookupScannedBarcode(code);
+
+    if (outcome.kind === "found") {
+      navigation.navigate("ProductDetailScreen", {
+        producto: outcome.product,
+        selectedMeal,
+      });
       return;
     }
 
-    try {
-      // Buscar el producto en la base de datos
-      const producto = await nutritionService.scanBarcode(code);
+    if (outcome.kind === "invalid_code") {
+      Alert.alert(BARCODE_COPY.invalidTitle, BARCODE_COPY.invalidBody, [
+        { text: BARCODE_COPY.close, style: "cancel" },
+      ]);
+      return;
+    }
 
-      if (producto && producto.code) {
-        // Producto encontrado en la base de datos
-        navigation.navigate("ProductDetailScreen", { producto });
-      } else {
-        // Producto no encontrado, crear uno nuevo directamente
-        Alert.alert(
-          "Producto no encontrado",
-          `No se encontró el producto con código ${code} en nuestra base de datos.\n\nSerás redirigido para crear un producto personalizado.`,
-          [
-            {
-              text: "Cancelar",
-              style: "cancel",
-            },
-            {
-              text: "Crear Producto",
-              onPress: () =>
-                navigation.navigate("CreateProductScreen", {
-                  barcode: code,
-                  selectedMeal,
-                }),
-              style: "default",
-            },
-          ]
-        );
-      }
-    } catch (error: CaughtError) {
-      console.error("Error escaneando código:", error);
-
-      // Si hay error, asumir que no existe y ofrecer crearlo
+    if (outcome.kind === "lookup_failed") {
       Alert.alert(
-        "Producto no encontrado",
-        `No se pudo encontrar el producto con código ${code}.\n\n¿Deseas crear un producto personalizado?`,
+        BARCODE_COPY.lookupFailedTitle,
+        BARCODE_COPY.lookupFailedBody,
         [
+          { text: BARCODE_COPY.cancel, style: "cancel" },
           {
-            text: "Cancelar",
-            style: "cancel",
+            text: BARCODE_COPY.retry,
+            onPress: () => {
+              void handleBarCodeScanned(code);
+            },
           },
           {
-            text: "Crear Producto",
+            text: BARCODE_COPY.createProduct,
             onPress: () =>
               navigation.navigate("CreateProductScreen", {
                 barcode: code,
                 selectedMeal,
               }),
           },
-        ]
+        ],
       );
+      return;
     }
+
+    Alert.alert(
+      BARCODE_COPY.notFoundTitle,
+      BARCODE_COPY.notFoundBody(outcome.code),
+      [
+        { text: BARCODE_COPY.cancel, style: "cancel" },
+        {
+          text: BARCODE_COPY.createProduct,
+          onPress: () =>
+            navigation.navigate("CreateProductScreen", {
+              barcode: outcome.code,
+              selectedMeal,
+            }),
+        },
+      ],
+    );
   };
 
   const getTabConfig = () => {

@@ -210,9 +210,16 @@ export async function getAIUsage(userId: string): Promise<AIUsageResponseDto> {
 
 // Barcode scanning
 export async function scanBarcode(code: string): Promise<Product> {
+  let userId: string | undefined;
+  try {
+    userId = getCurrentUserId();
+  } catch {
+    userId = undefined;
+  }
+
   return apiFetch<Product>("nutrition/barcode", {
     method: "POST",
-    body: JSON.stringify({ code }),
+    body: JSON.stringify(userId ? { code, userId } : { code }),
   });
 }
 

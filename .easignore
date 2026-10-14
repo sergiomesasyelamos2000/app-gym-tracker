@@ -1,0 +1,22 @@
+# Keep EAS upload lean and avoid shipping local native caches.
+android/build/
+android/.gradle/
+android/app/build/
+android/.kotlin/
+ios/build/
+ios/Pods/
+.cursor/
+.ECC/
+.claude/
+.expo/
+coverage/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+docs/
+*.md
+!README.md
+agent-transcripts/
+NUL

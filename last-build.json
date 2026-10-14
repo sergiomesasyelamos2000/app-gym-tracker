@@ -1,0 +1,48 @@
+{
+  "id": "32bdc9d5-306d-4c1e-a860-361a2463ff1f",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "EAS_BUILD_UNKNOWN_GRADLE_ERROR",
+    "message": "Gradle build failed with unknown error. See logs for the \"Run gradlew\" phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "01a11f4a-8f6e-73a9-9e1c-0bb5f6d41c41",
+    "hash": "b71a1bcb1493f5bd9f45badf507cd8d1d11b7322"
+  },
+  "initiatingActor": {
+    "id": "1abd9c61-55fe-4097-b12b-6490f52100dc",
+    "displayName": "smy862"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/59890898-088b-402b-bc22-b15ec51d1c17/32bdc9d5-306d-4c1e-a860-361a2463ff1f/2026-10-09T06%3A12%3A23Z-e880c5c0-b6f4-46f2-8426-59d7f424abbd.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20261009%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20261009T061350Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=62c718ee6101d0532abb546af8df919ad6e1dc0ac7f31a4b2b9a0754c2acda08df99d82faf6b843f4d1f66f8f3b3118fb5a49aa7b22fa8bf0f57e31a6f18353a425fef25b2826bcd47b64d0a33f8d56869ae863df02c319f1ab834bcdebdf4fbb3c8f6d65977965ea85206674d765b027bd17bb8d7c2dd079f9327572d4c6e752ae13cbbcbca6c3f12bb7795aa51868e4209e2abb1690a2f71532fcc79bc05ee2c3710a2a46ab94d99f102a322fc730c5eae2f99d2a9cd07156f4c10173eacaa455484df26b143cba5af9996e659a685dfe5a185a57f3bf9ff82d40097382dbbbbf206e6bd9ca413307e3af4bc4070f191dbb692a7e09faf799e0dd10dad1da9"
+  ],
+  "project": {
+    "id": "59890898-088b-402b-bc22-b15ec51d1c17",
+    "name": "app",
+    "slug": "app",
+    "ownerAccount": {
+      "id": "7658b283-3ea5-4b6d-b231-d8446276cec2",
+      "name": "smy862"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "development",
+  "sdkVersion": "54.0.0",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "5",
+  "gitCommitHash": "0f797a3dd66acbd2750a75d75f890a171d445dfd",
+  "gitCommitMessage": "fix: update WorkoutLiveNotificationUi and WorkoutLiveActivityWidget for improved progress handling\n\n- Adjusted progress calculation in WorkoutLiveNotificationUi to reflect remaining time instead of elapsed time, enhancing accuracy in displaying workout progress.\n- Updated WorkoutLiveActivityWidget to ensure countdown displays correctly, improving user experience during live activities.\n- Marked ECC file as dirty to indicate changes in the subproject commit state.",
+  "priority": "NORMAL",
+  "createdAt": "2026-10-09T06:12:22.420Z",
+  "updatedAt": "2026-10-09T06:13:20.907Z",
+  "completedAt": "2026-10-09T06:13:20.650Z",
+  "expirationDate": "2026-10-23T06:12:22.498Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 849,
+    "buildQueueTime": 5141,
+    "buildDuration": 52240
+  }
+}

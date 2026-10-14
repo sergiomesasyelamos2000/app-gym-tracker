@@ -1,0 +1,605 @@
+(worker) [SPIN_UP_BUILDER] AMD, 4 vCPUs, 15.62 GB RAM
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] Using image "ubuntu-24.04-jdk-17-ndk-r27b" based on "ubuntu-2404-noble-amd64-v20250805"
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] Installed software:
+(worker) [SPIN_UP_BUILDER] - NDK 27.1.12297006
+(worker) [SPIN_UP_BUILDER] - Node.js 20.19.4
+(worker) [SPIN_UP_BUILDER] - Bun 1.2.20
+(worker) [SPIN_UP_BUILDER] - Yarn 1.22.22
+(worker) [SPIN_UP_BUILDER] - pnpm 10.14.0
+(worker) [SPIN_UP_BUILDER] - npm 10.9.3
+(worker) [SPIN_UP_BUILDER] - Java 17
+(worker) [SPIN_UP_BUILDER] - node-gyp 11.3.0
+(worker) [SPIN_UP_BUILDER] - Maestro 2.0.2
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] Project environment variables:
+(worker) [SPIN_UP_BUILDER]   EAS_GRADLE_CACHE=0
+(worker) [SPIN_UP_BUILDER]   EAS_USE_CACHE=1
+(worker) [SPIN_UP_BUILDER]   EAS_USE_NPM_CACHE=0
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID=com.smy862.app.premium.lifetime
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID=com.smy862.app.premium.monthly.v2
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID=com.smy862.app.premium.yearly.v2
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID=1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS=1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com
+(worker) [SPIN_UP_BUILDER]   EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB=1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com
+(worker) [SPIN_UP_BUILDER]   GRADLE_OPTS=-Dorg.gradle.configureondemand=false
+(worker) [SPIN_UP_BUILDER]   NPM_CONFIG_LEGACY_PEER_DEPS=true
+(worker) [SPIN_UP_BUILDER]   __API_SERVER_URL=https://api.expo.dev/
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] Environment secrets:
+(worker) [SPIN_UP_BUILDER]   EXPO_TOKEN=********
+(worker) [SPIN_UP_BUILDER]   NODE_AUTH_TOKEN=********
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] EAS Build environment variables:
+(worker) [SPIN_UP_BUILDER]   NVM_INC=/home/expo/.nvm/versions/node/v20.19.4/include/node
+(worker) [SPIN_UP_BUILDER]   HOSTNAME=turtle-worker-361a2463ff1f
+(worker) [SPIN_UP_BUILDER]   JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+(worker) [SPIN_UP_BUILDER]   WORKER_TARBALL_URL=https://storage.googleapis.com/eas-build-worker-tarballs/worker-android-production.tar.gz
+(worker) [SPIN_UP_BUILDER]   PWD=/usr/local/eas-build-worker
+(worker) [SPIN_UP_BUILDER]   HOME=/home/expo
+(worker) [SPIN_UP_BUILDER]   ANDROID_NDK_HOME=/home/expo/Android/Sdk/ndk/27.1.12297006
+(worker) [SPIN_UP_BUILDER]   NVM_DIR=/home/expo/.nvm
+(worker) [SPIN_UP_BUILDER]   ANDROID_HOME=/home/expo/Android/Sdk
+(worker) [SPIN_UP_BUILDER]   SHLVL=1
+(worker) [SPIN_UP_BUILDER]   ANDROID_SDK_ROOT=/home/expo/Android/Sdk
+(worker) [SPIN_UP_BUILDER]   PATH=/home/expo/workingdir/bin:/home/expo/.nvm/versions/node/v20.19.4/bin:/opt/bundletool:/home/expo/Android/Sdk/build-tools/29.0.3:/home/expo/Android/Sdk/build-tools/35.0.0:/home/expo/Android/Sdk/ndk/27.1.12297006:/home/expo/Android/Sdk/cmdline-tools/tools/bin:/home/expo/Android/Sdk/tools:/home/expo/Android/Sdk/tools/bin:/home/expo/Android/Sdk/platform-tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/expo/.bun/bin
+(worker) [SPIN_UP_BUILDER]   LOGGER_LEVEL=debug
+(worker) [SPIN_UP_BUILDER]   NVM_BIN=/home/expo/.nvm/versions/node/v20.19.4/bin
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_WORKER_DIR=/home/expo/eas-build-worker
+(worker) [SPIN_UP_BUILDER]   OLDPWD=/home/expo
+(worker) [SPIN_UP_BUILDER]   _=/home/expo/.nvm/versions/node/v20.19.4/bin/node
+(worker) [SPIN_UP_BUILDER]   CI=1
+(worker) [SPIN_UP_BUILDER]   MAESTRO_DRIVER_STARTUP_TIMEOUT=120000
+(worker) [SPIN_UP_BUILDER]   MAESTRO_CLI_NO_ANALYTICS=1
+(worker) [SPIN_UP_BUILDER]   HOMEBREW_NO_AUTO_UPDATE=1
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD=true
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_RUNNER=eas-build
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_PLATFORM=android
+(worker) [SPIN_UP_BUILDER]   EAS_CLI_SENTRY_DSN=https://ca4734dc503543b28d55fdaf0563f61c@o30871.ingest.sentry.io/1837720
+(worker) [SPIN_UP_BUILDER]   NVM_NODEJS_ORG_MIRROR=http://nodejs.production.caches.eas-build.internal
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_PROFILE=development
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_GIT_COMMIT_HASH=0f797a3dd66acbd2750a75d75f890a171d445dfd
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_ID=32bdc9d5-306d-4c1e-a860-361a2463ff1f
+(worker) [SPIN_UP_BUILDER]   LANG=en_US.UTF-8
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_WORKINGDIR=/home/expo/workingdir/build
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_PROJECT_ID=59890898-088b-402b-bc22-b15ec51d1c17
+(worker) [SPIN_UP_BUILDER]   ANDROID_CCACHE=/usr/bin/ccache
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_MAVEN_CACHE_URL=http://maven.production.caches.eas-build.internal
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_ANDROID_VERSION_CODE=5
+(worker) [SPIN_UP_BUILDER]   EAS_BUILD_USERNAME=smy862
+(worker) [SPIN_UP_BUILDER]   __EAS_BUILD_ENVS_DIR=/home/expo/workingdir/env
+(worker) [SPIN_UP_BUILDER] 
+(worker) [SPIN_UP_BUILDER] Builder is ready, starting build
+(worker) [SPIN_UP_BUILDER] End phase: SPIN_UP_BUILDER
+(worker) [INSTALL_CUSTOM_TOOLS] Start phase: INSTALL_CUSTOM_TOOLS
+(worker) [INSTALL_CUSTOM_TOOLS] End phase: INSTALL_CUSTOM_TOOLS
+(worker) [PREPARE_PROJECT] Start phase: PREPARE_PROJECT
+(worker) [PREPARE_PROJECT] Normalizing project source permissions
+(worker) [PREPARE_PROJECT] .npmrc found at .npmrc
+(worker) [PREPARE_PROJECT] End phase: PREPARE_PROJECT
+(worker) [PRE_INSTALL_HOOK] Start phase: PRE_INSTALL_HOOK
+(worker) [PRE_INSTALL_HOOK] End phase: PRE_INSTALL_HOOK
+(worker) [READ_EAS_JSON] Start phase: READ_EAS_JSON
+(worker) [READ_EAS_JSON] Using eas.json:
+(worker) [READ_EAS_JSON] {
+  "cli": {
+    "version": ">= 18.0.5",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      },
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
+      }
+    },
+    "production": {
+      "prebuildCommand": "npx expo prebuild --clean",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "1029378599483-9r1n6v0tno8925jfmi71aghh97avno5i.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni.apps.googleusercontent.com",
+        "EXPO_PUBLIC_APPLE_IAP_MONTHLY_PRODUCT_ID": "com.smy862.app.premium.monthly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_YEARLY_PRODUCT_ID": "com.smy862.app.premium.yearly.v2",
+        "EXPO_PUBLIC_APPLE_IAP_LIFETIME_PRODUCT_ID": "com.smy862.app.premium.lifetime",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.configureondemand=false"
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      },
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
+
+(worker) [READ_EAS_JSON] End phase: READ_EAS_JSON
+(worker) [READ_PACKAGE_JSON] Start phase: READ_PACKAGE_JSON
+(worker) [READ_PACKAGE_JSON] Using package.json:
+(worker) [READ_PACKAGE_JSON] {
+  "name": "app",
+  "license": "0BSD",
+  "version": "1.0.1",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start -c",
+    "start:tunnel": "expo start --tunnel -c",
+    "android": "npx expo run:android --device",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "eas-build-post-install": "node scripts/eas-android-post-install.js"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/netinfo": "^11.5.2",
+    "@react-native-google-signin/google-signin": "^16.1.2",
+    "@react-native-picker/picker": "2.11.1",
+    "@react-navigation/bottom-tabs": "^7.3.14",
+    "@react-navigation/material-top-tabs": "^7.4.2",
+    "@react-navigation/native": "^7.1.19",
+    "@react-navigation/native-stack": "^7.3.14",
+    "@reduxjs/toolkit": "^2.8.2",
+    "@sergiomesasyelamos2000/shared": "^1.4.0",
+    "@types/react": "~19.1.0",
+    "apple-health": "^0.0.5",
+    "expo": "~54.0.33",
+    "expo-apple-authentication": "~8.0.8",
+    "expo-auth-session": "~7.0.10",
+    "expo-build-properties": "~1.0.10",
+    "expo-camera": "~17.0.10",
+    "expo-crypto": "~15.0.8",
+    "expo-dev-client": "~6.0.20",
+    "expo-file-system": "~19.0.21",
+    "expo-haptics": "~15.0.8",
+    "expo-iap": "^4.2.3",
+    "expo-image-manipulator": "~14.0.8",
+    "expo-image-picker": "~17.0.10",
+    "expo-linear-gradient": "~15.0.8",
+    "expo-notifications": "~0.32.16",
+    "expo-sharing": "~14.0.8",
+    "expo-sqlite": "^16.0.10",
+    "expo-status-bar": "~3.0.9",
+    "expo-web-browser": "~15.0.10",
+    "lucide-react-native": "^0.511.0",
+    "nativewind": "^4.1.23",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.56.4",
+    "react-native": "0.81.5",
+    "react-native-calendar-strip": "^2.2.6",
+    "react-native-calendars": "^1.1313.0",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-circular-progress-indicator": "^4.4.2",
+    "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-health-connect": "^4.1.3",
+    "react-native-image-picker": "^8.2.1",
+    "react-native-markdown-display": "^7.0.2",
+    "react-native-modal": "^14.0.0-rc.1",
+    "react-native-modal-datetime-picker": "^18.0.0",
+    "react-native-pager-view": "^6.9.1",
+    "react-native-paper": "^5.14.5",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-responsive-dimensions": "^3.1.1",
+    "react-native-responsive-fontsize": "^0.5.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
+    "react-native-tab-view": "^4.2.0",
+    "react-native-timer-picker": "^2.2.0",
+    "react-native-toast-message": "^2.3.0",
+    "react-native-uuid": "^2.0.3",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-web": "^0.21.0",
+    "react-native-webview": "^13.13.5",
+    "react-native-worklets": "0.5.1",
+    "react-redux": "^9.2.0",
+    "tailwind-rn": "^4.2.0",
+    "typescript": "~5.9.2",
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@react-native/metro-config": "^0.83.1",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
+    "@types/react": "~19.0.0",
+    "@types/react-native-vector-icons": "^6.4.18",
+    "@types/react-test-renderer": "^19.1.0",
+    "jest": "^29.7.0",
+    "jest-expo": "^54.0.17",
+    "react-test-renderer": "^19.1.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.8.3"
+  },
+  "private": true
+}
+(worker) [READ_PACKAGE_JSON] End phase: READ_PACKAGE_JSON
+(worker) [INSTALL_DEPENDENCIES] Start phase: INSTALL_DEPENDENCIES
+(worker) [INSTALL_DEPENDENCIES] Running "npm ci --include=dev" in /home/expo/workingdir/build directory
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated whatwg-encoding@2.0.0: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated source-map-resolve@0.6.0: See https://github.com/lydell/source-map-resolve#deprecated
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated @testing-library/jest-native@5.4.3: DEPRECATED: This package is no longer maintained.
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated Please use the built-in Jest matchers available in @testing-library/react-native v12.4+.
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated See migration guide: https://callstack.github.io/react-native-testing-library/docs/migration/jest-matchers
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated react-native-vector-icons@10.3.0: react-native-vector-icons package has moved to a new model of per-icon-family packages. See the https://github.com/oblador/react-native-vector-icons/blob/master/MIGRATION.md on how to migrate
+(worker) [INSTALL_DEPENDENCIES] npm warn deprecated core-js@1.2.7: core-js@<3.23.3 is no longer maintained and not recommended for usage due to the number of issues. Because of the V8 engine whims, feature detection in old core-js versions could cause a slowdown up to 100x even if nothing is polyfilled. Some versions have web compatibility issues. Please, upgrade your dependencies to the actual version of core-js.
+(worker) [INSTALL_DEPENDENCIES] added 1101 packages, and audited 1102 packages in 20s
+(worker) [INSTALL_DEPENDENCIES] 130 packages are looking for funding
+(worker) [INSTALL_DEPENDENCIES]   run `npm fund` for details
+(worker) [INSTALL_DEPENDENCIES] 97 vulnerabilities (1 low, 24 moderate, 70 high, 2 critical)
+(worker) [INSTALL_DEPENDENCIES] 
+(worker) [INSTALL_DEPENDENCIES] To address issues that do not require attention, run:
+(worker) [INSTALL_DEPENDENCIES]   npm audit fix
+(worker) [INSTALL_DEPENDENCIES] 
+(worker) [INSTALL_DEPENDENCIES] To address all issues possible (including breaking changes), run:
+(worker) [INSTALL_DEPENDENCIES]   npm audit fix --force
+(worker) [INSTALL_DEPENDENCIES] 
+(worker) [INSTALL_DEPENDENCIES] Some issues need review, and may require choosing
+(worker) [INSTALL_DEPENDENCIES] a different dependency.
+(worker) [INSTALL_DEPENDENCIES] 
+(worker) [INSTALL_DEPENDENCIES] Run `npm audit` for details.
+(worker) [INSTALL_DEPENDENCIES] End phase: INSTALL_DEPENDENCIES
+(worker) [READ_APP_CONFIG] Start phase: READ_APP_CONFIG
+(worker) [READ_APP_CONFIG] Using app configuration:
+(worker) [READ_APP_CONFIG] {
+  "name": "EvoFit",
+  "slug": "app",
+  "platforms": [
+    "ios",
+    "android",
+    "web"
+  ],
+  "version": "1.0.1",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "automatic",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./assets/splash-icon.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "scheme": [
+    "com.smy862.app",
+    "com.googleusercontent.apps.1029378599483-55i89a23olo9k8pvidrveh2pkfn1cuni"
+  ],
+  "notification": {
+    "icon": "./assets/icon.png"
+  },
+  "ios": {
+    "icon": "./assets/ios-icon.png",
+    "supportsTablet": true,
+    "usesAppleSignIn": true,
+    "bundleIdentifier": "com.smy862.app",
+    "buildNumber": "71",
+    "infoPlist": {
+      "UIViewControllerBasedStatusBarAppearance": false,
+      "NSPhotoLibraryUsageDescription": "EvoFit necesita acceso a tu fototeca para que puedas, por ejemplo, elegir una foto para tu perfil o subir una imagen de una comida para estimar calorías y macronutrientes y guardarla en tu diario nutricional.",
+      "NSCameraUsageDescription": "EvoFit necesita acceso a la cámara para escanear códigos de barras de productos alimenticios y para fotografiar comidas, estimar calorías y macronutrientes, y guardarlas en tu diario nutricional.",
+      "NSHealthShareUsageDescription": "EvoFit lee de Apple Salud tu frecuencia cardiaca y energía activa durante el entrenamiento, y tu sueño y pasos para consejos de descanso.",
+      "NSHealthUpdateUsageDescription": "EvoFit puede guardar en Apple Salud el entrenamiento completado y las calorías activas de la sesión, si activas esa opción.",
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
+  "android": {
+    "usesCleartextTraffic": true,
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#5B21B6"
+    },
+    "edgeToEdgeEnabled": true,
+    "package": "com.smy862.app",
+    "versionCode": 1,
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+      "android.permission.health.READ_HEART_RATE",
+      "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+      "android.permission.health.READ_SLEEP",
+      "android.permission.health.READ_STEPS",
+      "android.permission.health.WRITE_EXERCISE",
+      "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"
+    ]
+  },
+  "web": {
+    "favicon": "./assets/favicon.png",
+    "bundler": "metro"
+  },
+  "plugins": [
+    [
+      "@react-native-google-signin/google-signin",
+      {
+        "iosUrlScheme": "com.googleusercontent.apps.1029378599483-9b2ho2kkigj6foqvjuji2lslunvrm3bv"
+      }
+    ],
+    [
+      "expo-camera",
+      {
+        "cameraPermission": "EvoFit necesita acceso a la cámara para escanear códigos de barras de productos alimenticios y para fotografiar comidas, estimar calorías y macronutrientes, y guardarlas en tu diario nutricional.",
+        "recordAudioAndroid": false
+      }
+    ],
+    [
+      "expo-build-properties",
+      {
+        "ios": {
+          "extraPods": [
+            {
+              "name": "GoogleUtilities",
+              "modular_headers": true
+            },
+            {
+              "name": "RecaptchaInterop",
+              "modular_headers": true
+            },
+            {
+              "name": "AppCheckCore",
+              "version": "11.2.0"
+            }
+          ]
+        },
+        "android": {
+          "minSdkVersion": 26
+        }
+      }
+    ],
+    [
+      "apple-health",
+      {
+        "healthSharePermission": "EvoFit lee de Apple Salud tu frecuencia cardiaca y energía activa durante el entrenamiento, y tu sueño y pasos para consejos de descanso.",
+        "healthUpdatePermission": "EvoFit puede guardar en Apple Salud el entrenamiento completado y las calorías activas de la sesión, si activas esa opción.",
+        "backgroundDelivery": false,
+        "healthKitRequired": false
+      }
+    ],
+    "react-native-health-connect",
+    "./plugins/withHealthUsageStrings",
+    "./plugins/withWorkoutLiveActivity",
+    "./plugins/withIosPodFixes",
+    "@react-native-community/datetimepicker"
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "59890898-088b-402b-bc22-b15ec51d1c17",
+      "build": {
+        "experimental": {
+          "ios": {
+            "appExtensions": [
+              {
+                "targetName": "WorkoutLiveActivity",
+                "bundleIdentifier": "com.smy862.app.WorkoutLiveActivity",
+                "entitlements": {
+                  "com.apple.security.application-groups": [
+                    "group.com.smy862.app"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "enableAndroidPush": false,
+    "appleIap": {
+      "monthlyProductId": "com.smy862.app.premium.monthly.v2",
+      "yearlyProductId": "com.smy862.app.premium.yearly.v2",
+      "lifetimeProductId": "com.smy862.app.premium.lifetime"
+    }
+  },
+  "owner": "smy862",
+  "sdkVersion": "54.0.0"
+}
+(worker) [READ_APP_CONFIG] End phase: READ_APP_CONFIG
+(worker) [RUN_EXPO_DOCTOR] Start phase: RUN_EXPO_DOCTOR
+(worker) [RUN_EXPO_DOCTOR] Running "expo doctor"
+(worker) [RUN_EXPO_DOCTOR] env: load .env
+(worker) [RUN_EXPO_DOCTOR] env: export EXPO_PUBLIC_API_URL_ANDROID
+(worker) [RUN_EXPO_DOCTOR] Running 18 checks on your project...
+(worker) [RUN_EXPO_DOCTOR] 15/18 checks passed. 3 checks failed. Possible issues detected:
+(worker) [RUN_EXPO_DOCTOR] Use the --verbose flag to see more details about passed checks.
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] ✖ Check Expo config (app.json/ app.config.js) schema
+(worker) [RUN_EXPO_DOCTOR] Error validating fields in /home/expo/workingdir/build/app.json:
+(worker) [RUN_EXPO_DOCTOR]  Field: android - should NOT have additional property 'usesCleartextTraffic'.
+(worker) [RUN_EXPO_DOCTOR] Advice:
+(worker) [RUN_EXPO_DOCTOR] Resolve schema errors in your app config. Learn more: https://docs.expo.dev/workflow/configuration/
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] ✖ Check for app config fields that may not be synced in a non-CNG project
+(worker) [RUN_EXPO_DOCTOR] This project contains native project folders but also has native configuration properties in app.config.js, indicating it is configured to use Prebuild. When the android/ios folders are present, EAS Build will not sync the following properties: orientation, icon, userInterfaceStyle, splash, scheme, notification, ios, android, plugins. 
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] Advice:
+(worker) [RUN_EXPO_DOCTOR] Add '/android' to your .easignore file if you intend to use CNG / Prebuild. Learn more: https://docs.expo.dev/workflow/prebuild/#usage-with-eas-build
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] ✖ Check that packages match versions required by installed Expo SDK
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] ⚠️ Minor version mismatches
+(worker) [RUN_EXPO_DOCTOR] package                          expected  found    
+(worker) [RUN_EXPO_DOCTOR] @react-native-community/netinfo  11.4.1    11.5.2   
+(worker) [RUN_EXPO_DOCTOR] @types/react                     ~19.1.10  19.0.14  
+(worker) [RUN_EXPO_DOCTOR] react-native-webview             13.15.0   13.16.1  
+(worker) [RUN_EXPO_DOCTOR] typescript                       ~5.9.2    5.8.3    
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] 🔧 Patch version mismatches
+(worker) [RUN_EXPO_DOCTOR] package                          expected  found    
+(worker) [RUN_EXPO_DOCTOR] expo                             ~54.0.37  54.0.34  
+(worker) [RUN_EXPO_DOCTOR] expo-file-system                 ~19.0.24  19.0.22  
+(worker) [RUN_EXPO_DOCTOR] jest-expo                        ~54.0.18  54.0.17  
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] Changelogs:
+(worker) [RUN_EXPO_DOCTOR] - expo-file-system → https://github.com/expo/expo/blob/sdk-54/packages/expo-file-system/CHANGELOG.md
+(worker) [RUN_EXPO_DOCTOR] 
+(worker) [RUN_EXPO_DOCTOR] 7 packages out of date.
+(worker) [RUN_EXPO_DOCTOR] Advice:
+(worker) [RUN_EXPO_DOCTOR] Use 'npx expo install --check' to review and upgrade your dependencies.
+(worker) [RUN_EXPO_DOCTOR] To ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: https://expo.fyi/dependency-validation
+(worker) [RUN_EXPO_DOCTOR] 3 checks failed, indicating possible issues with the project.
+(worker) [RUN_EXPO_DOCTOR] Command "expo doctor" failed.
+(worker) [RUN_EXPO_DOCTOR] End phase: RUN_EXPO_DOCTOR
+(worker) [FIX_GRADLEW] Start phase: FIX_GRADLEW
+(worker) [FIX_GRADLEW] Replacing CRLF line endings with LF in gradlew script
+(worker) [FIX_GRADLEW] End phase: FIX_GRADLEW
+(worker) [PREBUILD] Start phase: PREBUILD
+(worker) [PREBUILD] Skipped running "expo prebuild" because the "android" directory already exists. Learn more about the build process: https://docs.expo.dev/build-reference/android-builds/
+(worker) [PREBUILD] End phase: PREBUILD
+(worker) [RESTORE_CACHE] Start phase: RESTORE_CACHE
+(worker) [RESTORE_CACHE] Restoring cache key: android-ccache-56b659a8c00247407421a9ced61833dbfcb32cc84403a6aea3c2b4271e66853e
+(worker) [RESTORE_CACHE] No cache found for this key
+(worker) [RESTORE_CACHE] End phase: RESTORE_CACHE
+(worker) [POST_INSTALL_HOOK] Start phase: POST_INSTALL_HOOK
+(worker) [POST_INSTALL_HOOK] Script 'eas-build-post-install' is present in package.json, running it...
+(worker) [POST_INSTALL_HOOK] > app@1.0.1 eas-build-post-install
+(worker) [POST_INSTALL_HOOK] > node scripts/eas-android-post-install.js
+(worker) [POST_INSTALL_HOOK] [eas-android-post-install] removed android/build
+(worker) [POST_INSTALL_HOOK] [eas-android-post-install] wrote /home/expo/.gradle/gradle.properties
+(worker) [POST_INSTALL_HOOK] End phase: POST_INSTALL_HOOK
+(worker) [CALCULATE_EXPO_UPDATES_RUNTIME_VERSION] Start phase: CALCULATE_EXPO_UPDATES_RUNTIME_VERSION
+(worker) [CALCULATE_EXPO_UPDATES_RUNTIME_VERSION] End phase: CALCULATE_EXPO_UPDATES_RUNTIME_VERSION
+(worker) [PREPARE_CREDENTIALS] Start phase: PREPARE_CREDENTIALS
+(worker) [PREPARE_CREDENTIALS] Writing secrets to the project's directory
+(worker) [PREPARE_CREDENTIALS] Injecting signing config into build.gradle
+(worker) [PREPARE_CREDENTIALS] Signing config injected
+(worker) [PREPARE_CREDENTIALS] End phase: PREPARE_CREDENTIALS
+(worker) [CONFIGURE_ANDROID_VERSION] Start phase: CONFIGURE_ANDROID_VERSION
+(worker) [CONFIGURE_ANDROID_VERSION] Injecting version config into build.gradle
+(worker) [CONFIGURE_ANDROID_VERSION] Version code: 5
+(worker) [CONFIGURE_ANDROID_VERSION] Version config injected
+(worker) [CONFIGURE_ANDROID_VERSION] End phase: CONFIGURE_ANDROID_VERSION
+(worker) [CONFIGURE_EXPO_UPDATES] Start phase: CONFIGURE_EXPO_UPDATES
+(worker) [CONFIGURE_EXPO_UPDATES] End phase: CONFIGURE_EXPO_UPDATES
+(worker) [RUN_GRADLEW] Start phase: RUN_GRADLEW
+(worker) [RUN_GRADLEW] Running 'gradlew :app:assembleDebug' in /home/expo/workingdir/build/android
+(worker) [RUN_GRADLEW] Downloading https://services.gradle.org/distributions/gradle-8.14.3-bin.zip
+(worker) [RUN_GRADLEW] 10%
+(worker) [RUN_GRADLEW] 20%.
+(worker) [RUN_GRADLEW] 30%
+(worker) [RUN_GRADLEW] 40%.
+(worker) [RUN_GRADLEW] 50%.
+(worker) [RUN_GRADLEW] 60%
+(worker) [RUN_GRADLEW] 70
+(worker) [RUN_GRADLEW] %.
+(worker) [RUN_GRADLEW] 80%
+(worker) [RUN_GRADLEW] 90%
+(worker) [RUN_GRADLEW] 100%
+(worker) [RUN_GRADLEW] Welcome to Gradle 8.14.3!
+(worker) [RUN_GRADLEW] Here are the highlights of this release:
+(worker) [RUN_GRADLEW]  - Java 24 support
+(worker) [RUN_GRADLEW]  - GraalVM Native Image toolchain selection
+(worker) [RUN_GRADLEW]  - Enhancements to test reporting
+(worker) [RUN_GRADLEW]  - Build Authoring improvements
+(worker) [RUN_GRADLEW] For more details see https://docs.gradle.org/8.14.3/release-notes.html
+(worker) [RUN_GRADLEW] Starting a Gradle Daemon (subsequent builds will be faster)
+(worker) [RUN_GRADLEW] [Incubating] Problems report is available at: file:///home/expo/workingdir/build/android/build/reports/problems/problems-report.html
+(worker) [RUN_GRADLEW] FAILURE: Build failed with an exception.
+(worker) [RUN_GRADLEW] * Where:
+(worker) [RUN_GRADLEW] Settings file '/home/expo/workingdir/build/android/settings.gradle' line: 13
+(worker) [RUN_GRADLEW] * What went wrong:
+(worker) [RUN_GRADLEW] Could not compile settings file '/home/expo/workingdir/build/android/settings.gradle'.
+(worker) [RUN_GRADLEW] > startup failed:
+(worker) [RUN_GRADLEW]   settings file '/home/expo/workingdir/build/android/settings.gradle': 13: The pluginManagement {} block must appear before any other statements in the script.
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]   For more information on the pluginManagement {} block, please refer to https://docs.gradle.org/8.14.3/userguide/plugins.html#sec:plugin_management in the Gradle documentation.
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]    @ line 13, column 1.
+(worker) [RUN_GRADLEW]      pluginManagement {
+(worker) [RUN_GRADLEW]      ^
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]   settings file '/home/expo/workingdir/build/android/settings.gradle': 32: only buildscript {}, pluginManagement {} and other plugins {} script blocks are allowed before plugins {} blocks, no other statements are allowed
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]   For more information on the plugins {} block, please refer to https://docs.gradle.org/8.14.3/userguide/plugins.html#sec:plugins_block in the Gradle documentation.
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]    @ line 32, column 1.
+(worker) [RUN_GRADLEW]      plugins {
+(worker) [RUN_GRADLEW]      ^
+(worker) [RUN_GRADLEW]   
+(worker) [RUN_GRADLEW]   2 errors
+(worker) [RUN_GRADLEW] * Try:
+(worker) [RUN_GRADLEW] > Run with --stacktrace option to get the stack trace.
+(worker) [RUN_GRADLEW] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+(worker) [RUN_GRADLEW] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+(worker) [RUN_GRADLEW] For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+(worker) [RUN_GRADLEW] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+(worker) [RUN_GRADLEW] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+(worker) [RUN_GRADLEW] For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+(worker) [RUN_GRADLEW] > Run with --info or --debug option to get more log output.
+(worker) [RUN_GRADLEW] > Run with --scan to get full insights.
+(worker) [RUN_GRADLEW] > Get more help at https://help.gradle.org.
+(worker) [RUN_GRADLEW] BUILD FAILED in 10s
+(worker) [RUN_GRADLEW] FAILURE: Build failed with an exception.
+(worker) [RUN_GRADLEW] * What went wrong:
+(worker) [RUN_GRADLEW] Projects for build ':' have not been registered yet.
+(worker) [RUN_GRADLEW] * Try:
+(worker) [RUN_GRADLEW] > Run with --stacktrace option to get the stack trace.
+(worker) [RUN_GRADLEW] > Run with --info or --debug option to get more log output.
+(worker) [RUN_GRADLEW] > Run with --scan to get full insights.
+(worker) [RUN_GRADLEW] > Get more help at https://help.gradle.org.
+(worker) [RUN_GRADLEW] BUILD FAILED in 10s
+(worker) [RUN_GRADLEW] Error: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+(worker) [RUN_GRADLEW] End phase: RUN_GRADLEW
+(worker) [ON_BUILD_ERROR_HOOK] Start phase: ON_BUILD_ERROR_HOOK
+(worker) [ON_BUILD_ERROR_HOOK] End phase: ON_BUILD_ERROR_HOOK
+(worker) [ON_BUILD_COMPLETE_HOOK] Start phase: ON_BUILD_COMPLETE_HOOK
+(worker) [ON_BUILD_COMPLETE_HOOK] End phase: ON_BUILD_COMPLETE_HOOK
+(worker) [UPLOAD_BUILD_ARTIFACTS] Start phase: UPLOAD_BUILD_ARTIFACTS
+(worker) [UPLOAD_BUILD_ARTIFACTS] End phase: UPLOAD_BUILD_ARTIFACTS
+(worker) [FAIL_BUILD] Start phase: FAIL_BUILD
+(worker) [FAIL_BUILD] Build failed: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+(worker) [FAIL_BUILD] End phase: FAIL_BUILD
