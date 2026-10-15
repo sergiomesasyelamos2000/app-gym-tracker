@@ -35,6 +35,7 @@ import {
   saveRoutineLayout,
   saveRoutineSession,
   updateRoutineById,
+  upsertRoutineSessionCaches,
 } from "../features/routine/services/routineService";
 import {
   folderKey,
@@ -305,7 +306,11 @@ async function syncCreateSession(operation: PendingOperation): Promise<void> {
     throw new Error("Parent routine not synced");
   }
 
-  await saveRoutineSession(realRoutineId, session);
+  const saved = await saveRoutineSession(realRoutineId, session);
+  await upsertRoutineSessionCaches({
+    ...saved,
+    routineId: saved.routineId || realRoutineId,
+  });
 }
 
 async function syncDeleteRoutine(operation: PendingOperation): Promise<void> {

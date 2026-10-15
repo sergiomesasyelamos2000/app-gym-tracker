@@ -1,5 +1,25 @@
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 
+/**
+ * Live Activity `restSecondsDefault` after a ±15 (or any) rest delta.
+ * Keeps progress duration ≥ remaining so Island countdown ranges stay valid.
+ */
+export function nextRestSecondsDefault(
+  previousTotal: number,
+  newRemainingSeconds: number,
+  deltaSeconds: number
+): number {
+  const prev = Number.isFinite(previousTotal) ? previousTotal : 0;
+  const remaining = Math.max(
+    0,
+    Math.floor(
+      Number.isFinite(newRemainingSeconds) ? newRemainingSeconds : 0
+    )
+  );
+  const next = Math.max(0, prev + deltaSeconds);
+  return Math.max(next, remaining, 1);
+}
+
 /** Human-readable next-set line for Live Activity / FGS notification. */
 export function buildNextSetSummary(
   setList: SetRequestDto[],

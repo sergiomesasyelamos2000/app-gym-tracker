@@ -41,6 +41,8 @@ enum WorkoutLiveStore {
   static let pendingCompleteKey = "workoutLive.pendingCompleteSet"
   static let appTerminatedAtKey = "workoutLive.appTerminatedAt"
   static let stateKey = "workoutLive.currentState"
+  /// Darwin wake so the RN module can deliver Island intents while the app is foregrounded.
+  static let intentDarwinName = "com.smy862.app.workoutLive.intentPending" as CFString
 
   static var defaults: UserDefaults {
     UserDefaults(suiteName: appGroupId) ?? .standard
@@ -59,5 +61,16 @@ enum WorkoutLiveStore {
     if action == "completeSet" {
       defaults.set(true, forKey: pendingCompleteKey)
     }
+    notifyIntentQueued()
+  }
+
+  static func notifyIntentQueued() {
+    CFNotificationCenterPostNotification(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      CFNotificationName(intentDarwinName),
+      nil,
+      nil,
+      true
+    )
   }
 }

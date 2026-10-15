@@ -118,6 +118,23 @@ function snapshotsEqual(
 
 let lastSentSnapshot: WorkoutLiveSnapshot | null = null;
 
+/** Keep JS dedupe cache aligned after native Island ±15 already updated Activity. */
+export const noteWorkoutLiveRestEnd = (
+  restEndAtMs: number | null,
+  restSecondsDefault?: number | null
+): void => {
+  if (!lastSentSnapshot) return;
+  lastSentSnapshot = {
+    ...lastSentSnapshot,
+    isResting: restEndAtMs != null,
+    restEndAtMs: normalizeRestEnd(restEndAtMs),
+    restSecondsDefault:
+      restSecondsDefault !== undefined
+        ? restSecondsDefault
+        : lastSentSnapshot.restSecondsDefault,
+  };
+};
+
 export const startWorkoutLive = async (
   snapshot: WorkoutLiveSnapshot
 ): Promise<void> => {

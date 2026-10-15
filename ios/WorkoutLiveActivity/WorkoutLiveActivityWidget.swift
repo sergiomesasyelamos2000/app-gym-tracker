@@ -15,35 +15,125 @@ private enum LiveTheme {
   static let completeGreen = Color(red: 0.22, green: 0.78, blue: 0.35)
 }
 
-/// Margin before `end` where we switch to static "0:00" instead of `timerInterval`.
-/// SwiftUI can fatal when the clock crosses the interval end while the view is mounted.
-private let liveTimerSafetyMargin: TimeInterval = 1.0
+/// Switch away from `timerInterval` before the clock hits `end`.
+/// SwiftUI can fatal when a mounted `Text`/`ProgressView(timerInterval:)` crosses its end.
+private let liveTimerSafetyMargin: TimeInterval = 1.5
 
-/// Avoids Swift traps when Live Activity re-renders near / after rest end.
-private func countdownRange(until end: Date, now: Date = Date()) -> ClosedRange<Date>? {
-  guard end.timeIntervalSince(now) > liveTimerSafetyMargin else { return nil }
-  return now...end
-}
+/// Cap elapsed workout clocks — `Date.distantFuture` traps `Text(timerInterval:)`.
+private let workoutElapsedMaxDuration: TimeInterval = 24 * 60 * 60
 
-private func restProgressRange(
-  end: Date,
+/// Stable rest countdown range (fixed start…end). Nil when too close to expiry.
+/// Duration is at least the remaining time so ±15 never places `start` in the future.
+private func stableRestCountdownRange(
+  until end: Date,
   restSecondsDefault: Int,
   now: Date = Date()
 ) -> ClosedRange<Date>? {
-  guard end.timeIntervalSince(now) > liveTimerSafetyMargin else { return nil }
-  let duration = max(1.0, Double(restSecondsDefault))
+  let remaining = end.timeIntervalSince(now)
+  guard remaining > liveTimerSafetyMargin else { return nil }
+  let duration = max(max(1.0, Double(restSecondsDefault)), remaining)
   let start = end.addingTimeInterval(-duration)
   guard start < end else { return nil }
   return start...end
 }
 
-/// Elapsed workout clock; nil if `startedAt` is invalid (would trap `timerInterval`).
+/// Elapsed workout clock with a bounded end (never `Date.distantFuture`).
 private func workoutElapsedRange(
   startedAt: Date,
   now: Date = Date()
 ) -> ClosedRange<Date>? {
   guard startedAt <= now else { return nil }
-  return startedAt...Date.distantFuture
+  let end = startedAt.addingTimeInterval(workoutElapsedMaxDuration)
+  guard now.timeIntervalSince(end) < -liveTimerSafetyMargin else { return nil }
+  return startedAt...end
+}
+
+// MARK: - Safe timer views
+
+@available(iOS 17.0, *)
+private struct SafeRestCountdownText: View {
+  let end: Date
+  let restSecondsDefault: Int
+  var font: Font = .title3.bold()
+  var color: Color = LiveTheme.brand
+  var width: CGFloat? = nil
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      Group {
+        if let range = stableRestCountdownRange(
+          until: end,
+          restSecondsDefault: restSecondsDefault,
+          now: context.date
+        ) {
+          Text(timerInterval: range, countsDown: true)
+        } else {
+          Text("0:00")
+        }
+      }
+      // Remount when end changes — timerInterval does not always adopt a new range.
+      .id(Int(end.timeIntervalSince1970 * 1000))
+      .monospacedDigit()
+      .font(font)
+      .foregroundStyle(color)
+      .frame(width: width)
+    }
+  }
+}
+
+@available(iOS 17.0, *)
+private struct SafeWorkoutElapsedText: View {
+  let startedAt: Date
+  var font: Font = .caption.bold()
+  var color: Color = .primary
+  var width: CGFloat? = nil
+  var multilineTrailing: Bool = false
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 30)) { context in
+      Group {
+        if let range = workoutElapsedRange(
+          startedAt: startedAt,
+          now: context.date
+        ) {
+          Text(timerInterval: range, countsDown: false)
+        } else {
+          Text("0:00")
+        }
+      }
+      .monospacedDigit()
+      .font(font)
+      .foregroundStyle(color)
+      .frame(width: width)
+      .multilineTextAlignment(multilineTrailing ? .trailing : .leading)
+    }
+  }
+}
+
+@available(iOS 17.0, *)
+private struct SafeRestProgressBar: View {
+  let end: Date
+  let restSecondsDefault: Int
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      Group {
+        if let range = stableRestCountdownRange(
+          until: end,
+          restSecondsDefault: restSecondsDefault,
+          now: context.date
+        ) {
+          ProgressView(timerInterval: range, countsDown: true)
+        } else {
+          ProgressView(value: 0)
+        }
+      }
+      .id(Int(end.timeIntervalSince1970 * 1000))
+      .tint(LiveTheme.brand)
+      .labelsHidden()
+      .scaleEffect(x: 1, y: 0.55, anchor: .center)
+    }
+  }
 }
 
 @available(iOS 17.0, *)
@@ -72,27 +162,17 @@ struct WorkoutLiveActivityWidget: Widget {
         }
         DynamicIslandExpandedRegion(.trailing) {
           if context.state.isResting, let end = context.state.restEndAt {
-            if let range = countdownRange(until: end) {
-              Text(timerInterval: range, countsDown: true)
-                .monospacedDigit()
-                .font(.title3.bold())
-                .foregroundStyle(LiveTheme.brand)
-            } else {
-              Text("0:00")
-                .monospacedDigit()
-                .font(.title3.bold())
-                .foregroundStyle(LiveTheme.brand)
-            }
-          } else if let range = workoutElapsedRange(
-            startedAt: context.attributes.workoutStartedAt
-          ) {
-            Text(timerInterval: range, countsDown: false)
-              .monospacedDigit()
-              .font(.caption.bold())
+            SafeRestCountdownText(
+              end: end,
+              restSecondsDefault: context.state.restSecondsDefault,
+              font: .title3.bold(),
+              color: LiveTheme.brand
+            )
           } else {
-            Text("0:00")
-              .monospacedDigit()
-              .font(.caption.bold())
+            SafeWorkoutElapsedText(
+              startedAt: context.attributes.workoutStartedAt,
+              font: .caption.bold()
+            )
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
@@ -127,27 +207,19 @@ struct WorkoutLiveActivityWidget: Widget {
           .foregroundStyle(LiveTheme.brand)
       } compactTrailing: {
         if context.state.isResting, let end = context.state.restEndAt {
-          if let range = countdownRange(until: end) {
-            Text(timerInterval: range, countsDown: true)
-              .monospacedDigit()
-              .foregroundStyle(LiveTheme.brand)
-              .frame(width: 48)
-          } else {
-            Text("0:00")
-              .monospacedDigit()
-              .foregroundStyle(LiveTheme.brand)
-              .frame(width: 48)
-          }
-        } else if let range = workoutElapsedRange(
-          startedAt: context.attributes.workoutStartedAt
-        ) {
-          Text(timerInterval: range, countsDown: false)
-            .monospacedDigit()
-            .frame(width: 48)
+          SafeRestCountdownText(
+            end: end,
+            restSecondsDefault: context.state.restSecondsDefault,
+            font: .body.monospacedDigit(),
+            color: LiveTheme.brand,
+            width: 48
+          )
         } else {
-          Text("0:00")
-            .monospacedDigit()
-            .frame(width: 48)
+          SafeWorkoutElapsedText(
+            startedAt: context.attributes.workoutStartedAt,
+            font: .body.monospacedDigit(),
+            width: 48
+          )
         }
       } minimal: {
         Image(systemName: "dumbbell.fill")
@@ -196,17 +268,12 @@ struct WorkoutLiveLockScreenView: View {
         .font(.caption.weight(.medium))
         .foregroundStyle(LiveTheme.textTertiary)
       Spacer(minLength: 8)
-      if let range = workoutElapsedRange(startedAt: context.attributes.workoutStartedAt) {
-        Text(timerInterval: range, countsDown: false)
-          .font(.caption.monospacedDigit().weight(.medium))
-          .foregroundStyle(LiveTheme.textSecondary)
-          .multilineTextAlignment(.trailing)
-      } else {
-        Text("0:00")
-          .font(.caption.monospacedDigit().weight(.medium))
-          .foregroundStyle(LiveTheme.textSecondary)
-          .multilineTextAlignment(.trailing)
-      }
+      SafeWorkoutElapsedText(
+        startedAt: context.attributes.workoutStartedAt,
+        font: .caption.monospacedDigit().weight(.medium),
+        color: LiveTheme.textSecondary,
+        multilineTrailing: true
+      )
     }
   }
 
@@ -286,8 +353,19 @@ struct WorkoutLiveLockScreenView: View {
 
   private var restSection: some View {
     VStack(spacing: 10) {
-      restProgressBar
-        .padding(.horizontal, 14)
+      Group {
+        if let end = context.state.restEndAt {
+          SafeRestProgressBar(
+            end: end,
+            restSecondsDefault: context.state.restSecondsDefault
+          )
+        } else {
+          ProgressView(value: 0)
+            .tint(LiveTheme.brand)
+            .labelsHidden()
+        }
+      }
+      .padding(.horizontal, 14)
 
       HStack(spacing: 8) {
         Button(intent: WorkoutLiveSubtractRestIntent()) {
@@ -325,47 +403,18 @@ struct WorkoutLiveLockScreenView: View {
   }
 
   @ViewBuilder
-  private var restProgressBar: some View {
-    if let end = context.state.restEndAt {
-      if let range = restProgressRange(
-        end: end,
-        restSecondsDefault: context.state.restSecondsDefault
-      ) {
-        ProgressView(timerInterval: range, countsDown: true)
-          .tint(LiveTheme.brand)
-          .labelsHidden()
-          .scaleEffect(x: 1, y: 0.55, anchor: .center)
-      } else {
-        ProgressView(value: 0)
-          .tint(LiveTheme.brand)
-          .labelsHidden()
-          .scaleEffect(x: 1, y: 0.55, anchor: .center)
-      }
-    } else {
-      ProgressView(value: 0)
-        .tint(LiveTheme.brand)
-        .labelsHidden()
-    }
-  }
-
-  @ViewBuilder
   private var restTimerLabel: some View {
     if let end = context.state.restEndAt {
       HStack(spacing: 4) {
         Text("Rest:")
           .font(.title3.weight(.bold))
           .foregroundStyle(LiveTheme.textPrimary)
-        if let range = countdownRange(until: end) {
-          Text(timerInterval: range, countsDown: true)
-            .font(.title3.weight(.bold).monospacedDigit())
-            .foregroundStyle(LiveTheme.textPrimary)
-            .multilineTextAlignment(.leading)
-        } else {
-          Text("0:00")
-            .font(.title3.weight(.bold).monospacedDigit())
-            .foregroundStyle(LiveTheme.textPrimary)
-            .multilineTextAlignment(.leading)
-        }
+        SafeRestCountdownText(
+          end: end,
+          restSecondsDefault: context.state.restSecondsDefault,
+          font: .title3.weight(.bold).monospacedDigit(),
+          color: LiveTheme.textPrimary
+        )
       }
     } else {
       Text("Rest")

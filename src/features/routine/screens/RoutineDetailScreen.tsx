@@ -58,6 +58,7 @@ import {
   consumePendingCompleteSet,
   endWorkoutLive,
   getCurrentRestTimerLiveState,
+  noteWorkoutLiveRestEnd,
   pollNativeIntent,
   startWorkoutLive,
   subscribeToWorkoutLiveIntents,
@@ -116,6 +117,7 @@ import {
   buildNextSetSummary,
   buildLiveCompletionFingerprint,
   findNextIncompleteSet,
+  nextRestSecondsDefault,
 } from "../utils/workoutLiveHelpers";
 import {
   normalizeExerciseImage,
@@ -231,6 +233,7 @@ export default function RoutineDetailScreen() {
   const [restTimerEndTime, setRestTimerEndTime] = useState<number | null>(null);
   const restTimerEndTimeRef = useRef<number | null>(null);
   const restTimeRemainingRef = useRef(0);
+  const totalRestTimeRef = useRef(0);
   const restEpochRef = useRef(0);
   const restActiveRef = useRef(false);
   const leaveRestInFlightRef = useRef(false);
@@ -666,6 +669,10 @@ export default function RoutineDetailScreen() {
   useEffect(() => {
     restTimeRemainingRef.current = restTimeRemaining;
   }, [restTimeRemaining]);
+
+  useEffect(() => {
+    totalRestTimeRef.current = totalRestTime;
+  }, [totalRestTime]);
 
   useEffect(() => {
     currentExerciseNameRef.current = currentExerciseName;
@@ -1910,6 +1917,7 @@ export default function RoutineDetailScreen() {
     restEpochRef.current += 1;
     const epochAtStart = restEpochRef.current;
     setTotalRestTime(restSeconds);
+    totalRestTimeRef.current = restSeconds;
     setRestTimeRemaining(restSeconds);
     const endTime = Date.now() + restSeconds * 1000;
     setRestTimerEndTime(endTime);
@@ -1930,6 +1938,7 @@ export default function RoutineDetailScreen() {
       nextSetSummary: resolvedUpcomingSummary,
       isResting: true,
       restEndAtMs: endTime,
+      restSecondsDefault: restSeconds,
     });
     startRestCountdownInterval();
 
@@ -1975,12 +1984,15 @@ export default function RoutineDetailScreen() {
       restEpochRef.current += 1;
       const epochAtDelta = restEpochRef.current;
 
+      const nextTotal = nextRestSecondsDefault(
+        totalRestTimeRef.current || currentRemaining,
+        newTime,
+        deltaSeconds
+      );
+
       setRestTimeRemaining(newTime);
-      if (deltaSeconds > 0) {
-        setTotalRestTime((prev) => prev + deltaSeconds);
-      } else {
-        setTotalRestTime((prev) => Math.max(0, prev + deltaSeconds));
-      }
+      setTotalRestTime(nextTotal);
+      totalRestTimeRef.current = nextTotal;
 
       const endTime = Date.now() + newTime * 1000;
       setRestTimerEndTime(endTime);
@@ -1995,6 +2007,7 @@ export default function RoutineDetailScreen() {
           nextSetSummary: currentNextSetSummary,
           isResting: true,
           restEndAtMs: endTime,
+          restSecondsDefault: nextTotal,
         });
         if (shouldAbortLeaveSideEffects(epochAtDelta, restEpochRef.current)) {
           return;
@@ -2166,19 +2179,27 @@ export default function RoutineDetailScreen() {
       restEpochRef.current += 1;
       const epochAtSync = restEpochRef.current;
 
-      setRestTimeRemaining(newTime);
-      setTotalRestTime((prev) =>
-        Math.max(newTime, Math.max(0, prev + deltaSeconds))
+      const nextTotal = nextRestSecondsDefault(
+        totalRestTimeRef.current || newTime,
+        newTime,
+        deltaSeconds
       );
+
+      setRestTimeRemaining(newTime);
+      setTotalRestTime(nextTotal);
+      totalRestTimeRef.current = nextTotal;
       setRestTimerEndTime(resolvedEndMs);
       restTimerEndTimeRef.current = resolvedEndMs;
       startRestCountdownInterval();
 
-      // Native already updated on Android intents; only push live update when
-      // the end time came from JS (no native endTimestampMs).
+      // Native already updated on Android/iOS Island intents; only push live
+      // update when the end time came from JS (no native endTimestampMs).
       if (
-        !(typeof endTimestampMs === "number" && Number.isFinite(endTimestampMs))
+        typeof endTimestampMs === "number" &&
+        Number.isFinite(endTimestampMs)
       ) {
+        noteWorkoutLiveRestEnd(resolvedEndMs, nextTotal);
+      } else {
         await updateWorkoutLive({
           workoutStartedAtMs: getWorkoutStartTime(),
           exerciseName: currentExerciseName ?? "Descanso",
@@ -2186,6 +2207,7 @@ export default function RoutineDetailScreen() {
           nextSetSummary: currentNextSetSummary,
           isResting: true,
           restEndAtMs: resolvedEndMs,
+          restSecondsDefault: nextTotal,
         });
         if (shouldAbortLeaveSideEffects(epochAtSync, restEpochRef.current)) {
           return;

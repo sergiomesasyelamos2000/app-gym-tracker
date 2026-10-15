@@ -15,6 +15,7 @@ import {
   saveRoutineLayout as apiSaveLayout,
   saveRoutineSession as apiSaveSession,
   updateRoutineById as apiUpdateRoutine,
+  upsertRoutineSessionCaches,
 } from "../features/routine/services/routineService";
 import {
   addToSyncQueue,
@@ -42,7 +43,6 @@ function kickSync(): void {
 }
 
 const LOCAL_ROUTINES_KEY = "@local_routines";
-const LOCAL_SESSIONS_KEY = "@local_sessions";
 
 /**
  * Save routine with offline support
@@ -213,7 +213,11 @@ export async function saveSessionOffline(
   if (online && !routineId.startsWith("local_")) {
     try {
       const result = await apiSaveSession(routineId, session);
-      await saveLocalSession(result);
+      await upsertRoutineSessionCaches({
+        ...result,
+        routineId: result.routineId || routineId,
+      });
+      kickSync();
       return result;
     } catch (error) {
       console.error("[OfflineRoutine] API failed with error:", error);
@@ -238,8 +242,9 @@ export async function saveSessionOffline(
     _isPending: true,
   } as RoutineSessionEntity & { _isPending: boolean };
 
-  await saveLocalSession(localSession);
+  await upsertRoutineSessionCaches(localSession);
   await addToSyncQueue("CREATE_SESSION", { routineId, session });
+  kickSync();
 
   return localSession;
 }
@@ -264,22 +269,6 @@ async function saveLocalRoutine(routine: RoutineResponseDto): Promise<void> {
     await AsyncStorage.setItem(LOCAL_ROUTINES_KEY, JSON.stringify(routines));
   } catch (error) {
     console.error("[OfflineRoutine] Failed to save local routine:", error);
-  }
-}
-
-/**
- * Save session to local storage
- */
-async function saveLocalSession(session: RoutineSessionEntity): Promise<void> {
-  try {
-    const sessionsStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
-    const sessions: RoutineSessionEntity[] = sessionsStr
-      ? JSON.parse(sessionsStr)
-      : [];
-    sessions.push(session);
-    await AsyncStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(sessions));
-  } catch (error) {
-    console.error("[OfflineRoutine] Failed to save local session:", error);
   }
 }
 

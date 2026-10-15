@@ -60,6 +60,9 @@ enum WorkoutLiveIntentHandler {
     } else {
       let newEnd = Date().addingTimeInterval(remaining)
       state.restEndAt = newEnd
+      // Keep progress duration ≥ remaining so widget timer ranges stay valid after ±15.
+      let nextDefault = max(state.restSecondsDefault + delta, Int(ceil(remaining)), 1)
+      state.restSecondsDefault = nextDefault
       WorkoutLiveStore.enqueueIntent(
         delta > 0 ? "add" : "subtract",
         delta: delta,

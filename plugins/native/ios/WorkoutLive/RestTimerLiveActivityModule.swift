@@ -5,8 +5,18 @@ import React
 class RestTimerLiveActivityModule: RCTEventEmitter {
 
   private var hasListeners = false
+  private var darwinRegistered = false
 
   override static func requiresMainQueueSetup() -> Bool { true }
+
+  override init() {
+    super.init()
+    registerDarwinObserver()
+  }
+
+  deinit {
+    unregisterDarwinObserver()
+  }
 
   override func supportedEvents() -> [String]! {
     ["onRestTimerIntent", "onWorkoutLiveIntent"]
@@ -14,6 +24,8 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
 
   override func startObserving() {
     hasListeners = true
+    // Deliver anything queued while JS had no subscribers.
+    emitPendingIntentIfAny()
   }
 
   override func stopObserving() {
@@ -25,18 +37,8 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
     _ resolver: RCTPromiseResolveBlock,
     rejecter: RCTPromiseRejectBlock
   ) {
-    let defaults = WorkoutLiveStore.defaults
-    guard let payload = defaults.dictionary(forKey: WorkoutLiveStore.pendingIntentKey) else {
-      resolver(false)
-      return
-    }
-    defaults.removeObject(forKey: WorkoutLiveStore.pendingIntentKey)
-
-    if hasListeners {
-      sendEvent(withName: "onRestTimerIntent", body: payload)
-      sendEvent(withName: "onWorkoutLiveIntent", body: payload)
-    }
-    resolver(true)
+    let delivered = emitPendingIntentIfAny()
+    resolver(delivered)
   }
 
   @objc
@@ -64,6 +66,54 @@ class RestTimerLiveActivityModule: RCTEventEmitter {
       resolver(value)
     } else {
       resolver(NSNull())
+    }
+  }
+
+  /// Returns true when an intent was emitted to JS.
+  @discardableResult
+  private func emitPendingIntentIfAny() -> Bool {
+    guard hasListeners else { return false }
+    let defaults = WorkoutLiveStore.defaults
+    guard let payload = defaults.dictionary(forKey: WorkoutLiveStore.pendingIntentKey) else {
+      return false
+    }
+    defaults.removeObject(forKey: WorkoutLiveStore.pendingIntentKey)
+    sendEvent(withName: "onRestTimerIntent", body: payload)
+    sendEvent(withName: "onWorkoutLiveIntent", body: payload)
+    return true
+  }
+
+  private func registerDarwinObserver() {
+    guard !darwinRegistered else { return }
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    CFNotificationCenterAddObserver(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      observer,
+      Self.darwinCallback,
+      WorkoutLiveStore.intentDarwinName,
+      nil,
+      .deliverImmediately
+    )
+    darwinRegistered = true
+  }
+
+  private func unregisterDarwinObserver() {
+    guard darwinRegistered else { return }
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    CFNotificationCenterRemoveObserver(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      observer,
+      CFNotificationName(WorkoutLiveStore.intentDarwinName),
+      nil
+    )
+    darwinRegistered = false
+  }
+
+  private static let darwinCallback: CFNotificationCallback = { _, observer, _, _, _ in
+    guard let observer else { return }
+    let module = Unmanaged<RestTimerLiveActivityModule>.fromOpaque(observer).takeUnretainedValue()
+    DispatchQueue.main.async {
+      module.emitPendingIntentIfAny()
     }
   }
 }

@@ -584,28 +584,148 @@ export async function findSessionBurnSummaries(): Promise<
   }
 }
 
+function routineSessionCacheKey(routineId: string): string {
+  return `@sessions_routine_${routineId}`;
+}
+
+function sessionBelongsToRoutine(
+  session: { routineId?: string; routine?: { id?: string } },
+  routineId: string
+): boolean {
+  return (
+    session.routineId === routineId || session.routine?.id === routineId
+  );
+}
+
+function mergeSessionEntities(
+  ...lists: Array<RoutineSessionEntity[] | null | undefined>
+): RoutineSessionEntity[] {
+  const byId = new Map<string, RoutineSessionEntity>();
+  for (const list of lists) {
+    if (!list) continue;
+    for (const session of list) {
+      if (!session?.id) continue;
+      byId.set(session.id, session);
+    }
+  }
+  return Array.from(byId.values()).sort((a, b) => {
+    const ta =
+      a.createdAt instanceof Date
+        ? a.createdAt.getTime()
+        : Date.parse(String(a.createdAt));
+    const tb =
+      b.createdAt instanceof Date
+        ? b.createdAt.getTime()
+        : Date.parse(String(b.createdAt));
+    return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+  });
+}
+
+async function readPerRoutineSessionsCache(
+  routineId: string
+): Promise<RoutineSessionEntity[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(routineSessionCacheKey(routineId));
+    if (raw == null) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as RoutineSessionEntity[]) : null;
+  } catch (cacheError) {
+    console.error("[RoutineService] Sessions cache read failed:", cacheError);
+    return null;
+  }
+}
+
+/**
+ * Persist a completed session into all local SoTs used by Home, Progress,
+ * and previous-set marks (Hevy-style device history).
+ */
+export async function upsertRoutineSessionCaches(
+  session: RoutineSessionEntity
+): Promise<void> {
+  if (!session?.id) return;
+
+  const routineId = session.routineId || session.routine?.id;
+
+  try {
+    const localStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
+    const localList: RoutineSessionEntity[] = localStr
+      ? (JSON.parse(localStr) as RoutineSessionEntity[])
+      : [];
+    const without = localList.filter((s) => s.id !== session.id);
+    await AsyncStorage.setItem(
+      LOCAL_SESSIONS_KEY,
+      JSON.stringify([session, ...without])
+    );
+  } catch (error) {
+    console.error("[RoutineService] Failed to upsert @local_sessions:", error);
+  }
+
+  if (routineId) {
+    try {
+      const existing = (await readPerRoutineSessionsCache(routineId)) ?? [];
+      const next = mergeSessionEntities([session], existing);
+      await AsyncStorage.setItem(
+        routineSessionCacheKey(routineId),
+        JSON.stringify(next)
+      );
+    } catch (error) {
+      console.error(
+        "[RoutineService] Failed to upsert per-routine sessions cache:",
+        error
+      );
+    }
+  }
+
+  try {
+    const globalCached = (await readCachedRoutineSessions()) ?? [];
+    const asListItem = session as unknown as RoutineSessionListItem;
+    const nextGlobal = mergeSessions([asListItem], globalCached);
+    await AsyncStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify(nextGlobal));
+  } catch (error) {
+    console.error(
+      "[RoutineService] Failed to upsert @sessions_cache_v2:",
+      error
+    );
+  }
+}
+
+/**
+ * Offline-first sessions for one routine (previous-set marks + detail history).
+ * Merges per-routine cache, pending local sessions, and global history cache.
+ */
 export async function findRoutineSessions(
   id: string
 ): Promise<RoutineSessionEntity[]> {
-  const cacheKey = `@sessions_routine_${id}`;
+  const perRoutine = await readPerRoutineSessionsCache(id);
+  const localAll = await readLocalPendingSessions();
+  const localForRoutine = (
+    localAll as unknown as RoutineSessionEntity[]
+  ).filter((s) => sessionBelongsToRoutine(s, id));
 
-  let cached: RoutineSessionEntity[] | null = null;
-  try {
-    const raw = await AsyncStorage.getItem(cacheKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) cached = parsed as RoutineSessionEntity[];
-    }
-  } catch (cacheError) {
-    console.error("[RoutineService] Sessions cache read failed:", cacheError);
-  }
+  const globalCached = await readCachedRoutineSessions();
+  const globalForRoutine = (
+    (globalCached ?? []) as unknown as RoutineSessionEntity[]
+  ).filter((s) => sessionBelongsToRoutine(s, id));
+
+  const localMerged = mergeSessionEntities(
+    perRoutine,
+    localForRoutine,
+    globalForRoutine
+  );
+  const hasLocalSnapshot =
+    perRoutine != null ||
+    localForRoutine.length > 0 ||
+    globalForRoutine.length > 0;
 
   const networkPromise = apiFetch<RoutineSessionEntity[]>(
     `routines/${id}/sessions`,
     { method: "GET" }
   )
     .then(async (sessions) => {
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(sessions));
+      await AsyncStorage.setItem(
+        routineSessionCacheKey(id),
+        JSON.stringify(sessions)
+      );
       return sessions;
     })
     .catch((error: CaughtError) => {
@@ -616,16 +736,18 @@ export async function findRoutineSessions(
       return null;
     });
 
-  if (cached) {
+  if (hasLocalSnapshot) {
     void networkPromise;
-    return cached;
+    return localMerged;
   }
 
   const fromNetwork = await networkPromise;
-  if (fromNetwork) return fromNetwork;
+  if (fromNetwork) {
+    return mergeSessionEntities(fromNetwork, localForRoutine);
+  }
 
   console.warn(`[RoutineService] No cached sessions for routine ${id}`);
-  return [];
+  return localForRoutine;
 }
 
 export interface GlobalStats {
