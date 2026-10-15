@@ -17,7 +17,16 @@ import {
   UpdateUserNutritionProfileDto,
   UserNutritionProfileResponseDto,
 } from "@sergiomesasyelamos2000/shared";
+import {
+  NUTRITION_CUSTOM_MEALS_KEY,
+  NUTRITION_CUSTOM_PRODUCTS_KEY,
+  NUTRITION_DIARY_CACHE_KEY,
+  NUTRITION_FAVORITES_KEY,
+  NUTRITION_PRODUCTS_FIRST_PAGE_KEY,
+  NUTRITION_PRODUCTS_FIRST_PAGE_SYNC_KEY,
+} from "../../../services/nutritionOfflineKeys";
 import { useAuthStore } from "../../../store/useAuthStore";
+import type { CaughtError } from "../../../types";
 
 export interface AIUsageResponseDto {
   isPremium: boolean;
@@ -28,9 +37,82 @@ export interface AIUsageResponseDto {
 const AI_CHAT_TIMEOUT_MS = 25000;
 
 const PRODUCT_CACHE_KEYS = {
-  FIRST_PAGE: "@nutrition_products_first_page_cache_v1",
-  LAST_SYNC: "@nutrition_products_first_page_last_sync_v1",
+  FIRST_PAGE: NUTRITION_PRODUCTS_FIRST_PAGE_KEY,
+  LAST_SYNC: NUTRITION_PRODUCTS_FIRST_PAGE_SYNC_KEY,
 };
+
+/** Per-date diary snapshots (full DailyNutritionSummary). */
+export type NutritionDiaryCache = Record<string, DailyNutritionSummary>;
+
+async function readDiaryCache(): Promise<NutritionDiaryCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(NUTRITION_DIARY_CACHE_KEY);
+    if (raw == null) return null;
+    const parsed = JSON.parse(raw) as NutritionDiaryCache;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function writeDiaryCache(cache: NutritionDiaryCache): Promise<void> {
+  await safeSetItem(NUTRITION_DIARY_CACHE_KEY, JSON.stringify(cache));
+}
+
+/**
+ * True when a diary snapshot exists for `date` (including empty entries).
+ * False before any successful fetch for that day / after logout purge.
+ */
+export async function hasLocalDiarySnapshot(date: string): Promise<boolean> {
+  const cache = await readDiaryCache();
+  if (!cache) return false;
+  return Object.prototype.hasOwnProperty.call(cache, date);
+}
+
+/**
+ * True when any nutrition list snapshot exists (custom/fav) or diary has any day.
+ * Used for never-synced empty UX.
+ */
+export async function hasLocalNutritionSnapshot(): Promise<boolean> {
+  const diary = await readDiaryCache();
+  if (diary && Object.keys(diary).length > 0) return true;
+
+  for (const key of [
+    NUTRITION_CUSTOM_PRODUCTS_KEY,
+    NUTRITION_CUSTOM_MEALS_KEY,
+    NUTRITION_FAVORITES_KEY,
+  ]) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw != null) return true;
+    } catch {
+      // ignore
+    }
+  }
+  return false;
+}
+
+export async function writeDiaryDayCache(
+  summary: DailyNutritionSummary
+): Promise<void> {
+  const cache = (await readDiaryCache()) ?? {};
+  await writeDiaryCache({ ...cache, [summary.date]: summary });
+}
+
+async function fetchAndCacheDailyEntries(
+  userId: string,
+  date: string
+): Promise<DailyNutritionSummary> {
+  const summary = await apiFetch<DailyNutritionSummary>(
+    `nutrition/diary/${userId}/${date}`,
+    { method: "GET" }
+  );
+  await writeDiaryDayCache(summary);
+  return summary;
+}
 
 const PRODUCT_CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6h
 
@@ -598,13 +680,38 @@ export async function addFoodEntry(
   });
 }
 
+/**
+ * Offline-first diary day: return local snapshot immediately when present;
+ * refresh from network in the background. First visit for a date awaits network.
+ */
 export async function getDailyEntries(
   userId: string,
   date: string,
 ): Promise<DailyNutritionSummary> {
-  return apiFetch<DailyNutritionSummary>(`nutrition/diary/${userId}/${date}`, {
-    method: "GET",
-  });
+  const cache = await readDiaryCache();
+  const cached = cache?.[date];
+
+  const networkPromise = fetchAndCacheDailyEntries(userId, date).catch(
+    (error: CaughtError) => {
+      console.warn(
+        "[NutritionService] Background diary refresh failed:",
+        error
+      );
+      return null;
+    }
+  );
+
+  if (cached) {
+    void networkPromise;
+    return cached;
+  }
+
+  const fresh = await networkPromise;
+  if (fresh) return fresh;
+
+  throw new Error(
+    `Unable to load diary for ${date}: no local snapshot and network failed`
+  );
 }
 
 export async function updateFoodEntry(

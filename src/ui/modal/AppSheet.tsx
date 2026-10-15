@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -48,13 +48,15 @@ export function AppSheet({
   const insets = useSafeAreaInsets();
   const chrome = useMemo(() => getSheetChrome(theme), [theme]);
 
+  /** Keep RN Modal mounted until close animation finishes (avoids flash). */
+  const [presented, setPresented] = useState(visible);
+
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(
     new Animated.Value(MODAL_SHEET_SLIDE_DISTANCE)
   ).current;
   const dragY = useRef(new Animated.Value(0)).current;
   const closingRef = useRef(false);
-  const wasVisibleRef = useRef(false);
   const onDismissRef = useRef(onDismiss);
   const onDismissedRef = useRef(onDismissed);
   const dismissOnBackdropRef = useRef(dismissOnBackdrop);
@@ -72,8 +74,13 @@ export function AppSheet({
   };
 
   useEffect(() => {
-    if (visible === wasVisibleRef.current) return;
-    wasVisibleRef.current = visible;
+    if (visible) {
+      setPresented(true);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!presented) return;
 
     let animation: Animated.CompositeAnimation | undefined;
 
@@ -113,14 +120,16 @@ export function AppSheet({
         }),
       ]);
       animation.start(({ finished }) => {
-        if (finished) onDismissedRef.current?.();
+        if (!finished) return;
+        setPresented(false);
+        onDismissedRef.current?.();
       });
     }
 
     return () => {
       animation?.stop();
     };
-  }, [visible, overlayOpacity, translateY, dragY]);
+  }, [visible, presented, overlayOpacity, translateY, dragY]);
 
   const panResponder = useMemo(
     () =>
@@ -224,9 +233,13 @@ export function AppSheet({
     </View>
   );
 
+  if (!presented) {
+    return null;
+  }
+
   return (
     <Modal
-      visible={visible}
+      visible
       transparent
       animationType="none"
       statusBarTranslucent

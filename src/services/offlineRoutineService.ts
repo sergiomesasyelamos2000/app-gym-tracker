@@ -1,15 +1,45 @@
 import type { RoutineSessionEntity } from "@sergiomesasyelamos2000/shared";
 import {
+  RoutineFolderResponseDto,
+  RoutineLayoutRequestDto,
   RoutineRequestDto,
   RoutineResponseDto,
 } from "@sergiomesasyelamos2000/shared";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  createRoutineFolder as apiCreateFolder,
+  deleteRoutine as apiDeleteRoutine,
+  deleteRoutineFolder as apiDeleteFolder,
+  renameRoutineFolder as apiRenameFolder,
   saveRoutine as apiSaveRoutine,
+  saveRoutineLayout as apiSaveLayout,
   saveRoutineSession as apiSaveSession,
   updateRoutineById as apiUpdateRoutine,
 } from "../features/routine/services/routineService";
-import { addToSyncQueue, isOnline } from "./syncQueue";
+import {
+  addToSyncQueue,
+  filterSyncQueue,
+  isOnline,
+} from "./syncQueue";
+
+const ROUTINES_CACHE_KEY = "@routines_cache";
+const FOLDERS_CACHE_KEY = "@routine_folders_cache";
+
+function kickSync(): void {
+  // Lazy require avoids circular dependency with autoSyncService at module load time.
+  // Prefer require over dynamic import() so Jest (CJS) does not need --experimental-vm-modules.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autoSync = require("./autoSyncService") as {
+      processSyncQueue?: () => Promise<unknown>;
+    };
+    if (typeof autoSync.processSyncQueue === "function") {
+      void autoSync.processSyncQueue();
+    }
+  } catch (error) {
+    console.warn("[OfflineRoutine] kickSync failed:", error);
+  }
+}
 
 const LOCAL_ROUTINES_KEY = "@local_routines";
 const LOCAL_SESSIONS_KEY = "@local_sessions";
@@ -322,4 +352,273 @@ export async function getLocalRoutines(): Promise<RoutineResponseDto[]> {
     console.error("[OfflineRoutine] Failed to get local routines:", error);
     return [];
   }
+}
+
+async function removeRoutineFromCaches(id: string): Promise<void> {
+  try {
+    const cached = await AsyncStorage.getItem(ROUTINES_CACHE_KEY);
+    if (cached) {
+      const routines = JSON.parse(cached) as RoutineResponseDto[];
+      await AsyncStorage.setItem(
+        ROUTINES_CACHE_KEY,
+        JSON.stringify(routines.filter((r) => r.id !== id))
+      );
+    }
+  } catch (error) {
+    console.error("[OfflineRoutine] Failed to prune routines cache:", error);
+  }
+
+  try {
+    const localStr = await AsyncStorage.getItem(LOCAL_ROUTINES_KEY);
+    if (localStr) {
+      const locals = JSON.parse(localStr) as RoutineResponseDto[];
+      await AsyncStorage.setItem(
+        LOCAL_ROUTINES_KEY,
+        JSON.stringify(locals.filter((r) => r.id !== id))
+      );
+    }
+  } catch (error) {
+    console.error("[OfflineRoutine] Failed to prune local routines:", error);
+  }
+
+  try {
+    await AsyncStorage.removeItem(`@routine_${id}`);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Delete routine offline-first (local SoT + sync queue).
+ */
+export async function deleteRoutineOffline(id: string): Promise<void> {
+  await removeRoutineFromCaches(id);
+
+  if (id.startsWith("local_")) {
+    await filterSyncQueue((op) => {
+      if (op.type === "CREATE_ROUTINE") {
+        const payload = op.payload as RoutineRequestDto & { id?: string };
+        return payload.id !== id;
+      }
+      if (op.type === "UPDATE_ROUTINE") {
+        return (op.payload as { id: string }).id !== id;
+      }
+      if (op.type === "CREATE_SESSION") {
+        return (op.payload as { routineId: string }).routineId !== id;
+      }
+      if (op.type === "DELETE_ROUTINE") {
+        return (op.payload as { id: string }).id !== id;
+      }
+      return true;
+    });
+    return;
+  }
+
+  const online = await isOnline();
+  if (online) {
+    try {
+      await apiDeleteRoutine(id);
+      return;
+    } catch {
+      // fall through to queue
+    }
+  }
+
+  await addToSyncQueue("DELETE_ROUTINE", { id });
+  kickSync();
+}
+
+async function upsertFoldersCache(
+  folder: RoutineFolderResponseDto
+): Promise<void> {
+  try {
+    const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+    const list = cached
+      ? (JSON.parse(cached) as RoutineFolderResponseDto[])
+      : [];
+    await AsyncStorage.setItem(
+      FOLDERS_CACHE_KEY,
+      JSON.stringify([folder, ...list.filter((f) => f.id !== folder.id)])
+    );
+  } catch (error) {
+    console.error("[OfflineRoutine] Failed to upsert folders cache:", error);
+  }
+}
+
+async function removeFolderFromCache(id: string): Promise<void> {
+  try {
+    const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+    if (!cached) return;
+    const list = JSON.parse(cached) as RoutineFolderResponseDto[];
+    await AsyncStorage.setItem(
+      FOLDERS_CACHE_KEY,
+      JSON.stringify(list.filter((f) => f.id !== id))
+    );
+  } catch (error) {
+    console.error("[OfflineRoutine] Failed to prune folders cache:", error);
+  }
+}
+
+/**
+ * Create folder offline-first.
+ */
+export async function createRoutineFolderOffline(
+  title: string,
+  localId?: string
+): Promise<RoutineFolderResponseDto> {
+  const online = await isOnline();
+  if (online) {
+    try {
+      return await apiCreateFolder(title);
+    } catch {
+      // fall through
+    }
+  }
+
+  const id =
+    localId ??
+    `folder_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const now = new Date().toISOString();
+  const folder: RoutineFolderResponseDto = {
+    id,
+    title: title.trim() || "Grupo",
+    sortOrder: 0,
+    routineIds: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await upsertFoldersCache(folder);
+  await addToSyncQueue("CREATE_FOLDER", { localId: id, title: folder.title });
+  kickSync();
+  return folder;
+}
+
+/**
+ * Rename folder offline-first.
+ */
+export async function renameRoutineFolderOffline(
+  id: string,
+  title: string
+): Promise<RoutineFolderResponseDto> {
+  const nextTitle = title.trim() || "Grupo";
+  const now = new Date().toISOString();
+
+  try {
+    const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+    const list = cached
+      ? (JSON.parse(cached) as RoutineFolderResponseDto[])
+      : [];
+    const existing = list.find((f) => f.id === id);
+    const folder: RoutineFolderResponseDto = {
+      id,
+      title: nextTitle,
+      sortOrder: existing?.sortOrder ?? 0,
+      routineIds: existing?.routineIds ?? [],
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await upsertFoldersCache(folder);
+
+    const online = await isOnline();
+    if (online && !id.startsWith("folder_")) {
+      try {
+        return await apiRenameFolder(id, nextTitle);
+      } catch {
+        // queue below
+      }
+    }
+
+    // Local-only folders that were never synced: update pending CREATE title.
+    if (id.startsWith("folder_")) {
+      await filterSyncQueue((op) => {
+        if (op.type !== "CREATE_FOLDER") return true;
+        return (op.payload as { localId: string }).localId !== id;
+      });
+      await addToSyncQueue("CREATE_FOLDER", { localId: id, title: nextTitle });
+    } else {
+      await addToSyncQueue("RENAME_FOLDER", { id, title: nextTitle });
+    }
+    kickSync();
+    return folder;
+  } catch (error) {
+    console.error("[OfflineRoutine] rename folder failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete folder offline-first (API delete; local layout dissolve is caller's job).
+ */
+export async function deleteRoutineFolderOffline(id: string): Promise<void> {
+  await removeFolderFromCache(id);
+
+  if (id.startsWith("folder_")) {
+    await filterSyncQueue((op) => {
+      if (op.type === "CREATE_FOLDER") {
+        return (op.payload as { localId: string }).localId !== id;
+      }
+      if (op.type === "RENAME_FOLDER" || op.type === "DELETE_FOLDER") {
+        return (op.payload as { id: string }).id !== id;
+      }
+      return true;
+    });
+    return;
+  }
+
+  const online = await isOnline();
+  if (online) {
+    try {
+      await apiDeleteFolder(id);
+      return;
+    } catch {
+      // queue
+    }
+  }
+
+  await addToSyncQueue("DELETE_FOLDER", { id });
+  kickSync();
+}
+
+/**
+ * Persist layout offline-first (cache + coalesced UPSERT_LAYOUT queue).
+ */
+export async function saveRoutineLayoutOffline(
+  layout: RoutineLayoutRequestDto
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      FOLDERS_CACHE_KEY,
+      JSON.stringify(
+        layout.folders.map((folder) => {
+          const sortIndex = layout.rootOrder.findIndex(
+            (item) => item.type === "folder" && item.id === folder.id
+          );
+          return {
+            id: folder.id,
+            title: folder.title,
+            sortOrder: sortIndex >= 0 ? sortIndex : 0,
+            routineIds: folder.routineIds,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        })
+      )
+    );
+  } catch (cacheError) {
+    console.error("[OfflineRoutine] Failed to cache layout:", cacheError);
+  }
+
+  const online = await isOnline();
+  if (online) {
+    try {
+      await apiSaveLayout(layout);
+      return;
+    } catch {
+      // queue
+    }
+  }
+
+  await addToSyncQueue("UPSERT_LAYOUT", layout);
+  kickSync();
 }

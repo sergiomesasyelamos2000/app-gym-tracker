@@ -2,8 +2,10 @@ import AppIntents
 import ActivityKit
 import Foundation
 
-@available(iOS 16.2, *)
-struct WorkoutLiveAddRestIntent: AppIntent {
+/// Interactive Live Activity controls require `LiveActivityIntent` (not plain `AppIntent`)
+/// so Lock Screen / Dynamic Island buttons actually run.
+@available(iOS 17.0, *)
+struct WorkoutLiveAddRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Add 15s rest"
 
   func perform() async throws -> some IntentResult {
@@ -12,8 +14,8 @@ struct WorkoutLiveAddRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.2, *)
-struct WorkoutLiveSubtractRestIntent: AppIntent {
+@available(iOS 17.0, *)
+struct WorkoutLiveSubtractRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Subtract 15s rest"
 
   func perform() async throws -> some IntentResult {
@@ -22,8 +24,8 @@ struct WorkoutLiveSubtractRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.2, *)
-struct WorkoutLiveSkipRestIntent: AppIntent {
+@available(iOS 17.0, *)
+struct WorkoutLiveSkipRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Skip rest"
 
   func perform() async throws -> some IntentResult {
@@ -32,8 +34,8 @@ struct WorkoutLiveSkipRestIntent: AppIntent {
   }
 }
 
-@available(iOS 16.2, *)
-struct WorkoutLiveCompleteSetIntent: AppIntent {
+@available(iOS 17.0, *)
+struct WorkoutLiveCompleteSetIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Complete set"
 
   func perform() async throws -> some IntentResult {
@@ -42,7 +44,7 @@ struct WorkoutLiveCompleteSetIntent: AppIntent {
   }
 }
 
-@available(iOS 16.2, *)
+@available(iOS 17.0, *)
 enum WorkoutLiveIntentHandler {
   @MainActor
   static func applyRestDelta(_ delta: Int) async {
@@ -50,6 +52,7 @@ enum WorkoutLiveIntentHandler {
     var state = activity.content.state
     guard state.isResting, let end = state.restEndAt else { return }
     let remaining = max(0, end.timeIntervalSinceNow + Double(delta))
+    // Clear rest flags before update so the widget never mounts an expired timerInterval.
     if remaining <= 0 {
       state.isResting = false
       state.restEndAt = nil

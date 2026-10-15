@@ -157,7 +157,7 @@ El plugin declara la extensión en `extra.eas.build.experimental.ios.appExtensio
 
 #### iOS
 
-1. Instala un build EAS en un iPhone físico (iOS 16.2+).
+1. Instala un build EAS en un iPhone físico (Live Activity + botones interactivos: iOS 17+; ActivityKit base: 16.2+).
 2. Ajustes → Face ID y código → activar **Live Activities**.
 3. Ajustes → Notificaciones → EvoFit → activar las que necesites.
 4. Inicia una rutina → debería aparecer el Live Activity en pantalla de bloqueo / Dynamic Island.

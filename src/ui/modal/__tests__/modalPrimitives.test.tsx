@@ -1,10 +1,14 @@
 import React from "react";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { Modal, Text } from "react-native";
 import { AppDialog } from "../AppDialog";
 import { AppSheet } from "../AppSheet";
 import { BlockingOverlay } from "../BlockingOverlay";
-import { MODAL_DIALOG_RADIUS, MODAL_SHEET_RADIUS } from "../modalTokens";
+import {
+  MODAL_DIALOG_RADIUS,
+  MODAL_SHEET_CLOSE_MS,
+  MODAL_SHEET_RADIUS,
+} from "../modalTokens";
 
 jest.mock("../../../contexts/ThemeContext", () => ({
   useTheme: () => ({
@@ -170,6 +174,44 @@ describe("AppSheet", () => {
     );
     jest.advanceTimersByTime(500);
     expect(onDismissed).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it("keeps Modal presented until close animation finishes, then calls onDismissed", () => {
+    jest.useFakeTimers();
+    const onDismissed = jest.fn();
+    const { UNSAFE_getByType, rerender, queryByTestId } = render(
+      <AppSheet
+        visible
+        onDismiss={jest.fn()}
+        onDismissed={onDismissed}
+        testID="sheet"
+      >
+        <Text>Options</Text>
+      </AppSheet>
+    );
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(true);
+
+    rerender(
+      <AppSheet
+        visible={false}
+        onDismiss={jest.fn()}
+        onDismissed={onDismissed}
+        testID="sheet"
+      >
+        <Text>Options</Text>
+      </AppSheet>
+    );
+
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(true);
+    expect(onDismissed).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(MODAL_SHEET_CLOSE_MS + 50);
+    });
+
+    expect(onDismissed).toHaveBeenCalledTimes(1);
+    expect(queryByTestId("sheet")).toBeNull();
     jest.useRealTimers();
   });
 

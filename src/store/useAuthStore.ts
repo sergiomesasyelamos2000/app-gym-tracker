@@ -4,8 +4,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { invalidateExerciseCatalogMemory } from "../services/exerciseCatalogCache";
-import { invalidateRoutineSessionsCacheWrites } from "../features/routine/services/routineService";
+import { clearNutritionOfflineData } from "../services/clearNutritionOfflineData";
+import { clearRoutineOfflineData } from "../services/clearRoutineOfflineData";
 import { useNavigationStore } from "./useNavigationStore";
+import { useSyncStore } from "./useSyncStore";
 
 interface AuthState {
   // State
@@ -72,7 +74,11 @@ export const useAuthStore = create<AuthState>()(
         const navigation = useNavigationStore.getState();
         navigation.resetHomeGate();
         navigation.resetAllTabs();
-        invalidateRoutineSessionsCacheWrites();
+        void (async () => {
+          await clearRoutineOfflineData();
+          await clearNutritionOfflineData();
+          useSyncStore.getState().resetSync();
+        })();
         set({
           user: null,
           accessToken: null,

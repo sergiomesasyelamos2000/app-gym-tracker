@@ -15,9 +15,13 @@ private enum LiveTheme {
   static let completeGreen = Color(red: 0.22, green: 0.78, blue: 0.35)
 }
 
-/// Avoids Swift traps when Live Activity re-renders after rest end (`end <= now`).
+/// Margin before `end` where we switch to static "0:00" instead of `timerInterval`.
+/// SwiftUI can fatal when the clock crosses the interval end while the view is mounted.
+private let liveTimerSafetyMargin: TimeInterval = 1.0
+
+/// Avoids Swift traps when Live Activity re-renders near / after rest end.
 private func countdownRange(until end: Date, now: Date = Date()) -> ClosedRange<Date>? {
-  guard end > now else { return nil }
+  guard end.timeIntervalSince(now) > liveTimerSafetyMargin else { return nil }
   return now...end
 }
 
@@ -26,14 +30,23 @@ private func restProgressRange(
   restSecondsDefault: Int,
   now: Date = Date()
 ) -> ClosedRange<Date>? {
-  guard end > now else { return nil }
+  guard end.timeIntervalSince(now) > liveTimerSafetyMargin else { return nil }
   let duration = max(1.0, Double(restSecondsDefault))
   let start = end.addingTimeInterval(-duration)
-  guard start <= end else { return nil }
+  guard start < end else { return nil }
   return start...end
 }
 
-@available(iOS 16.2, *)
+/// Elapsed workout clock; nil if `startedAt` is invalid (would trap `timerInterval`).
+private func workoutElapsedRange(
+  startedAt: Date,
+  now: Date = Date()
+) -> ClosedRange<Date>? {
+  guard startedAt <= now else { return nil }
+  return startedAt...Date.distantFuture
+}
+
+@available(iOS 17.0, *)
 @main
 struct WorkoutLiveActivityBundle: WidgetBundle {
   var body: some Widget {
@@ -41,7 +54,7 @@ struct WorkoutLiveActivityBundle: WidgetBundle {
   }
 }
 
-@available(iOS 16.2, *)
+@available(iOS 17.0, *)
 struct WorkoutLiveActivityWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: WorkoutLiveAttributes.self) { context in
@@ -70,13 +83,16 @@ struct WorkoutLiveActivityWidget: Widget {
                 .font(.title3.bold())
                 .foregroundStyle(LiveTheme.brand)
             }
+          } else if let range = workoutElapsedRange(
+            startedAt: context.attributes.workoutStartedAt
+          ) {
+            Text(timerInterval: range, countsDown: false)
+              .monospacedDigit()
+              .font(.caption.bold())
           } else {
-            Text(
-              timerInterval: context.attributes.workoutStartedAt...Date.distantFuture,
-              countsDown: false
-            )
-            .monospacedDigit()
-            .font(.caption.bold())
+            Text("0:00")
+              .monospacedDigit()
+              .font(.caption.bold())
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
@@ -122,13 +138,16 @@ struct WorkoutLiveActivityWidget: Widget {
               .foregroundStyle(LiveTheme.brand)
               .frame(width: 48)
           }
+        } else if let range = workoutElapsedRange(
+          startedAt: context.attributes.workoutStartedAt
+        ) {
+          Text(timerInterval: range, countsDown: false)
+            .monospacedDigit()
+            .frame(width: 48)
         } else {
-          Text(
-            timerInterval: context.attributes.workoutStartedAt...Date.distantFuture,
-            countsDown: false
-          )
-          .monospacedDigit()
-          .frame(width: 48)
+          Text("0:00")
+            .monospacedDigit()
+            .frame(width: 48)
         }
       } minimal: {
         Image(systemName: "dumbbell.fill")
@@ -140,7 +159,7 @@ struct WorkoutLiveActivityWidget: Widget {
 
 // MARK: - Lock screen / banner
 
-@available(iOS 16.2, *)
+@available(iOS 17.0, *)
 struct WorkoutLiveLockScreenView: View {
   let context: ActivityViewContext<WorkoutLiveAttributes>
 
@@ -177,13 +196,17 @@ struct WorkoutLiveLockScreenView: View {
         .font(.caption.weight(.medium))
         .foregroundStyle(LiveTheme.textTertiary)
       Spacer(minLength: 8)
-      Text(
-        timerInterval: context.attributes.workoutStartedAt...Date.distantFuture,
-        countsDown: false
-      )
-      .font(.caption.monospacedDigit().weight(.medium))
-      .foregroundStyle(LiveTheme.textSecondary)
-      .multilineTextAlignment(.trailing)
+      if let range = workoutElapsedRange(startedAt: context.attributes.workoutStartedAt) {
+        Text(timerInterval: range, countsDown: false)
+          .font(.caption.monospacedDigit().weight(.medium))
+          .foregroundStyle(LiveTheme.textSecondary)
+          .multilineTextAlignment(.trailing)
+      } else {
+        Text("0:00")
+          .font(.caption.monospacedDigit().weight(.medium))
+          .foregroundStyle(LiveTheme.textSecondary)
+          .multilineTextAlignment(.trailing)
+      }
     }
   }
 

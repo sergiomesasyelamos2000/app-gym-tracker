@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 import { useNutritionStore } from "../../store/useNutritionStore";
 import { getHealthClient } from "./healthClient";
+import { canReadHealthHub } from "./healthPermissionGates";
 import { estimateCaloriesFromMet } from "./metEstimate";
 import type { HealthMetricsSource, WorkoutHealthSnapshot } from "./types";
 import { useHealthConnectionStore } from "./useHealthConnectionStore";
@@ -35,14 +36,13 @@ function snapshotsEqual(
   );
 }
 
-function pollIntervalForStatus(
-  status: string,
+function pollIntervalForHub(
+  canReadHub: boolean,
   appState: AppStateStatus
 ): number | null {
   // Stop native/JS polling while backgrounded — saves battery & HealthKit/HC wakeups.
   if (appState !== "active") return null;
-  if (status === "granted" || status === "undetermined") return HUB_POLL_MS;
-  return MET_POLL_MS;
+  return canReadHub ? HUB_POLL_MS : MET_POLL_MS;
 }
 
 /**
@@ -56,6 +56,9 @@ export function useWorkoutHealthMetrics(options: {
 }) {
   const { enabled, getStartTime, getDurationSeconds } = options;
   const authStatus = useHealthConnectionStore((s) => s.status);
+  const hasRequestedAuthorization = useHealthConnectionStore(
+    (s) => s.hasRequestedAuthorization
+  );
   const weightRaw =
     useNutritionStore((s) => s.userProfile?.anthropometrics?.weight) ?? 0;
   const weightUnit = useNutritionStore(
@@ -78,11 +81,14 @@ export function useWorkoutHealthMetrics(options: {
   snapshotRef.current = snapshot;
 
   const enabledRef = useRef(enabled);
-  const authStatusRef = useRef(authStatus);
+  const canReadHubRef = useRef(false);
   const weightKgRef = useRef(weightKg);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   enabledRef.current = enabled;
-  authStatusRef.current = authStatus;
+  canReadHubRef.current = canReadHealthHub({
+    status: authStatus,
+    hasRequestedAuthorization,
+  });
   weightKgRef.current = weightKg;
 
   const commitSnapshot = useCallback((next: WorkoutHealthSnapshot) => {
@@ -98,7 +104,7 @@ export function useWorkoutHealthMetrics(options: {
 
     try {
       const isEnabled = enabledRef.current;
-      const status = authStatusRef.current;
+      const canReadHub = canReadHubRef.current;
       const kg = weightKgRef.current;
       const startedAtMs = getStartTime();
       const duration = getDurationSeconds();
@@ -124,7 +130,7 @@ export function useWorkoutHealthMetrics(options: {
             ? "health_connect"
             : "unavailable";
 
-      if (status !== "granted" && status !== "undetermined") {
+      if (!canReadHub) {
         commitSnapshot({
           ...emptySnapshot("met_estimate"),
           caloriesBurned: metCalories || null,
@@ -215,8 +221,8 @@ export function useWorkoutHealthMetrics(options: {
 
     const startPoll = () => {
       clearPoll();
-      const ms = pollIntervalForStatus(
-        authStatusRef.current,
+      const ms = pollIntervalForHub(
+        canReadHubRef.current,
         appStateRef.current
       );
       if (ms == null) return;
@@ -244,7 +250,7 @@ export function useWorkoutHealthMetrics(options: {
       clearPoll();
       sub.remove();
     };
-  }, [commitSnapshot, enabled, sample, authStatus]);
+  }, [commitSnapshot, enabled, sample, authStatus, hasRequestedAuthorization]);
 
   return snapshot;
 }

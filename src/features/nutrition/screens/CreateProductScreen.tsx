@@ -32,6 +32,7 @@ import {
 } from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { createCustomProductOffline } from "../../../services/offlineNutritionService";
 import * as nutritionService from "../services/nutritionService";
 import {
   parseDecimalInput,
@@ -291,7 +292,7 @@ export default function CreateProductScreen() {
           : undefined,
       };
 
-      await nutritionService.createCustomProduct(productData);
+      await createCustomProductOffline(productData);
 
       Alert.alert("¡Éxito!", "Producto personalizado creado exitosamente", [
         {

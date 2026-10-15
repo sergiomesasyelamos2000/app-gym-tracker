@@ -118,12 +118,10 @@ describe("routineService home sessions helpers", () => {
 
   it("findAllRoutineSessions skips persist when logout happens during fetch", async () => {
     let resolvePage: (value: unknown) => void = () => {};
-    mockApiFetch.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolvePage = resolve;
-        })
-    );
+    const pagePromise = new Promise((resolve) => {
+      resolvePage = resolve;
+    });
+    mockApiFetch.mockReturnValue(pagePromise);
 
     const loadPromise = findAllRoutineSessions();
     invalidateRoutineSessionsCacheWrites();

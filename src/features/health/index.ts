@@ -5,6 +5,10 @@ export {
   invalidateRestSummaryCache,
 } from "./insightsCache";
 export { getHealthClient, requestHealthAuthorization, getHealthAuthorizationStatus } from "./healthClient";
+export {
+  canReadHealthHub,
+  canWriteHealthHub,
+} from "./healthPermissionGates";
 export { estimateCaloriesFromMet } from "./metEstimate";
 export { useHealthConnectionStore } from "./useHealthConnectionStore";
 export { useWorkoutHealthMetrics } from "./useWorkoutHealthMetrics";

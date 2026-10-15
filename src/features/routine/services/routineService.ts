@@ -40,54 +40,100 @@ export async function saveRoutine(
   });
 }
 
-export async function findAllRoutines(): Promise<RoutineResponseDto[]> {
+async function readRoutinesCache(): Promise<RoutineResponseDto[] | null> {
   try {
-    // Try to fetch from API
-    const routines = await apiFetch<RoutineResponseDto[]>("routines", {
-      method: "GET",
-    });
-
-    // Cache for offline use
-    await AsyncStorage.setItem(ROUTINES_CACHE_KEY, JSON.stringify(routines));
-
-    return routines;
-  } catch (error: CaughtError) {
-    // If network fails, load from cache
-
-    try {
-      const cached = await AsyncStorage.getItem(ROUTINES_CACHE_KEY);
-      if (cached) {
-        const routines = JSON.parse(cached);
-        return routines;
-      }
-    } catch (cacheError) {
-      console.error("[RoutineService] Cache read failed:", cacheError);
-    }
-
-    // If both fail, return empty array instead of throwing
-    console.warn("[RoutineService] No cached routines available");
-    return [];
+    const cached = await AsyncStorage.getItem(ROUTINES_CACHE_KEY);
+    if (cached == null) return null;
+    const parsed = JSON.parse(cached);
+    return Array.isArray(parsed) ? (parsed as RoutineResponseDto[]) : null;
+  } catch (cacheError) {
+    console.error("[RoutineService] Cache read failed:", cacheError);
+    return null;
   }
 }
 
-export async function fetchRoutineFolders(): Promise<RoutineFolderResponseDto[]> {
-  try {
-    const folders = await apiFetch<RoutineFolderResponseDto[]>(
-      "routines/folders",
-      { method: "GET" }
-    );
-    await AsyncStorage.setItem(FOLDERS_CACHE_KEY, JSON.stringify(folders));
-    return folders;
-  } catch (error: CaughtError) {
-    try {
-      const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
-      if (cached) return JSON.parse(cached) as RoutineFolderResponseDto[];
-    } catch (cacheError) {
-      console.error("[RoutineService] Folders cache read failed:", cacheError);
-    }
-    console.warn("[RoutineService] No cached folders available");
-    return [];
+/**
+ * True when a routines snapshot exists locally (including an empty list).
+ * False on first install / after logout purge before any successful fetch.
+ */
+export async function hasLocalRoutinesSnapshot(): Promise<boolean> {
+  return (await readRoutinesCache()) !== null;
+}
+
+async function fetchAndCacheRoutines(): Promise<RoutineResponseDto[]> {
+  const routines = await apiFetch<RoutineResponseDto[]>("routines", {
+    method: "GET",
+  });
+  await AsyncStorage.setItem(ROUTINES_CACHE_KEY, JSON.stringify(routines));
+  return routines;
+}
+
+/**
+ * Offline-first: return local cache immediately when present; refresh from
+ * network in the background. First install (no cache) awaits the network.
+ */
+export async function findAllRoutines(): Promise<RoutineResponseDto[]> {
+  const cached = await readRoutinesCache();
+
+  const networkPromise = fetchAndCacheRoutines().catch((error: CaughtError) => {
+    console.warn("[RoutineService] Background routines refresh failed:", error);
+    return null;
+  });
+
+  if (cached) {
+    void networkPromise;
+    return cached;
   }
+
+  const fromNetwork = await networkPromise;
+  if (fromNetwork) return fromNetwork;
+
+  console.warn("[RoutineService] No cached routines available");
+  return [];
+}
+
+async function readFoldersCache(): Promise<RoutineFolderResponseDto[] | null> {
+  try {
+    const cached = await AsyncStorage.getItem(FOLDERS_CACHE_KEY);
+    if (cached == null) return null;
+    const parsed = JSON.parse(cached);
+    return Array.isArray(parsed)
+      ? (parsed as RoutineFolderResponseDto[])
+      : null;
+  } catch (cacheError) {
+    console.error("[RoutineService] Folders cache read failed:", cacheError);
+    return null;
+  }
+}
+
+async function fetchAndCacheFolders(): Promise<RoutineFolderResponseDto[]> {
+  const folders = await apiFetch<RoutineFolderResponseDto[]>(
+    "routines/folders",
+    { method: "GET" }
+  );
+  await AsyncStorage.setItem(FOLDERS_CACHE_KEY, JSON.stringify(folders));
+  return folders;
+}
+
+/** Offline-first folders list (same pattern as findAllRoutines). */
+export async function fetchRoutineFolders(): Promise<RoutineFolderResponseDto[]> {
+  const cached = await readFoldersCache();
+
+  const networkPromise = fetchAndCacheFolders().catch((error: CaughtError) => {
+    console.warn("[RoutineService] Background folders refresh failed:", error);
+    return null;
+  });
+
+  if (cached) {
+    void networkPromise;
+    return cached;
+  }
+
+  const fromNetwork = await networkPromise;
+  if (fromNetwork) return fromNetwork;
+
+  console.warn("[RoutineService] No cached folders available");
+  return [];
 }
 
 export async function createRoutineFolder(
@@ -442,42 +488,68 @@ export async function fetchAllRoutineSessionsUncached(): Promise<
  * Fetches session history (paginated under the hood). Returns slim list items
  * compatible with previous RoutineSessionEntity consumers for sets/history UX.
  */
+async function readLocalPendingSessions(): Promise<RoutineSessionListItem[]> {
+  try {
+    const localStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (!localStr) return [];
+    const parsed = JSON.parse(localStr);
+    return Array.isArray(parsed) ? (parsed as RoutineSessionListItem[]) : [];
+  } catch (loadError) {
+    console.error("[RoutineService] Failed to load local sessions:", loadError);
+    return [];
+  }
+}
+
+function mergeSessions(
+  localSessions: RoutineSessionListItem[],
+  remoteOrCached: RoutineSessionListItem[]
+): RoutineSessionListItem[] {
+  const allSessions = [...localSessions, ...remoteOrCached];
+  return allSessions.filter(
+    (session, index, self) =>
+      index === self.findIndex((s) => s.id === session.id)
+  );
+}
+
+/**
+ * Offline-first session history: serve cache (+ pending local) immediately,
+ * refresh from network in the background when a cache exists.
+ */
 export async function findAllRoutineSessions(): Promise<
   RoutineSessionListItem[]
 > {
-  let apiSessions: RoutineSessionListItem[] = [];
-  let localSessions: RoutineSessionListItem[] = [];
+  // Capture before any await so logout during in-flight work can invalidate writes.
+  const writeEpochAtStart = sessionsCacheWriteEpoch;
+  const cached = await readCachedRoutineSessions();
+  const localSessions = await readLocalPendingSessions();
 
-  try {
-    const writeEpochAtStart = sessionsCacheWriteEpoch;
-    apiSessions = await fetchAllRoutineSessionsUncached();
-    // Logout during fetch bumps the epoch and clears the key — do not rewrite.
+  const networkPromise = (async () => {
+    const apiSessions = await fetchAllRoutineSessionsUncached();
     if (writeEpochAtStart !== sessionsCacheWriteEpoch) {
       return apiSessions;
     }
-    return await persistEnrichedSessionsCache(apiSessions);
-  } catch (error: CaughtError) {
-    const cached = await readCachedRoutineSessions();
-    if (cached) {
-      apiSessions = cached;
-    }
+    return persistEnrichedSessionsCache(apiSessions);
+  })().catch((error: CaughtError) => {
+    console.warn("[RoutineService] Background sessions refresh failed:", error);
+    return null;
+  });
 
-    try {
-      const localStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
-      if (localStr) {
-        localSessions = JSON.parse(localStr);
-      }
-    } catch (loadError) {
-      console.error("[RoutineService] Failed to load local sessions:", loadError);
-    }
-
-    const allSessions = [...localSessions, ...apiSessions];
-    const unique = allSessions.filter(
-      (session, index, self) =>
-        index === self.findIndex((s) => s.id === session.id)
-    );
-    return enrichRoutineSessionsMedia(unique);
+  if (cached) {
+    void networkPromise;
+    return enrichRoutineSessionsMedia(mergeSessions(localSessions, cached));
   }
+
+  const fromNetwork = await networkPromise;
+  if (fromNetwork) {
+    return mergeSessions(localSessions, fromNetwork);
+  }
+
+  if (localSessions.length > 0) {
+    return enrichRoutineSessionsMedia(localSessions);
+  }
+
+  console.warn("[RoutineService] No cached sessions available");
+  return [];
 }
 
 async function enrichRoutineSessionsMedia(
@@ -515,38 +587,45 @@ export async function findSessionBurnSummaries(): Promise<
 export async function findRoutineSessions(
   id: string
 ): Promise<RoutineSessionEntity[]> {
+  const cacheKey = `@sessions_routine_${id}`;
+
+  let cached: RoutineSessionEntity[] | null = null;
   try {
-    // Try to fetch from API
-    const sessions = await apiFetch<RoutineSessionEntity[]>(
-      `routines/${id}/sessions`,
-      {
-        method: "GET",
-      }
-    );
-
-    // Cache individual routine sessions
-    const cacheKey = `@sessions_routine_${id}`;
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(sessions));
-
-    return sessions;
-  } catch (error: CaughtError) {
-    // If network fails, try cache
-
-    try {
-      const cacheKey = `@sessions_routine_${id}`;
-      const cached = await AsyncStorage.getItem(cacheKey);
-      if (cached) {
-        const sessions = JSON.parse(cached);
-        return sessions;
-      }
-    } catch (cacheError) {
-      console.error("[RoutineService] Sessions cache read failed:", cacheError);
+    const raw = await AsyncStorage.getItem(cacheKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) cached = parsed as RoutineSessionEntity[];
     }
-
-    // If both fail, return empty array
-    console.warn(`[RoutineService] No cached sessions for routine ${id}`);
-    return [];
+  } catch (cacheError) {
+    console.error("[RoutineService] Sessions cache read failed:", cacheError);
   }
+
+  const networkPromise = apiFetch<RoutineSessionEntity[]>(
+    `routines/${id}/sessions`,
+    { method: "GET" }
+  )
+    .then(async (sessions) => {
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(sessions));
+      return sessions;
+    })
+    .catch((error: CaughtError) => {
+      console.warn(
+        `[RoutineService] Background sessions refresh failed for ${id}:`,
+        error
+      );
+      return null;
+    });
+
+  if (cached) {
+    void networkPromise;
+    return cached;
+  }
+
+  const fromNetwork = await networkPromise;
+  if (fromNetwork) return fromNetwork;
+
+  console.warn(`[RoutineService] No cached sessions for routine ${id}`);
+  return [];
 }
 
 export interface GlobalStats {

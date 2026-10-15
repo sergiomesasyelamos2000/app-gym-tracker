@@ -36,7 +36,13 @@ import {
 } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
-import { addFoodEntry, updateFoodEntry } from "../services/nutritionService";
+import {
+  addFavoriteOffline,
+  addFoodEntryOffline,
+  rememberRecentProduct,
+  removeFavoriteOffline,
+  updateFoodEntryOffline,
+} from "../../../services/offlineNutritionService";
 import { MACRO_COLORS, MACRO_LABELS } from "../utils/macroColors";
 
 const { width } = Dimensions.get("window");
@@ -270,15 +276,12 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
     try {
       if (isFavorite) {
-        await nutritionService.removeFavoriteByProductCode(
-          producto.code,
-          userProfile.userId
-        );
+        await removeFavoriteOffline(producto.code);
         setIsFavorite(false);
         triggerFavoritesUpdate();
         Alert.alert("Eliminado", "Producto eliminado de favoritos");
       } else {
-        await nutritionService.addFavorite({
+        await addFavoriteOffline({
           userId: userProfile.userId,
           productCode: producto.code,
           productName: producto.name,
@@ -366,7 +369,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           fat: nutrients.fat,
         };
 
-        await updateFoodEntry(entryId, updatedEntry);
+        await updateFoodEntryOffline(entryId, updatedEntry);
         updateFoodEntryInStore(entryId, updatedEntry);
 
         Alert.alert("¡Actualizado!", "Alimento actualizado en tu diario", [
@@ -391,8 +394,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           fat: nutrients.fat,
         };
 
-        const savedEntry = await addFoodEntry(entry);
+        const savedEntry = await addFoodEntryOffline(entry);
         addFoodEntryToStore(savedEntry);
+        void rememberRecentProduct(producto);
 
         if (quickAdd) {
           Alert.alert("¡Añadido!", "Alimento registrado en tu diario", [

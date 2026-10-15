@@ -31,6 +31,7 @@ import {
   Switch,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,7 +41,11 @@ import {
   themeBarStyle,
   useFocusedStatusBar,
 } from "../hooks/useFocusedStatusBar";
-import { AppDialog } from "../ui/modal";
+import {
+  AppDialog,
+  MODAL_DIALOG_MAX_HEIGHT_RATIO,
+  MODAL_DIALOG_PADDING,
+} from "../ui/modal";
 import {
   deleteAccount as deleteAccountService,
   logout as logoutService,
@@ -126,6 +131,9 @@ export default function ProfileScreen() {
   );
 
   const { theme, isDark, themeMode, setThemeMode } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
+  const privacyCardMaxHeight = windowHeight * MODAL_DIALOG_MAX_HEIGHT_RATIO;
+  const privacyBodyMaxHeight = privacyCardMaxHeight - MODAL_DIALOG_PADDING * 2;
   useFocusedStatusBar(themeBarStyle(isDark));
 
   // Subscription store
@@ -192,7 +200,6 @@ export default function ProfileScreen() {
 
       const loadPhase3Insights = async () => {
         const {
-          healthStatus: status,
           showRestHints: restHintsOn,
           lastDismissedSuggestionAt: dismissedAt,
           activityLevel,
@@ -202,7 +209,7 @@ export default function ProfileScreen() {
         try {
           const shouldLoadRest =
             restHintsOn &&
-            (status === "granted" || status === "undetermined");
+            useHealthConnectionStore.getState().canReadFromHub();
 
           // Parallel: sessions (cached TTL) + rest summary (cached longer).
           const [burnedInsights, summary] = await Promise.all([
@@ -1468,101 +1475,69 @@ export default function ProfileScreen() {
         visible={isPrivacyModalVisible}
         onDismiss={() => setIsPrivacyModalVisible(false)}
         maxWidth={400}
-        contentStyle={styles.privacyModalCard}
+        releaseCardPress
+        contentStyle={[
+          styles.privacyModalCard,
+          { maxHeight: privacyCardMaxHeight },
+        ]}
         testID="privacy-data"
       >
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Privacidad y datos
-            </Text>
+        <View
+          style={[styles.privacyModalBody, { height: privacyBodyMaxHeight }]}
+        >
+          <Text style={[styles.modalTitle, { color: theme.text }]}>
+            Privacidad y datos
+          </Text>
 
-            <ScrollView
-              style={styles.privacyScroll}
-              contentContainerStyle={styles.privacyScrollContent}
-              showsVerticalScrollIndicator={false}
+          <ScrollView
+            style={styles.privacyScroll}
+            contentContainerStyle={styles.privacyScrollContent}
+            showsVerticalScrollIndicator
+            bounces={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
+            <View
+              style={[
+                styles.privacyIntroCard,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
             >
-              <View
-                style={[
-                  styles.privacyIntroCard,
-                  {
-                    backgroundColor: theme.backgroundSecondary,
-                    borderColor: theme.border,
-                  },
-                ]}
-              >
-                <View style={styles.privacyIntroHeader}>
-                  <Brain color={theme.primary} size={18} />
-                  <Text
-                    style={[styles.privacyIntroTitle, { color: theme.text }]}
-                  >
-                    Uso de IA de terceros
-                  </Text>
-                </View>
+              <View style={styles.privacyIntroHeader}>
+                <Brain color={theme.primary} size={18} />
                 <Text
-                  style={[
-                    styles.privacyParagraph,
-                    { color: theme.textSecondary },
-                  ]}
+                  style={[styles.privacyIntroTitle, { color: theme.text }]}
                 >
-                  EvoFit utiliza proveedores externos de IA para el chat de
-                  nutrición y entrenamiento, el análisis de fotos de comida y la
-                  generación de planes nutricionales.
-                </Text>
-                <Text
-                  style={[
-                    styles.privacyParagraph,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Puedes consultar esta información en Perfil &gt; Datos &gt;
-                  Privacidad y datos.
+                  Uso de IA de terceros
                 </Text>
               </View>
+              <Text
+                style={[
+                  styles.privacyParagraph,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                EvoFit utiliza proveedores externos de IA para el chat de
+                nutrición y entrenamiento, el análisis de fotos de comida y la
+                generación de planes nutricionales.
+              </Text>
+              <Text
+                style={[
+                  styles.privacyParagraph,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Puedes consultar esta información en Perfil &gt; Datos &gt;
+                Privacidad y datos.
+              </Text>
+            </View>
 
-              {AI_DATA_SHARING_DETAILS.map((item) => (
-                <View
-                  key={item.title}
-                  style={[
-                    styles.privacyDetailCard,
-                    {
-                      backgroundColor: theme.backgroundSecondary,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.privacyCardTitle, { color: theme.text }]}>
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.privacyProvider,
-                      { color: theme.primary },
-                    ]}
-                  >
-                    Proveedor: {item.provider}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.privacyParagraph,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {item.description}
-                  </Text>
-                  <Text style={[styles.privacyLabel, { color: theme.text }]}>
-                    Datos compartidos
-                  </Text>
-                  <Text
-                    style={[
-                      styles.privacyParagraph,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {item.dataShared}
-                  </Text>
-                </View>
-              ))}
-
+            {AI_DATA_SHARING_DETAILS.map((item) => (
               <View
+                key={item.title}
                 style={[
                   styles.privacyDetailCard,
                   {
@@ -1572,52 +1547,94 @@ export default function ProfileScreen() {
                 ]}
               >
                 <Text style={[styles.privacyCardTitle, { color: theme.text }]}>
-                  Datos que no compartimos con IA
+                  {item.title}
                 </Text>
-                {NON_SHARED_WITH_AI.map((item) => (
-                  <Text
-                    key={item}
-                    style={[
-                      styles.privacyBullet,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    • {item}
-                  </Text>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  {
-                    backgroundColor: theme.backgroundSecondary,
-                    borderColor: theme.border,
-                  },
-                ]}
-                onPress={() => setIsPrivacyModalVisible(false)}
-              >
+                <Text
+                  style={[styles.privacyProvider, { color: theme.primary }]}
+                >
+                  Proveedor: {item.provider}
+                </Text>
                 <Text
                   style={[
-                    styles.modalButtonText,
+                    styles.privacyParagraph,
                     { color: theme.textSecondary },
                   ]}
                 >
-                  Cerrar
+                  {item.description}
                 </Text>
-              </TouchableOpacity>
+                <Text style={[styles.privacyLabel, { color: theme.text }]}>
+                  Datos compartidos
+                </Text>
+                <Text
+                  style={[
+                    styles.privacyParagraph,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {item.dataShared}
+                </Text>
+              </View>
+            ))}
 
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.primary }]}
-                onPress={handleOpenPrivacyPolicy}
-              >
-                <Text style={[styles.modalButtonText, { color: theme.onPrimary }]}>
-                  Ver política
+            <View
+              style={[
+                styles.privacyDetailCard,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              <Text style={[styles.privacyCardTitle, { color: theme.text }]}>
+                Datos que no compartimos con IA
+              </Text>
+              {NON_SHARED_WITH_AI.map((item) => (
+                <Text
+                  key={item}
+                  style={[
+                    styles.privacyBullet,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  • {item}
                 </Text>
-              </TouchableOpacity>
+              ))}
             </View>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
+              onPress={() => setIsPrivacyModalVisible(false)}
+            >
+              <Text
+                style={[
+                  styles.modalButtonText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Cerrar
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.primary }]}
+              onPress={handleOpenPrivacyPolicy}
+            >
+              <Text
+                style={[styles.modalButtonText, { color: theme.onPrimary }]}
+              >
+                Ver política
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </AppDialog>
 
       <HealthSourcesModal
@@ -1832,10 +1849,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   privacyModalCard: {
-    maxHeight: "82%",
+    overflow: "hidden",
+  },
+  privacyModalBody: {
+    width: "100%",
   },
   privacyScroll: {
-    maxHeight: 520,
+    flex: 1,
   },
   privacyScrollContent: {
     paddingBottom: 8,

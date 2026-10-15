@@ -1,5 +1,7 @@
 import type { MappedProduct as Product } from "@sergiomesasyelamos2000/shared";
 import { ApiError } from "../../../api/client";
+import { findProductInLocalCaches } from "../../../services/offlineNutritionService";
+import { isOnline } from "../../../services/syncQueue";
 import { scanBarcode } from "../services/nutritionService";
 
 export type BarcodeLookupOutcome =
@@ -15,6 +17,8 @@ export const BARCODE_COPY = {
   notFoundTitle: "Producto no encontrado",
   notFoundBody: (code: string) =>
     `Hemos leído el código ${code}, pero no está en tus productos ni en el catálogo.`,
+  offlineNotFoundBody: (code: string) =>
+    `Sin conexión: el código ${code} no está en tus productos recientes, favoritos ni catálogo cacheado. Conéctate para buscarlo en Open Food Facts.`,
   lookupFailedTitle: "No se pudo buscar el producto",
   lookupFailedBody:
     "El código se leyó bien, pero la búsqueda ha fallado. Revisa la conexión e inténtalo de nuevo.",
@@ -34,6 +38,15 @@ export async function lookupScannedBarcode(
     return { kind: "invalid_code", code: trimmed };
   }
 
+  const online = await isOnline();
+  if (!online) {
+    const local = await findProductInLocalCaches(trimmed);
+    if (local?.code) {
+      return { kind: "found", product: local };
+    }
+    return { kind: "not_found", code: trimmed };
+  }
+
   try {
     const product = await scanBarcode(trimmed);
     if (product?.code) {
@@ -48,6 +61,11 @@ export async function lookupScannedBarcode(
       if (error.status === 404) {
         return { kind: "not_found", code: trimmed };
       }
+    }
+    // Online path failed — try local caches as last resort.
+    const local = await findProductInLocalCaches(trimmed);
+    if (local?.code) {
+      return { kind: "found", product: local };
     }
     return { kind: "lookup_failed", code: trimmed };
   }

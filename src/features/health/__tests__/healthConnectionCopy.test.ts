@@ -51,7 +51,7 @@ describe("healthConnectionCopy", () => {
     for (const body of [iosDenied.deniedBody, androidDenied.deniedBody]) {
       const lower = body.toLowerCase();
       expect(lower).toMatch(/frecuencia|cardiaca|pulsaciones/);
-      expect(lower).toMatch(/calor/);
+      expect(lower).toMatch(/calor|entrenamiento/);
       expect(lower).toMatch(/sueño|sueno/);
       expect(lower).toMatch(/pasos/);
     }
@@ -66,6 +66,17 @@ describe("healthConnectionCopy", () => {
 
     expect(copy.statusSubtitle.toLowerCase()).toContain("permiso solicitado");
     expect(copy.statusSubtitle.toLowerCase()).not.toContain("conectado");
+    expect(copy.connectSuccessBody.toLowerCase()).toContain("evofit");
+  });
+
+  it("explains missing Health apps list when unavailable on iOS", () => {
+    const copy = getHealthConnectionPresentation({
+      platform: "ios",
+      status: "unavailable",
+      hasRequestedAuthorization: false,
+    });
+    expect(copy.unavailableBody.toLowerCase()).toContain("healthkit");
+    expect(copy.unavailableBody.toLowerCase()).toContain("testflight");
   });
 
   it("mentions App Store subscription when deleting account", () => {

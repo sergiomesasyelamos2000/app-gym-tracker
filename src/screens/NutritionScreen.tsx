@@ -40,7 +40,7 @@ import {
 import { useAIUsageLimit } from "../hooks/useAIUsageLimit";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNutritionStore } from "../store/useNutritionStore";
-import { addFoodEntry as addFoodEntryToDiary } from "../features/nutrition/services/nutritionService";
+import { addFoodEntryOffline as addFoodEntryToDiary } from "../services/offlineNutritionService";
 import {
   selectLoading,
   useChatStore,

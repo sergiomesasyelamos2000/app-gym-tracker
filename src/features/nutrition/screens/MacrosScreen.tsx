@@ -46,14 +46,20 @@ import { MacrosDiarySkeleton } from "../components/MacrosDiarySkeleton";
 import * as nutritionService from "../services/nutritionService";
 import { MACRO_COLORS, MACRO_GRAMS_ORDER, MACRO_LABELS } from "../utils/macroColors";
 import {
-  deleteFoodEntry,
-  getProductDetail,
-} from "../services/nutritionService";
+  addFoodEntryOffline,
+  deleteFoodEntryOffline,
+  rememberRecentProduct,
+} from "../../../services/offlineNutritionService";
+import { isOnline } from "../../../services/syncQueue";
+import { getProductDetail } from "../services/nutritionService";
 import { getBurnedInsightsCached } from "../../health";
 import {
   BARCODE_COPY,
   lookupScannedBarcode,
 } from "../utils/barcodeLookupFlow";
+
+/** Fixed CalendarList page height so 5- vs 6-week months don't resize the modal. */
+const MACROS_CALENDAR_HEIGHT = 360;
 
 // Configurar calendario en español
 LocaleConfig.locales["es"] = {
@@ -435,7 +441,7 @@ export default function MacrosScreen({ navigation }: Props) {
           onPress: async () => {
             try {
               for (const id of selectedEntries) {
-                await deleteFoodEntry(id);
+                await deleteFoodEntryOffline(id);
                 removeFoodEntry(id);
               }
               clearSelection();
@@ -467,7 +473,7 @@ export default function MacrosScreen({ navigation }: Props) {
               );
 
               for (const entry of entriesToDuplicate) {
-                await nutritionService.addFoodEntry({
+                await addFoodEntryOffline({
                   userId: user.id,
                   date: selectedDate,
                   mealType: entry.mealType,
@@ -546,6 +552,7 @@ export default function MacrosScreen({ navigation }: Props) {
     const outcome = await lookupScannedBarcode(code);
 
     if (outcome.kind === "found") {
+      void rememberRecentProduct(outcome.product);
       navigation.navigate("ProductDetailScreen", {
         producto: outcome.product,
       });
@@ -581,9 +588,12 @@ export default function MacrosScreen({ navigation }: Props) {
       return;
     }
 
+    const online = await isOnline();
     Alert.alert(
       BARCODE_COPY.notFoundTitle,
-      BARCODE_COPY.notFoundBody(outcome.code),
+      online
+        ? BARCODE_COPY.notFoundBody(outcome.code)
+        : BARCODE_COPY.offlineNotFoundBody(outcome.code),
       [
         { text: BARCODE_COPY.cancel, style: "cancel" },
         {
@@ -1181,8 +1191,10 @@ export default function MacrosScreen({ navigation }: Props) {
               horizontal
               pagingEnabled
               calendarWidth={calendarWidth}
+              calendarHeight={MACROS_CALENDAR_HEIGHT}
               hideArrows={false}
               hideExtraDays={false}
+              showSixWeeks
               calendarStyle={{ paddingLeft: 0, paddingRight: 0 }}
               onDayPress={handleDateSelect}
               markedDates={{
@@ -1662,6 +1674,8 @@ const createStyles = (theme: Theme) =>
     calendar: {
       marginTop: 8,
       paddingBottom: 12,
+      height: MACROS_CALENDAR_HEIGHT,
+      overflow: "hidden",
     },
     calendarFooter: {
       paddingHorizontal: 20,

@@ -34,6 +34,7 @@ import {
 } from "../../../hooks/useFocusedStatusBar";
 import { NutritionScreenHeader } from "../components/NutritionScreenHeader";
 import { useNutritionStore } from "../../../store/useNutritionStore";
+import { createCustomMealOffline } from "../../../services/offlineNutritionService";
 import * as nutritionService from "../services/nutritionService";
 import { ProductSearchEmptyState } from "../components/product-search/ProductSearchEmptyState";
 import { MealCollagePreview } from "../components/MealCollagePreview";
@@ -436,7 +437,7 @@ export default function CreateMealScreen() {
         products: mealProducts,
       };
 
-      await nutritionService.createCustomMeal(mealData);
+      await createCustomMealOffline(mealData);
 
       Alert.alert("¡Éxito!", "Comida personalizada creada exitosamente", [
         {

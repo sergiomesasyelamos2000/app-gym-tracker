@@ -25,7 +25,6 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import Modal from "react-native-modal";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -57,7 +56,7 @@ import {
   themeBarStyle,
   useFocusedStatusBar,
 } from "../../../hooks/useFocusedStatusBar";
-import { AppDialog } from "../../../ui/modal";
+import { AppDialog, AppSheet } from "../../../ui/modal";
 import { notificationService } from "../../../services/notificationService";
 import { consumeAppTerminatedAt } from "../../../services/restTimerLiveService";
 import { endWorkoutLive } from "../../../services/workoutLiveService";
@@ -72,6 +71,7 @@ import {
 } from "../../../store/useRoutineFolderStore";
 import { useSubscription } from "../../subscription/hooks/useSubscription";
 import { useSubscriptionStore } from "../../../store/useSubscriptionStore";
+import { useSyncStore } from "../../../store/useSyncStore";
 import { useWorkoutInProgressStore } from "../../../store/useWorkoutInProgressStore";
 import { CaughtError, getErrorMessage } from "../../../types";
 import {
@@ -81,16 +81,19 @@ import {
   routineLimitMessage,
 } from "../../../utils/subscriptionHelpers";
 import {
-  createRoutineFolder,
-  deleteRoutine,
-  deleteRoutineFolder,
   duplicateRoutine,
   fetchRoutineFolders,
   findAllRoutines,
   getRoutineById,
-  renameRoutineFolder,
-  saveRoutineLayout,
+  hasLocalRoutinesSnapshot,
 } from "../services/routineService";
+import {
+  createRoutineFolderOffline,
+  deleteRoutineFolderOffline,
+  deleteRoutineOffline,
+  renameRoutineFolderOffline,
+  saveRoutineLayoutOffline,
+} from "../../../services/offlineRoutineService";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 type WorkoutScreenNavigationProp = NativeStackNavigationProp<
@@ -117,6 +120,8 @@ type FolderDropSurfaceProps = {
   armedBorderColor: string;
   armedBackgroundColor: string;
   idleBackgroundColor: string;
+  /** Border when not an armed drop target (e.g. primary while this folder is dragged). */
+  idleBorderColor?: string;
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 };
@@ -131,13 +136,14 @@ function FolderDropSurface({
   armedBorderColor,
   armedBackgroundColor,
   idleBackgroundColor,
+  idleBorderColor = "transparent",
   style,
   children,
 }: FolderDropSurfaceProps) {
   const animatedStyle = useAnimatedStyle(() => {
     const armed = armedFolderId.value === folderId;
     return {
-      borderColor: armed ? armedBorderColor : "transparent",
+      borderColor: armed ? armedBorderColor : idleBorderColor,
       backgroundColor: armed ? armedBackgroundColor : idleBackgroundColor,
     };
   }, [
@@ -145,6 +151,7 @@ function FolderDropSurface({
     armedBorderColor,
     armedBackgroundColor,
     idleBackgroundColor,
+    idleBorderColor,
   ]);
 
   return (
@@ -173,6 +180,13 @@ function getRoutineExercisePreview(
   return "Sin ejercicios";
 }
 
+function isRoutinePendingSync(routine: RoutineResponseDto): boolean {
+  if (typeof routine.id === "string" && routine.id.startsWith("local_")) {
+    return true;
+  }
+  return Boolean((routine as RoutineResponseDto & { _isPending?: boolean })._isPending);
+}
+
 export default function WorkoutScreen() {
   const navigation = useNavigation<WorkoutScreenNavigationProp>();
   const { theme, isDark } = useTheme();
@@ -185,6 +199,7 @@ export default function WorkoutScreen() {
       features: state.features,
     }))
   );
+  const lastSyncAt = useSyncStore((state) => state.lastSyncAt);
 
   const [routines, setRoutines] = useState<RoutineResponseDto[]>([]);
   const atRoutineLimit = isAtRoutineLimitFromState(routines.length, {
@@ -196,6 +211,8 @@ export default function WorkoutScreen() {
     Record<string, RoutineResponseDto>
   >({});
   const [loading, setLoading] = useState(true);
+  /** False until a routines cache snapshot exists (never synced / after logout). */
+  const [hasLocalSnapshot, setHasLocalSnapshot] = useState(true);
   const [selectedRoutine, setSelectedRoutine] =
     useState<RoutineResponseDto | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<RoutineFolder | null>(
@@ -281,6 +298,18 @@ export default function WorkoutScreen() {
   const hasConsumedTerminationMarkerRef = useRef(false);
   const listDataRef = useRef<ListItem[]>([]);
   const draggingKeyRef = useRef<string | null>(null);
+  /** Mirrors draggingKeyRef so inactive rows re-render (dim) while dragging. */
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+
+  const clearDraggingKey = useCallback(() => {
+    draggingKeyRef.current = null;
+    setDraggingKey(null);
+  }, []);
+  /** Open rename AppDialog only after folder AppSheet close animation ends. */
+  const pendingRenameAfterFolderSheetRef = useRef<{
+    id: string;
+    title: string;
+  } | null>(null);
   const folderHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -364,6 +393,7 @@ export default function WorkoutScreen() {
       pausedAt: terminatedAt,
     });
     void notificationService.cancelAllRestTimers();
+    void endWorkoutLive();
     setPendingTerminationAt(null);
   }, [pendingTerminationAt, workoutInProgress, patchWorkoutInProgress]);
 
@@ -514,7 +544,7 @@ export default function WorkoutScreen() {
 
       try {
         await enqueue(async () => {
-          await saveRoutineLayout({
+          await saveRoutineLayoutOffline({
             rootOrder: layoutRoot,
             folders: layoutFolders,
           });
@@ -567,6 +597,7 @@ export default function WorkoutScreen() {
       if (draggingKeyRef.current) {
         setLoading(false);
         setRefreshing(false);
+        setHasLocalSnapshot(await hasLocalRoutinesSnapshot());
         return;
       }
 
@@ -585,7 +616,9 @@ export default function WorkoutScreen() {
         try {
           const idMap = new Map<string, string>();
           for (const localFolder of localState.folders) {
-            const created = await createRoutineFolder(localFolder.title);
+            const created = await createRoutineFolderOffline(
+              localFolder.title
+            );
             idMap.set(localFolder.id, created.id);
           }
 
@@ -638,7 +671,7 @@ export default function WorkoutScreen() {
             }
           });
 
-          await saveRoutineLayout({
+          await saveRoutineLayoutOffline({
             rootOrder: migratedRoot,
             folders: migratedFolders,
           });
@@ -649,6 +682,7 @@ export default function WorkoutScreen() {
           setRoutines(data);
           hydrateFromApi(hydrated.folders, hydrated.rootOrder);
           prefetchRoutineDetails(data);
+          setHasLocalSnapshot(await hasLocalRoutinesSnapshot());
           return;
         } catch (migrationError) {
           console.error("Folder migration failed", migrationError);
@@ -692,8 +726,10 @@ export default function WorkoutScreen() {
         setRoutines(ordered);
       }
       prefetchRoutineDetails(data);
+      setHasLocalSnapshot(await hasLocalRoutinesSnapshot());
     } catch (err) {
       console.error("Error fetching routines", err);
+      setHasLocalSnapshot(await hasLocalRoutinesSnapshot());
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -711,6 +747,12 @@ export default function WorkoutScreen() {
       fetchRoutines();
     }, [fetchRoutines])
   );
+
+  // After background sync remaps local_* → server ids, refresh the list.
+  useEffect(() => {
+    if (!lastSyncAt) return;
+    fetchRoutines();
+  }, [lastSyncAt, fetchRoutines]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -758,7 +800,7 @@ export default function WorkoutScreen() {
         listDataRef.current.find((row) => row.key === draggedKey);
 
       if (!draggedItem) {
-        draggingKeyRef.current = null;
+        clearDraggingKey();
         bumpListRemount();
         return;
       }
@@ -776,7 +818,7 @@ export default function WorkoutScreen() {
         !(orphanedOut && dropFolderId === draggedDrag.folderId);
 
       if (from === to && !canDropOnFolder && !orphanedOut) {
-        draggingKeyRef.current = null;
+        clearDraggingKey();
         bumpListRemount();
         return;
       }
@@ -840,10 +882,11 @@ export default function WorkoutScreen() {
         routines.map((routine) => routine.id),
         editEpoch
       );
-      draggingKeyRef.current = null;
+      clearDraggingKey();
     },
     [
       bumpListRemount,
+      clearDraggingKey,
       clearFolderHover,
       persistRoutineLayout,
       replaceLayout,
@@ -858,8 +901,11 @@ export default function WorkoutScreen() {
   };
 
   const closeRoutineOptions = () => {
-    setSelectedRoutine(null);
     setActionModalVisible(false);
+  };
+
+  const handleRoutineSheetDismissed = () => {
+    setSelectedRoutine(null);
   };
 
   const openFolderOptions = (folder: RoutineFolder) => {
@@ -868,8 +914,16 @@ export default function WorkoutScreen() {
   };
 
   const closeFolderOptions = () => {
-    setSelectedFolder(null);
     setFolderModalVisible(false);
+  };
+
+  const handleFolderSheetDismissed = () => {
+    const pending = pendingRenameAfterFolderSheetRef.current;
+    pendingRenameAfterFolderSheetRef.current = null;
+    setSelectedFolder(null);
+    if (pending) {
+      openRenameFolder(pending.id, pending.title);
+    }
   };
 
   const performRoutineMutation = useCallback(
@@ -882,7 +936,7 @@ export default function WorkoutScreen() {
         if (action === "duplicate") {
           await duplicateRoutine(routine.id);
         } else {
-          await deleteRoutine(routine.id);
+          await deleteRoutineOffline(routine.id);
           removeRoutineFromFolder(routine.id);
         }
         await fetchRoutines();
@@ -976,6 +1030,7 @@ export default function WorkoutScreen() {
     const details = routineDetailsById[routine.id];
     const preview = getRoutineExercisePreview(routine, details);
     const nested = Boolean(options.nested);
+    const isActive = Boolean(options.isActive);
 
     return (
       <View
@@ -984,18 +1039,28 @@ export default function WorkoutScreen() {
           nested && styles.nestedRoutineCard,
           nested && options.isLastNested && styles.nestedRoutineCardLast,
           {
-            backgroundColor: nested
-              ? isDark
-                ? theme.surfaceElevated
-                : theme.backgroundSecondary
-              : theme.card,
-            borderColor: nested ? "transparent" : theme.border,
-            borderWidth: nested ? 0 : 1,
-            shadowColor: theme.shadowColor,
-            opacity: options.isActive ? 0.94 : 1,
-            elevation: options.isActive ? 6 : nested ? 0 : 0,
-            shadowOpacity: nested ? 0 : 0.03,
+            backgroundColor: isActive
+              ? theme.backgroundSecondary
+              : nested
+                ? isDark
+                  ? theme.surfaceElevated
+                  : theme.backgroundSecondary
+                : theme.card,
+            borderColor: isActive
+              ? theme.primary
+              : nested
+                ? "transparent"
+                : theme.border,
+            borderWidth: isActive ? 2 : nested ? 0 : 1,
+            shadowColor: isActive ? theme.primary : theme.shadowColor,
+            elevation: isActive ? 8 : nested ? 0 : 0,
+            shadowOpacity: isActive ? 0.3 : nested ? 0 : 0.03,
+            shadowOffset: isActive
+              ? { width: 0, height: 4 }
+              : { width: 0, height: 2 },
+            shadowRadius: isActive ? 8 : 6,
           },
+          isActive && styles.dragItemActive,
         ]}
       >
         <View style={styles.cardTopRow}>
@@ -1011,7 +1076,7 @@ export default function WorkoutScreen() {
             <MaterialIcons
               name="drag-indicator"
               size={20}
-              color={theme.textTertiary}
+              color={isActive ? theme.primary : theme.textTertiary}
             />
           </Pressable>
 
@@ -1029,15 +1094,33 @@ export default function WorkoutScreen() {
             accessibilityLabel="Rutina"
             accessibilityHint="Toca para abrir. Mantén pulsado para reordenar."
           >
-            <Text
-              style={[
-                nested ? styles.nestedRoutineName : styles.routineName,
-                { color: theme.text },
-              ]}
-              numberOfLines={2}
-            >
-              {routine.title}
-            </Text>
+            <View style={styles.routineTitleRow}>
+              <Text
+                style={[
+                  nested ? styles.nestedRoutineName : styles.routineName,
+                  styles.routineTitleText,
+                  { color: theme.text },
+                ]}
+                numberOfLines={2}
+              >
+                {routine.title}
+              </Text>
+              {isRoutinePendingSync(routine) ? (
+                <View
+                  style={[
+                    styles.pendingBadge,
+                    { backgroundColor: theme.selection },
+                  ]}
+                  accessibilityLabel="Pendiente de sincronizar"
+                >
+                  <MaterialIcons
+                    name="cloud-upload"
+                    size={14}
+                    color={theme.primary}
+                  />
+                </View>
+              ) : null}
+            </View>
             <Text
               style={[
                 nested ? styles.nestedRoutinePreview : styles.routinePreview,
@@ -1188,26 +1271,38 @@ export default function WorkoutScreen() {
       return <RoutineListSkeleton />;
     }
 
+    const neverSynced = !hasLocalSnapshot;
+
     return (
       <View style={styles.emptyState}>
         <View style={[styles.emptyIconWrap, { backgroundColor: theme.selection }]}>
-          <MaterialIcons name="fitness-center" size={28} color={theme.primary} />
+          <MaterialIcons
+            name={neverSynced ? "cloud-off" : "fitness-center"}
+            size={28}
+            color={theme.primary}
+          />
         </View>
         <Text style={[styles.emptyTitle, { color: theme.text }]}>
-          Aún no tienes rutinas
+          {neverSynced
+            ? "Sin datos locales aún"
+            : "Aún no tienes rutinas"}
         </Text>
         <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-          Crea tu primera rutina para empezar a entrenar
+          {neverSynced
+            ? "Conéctate a internet una vez para descargar tus rutinas. Después podrás usarlas sin conexión."
+            : "Crea tu primera rutina para empezar a entrenar"}
         </Text>
-        <TouchableOpacity
-          style={[styles.emptyCta, { backgroundColor: theme.primary }]}
-          onPress={handleCreateRoutine}
-          activeOpacity={0.9}
-        >
-          <Text style={[styles.emptyCtaText, { color: theme.onPrimary }]}>
-            Crear rutina
-          </Text>
-        </TouchableOpacity>
+        {neverSynced ? null : (
+          <TouchableOpacity
+            style={[styles.emptyCta, { backgroundColor: theme.primary }]}
+            onPress={handleCreateRoutine}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.emptyCtaText, { color: theme.onPrimary }]}>
+              Crear rutina
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -1246,7 +1341,9 @@ export default function WorkoutScreen() {
             overshootClamping: true,
           }}
           onDragBegin={(index) => {
-            draggingKeyRef.current = listDataRef.current[index]?.key ?? null;
+            const key = listDataRef.current[index]?.key ?? null;
+            draggingKeyRef.current = key;
+            setDraggingKey(key);
             clearFolderHover();
           }}
           onPlaceholderIndexChange={(index) => {
@@ -1296,6 +1393,8 @@ export default function WorkoutScreen() {
             drag,
             isActive,
           }: RenderItemParams<ListItem>) => {
+            const isDimmed = Boolean(draggingKey) && !isActive;
+
             if (item.type === "folder") {
               const isExpanded = expandedFolderIds.includes(item.folder.id);
               const count = item.folder.routineIds.length;
@@ -1315,16 +1414,29 @@ export default function WorkoutScreen() {
                   armedBorderColor={theme.primary}
                   armedBackgroundColor={theme.selection}
                   idleBackgroundColor={
-                    isDark ? theme.surfaceElevated : theme.backgroundSecondary
+                    isActive
+                      ? theme.backgroundSecondary
+                      : isDark
+                        ? theme.surfaceElevated
+                        : theme.backgroundSecondary
                   }
+                  idleBorderColor={isActive ? theme.primary : "transparent"}
                   style={[
                     styles.folderCard,
                     isExpanded && styles.folderCardExpanded,
                     {
-                      opacity: isActive ? 0.94 : 1,
+                      borderWidth: isActive ? 2 : 1.5,
                       zIndex: isActive ? 10 : 0,
-                      elevation: isActive ? 4 : 0,
+                      elevation: isActive ? 8 : 0,
+                      shadowColor: isActive ? theme.primary : theme.shadowColor,
+                      shadowOpacity: isActive ? 0.3 : 0,
+                      shadowOffset: isActive
+                        ? { width: 0, height: 4 }
+                        : { width: 0, height: 2 },
+                      shadowRadius: isActive ? 8 : 0,
                     },
+                    isActive && styles.dragItemActive,
+                    isDimmed && styles.dragItemDimmed,
                   ]}
                 >
                   <View style={styles.folderHeader}>
@@ -1340,7 +1452,9 @@ export default function WorkoutScreen() {
                       <MaterialIcons
                         name="drag-indicator"
                         size={20}
-                        color={theme.textTertiary}
+                        color={
+                          isActive ? theme.primary : theme.textTertiary
+                        }
                       />
                     </Pressable>
 
@@ -1446,10 +1560,13 @@ export default function WorkoutScreen() {
               if (!underParent) {
                 return (
                   <View
-                    style={{
-                      zIndex: isActive ? 10 : 0,
-                      elevation: isActive ? 4 : 0,
-                    }}
+                    style={[
+                      {
+                        zIndex: isActive ? 10 : 0,
+                        elevation: isActive ? 8 : 0,
+                      },
+                      isDimmed && styles.dragItemDimmed,
+                    ]}
                   >
                     {renderRoutineCard(item.routine, { drag, isActive })}
                   </View>
@@ -1472,9 +1589,10 @@ export default function WorkoutScreen() {
                         : theme.backgroundSecondary,
                       borderLeftColor: theme.primary,
                       zIndex: isActive ? 10 : 0,
-                      elevation: isActive ? 4 : 0,
+                      elevation: isActive ? 8 : 0,
                     },
                     isLastNested && styles.nestedListWrapLast,
+                    isDimmed && styles.dragItemDimmed,
                   ]}
                 >
                   {renderRoutineCard(item.routine, {
@@ -1489,10 +1607,13 @@ export default function WorkoutScreen() {
 
             return (
               <View
-                style={{
-                  zIndex: isActive ? 10 : 0,
-                  elevation: isActive ? 4 : 0,
-                }}
+                style={[
+                  {
+                    zIndex: isActive ? 10 : 0,
+                    elevation: isActive ? 8 : 0,
+                  },
+                  isDimmed && styles.dragItemDimmed,
+                ]}
               >
                 {renderRoutineCard(item.routine, {
                   drag,
@@ -1504,173 +1625,139 @@ export default function WorkoutScreen() {
         />
       </View>
 
-      <Modal
-        isVisible={isActionModalVisible}
-        onBackdropPress={closeRoutineOptions}
-        onSwipeComplete={closeRoutineOptions}
-        swipeDirection="down"
-        style={styles.modalContainer}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        backdropColor={theme.shadowColor}
-        backdropOpacity={0.5}
-        backdropTransitionOutTiming={0}
-        useNativeDriver
-        statusBarTranslucent={Platform.OS === "android"}
+      <AppSheet
+        visible={isActionModalVisible}
+        onDismiss={closeRoutineOptions}
+        onDismissed={handleRoutineSheetDismissed}
+        title="Acciones de rutina"
+        avoidKeyboard={false}
+        testID="routine-actions-sheet"
       >
-        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-          <View
-            style={[styles.modalHeader, { borderBottomColor: theme.border }]}
-          >
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Acciones de rutina
+        <TouchableOpacity
+          style={[
+            styles.modalOption,
+            { borderBottomColor: theme.backgroundSecondary },
+          ]}
+          onPress={() => handleRoutineAction("duplicate")}
+          disabled={Boolean(processingMessage)}
+        >
+          <View style={styles.modalOptionLeft}>
+            <MaterialIcons
+              name="content-copy"
+              size={24}
+              color={theme.primary}
+            />
+            <Text style={[styles.modalOptionText, { color: theme.text }]}>
+              Duplicar rutina
             </Text>
-            <TouchableOpacity onPress={closeRoutineOptions}>
-              <Ionicons name="close" size={24} color={theme.textSecondary} />
-            </TouchableOpacity>
           </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.modalOption,
+            { borderBottomColor: theme.backgroundSecondary },
+          ]}
+          onPress={() => handleRoutineAction("edit")}
+          disabled={Boolean(processingMessage)}
+        >
+          <View style={styles.modalOptionLeft}>
+            <MaterialIcons name="edit" size={24} color={theme.primary} />
+            <Text style={[styles.modalOptionText, { color: theme.text }]}>
+              Editar rutina
+            </Text>
+          </View>
+        </TouchableOpacity>
+        {selectedRoutineFolderId ? (
           <TouchableOpacity
             style={[
               styles.modalOption,
               { borderBottomColor: theme.backgroundSecondary },
             ]}
-            onPress={() => handleRoutineAction("duplicate")}
-            disabled={Boolean(processingMessage)}
+            onPress={() => handleRoutineAction("ungroup")}
           >
             <View style={styles.modalOptionLeft}>
               <MaterialIcons
-                name="content-copy"
+                name="drive-file-move-outline"
                 size={24}
                 color={theme.primary}
               />
               <Text style={[styles.modalOptionText, { color: theme.text }]}>
-                Duplicar rutina
+                Sacar del grupo
               </Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.modalOption,
-              { borderBottomColor: theme.backgroundSecondary },
-            ]}
-            onPress={() => handleRoutineAction("edit")}
-            disabled={Boolean(processingMessage)}
-          >
-            <View style={styles.modalOptionLeft}>
-              <MaterialIcons name="edit" size={24} color={theme.primary} />
-              <Text style={[styles.modalOptionText, { color: theme.text }]}>
-                Editar rutina
-              </Text>
-            </View>
-          </TouchableOpacity>
-          {selectedRoutineFolderId ? (
-            <TouchableOpacity
-              style={[
-                styles.modalOption,
-                { borderBottomColor: theme.backgroundSecondary },
-              ]}
-              onPress={() => handleRoutineAction("ungroup")}
-            >
-              <View style={styles.modalOptionLeft}>
-                <MaterialIcons
-                  name="drive-file-move-outline"
-                  size={24}
-                  color={theme.primary}
-                />
-                <Text style={[styles.modalOptionText, { color: theme.text }]}>
-                  Sacar del grupo
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            style={styles.modalOption}
-            onPress={() => handleRoutineAction("delete")}
-            disabled={Boolean(processingMessage)}
-          >
-            <View style={styles.modalOptionLeft}>
-              <MaterialIcons name="delete" size={24} color={theme.error} />
-              <Text style={[styles.modalOptionText, { color: theme.error }]}>
-                Borrar rutina
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      <Modal
-        isVisible={isFolderModalVisible}
-        onBackdropPress={closeFolderOptions}
-        onSwipeComplete={closeFolderOptions}
-        swipeDirection="down"
-        style={styles.modalContainer}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        backdropColor={theme.shadowColor}
-        backdropOpacity={0.5}
-        backdropTransitionOutTiming={0}
-        useNativeDriver
-        statusBarTranslucent={Platform.OS === "android"}
-      >
-        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-          <View
-            style={[styles.modalHeader, { borderBottomColor: theme.border }]}
-          >
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Acciones del grupo
+        ) : null}
+        <TouchableOpacity
+          style={[styles.modalOption, styles.modalOptionLast]}
+          onPress={() => handleRoutineAction("delete")}
+          disabled={Boolean(processingMessage)}
+        >
+          <View style={styles.modalOptionLeft}>
+            <MaterialIcons name="delete" size={24} color={theme.error} />
+            <Text style={[styles.modalOptionText, { color: theme.error }]}>
+              Borrar rutina
             </Text>
-            <TouchableOpacity onPress={closeFolderOptions}>
-              <Ionicons name="close" size={24} color={theme.textSecondary} />
-            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.modalOption,
-              { borderBottomColor: theme.backgroundSecondary },
-            ]}
-            onPress={() => {
-              if (!selectedFolder) return;
-              const folder = selectedFolder;
-              closeFolderOptions();
-              openRenameFolder(folder.id, folder.title);
-            }}
-          >
-            <View style={styles.modalOptionLeft}>
-              <MaterialIcons name="edit" size={24} color={theme.primary} />
-              <Text style={[styles.modalOptionText, { color: theme.text }]}>
-                Renombrar grupo
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.modalOption}
-            onPress={() => {
-              if (!selectedFolder) return;
-              const folder = selectedFolder;
-              closeFolderOptions();
-              void (async () => {
-                try {
-                  await deleteRoutineFolder(folder.id);
-                  dissolveFolder(folder.id);
-                } catch (error: CaughtError) {
-                  Alert.alert(
-                    "Error",
-                    getErrorMessage(error) ||
-                      "No se pudo deshacer el grupo. Inténtalo de nuevo."
-                  );
-                }
-              })();
-            }}
-          >
-            <View style={styles.modalOptionLeft}>
-              <MaterialIcons name="folder-off" size={24} color={theme.error} />
-              <Text style={[styles.modalOptionText, { color: theme.error }]}>
-                Deshacer grupo
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+        </TouchableOpacity>
+      </AppSheet>
+
+      <AppSheet
+        visible={isFolderModalVisible}
+        onDismiss={closeFolderOptions}
+        onDismissed={handleFolderSheetDismissed}
+        title="Acciones del grupo"
+        avoidKeyboard={false}
+        testID="folder-actions-sheet"
+      >
+        <TouchableOpacity
+          style={[
+            styles.modalOption,
+            { borderBottomColor: theme.backgroundSecondary },
+          ]}
+          onPress={() => {
+            if (!selectedFolder) return;
+            pendingRenameAfterFolderSheetRef.current = {
+              id: selectedFolder.id,
+              title: selectedFolder.title,
+            };
+            closeFolderOptions();
+          }}
+        >
+          <View style={styles.modalOptionLeft}>
+            <MaterialIcons name="edit" size={24} color={theme.primary} />
+            <Text style={[styles.modalOptionText, { color: theme.text }]}>
+              Renombrar grupo
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modalOption, styles.modalOptionLast]}
+          onPress={() => {
+            if (!selectedFolder) return;
+            const folder = selectedFolder;
+            closeFolderOptions();
+            void (async () => {
+              try {
+                dissolveFolder(folder.id);
+                await deleteRoutineFolderOffline(folder.id);
+              } catch (error: CaughtError) {
+                Alert.alert(
+                  "Error",
+                  getErrorMessage(error) ||
+                    "No se pudo deshacer el grupo. Inténtalo de nuevo."
+                );
+              }
+            })();
+          }}
+        >
+          <View style={styles.modalOptionLeft}>
+            <MaterialIcons name="folder-off" size={24} color={theme.error} />
+            <Text style={[styles.modalOptionText, { color: theme.error }]}>
+              Deshacer grupo
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </AppSheet>
 
       <AppDialog
         visible={isRenameModalVisible}
@@ -1710,14 +1797,19 @@ export default function WorkoutScreen() {
               void (async () => {
                 try {
                   if (renameMode === "create") {
-                    const created = await createRoutineFolder(renameDraft);
+                    const created = await createRoutineFolderOffline(
+                      renameDraft
+                    );
                     insertFolder({
                       id: created.id,
                       title: created.title,
                       routineIds: created.routineIds ?? [],
                     });
                   } else if (renameFolderId) {
-                    await renameRoutineFolder(renameFolderId, renameDraft);
+                    await renameRoutineFolderOffline(
+                      renameFolderId,
+                      renameDraft
+                    );
                     renameFolder(renameFolderId, renameDraft);
                   }
                   closeRenameFolderModal();
@@ -1913,6 +2005,12 @@ const createStyles = (theme: Theme) =>
     listContentWithBanner: {
       paddingBottom: 110,
     },
+    dragItemActive: {
+      transform: [{ scale: 1.02 }],
+    },
+    dragItemDimmed: {
+      opacity: 0.5,
+    },
     routineCard: {
       borderRadius: 16,
       borderWidth: 1,
@@ -1921,6 +2019,23 @@ const createStyles = (theme: Theme) =>
       shadowOpacity: 0.03,
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 6,
+    },
+    routineTitleRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      marginBottom: 4,
+    },
+    routineTitleText: {
+      flex: 1,
+    },
+    pendingBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
     },
     nestedRoutineCard: {
       marginLeft: 0,
@@ -2098,32 +2213,16 @@ const createStyles = (theme: Theme) =>
       fontSize: RFValue(14),
       fontWeight: "700",
     },
-    modalContainer: {
-      justifyContent: "flex-end",
-      margin: 0,
-    },
-    modalContent: {
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingBottom: 30,
-    },
-    modalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 20,
-      borderBottomWidth: 1,
-    },
-    modalTitle: {
-      fontSize: RFValue(18),
-      fontWeight: "700",
-    },
     modalOption: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      padding: 20,
+      paddingVertical: 16,
+      paddingHorizontal: 4,
       borderBottomWidth: 1,
+    },
+    modalOptionLast: {
+      borderBottomWidth: 0,
     },
     modalOptionLeft: {
       flexDirection: "row",

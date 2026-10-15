@@ -3,8 +3,13 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
   getHealthAuthorizationStatus,
+  getHealthClient,
   requestHealthAuthorization,
 } from "./healthClient";
+import {
+  canReadHealthHub,
+  canWriteHealthHub,
+} from "./healthPermissionGates";
 import type { HealthAuthorizationStatus } from "./types";
 
 type HealthConnectionState = {
@@ -22,10 +27,19 @@ type HealthConnectionState = {
   /** ISO timestamp of last dismissed TDEE suggestion (avoid nagging). */
   lastDismissedSuggestionAt: string | null;
   refreshStatus: () => Promise<HealthAuthorizationStatus>;
+  /**
+   * Ensure the native hub is available, then present the system permission
+   * sheet. Sets `hasRequestedAuthorization` only when the request path runs
+   * (not when the module is missing).
+   */
   connect: () => Promise<HealthAuthorizationStatus>;
   setWriteWorkoutsToHub: (value: boolean) => void;
   setShowRestHints: (value: boolean) => void;
   dismissSuggestion: () => void;
+  /** Rest / live metrics may query the hub. */
+  canReadFromHub: () => boolean;
+  /** Completed sessions may be mirrored to the hub. */
+  canWriteToHub: () => boolean;
 };
 
 export const useHealthConnectionStore = create<HealthConnectionState>()(
@@ -43,15 +57,38 @@ export const useHealthConnectionStore = create<HealthConnectionState>()(
         return status;
       },
       connect: async () => {
-        set({ hasRequestedAuthorization: true });
+        const available = await getHealthClient().isAvailable();
+        if (!available) {
+          set({ status: "unavailable", lastCheckedAt: Date.now() });
+          return "unavailable";
+        }
         const status = await requestHealthAuthorization();
-        set({ status, lastCheckedAt: Date.now() });
+        // Mark requested whenever the system sheet path ran (even if write
+        // status stays undetermined/denied — reads can still work).
+        set({
+          hasRequestedAuthorization: status !== "unavailable",
+          status,
+          lastCheckedAt: Date.now(),
+        });
         return status;
       },
       setWriteWorkoutsToHub: (value) => set({ writeWorkoutsToHub: value }),
       setShowRestHints: (value) => set({ showRestHints: value }),
       dismissSuggestion: () =>
         set({ lastDismissedSuggestionAt: new Date().toISOString() }),
+      canReadFromHub: () => {
+        const { status, hasRequestedAuthorization } = useHealthConnectionStore.getState();
+        return canReadHealthHub({ status, hasRequestedAuthorization });
+      },
+      canWriteToHub: () => {
+        const { status, hasRequestedAuthorization, writeWorkoutsToHub } =
+          useHealthConnectionStore.getState();
+        return canWriteHealthHub({
+          status,
+          hasRequestedAuthorization,
+          writeWorkoutsToHub,
+        });
+      },
     }),
     {
       name: "health-connection",

@@ -109,6 +109,10 @@ import {
   type LeaveRestReason,
 } from "../utils/leaveRestPlan";
 import {
+  buildPausedWorkoutPatch,
+  shouldPauseWorkoutOnLeave,
+} from "../utils/pauseWorkoutOnLeave";
+import {
   buildNextSetSummary,
   buildLiveCompletionFingerprint,
   findNextIncompleteSet,
@@ -781,7 +785,13 @@ export default function RoutineDetailScreen() {
   const startWorkoutLiveSession = useCallback(() => {
     if (sessionView) return;
     const startedAt = getWorkoutStartTime();
-    const exercise = exercisesState[0];
+    const preferredId = liveExerciseIdRef.current;
+    const exercise =
+      exercisesState.find((item) => item.id === preferredId) ||
+      exercisesState.find((item) =>
+        (sets[item.id] || []).some((set) => !set.completed)
+      ) ||
+      exercisesState[0];
     if (exercise) {
       liveExerciseIdRef.current = exercise.id;
       setCurrentExerciseName(exercise.name);
@@ -1223,17 +1233,6 @@ export default function RoutineDetailScreen() {
   }, [started, isSaving, navigation, theme]);
 
   useEffect(() => {
-    if (!isSaving) return;
-
-    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
-      if (event?.data?.action?.type === "RESET") return;
-      event.preventDefault();
-    });
-
-    return unsubscribe;
-  }, [navigation, isSaving]);
-
-  useEffect(() => {
     if (showRestToast) {
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -1513,6 +1512,82 @@ export default function RoutineDetailScreen() {
     );
   }, [assignRestNotificationId, clearRestCountdownInterval]);
 
+  const allowLeaveAfterPauseRef = useRef(false);
+  const pauseLeaveInFlightRef = useRef(false);
+
+  const pauseWorkoutAndLeave = useCallback(async () => {
+    if (pauseLeaveInFlightRef.current) return;
+    pauseLeaveInFlightRef.current = true;
+
+    try {
+      if (
+        !shouldPauseWorkoutOnLeave({
+          started,
+          sessionView: Boolean(sessionView),
+          isSaving,
+        })
+      ) {
+        allowLeaveAfterPauseRef.current = true;
+        navigation.goBack();
+        return;
+      }
+
+      const pausedAt = Date.now();
+      endRestForWorkoutExit();
+      await persistWorkoutSnapshot({ flush: true, includeDuration: true });
+      patchWorkoutInProgress(
+        buildPausedWorkoutPatch({
+          durationSeconds: durationRef.current,
+          pausedAtMs: pausedAt,
+        })
+      );
+      await flushWorkoutInProgressPersist();
+      void endWorkoutLive();
+
+      allowLeaveAfterPauseRef.current = true;
+      navigation.goBack();
+    } finally {
+      pauseLeaveInFlightRef.current = false;
+    }
+  }, [
+    endRestForWorkoutExit,
+    isSaving,
+    navigation,
+    patchWorkoutInProgress,
+    persistWorkoutSnapshot,
+    sessionView,
+    started,
+  ]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event: any) => {
+      if (event?.data?.action?.type === "RESET") return;
+
+      if (isSaving) {
+        event.preventDefault();
+        return;
+      }
+
+      if (allowLeaveAfterPauseRef.current) {
+        allowLeaveAfterPauseRef.current = false;
+        return;
+      }
+
+      if (
+        shouldPauseWorkoutOnLeave({
+          started,
+          sessionView: Boolean(sessionView),
+          isSaving: false,
+        })
+      ) {
+        event.preventDefault();
+        void pauseWorkoutAndLeave();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, isSaving, started, sessionView, pauseWorkoutAndLeave]);
+
   const processFinishRoutine = async (updateRoutineTemplate = true) => {
     if (isSaving) return;
     setIsSaving(true);
@@ -1568,25 +1643,32 @@ export default function RoutineDetailScreen() {
       await saveSessionOffline(updatedRoutine.id, sessionToSave);
       invalidateSessionBurnCache();
 
-      // Fire-and-forget: mirror workout into Apple Salud / Health Connect.
+      // Mirror workout into Apple Salud / Health Connect (never fail session save).
       try {
-        const { writeWorkoutsToHub, status } =
-          useHealthConnectionStore.getState();
-        if (
-          writeWorkoutsToHub &&
-          (status === "granted" || status === "undetermined")
-        ) {
+        const healthStore = useHealthConnectionStore.getState();
+        if (healthStore.canWriteToHub()) {
           const startMs = getWorkoutStartTime();
           const endMs = Date.now();
-          void getHealthClient().writeWorkout({
-            startMs,
-            endMs,
-            title: routineTitle || "Entrenamiento EvoFit",
-            caloriesBurned: sessionToSave.caloriesBurned,
-          });
+          void getHealthClient()
+            .writeWorkout({
+              startMs,
+              endMs,
+              title: routineTitle || "Entrenamiento EvoFit",
+              caloriesBurned: sessionToSave.caloriesBurned,
+            })
+            .then((ok) => {
+              if (!ok) {
+                console.warn(
+                  "[Health] writeWorkout returned false — check Salud permissions for EvoFit"
+                );
+              }
+            })
+            .catch((error) => {
+              console.warn("[Health] writeWorkout failed:", error);
+            });
         }
-      } catch {
-        // Never fail session save because of hub write.
+      } catch (error) {
+        console.warn("[Health] writeWorkout setup failed:", error);
       }
 
       // Only clear workout after successful save
@@ -1754,6 +1836,20 @@ export default function RoutineDetailScreen() {
       setCurrentExerciseImageUrl(null);
       setCurrentNextSetSummary(null);
 
+      // Clear Live Activity rest ASAP (before awaiting notification cancel) so
+      // iOS never keeps an expired timerInterval mounted on the widget.
+      if (
+        plan.syncLiveActivity &&
+        !shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)
+      ) {
+        void updateWorkoutLive({
+          workoutStartedAtMs: getWorkoutStartTime(),
+          exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
+          isResting: false,
+          restEndAtMs: null,
+        });
+      }
+
       try {
         const notificationId =
           plan.cancelNotificationId ?? plan.dismissNotificationId;
@@ -1762,18 +1858,6 @@ export default function RoutineDetailScreen() {
           if (shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)) {
             return;
           }
-        }
-
-        if (
-          plan.syncLiveActivity &&
-          !shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)
-        ) {
-          void updateWorkoutLive({
-            workoutStartedAtMs: getWorkoutStartTime(),
-            exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
-            isResting: false,
-            restEndAtMs: null,
-          });
         }
 
         if (
@@ -2471,7 +2555,11 @@ export default function RoutineDetailScreen() {
       <ScreenHeader
         title={sessionView ? sessionTitle || "Detalle de sesión" : "Detalle"}
         onBack={
-          sessionView ? handleExitSessionView : () => navigation.goBack()
+          sessionView
+            ? handleExitSessionView
+            : () => {
+                void pauseWorkoutAndLeave();
+              }
         }
       />
       {loading || isExercisesLoading ? (

@@ -106,8 +106,11 @@ export function createIosHealthClient(): HealthClient {
         availableCache = null;
         if (status?.status === PermissionStatus.GRANTED) return "granted";
         if (status?.status === PermissionStatus.DENIED) return "denied";
-        return "granted";
-      } catch {
+        // HealthKit often leaves write status undetermined after the sheet;
+        // treat that as success so Connect is not marked unavailable.
+        return "undetermined";
+      } catch (error) {
+        console.warn("[HealthKit] requestAuthorization failed:", error);
         return "unavailable";
       }
     },
@@ -160,7 +163,12 @@ export function createIosHealthClient(): HealthClient {
     async writeWorkout(input: WriteWorkoutInput) {
       try {
         const mod = loadAppleHealth();
-        if (!mod?.HealthKitSampleBuilder) return false;
+        if (!mod?.HealthKitSampleBuilder) {
+          console.warn(
+            "[HealthKit] writeWorkout: HealthKitSampleBuilder unavailable"
+          );
+          return false;
+        }
         const start = new Date(input.startMs);
         const end = new Date(Math.max(input.endMs, input.startMs + 60_000));
         let builder = new mod.HealthKitSampleBuilder()
@@ -176,7 +184,8 @@ export function createIosHealthClient(): HealthClient {
         }
         await builder.save();
         return true;
-      } catch {
+      } catch (error) {
+        console.warn("[HealthKit] writeWorkout failed:", error);
         return false;
       }
     },

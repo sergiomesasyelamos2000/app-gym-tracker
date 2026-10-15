@@ -64,6 +64,8 @@ import { SearchStatusBanner } from "../components/product-search/SearchStatusBan
 import { SwapListShell } from "../components/product-search/SwapListShell";
 import { useDebouncedSwapKey } from "../components/product-search/useDebouncedSwapKey";
 import * as nutritionService from "../services/nutritionService";
+import { rememberRecentProduct } from "../../../services/offlineNutritionService";
+import { isOnline } from "../../../services/syncQueue";
 import {
   BARCODE_COPY,
   lookupScannedBarcode,
@@ -1556,6 +1558,7 @@ export default function ProductListScreen() {
     const outcome = await lookupScannedBarcode(code);
 
     if (outcome.kind === "found") {
+      void rememberRecentProduct(outcome.product);
       navigation.navigate("ProductDetailScreen", {
         producto: outcome.product,
         selectedMeal,
@@ -1595,9 +1598,12 @@ export default function ProductListScreen() {
       return;
     }
 
+    const online = await isOnline();
     Alert.alert(
       BARCODE_COPY.notFoundTitle,
-      BARCODE_COPY.notFoundBody(outcome.code),
+      online
+        ? BARCODE_COPY.notFoundBody(outcome.code)
+        : BARCODE_COPY.offlineNotFoundBody(outcome.code),
       [
         { text: BARCODE_COPY.cancel, style: "cancel" },
         {

@@ -269,7 +269,8 @@ function updateExtensionBuildSettings(project, targetUuid, options) {
     config.buildSettings.INFOPLIST_FILE = `${EXTENSION_NAME}/Info.plist`;
     config.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
     config.buildSettings.CODE_SIGN_ENTITLEMENTS = `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`;
-    config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "16.2";
+    // Button(intent:) / interactive Live Activity controls require iOS 17+.
+    config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "17.0";
     config.buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"';
     config.buildSettings.SWIFT_VERSION = "5.0";
     config.buildSettings.SKIP_INSTALL = "YES";

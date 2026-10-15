@@ -40,6 +40,8 @@ type RoutineFolderState = {
     rootOrder: RootKey[],
     expandedFolderIds?: string[]
   ) => void;
+  /** Clears folders/layout (logout). */
+  resetLayout: () => void;
   setFolderExpanded: (folderId: string, expanded: boolean) => void;
   toggleFolderExpanded: (folderId: string) => void;
   getFolderIdForRoutine: (routineId: string) => string | null;
@@ -341,6 +343,14 @@ export const useRoutineFolderStore = create<RoutineFolderState>()(
             : [...state.expandedFolderIds, folderId],
         }));
       },
+
+      resetLayout: () =>
+        set({
+          folders: [],
+          rootOrder: [],
+          expandedFolderIds: [],
+          migratedLocalFolders: false,
+        }),
 
       getFolderIdForRoutine: (routineId) => {
         const folder = get().folders.find((f) =>

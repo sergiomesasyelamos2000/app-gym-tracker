@@ -63,6 +63,11 @@ export function HealthConnectionSection({
         Alert.alert(copy.unavailableAlertTitle, copy.unavailableBody);
       } else if (nextStatus === "denied") {
         Alert.alert(copy.deniedAlertTitle, copy.deniedBody);
+      } else {
+        Alert.alert(copy.connectSuccessTitle, copy.connectSuccessBody);
+        void getRestSummaryCached({ force: true }).then((summary) => {
+          onRestSummaryChange(summary);
+        });
       }
     } finally {
       setIsConnecting(false);
