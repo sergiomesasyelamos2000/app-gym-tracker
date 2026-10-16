@@ -225,6 +225,7 @@ describe("workoutLiveActivityXcode fresh prebuild", () => {
         "RestTimerLiveActivity.swift in Sources",
         "RestTimerLiveActivityModule.swift in Sources",
         "RestTimerLiveActivityBridge.m in Sources",
+        "WorkoutLiveIntents.swift in Sources",
       ])
     );
 

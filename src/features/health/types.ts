@@ -31,8 +31,19 @@ export type RestSummary = {
   stepsLast7Days: number | null;
 };
 
+/** Provider readiness before requesting permissions (Android Health Connect). */
+export type HealthProviderAvailability =
+  | "available"
+  | "update_required"
+  | "unavailable";
+
 export interface HealthClient {
   isAvailable(): Promise<boolean>;
+  /**
+   * Finer-grained provider readiness (install / update / ready).
+   * Defaults to available/unavailable when the platform has no install step.
+   */
+  getProviderAvailability(): Promise<HealthProviderAvailability>;
   getAuthorizationStatus(): Promise<HealthAuthorizationStatus>;
   requestAuthorization(): Promise<HealthAuthorizationStatus>;
   /**
@@ -49,4 +60,8 @@ export interface HealthClient {
   writeWorkout(input: WriteWorkoutInput): Promise<boolean>;
   /** Optional rest signals from sleep + steps (best-effort). */
   getRestSummary(): Promise<RestSummary>;
+  /** Open system Health Connect / Salud permission management (Hevy Manage). */
+  openManagePermissions(): Promise<boolean>;
+  /** Open Play Store to install/update Health Connect when missing. */
+  openInstallProvider(): Promise<boolean>;
 }

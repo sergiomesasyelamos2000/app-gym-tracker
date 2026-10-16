@@ -405,21 +405,20 @@ struct WorkoutLiveLockScreenView: View {
   @ViewBuilder
   private var restTimerLabel: some View {
     if let end = context.state.restEndAt {
-      HStack(spacing: 4) {
-        Text("Rest:")
-          .font(.title3.weight(.bold))
-          .foregroundStyle(LiveTheme.textPrimary)
-        SafeRestCountdownText(
-          end: end,
-          restSecondsDefault: context.state.restSecondsDefault,
-          font: .title3.weight(.bold).monospacedDigit(),
-          color: LiveTheme.textPrimary
-        )
-      }
+      // Time only (no "Rest:" prefix) — lock screen truncates "Rest: 2:50" to "R…2:50".
+      SafeRestCountdownText(
+        end: end,
+        restSecondsDefault: context.state.restSecondsDefault,
+        font: .title3.weight(.bold).monospacedDigit(),
+        color: LiveTheme.textPrimary,
+        width: 56
+      )
+      .minimumScaleFactor(0.8)
     } else {
-      Text("Rest")
-        .font(.title3.weight(.bold))
+      Text("0:00")
+        .font(.title3.weight(.bold).monospacedDigit())
         .foregroundStyle(LiveTheme.textPrimary)
+        .frame(width: 56)
     }
   }
 

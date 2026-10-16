@@ -17,8 +17,15 @@ export { LiveWorkoutHealthPanel } from "./components/LiveWorkoutHealthPanel";
 export { HealthConnectionSection } from "./components/HealthConnectionSection";
 export {
   getHealthConnectionPresentation,
+  getHealthFinishPromptCopy,
   ACCOUNT_DELETE_SUBSCRIPTION_NOTICE,
 } from "./healthConnectionCopy";
+export {
+  appendHealthSyncToSuccessMessage,
+  healthHubLabel,
+  isHealthHubConnected,
+  planHealthFinishSync,
+} from "./healthHubConnection";
 export {
   HEALTH_ECOSYSTEMS,
   getMvpHubForPlatform,
@@ -32,10 +39,16 @@ export type { WeeklyActivitySuggestion } from "./weeklyActivitySuggestion";
 export type {
   HealthAuthorizationStatus,
   HealthMetricsSource,
+  HealthProviderAvailability,
   WorkoutHealthSnapshot,
   WriteWorkoutInput,
   RestSummary,
 } from "./types";
+export {
+  openHealthConnectManage,
+  openHealthConnectPlayStore,
+  probeHealthConnectAvailability,
+} from "./androidHealthConnectActions";
 export type {
   HealthHubId,
   HealthEcosystem,

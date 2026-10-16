@@ -693,8 +693,14 @@ export async function upsertRoutineSessionCaches(
  * Offline-first sessions for one routine (previous-set marks + detail history).
  * Merges per-routine cache, pending local sessions, and global history cache.
  */
+export type FindRoutineSessionsOptions = {
+  /** Called when the network refresh merges a newer snapshot (local-first path). */
+  onNetworkUpdate?: (sessions: RoutineSessionEntity[]) => void;
+};
+
 export async function findRoutineSessions(
-  id: string
+  id: string,
+  options?: FindRoutineSessionsOptions
 ): Promise<RoutineSessionEntity[]> {
   const perRoutine = await readPerRoutineSessionsCache(id);
   const localAll = await readLocalPendingSessions();
@@ -726,6 +732,8 @@ export async function findRoutineSessions(
         routineSessionCacheKey(id),
         JSON.stringify(sessions)
       );
+      const merged = mergeSessionEntities(sessions, localForRoutine);
+      options?.onNetworkUpdate?.(merged);
       return sessions;
     })
     .catch((error: CaughtError) => {

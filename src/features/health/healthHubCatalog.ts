@@ -90,6 +90,7 @@ export function getWatchNotesForPlatform(
 ): string[] {
   if (platform === "android") {
     return [
+      "Google Fit y Samsung Health no se conectan directo a EvoFit: primero a Health Connect; EvoFit escribe ahí y ellos lo leen.",
       "Pixel Watch, Fitbit y Galaxy Watch: si escriben en Health Connect, EvoFit los lee.",
       "Garmin, Polar o Amazfit: visibles si ya sincronizan con Health Connect. Conexión directa con cada marca más adelante.",
     ];

@@ -6,10 +6,84 @@ export type PreviousSetPerformance = {
   assistedReps?: number;
 };
 
+/** exerciseId → performance by set index (newest non-empty wins). */
+export type PreviousSetLookup = Map<
+  string,
+  Array<PreviousSetPerformance | undefined>
+>;
+
 function sessionTime(session: RoutineSessionEntity): number {
   const raw = session.createdAt;
   const ms = raw instanceof Date ? raw.getTime() : Date.parse(String(raw));
   return Number.isFinite(ms) ? ms : 0;
+}
+
+function performanceFromSet(
+  set: { weight?: unknown; reps?: unknown; assistedReps?: unknown }
+): PreviousSetPerformance | null {
+  const weight = Number(set.weight);
+  const reps = Number(set.reps);
+  if (!Number.isFinite(weight) || !Number.isFinite(reps)) return null;
+  // Ignore empty placeholders — not real previous performance.
+  if (weight <= 0 && reps <= 0) return null;
+
+  const assistedReps = Number(set.assistedReps);
+  return {
+    weight,
+    reps,
+    assistedReps:
+      Number.isFinite(assistedReps) && assistedReps > 0
+        ? assistedReps
+        : undefined,
+  };
+}
+
+/**
+ * Build a one-pass index of previous set performance.
+ * Sort sessions once; fill each exercise/set from newest → oldest.
+ */
+export function buildPreviousSetLookup(
+  previousSessions: RoutineSessionEntity[]
+): PreviousSetLookup {
+  const lookup: PreviousSetLookup = new Map();
+  if (!previousSessions.length) return lookup;
+
+  const sortedSessions = [...previousSessions].sort(
+    (a, b) => sessionTime(b) - sessionTime(a)
+  );
+
+  for (const session of sortedSessions) {
+    for (const exercise of session.exercises ?? []) {
+      const exerciseId =
+        exercise.exerciseId || (exercise as { id?: string }).id;
+      if (!exerciseId || !exercise.sets?.length) continue;
+
+      let row = lookup.get(exerciseId);
+      if (!row) {
+        row = [];
+        lookup.set(exerciseId, row);
+      }
+
+      exercise.sets.forEach((set, setIndex) => {
+        if (row![setIndex] != null) return;
+        const perf = performanceFromSet(set);
+        if (perf) {
+          row![setIndex] = perf;
+        }
+      });
+    }
+  }
+
+  return lookup;
+}
+
+export function getPreviousSetPerformanceFromLookup(
+  lookup: PreviousSetLookup,
+  exerciseId: string,
+  setIndex: number
+): PreviousSetPerformance | null {
+  if (!exerciseId || setIndex < 0) return null;
+  return lookup.get(exerciseId)?.[setIndex] ?? null;
 }
 
 /**
@@ -24,42 +98,11 @@ export function getPreviousSetPerformance(
   if (!exerciseId || setIndex < 0 || previousSessions.length === 0) {
     return null;
   }
-
-  const sortedSessions = [...previousSessions].sort(
-    (a, b) => sessionTime(b) - sessionTime(a)
+  return getPreviousSetPerformanceFromLookup(
+    buildPreviousSetLookup(previousSessions),
+    exerciseId,
+    setIndex
   );
-
-  for (const session of sortedSessions) {
-    const exercise = session.exercises?.find(
-      (ex) =>
-        ex.exerciseId === exerciseId ||
-        (ex as { id?: string }).id === exerciseId
-    );
-    if (!exercise?.sets?.length) continue;
-
-    const set = exercise.sets[setIndex];
-    if (!set) continue;
-
-    const weight = Number(set.weight);
-    const reps = Number(set.reps);
-    if (!Number.isFinite(weight) || !Number.isFinite(reps)) continue;
-    // Ignore empty placeholders — not real previous performance.
-    if (weight <= 0 && reps <= 0) continue;
-
-    const assistedRaw = (set as { assistedReps?: number }).assistedReps;
-    const assistedReps = Number(assistedRaw);
-
-    return {
-      weight,
-      reps,
-      assistedReps:
-        Number.isFinite(assistedReps) && assistedReps > 0
-          ? assistedReps
-          : undefined,
-    };
-  }
-
-  return null;
 }
 
 export function formatPreviousMark(

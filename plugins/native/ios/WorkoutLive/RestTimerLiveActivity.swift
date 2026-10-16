@@ -1,6 +1,7 @@
 import Foundation
 import ActivityKit
 import React
+import UIKit
 
 @objc(RestTimerLiveActivity)
 class RestTimerLiveActivity: NSObject {
@@ -42,12 +43,13 @@ class RestTimerLiveActivity: NSObject {
       await endAll()
       let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
       let attributes = WorkoutLiveAttributes(workoutStartedAt: startedAt)
+      let imageFileName = await Self.resolveImageFileName(imageUrl)
       let state = makeState(
         exerciseName: exerciseName,
         nextSetSummary: nextSetSummary,
         isResting: isResting,
         restEndAtMs: restEndAtMs,
-        imageUrl: imageUrl,
+        imageFileName: imageFileName,
         restSecondsDefault: restSecondsDefault
       )
       do {
@@ -83,23 +85,31 @@ class RestTimerLiveActivity: NSObject {
     }
 
     Task { @MainActor in
+      let existing = currentActivity ?? Activity<WorkoutLiveAttributes>.activities.first
+      // JS may pass null imageUrl to skip re-decode — keep prior App Group file.
+      let imageFileName: String?
+      if let imageUrl, !imageUrl.isEmpty {
+        imageFileName = await Self.resolveImageFileName(imageUrl)
+      } else {
+        imageFileName = existing?.content.state.imageFileName
+      }
+
       let state = makeState(
         exerciseName: exerciseName,
         nextSetSummary: nextSetSummary,
         isResting: isResting,
         restEndAtMs: restEndAtMs,
-        imageUrl: imageUrl,
+        imageFileName: imageFileName,
         restSecondsDefault: restSecondsDefault
       )
       let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
 
-      if let activity = currentActivity ?? Activity<WorkoutLiveAttributes>.activities.first {
+      if let activity = existing {
         await activity.update(ActivityContent(state: state, staleDate: nil))
         currentActivity = activity
         persistState(state, startedAt: startedAt)
         resolver(true)
       } else {
-        // No active activity — start one.
         startWorkoutLive(
           workoutStartedAtMs,
           exerciseName: exerciseName,
@@ -244,7 +254,7 @@ class RestTimerLiveActivity: NSObject {
     nextSetSummary: String?,
     isResting: Bool,
     restEndAtMs: NSNumber?,
-    imageUrl: String?,
+    imageFileName: String?,
     restSecondsDefault: NSNumber?
   ) -> WorkoutLiveAttributes.ContentState {
     let restEnd: Date? = {
@@ -256,9 +266,68 @@ class RestTimerLiveActivity: NSObject {
       nextSetSummary: nextSetSummary ?? "",
       isResting: isResting,
       restEndAt: restEnd,
-      imageFileName: imageUrl,
+      imageFileName: imageFileName,
       restSecondsDefault: restSecondsDefault?.intValue ?? 90
     )
+  }
+
+  /// Download remote static thumbs into the App Group so the widget can read them.
+  /// Returns a relative path under the group container (e.g. `live-thumbs/thumb_….jpg`).
+  private static func resolveImageFileName(_ imageUrl: String?) async -> String? {
+    guard let imageUrl, !imageUrl.isEmpty else { return nil }
+
+    if !imageUrl.hasPrefix("http://"), !imageUrl.hasPrefix("https://") {
+      return imageUrl
+    }
+
+    guard let container = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: WorkoutLiveStore.appGroupId
+    ) else {
+      return nil
+    }
+
+    let dir = container.appendingPathComponent("live-thumbs", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+    let fileName = "live-thumbs/\(stableThumbName(for: imageUrl))"
+    let dest = container.appendingPathComponent(fileName)
+
+    if FileManager.default.fileExists(atPath: dest.path) {
+      return fileName
+    }
+
+    guard let remote = URL(string: imageUrl) else { return nil }
+
+    do {
+      let config = URLSessionConfiguration.ephemeral
+      config.timeoutIntervalForRequest = 4
+      config.timeoutIntervalForResource = 6
+      let session = URLSession(configuration: config)
+      let (data, response) = try await session.data(from: remote)
+      if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+        return nil
+      }
+      // Prefer JPEG for widget decode size; fall back to original bytes.
+      if let uiImage = UIImage(data: data),
+         let jpeg = uiImage.jpegData(compressionQuality: 0.82) {
+        try jpeg.write(to: dest, options: .atomic)
+      } else {
+        try data.write(to: dest, options: .atomic)
+      }
+      return fileName
+    } catch {
+      return nil
+    }
+  }
+
+  /// Stable FNV-1a filename (Swift `Hasher` / `hashValue` are not stable across launches).
+  private static func stableThumbName(for urlString: String) -> String {
+    var hash: UInt64 = 14695981039346656037
+    for byte in urlString.utf8 {
+      hash ^= UInt64(byte)
+      hash = hash &* 1099511628211
+    }
+    return String(format: "thumb_%016llx.jpg", hash)
   }
 
   @available(iOS 16.2, *)
@@ -279,6 +348,7 @@ class RestTimerLiveActivity: NSObject {
       "restEndAtMs": state.restEndAt.map { $0.timeIntervalSince1970 * 1000 } as Any,
       "workoutStartedAtMs": startedAt.timeIntervalSince1970 * 1000,
       "restSecondsDefault": state.restSecondsDefault,
+      "imageFileName": state.imageFileName as Any,
     ]
     WorkoutLiveStore.defaults.set(payload, forKey: WorkoutLiveStore.stateKey)
   }

@@ -32,4 +32,11 @@ describe("healthHubCatalog", () => {
       expect(notes).not.toMatch(/emparejar/);
     }
   });
+
+  it("explains Google Fit / Samsung via Health Connect on Android", () => {
+    const notes = getWatchNotesForPlatform("android").join(" ").toLowerCase();
+    expect(notes).toContain("google fit");
+    expect(notes).toContain("samsung");
+    expect(notes).toContain("health connect");
+  });
 });

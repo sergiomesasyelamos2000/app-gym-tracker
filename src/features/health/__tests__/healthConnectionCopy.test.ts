@@ -1,6 +1,7 @@
 import {
   ACCOUNT_DELETE_SUBSCRIPTION_NOTICE,
   getHealthConnectionPresentation,
+  getHealthFinishPromptCopy,
 } from "../healthConnectionCopy";
 
 describe("healthConnectionCopy", () => {
@@ -13,17 +14,17 @@ describe("healthConnectionCopy", () => {
 
     expect(copy.sectionTitle).toContain("APPLE SALUD");
     expect(copy.connectTitle).toContain("Apple Salud");
+    expect(copy.showConnectedControls).toBe(false);
+    expect(copy.connectHint.toLowerCase()).toContain("entreno");
     expect(copy.explainer.toLowerCase()).toContain(
       "no emparejamos el reloj por bluetooth"
     );
     const actionCopy =
       `${copy.connectTitle} ${copy.statusSubtitle}`.toLowerCase();
     expect(actionCopy).not.toMatch(/\bemparejar\b/);
-    expect(actionCopy).toContain("sueño");
-    expect(actionCopy).toContain("pasos");
   });
 
-  it("names Health Connect on Android", () => {
+  it("names Health Connect on Android with Hevy-style hub messaging", () => {
     const copy = getHealthConnectionPresentation({
       platform: "android",
       status: "undetermined",
@@ -33,7 +34,12 @@ describe("healthConnectionCopy", () => {
     expect(copy.sectionTitle).toContain("HEALTH CONNECT");
     expect(copy.connectTitle).toContain("Health Connect");
     expect(copy.explainer.toLowerCase()).toContain("health connect");
+    expect(copy.explainer.toLowerCase()).toContain("google fit");
+    expect(copy.explainer.toLowerCase()).toContain("samsung");
     expect(copy.explainer.toLowerCase()).toContain("no emparejamos");
+    expect(copy.manageTitle.toLowerCase()).toContain("health connect");
+    expect(copy.installTitle.toLowerCase()).toContain("instalar");
+    expect(copy.connectHint.toLowerCase()).toContain("google fit");
   });
 
   it("lists the four read domains when denied", () => {
@@ -57,16 +63,17 @@ describe("healthConnectionCopy", () => {
     }
   });
 
-  it("keeps asked-but-undetermined copy after connect without claiming granted", () => {
+  it("shows connected controls after connect without requiring granted", () => {
     const copy = getHealthConnectionPresentation({
       platform: "ios",
       status: "undetermined",
       hasRequestedAuthorization: true,
     });
 
-    expect(copy.statusSubtitle.toLowerCase()).toContain("permiso solicitado");
-    expect(copy.statusSubtitle.toLowerCase()).not.toContain("conectado");
-    expect(copy.connectSuccessBody.toLowerCase()).toContain("evofit");
+    expect(copy.showConnectedControls).toBe(true);
+    expect(copy.statusSubtitle.toLowerCase()).toContain("conectado");
+    expect(copy.writeTitle.toLowerCase()).toContain("sincronizar");
+    expect(copy.connectSuccessBody.toLowerCase()).toContain("desactivar");
   });
 
   it("explains missing Health apps list when unavailable on iOS", () => {
@@ -77,6 +84,14 @@ describe("healthConnectionCopy", () => {
     });
     expect(copy.unavailableBody.toLowerCase()).toContain("healthkit");
     expect(copy.unavailableBody.toLowerCase()).toContain("testflight");
+    expect(copy.showConnectedControls).toBe(false);
+  });
+
+  it("offers a finish-workout connect prompt", () => {
+    const copy = getHealthFinishPromptCopy("ios");
+    expect(copy.title.toLowerCase()).toContain("apple salud");
+    expect(copy.accept.toLowerCase()).toContain("conectar");
+    expect(copy.decline.toLowerCase()).toContain("ahora no");
   });
 
   it("mentions App Store subscription when deleting account", () => {

@@ -27,6 +27,7 @@ import {
   AppState,
   DeviceEventEmitter,
   FlatList,
+  InteractionManager,
   Keyboard,
   Modal,
   Platform,
@@ -94,7 +95,10 @@ import { ShortWorkoutConfirmModal } from "../components/ShortWorkoutConfirmModal
 import { UpdateRoutineConfirmModal } from "../components/UpdateRoutineConfirmModal";
 import {
   LiveWorkoutHealthPanel,
+  appendHealthSyncToSuccessMessage,
   getHealthClient,
+  getHealthFinishPromptCopy,
+  healthHubLabel,
   invalidateSessionBurnCache,
   useHealthConnectionStore,
   type WorkoutHealthSnapshot,
@@ -1131,57 +1135,37 @@ export default function RoutineDetailScreen() {
   }, [started, isSaving, patchWorkoutInProgress]);
 
   useEffect(() => {
-    if (!started) return;
-
-    const updatedSets = { ...sets };
-    exercisesState.forEach((exercise) => {
-      updatedSets[exercise.id] = updatedSets[exercise.id].map((rawSet) => {
-        const set = rawSet as SetWithPreviousAssisted;
-
-        return {
-          ...set,
-          previousWeight:
-            typeof set.previousWeight === "number" &&
-            (set.previousWeight > 0 ||
-              (typeof set.previousReps === "number" && set.previousReps > 0))
-              ? set.previousWeight
-              : undefined,
-          previousReps:
-            typeof set.previousReps === "number" &&
-            (set.previousReps > 0 ||
-              (typeof set.previousWeight === "number" && set.previousWeight > 0))
-              ? set.previousReps
-              : undefined,
-          previousAssistedReps:
-            typeof set.previousAssistedReps === "number" &&
-            set.previousAssistedReps > 0
-              ? set.previousAssistedReps
-              : undefined,
-        };
-      });
-    });
-    setSets(updatedSets);
-  }, [started]);
-
-  useEffect(() => {
     if (route.params?.start) {
       setStarted(true);
     }
   }, [route.params?.start]);
 
-  // Load previous sessions for record detection (scoped to this routine)
+  // Load previous sessions for record detection (scoped to this routine).
+  // Local-first: paint cache ASAP; network refresh patches state via onNetworkUpdate.
   useEffect(() => {
+    let cancelled = false;
     const loadSessions = async () => {
       const id = routineId || routine?.id || routineData?.id;
       if (!id) return;
       try {
-        const sessions = await findRoutineSessions(id);
-        setPreviousSessions(sessions);
+        const sessions = await findRoutineSessions(id, {
+          onNetworkUpdate: (next) => {
+            if (!cancelled) {
+              setPreviousSessions(next);
+            }
+          },
+        });
+        if (!cancelled) {
+          setPreviousSessions(sessions);
+        }
       } catch (error) {
         console.error("Error loading sessions:", error);
       }
     };
-    loadSessions();
+    void loadSessions();
+    return () => {
+      cancelled = true;
+    };
   }, [routineId, routine?.id, routineData?.id]);
 
   // Persist sets/exercises when they change — not on every duration tick.
@@ -1390,8 +1374,15 @@ export default function RoutineDetailScreen() {
 
   const handleStartRoutine = () => {
     if (isSaving) return;
-    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
 
+    const startedAt = Date.now();
+    workoutStartTimeRef.current = startedAt;
+    durationRef.current = 0;
+
+    // Paint started UI first — persist / Live Activity must not block the tap.
+    setStarted(true);
+
+    const initialSets: { [exerciseId: string]: SetRequestDto[] } = {};
     exercisesState.forEach((exercise) => {
       const existingSets =
         sets[exercise.id]?.length > 0
@@ -1413,35 +1404,33 @@ export default function RoutineDetailScreen() {
         };
       });
     });
-
     setSets(initialSets);
 
-    const startedAt = Date.now();
-    workoutStartTimeRef.current = startedAt;
-    durationRef.current = 0;
-
-    setWorkoutInProgress({
-      routineId: routineData?.id || (routineId ?? (uuid.v4() as string)),
-      routineTitle: routineTitle || routineData?.title || "Rutina",
-      duration: 0,
-      volume: 0,
-      completedSets: 0,
-      exercises: exercisesState.map((ex) => ({
-        ...ex,
-        sets: initialSets[ex.id] || [],
-      })),
-      sets: initialSets,
-      startedAt,
+    InteractionManager.runAfterInteractions(() => {
+      setWorkoutInProgress({
+        routineId: routineData?.id || (routineId ?? (uuid.v4() as string)),
+        routineTitle: routineTitle || routineData?.title || "Rutina",
+        duration: 0,
+        volume: 0,
+        completedSets: 0,
+        exercises: exercisesState.map((ex) => ({
+          ...ex,
+          sets: initialSets[ex.id] || [],
+        })),
+        sets: initialSets,
+        startedAt,
+      });
+      void flushWorkoutInProgressPersist();
     });
-    void flushWorkoutInProgressPersist();
-
-    setStarted(true);
   };
 
-  // Start Hevy-style Live Activity for the whole workout.
+  // Start Hevy-style Live Activity after the started UI has painted.
   useEffect(() => {
     if (!started || sessionView || isSaving) return;
-    startWorkoutLiveSession();
+    const task = InteractionManager.runAfterInteractions(() => {
+      startWorkoutLiveSession();
+    });
+    return () => task.cancel();
   }, [started]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const wasStartedRef = useRef(false);
@@ -1651,28 +1640,29 @@ export default function RoutineDetailScreen() {
       invalidateSessionBurnCache();
 
       // Mirror workout into Apple Salud / Health Connect (never fail session save).
+      let healthOutcome: "synced" | "failed" | "skipped" = "skipped";
       try {
         const healthStore = useHealthConnectionStore.getState();
         if (healthStore.canWriteToHub()) {
           const startMs = getWorkoutStartTime();
           const endMs = Date.now();
-          void getHealthClient()
-            .writeWorkout({
+          try {
+            const ok = await getHealthClient().writeWorkout({
               startMs,
               endMs,
               title: routineTitle || "Entrenamiento EvoFit",
               caloriesBurned: sessionToSave.caloriesBurned,
-            })
-            .then((ok) => {
-              if (!ok) {
-                console.warn(
-                  "[Health] writeWorkout returned false — check Salud permissions for EvoFit"
-                );
-              }
-            })
-            .catch((error) => {
-              console.warn("[Health] writeWorkout failed:", error);
             });
+            healthOutcome = ok ? "synced" : "failed";
+            if (!ok) {
+              console.warn(
+                "[Health] writeWorkout returned false — check Salud permissions for EvoFit"
+              );
+            }
+          } catch (error) {
+            healthOutcome = "failed";
+            console.warn("[Health] writeWorkout failed:", error);
+          }
         }
       } catch (error) {
         console.warn("[Health] writeWorkout setup failed:", error);
@@ -1689,11 +1679,16 @@ export default function RoutineDetailScreen() {
 
       // Check if saved offline or online
       const isPending = (updatedRoutine as any)._isPending;
-      const message = !updateRoutineTemplate
+      const baseMessage = !updateRoutineTemplate
         ? "Sesión guardada. La rutina original se mantiene."
         : isPending
           ? "Rutina guardada localmente. Se sincronizará cuando haya conexión."
           : "Rutina y sesión guardadas exitosamente";
+      const message = appendHealthSyncToSuccessMessage(
+        baseMessage,
+        healthOutcome,
+        healthHubLabel(Platform.OS)
+      );
 
       Alert.alert("¡Éxito!", message);
 
@@ -1714,10 +1709,45 @@ export default function RoutineDetailScreen() {
     }
   };
 
+  const requestFinishRoutine = (updateRoutineTemplate = true) => {
+    const healthStore = useHealthConnectionStore.getState();
+    if (!healthStore.shouldOfferFinishPrompt()) {
+      void processFinishRoutine(updateRoutineTemplate);
+      return;
+    }
+
+    const prompt = getHealthFinishPromptCopy(Platform.OS);
+    Alert.alert(prompt.title, prompt.body, [
+      {
+        text: prompt.decline,
+        style: "cancel",
+        onPress: () => {
+          healthStore.dismissFinishPrompt();
+          void processFinishRoutine(updateRoutineTemplate);
+        },
+      },
+      {
+        text: prompt.accept,
+        onPress: () => {
+          void (async () => {
+            const nextStatus = await healthStore.connect();
+            if (nextStatus === "unavailable") {
+              // Still save the session; connect alert is only on Profile CTA.
+              console.warn(
+                "[Health] finish prompt connect returned unavailable"
+              );
+            }
+            void processFinishRoutine(updateRoutineTemplate);
+          })();
+        },
+      },
+    ]);
+  };
+
   const confirmFinishRoutine = () => {
     const addedExercises = getExercisesAddedDuringWorkout();
     if (addedExercises.length === 0) {
-      void processFinishRoutine(true);
+      requestFinishRoutine(true);
       return;
     }
 
@@ -2780,12 +2810,12 @@ export default function RoutineDetailScreen() {
         onUpdate={() => {
           if (isSaving) return;
           setShowUpdateRoutineModal(false);
-          void processFinishRoutine(true);
+          requestFinishRoutine(true);
         }}
         onKeepOriginal={() => {
           if (isSaving) return;
           setShowUpdateRoutineModal(false);
-          void processFinishRoutine(false);
+          requestFinishRoutine(false);
         }}
       />
 

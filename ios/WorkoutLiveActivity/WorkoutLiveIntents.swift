@@ -7,6 +7,7 @@ import Foundation
 @available(iOS 17.0, *)
 struct WorkoutLiveAddRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Add 15s rest"
+  static var openAppWhenRun: Bool = false
 
   func perform() async throws -> some IntentResult {
     await WorkoutLiveIntentHandler.applyRestDelta(15)
@@ -17,6 +18,7 @@ struct WorkoutLiveAddRestIntent: LiveActivityIntent {
 @available(iOS 17.0, *)
 struct WorkoutLiveSubtractRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Subtract 15s rest"
+  static var openAppWhenRun: Bool = false
 
   func perform() async throws -> some IntentResult {
     await WorkoutLiveIntentHandler.applyRestDelta(-15)
@@ -27,6 +29,7 @@ struct WorkoutLiveSubtractRestIntent: LiveActivityIntent {
 @available(iOS 17.0, *)
 struct WorkoutLiveSkipRestIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Skip rest"
+  static var openAppWhenRun: Bool = false
 
   func perform() async throws -> some IntentResult {
     await WorkoutLiveIntentHandler.skipRest()
@@ -37,6 +40,7 @@ struct WorkoutLiveSkipRestIntent: LiveActivityIntent {
 @available(iOS 17.0, *)
 struct WorkoutLiveCompleteSetIntent: LiveActivityIntent {
   static var title: LocalizedStringResource = "Complete set"
+  static var openAppWhenRun: Bool = false
 
   func perform() async throws -> some IntentResult {
     await WorkoutLiveIntentHandler.completeSet()

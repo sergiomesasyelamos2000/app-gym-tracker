@@ -7,6 +7,9 @@ const unavailableClient: HealthClient = {
   async isAvailable() {
     return false;
   },
+  async getProviderAvailability() {
+    return "unavailable";
+  },
   async getAuthorizationStatus() {
     return "unavailable";
   },
@@ -21,6 +24,12 @@ const unavailableClient: HealthClient = {
   },
   async getRestSummary() {
     return { sleepHoursLastNight: null, stepsLast7Days: null };
+  },
+  async openManagePermissions() {
+    return false;
+  },
+  async openInstallProvider() {
+    return false;
   },
 };
 

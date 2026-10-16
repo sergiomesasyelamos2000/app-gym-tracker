@@ -44,6 +44,7 @@ import {
   getExerciseProgressData,
 } from "../../../utils/statsHelpers";
 import { findAllRoutineSessions } from "../services/routineService";
+import { hydrateExerciseMediaFromCatalog } from "../utils/hydrateExerciseMediaFromCatalog";
 import { WorkoutStackParamList } from "./WorkoutStack";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -977,7 +978,7 @@ const HistoryCard = ({
 // COMPONENTE PRINCIPAL
 // ============================================================================
 export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
-  const { exercise } = route.params;
+  const { exercise: routeExercise } = route.params;
   const { theme, isDark } = useTheme();
   useFocusedStatusBar(themeBarStyle(isDark));
   const insets = useSafeAreaInsets();
@@ -988,11 +989,13 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const [history, setHistory] = useState<ExerciseHistoryItem[]>([]);
   const [allSessions, setAllSessions] = useState<RoutineSessionEntity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exercise, setExercise] = useState(routeExercise);
   const giftUrl = (exercise as { giftUrl?: string }).giftUrl;
+  const gifUrl = (exercise as { gifUrl?: string }).gifUrl;
   const hasMedia = Boolean(
     exercise.videoUrl?.trim() ||
-      exercise.giftUrl?.trim() ||
       giftUrl?.trim() ||
+      gifUrl?.trim() ||
       exercise.imageUrl?.trim()
   );
   const [mediaLoading, setMediaLoading] = useState(hasMedia);
@@ -1000,6 +1003,22 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
   const [analysisPeriod, setAnalysisPeriod] = useState<AnalysisPeriod>(30);
   const loadingMessage = "Cargando...";
   const mediaSize = IS_VERY_SMALL_DEVICE ? 160 : IS_SMALL_DEVICE ? 180 : 200;
+
+  useEffect(() => {
+    setExercise(routeExercise);
+    let cancelled = false;
+
+    void (async () => {
+      const hydrated = await hydrateExerciseMediaFromCatalog(routeExercise);
+      if (!cancelled) {
+        setExercise(hydrated);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [routeExercise]);
 
   // Fetch de datos
   const fetchExerciseHistory = useCallback(async () => {
@@ -1055,6 +1074,7 @@ export const ExerciseDetailScreen = ({ route, navigation }: Props) => {
     exercise.videoUrl,
     exercise.giftUrl,
     giftUrl,
+    gifUrl,
     exercise.imageUrl,
     hasMedia,
   ]);

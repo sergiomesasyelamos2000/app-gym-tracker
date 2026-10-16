@@ -18,6 +18,7 @@
 		CF7C2144AA76499FA08A7C8F /* WorkoutLiveActivity.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = E93080E092584DF4A3E31695 /* WorkoutLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		03C19A34D3EA43BE9551349E /* WorkoutLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */; };
 		DD6BF2E6B12D47B5AACD2B2F /* WorkoutLiveIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */; };
+		A10000000000000000000015 /* WorkoutLiveIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */; };
 		35942C9D9F3F4BBA86E1A4AB /* WorkoutLiveAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* WorkoutLiveAttributes.swift */; };
 /* End PBXBuildFile section */
 
@@ -302,6 +303,7 @@
 				A10000000000000000000012 /* RestTimerLiveActivity.swift in Sources */,
 				A10000000000000000000013 /* RestTimerLiveActivityModule.swift in Sources */,
 				A10000000000000000000014 /* RestTimerLiveActivityBridge.m in Sources */,
+				A10000000000000000000015 /* WorkoutLiveIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

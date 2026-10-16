@@ -1,6 +1,8 @@
+import { Linking } from "react-native";
 import type {
   HealthAuthorizationStatus,
   HealthClient,
+  HealthProviderAvailability,
   RestSummary,
   WriteWorkoutInput,
 } from "./types";
@@ -59,26 +61,34 @@ function loadAppleHealth(): AppleHealthModule | null {
 export function createIosHealthClient(): HealthClient {
   let availableCache: boolean | null = null;
 
-  return {
-    async isAvailable() {
-      if (availableCache != null) return availableCache;
-      try {
-        const mod = loadAppleHealth();
-        if (!mod) {
-          availableCache = false;
-          return false;
-        }
-        const AppleHealth = mod.default;
-        if (typeof AppleHealth?.isAvailableAsync === "function") {
-          availableCache = Boolean(await AppleHealth.isAvailableAsync());
-          return availableCache;
-        }
-        availableCache = true;
-        return true;
-      } catch {
+  async function checkAvailable(): Promise<boolean> {
+    if (availableCache != null) return availableCache;
+    try {
+      const mod = loadAppleHealth();
+      if (!mod) {
         availableCache = false;
         return false;
       }
+      const AppleHealth = mod.default;
+      if (typeof AppleHealth?.isAvailableAsync === "function") {
+        availableCache = Boolean(await AppleHealth.isAvailableAsync());
+        return availableCache;
+      }
+      availableCache = true;
+      return true;
+    } catch {
+      availableCache = false;
+      return false;
+    }
+  }
+
+  return {
+    async isAvailable() {
+      return checkAvailable();
+    },
+
+    async getProviderAvailability(): Promise<HealthProviderAvailability> {
+      return (await checkAvailable()) ? "available" : "unavailable";
     },
 
     async getAuthorizationStatus(): Promise<HealthAuthorizationStatus> {
@@ -247,6 +257,19 @@ export function createIosHealthClient(): HealthClient {
       } catch {
         return empty;
       }
+    },
+
+    async openManagePermissions() {
+      try {
+        await Linking.openSettings();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    async openInstallProvider() {
+      return false;
     },
   };
 }

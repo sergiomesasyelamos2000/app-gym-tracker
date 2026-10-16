@@ -1,4 +1,11 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Easing,
@@ -23,8 +30,9 @@ import type { SetRequestDto, RoutineSessionEntity } from "@sergiomesasyelamos200
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { getModalStyle, getOptionStyle } from "../../../../utils/themeStyles";
 import {
+  buildPreviousSetLookup,
   formatPreviousMark,
-  getPreviousSetPerformance,
+  getPreviousSetPerformanceFromLookup,
 } from "../../utils/previousSetHelpers";
 import ExerciseSetRow from "./ExerciseSetRow";
 import {
@@ -176,6 +184,11 @@ const ExerciseSetList = ({
   const onUpdateRef = useRef(onUpdate);
   const onDeleteRef = useRef(onDelete);
 
+  const previousLookup = useMemo(
+    () => buildPreviousSetLookup(previousSessions),
+    [previousSessions]
+  );
+
   useEffect(() => {
     onUpdateRef.current = onUpdate;
   }, [onUpdate]);
@@ -300,7 +313,11 @@ const ExerciseSetList = ({
 
       // Prefer real session history (includes bodyweight 0kg x N).
       const fromHistory = exerciseId
-        ? getPreviousSetPerformance(exerciseId, setIndex, previousSessions)
+        ? getPreviousSetPerformanceFromLookup(
+            previousLookup,
+            exerciseId,
+            setIndex
+          )
         : null;
       const historyMark = formatPreviousMark(fromHistory, weightUnit);
       if (historyMark) return historyMark;
@@ -337,7 +354,7 @@ const ExerciseSetList = ({
 
       return "-";
     },
-    [started, weightUnit, exerciseId, previousSessions]
+    [started, weightUnit, exerciseId, previousLookup]
   );
 
   const keyExtractor = useCallback(

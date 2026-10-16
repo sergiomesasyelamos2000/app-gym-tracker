@@ -32,6 +32,7 @@ describe("useHealthConnectionStore", () => {
         writeWorkoutsToHub: true,
         showRestHints: true,
         lastDismissedSuggestionAt: null,
+        finishPromptDismissed: false,
       });
     });
   });
@@ -87,5 +88,40 @@ describe("useHealthConnectionStore", () => {
     expect(result.current.hasRequestedAuthorization).toBe(true);
     expect(result.current.canReadFromHub()).toBe(true);
     expect(result.current.canWriteToHub()).toBe(false);
+  });
+
+  it("enables workout sync by default after connect and can disconnect", async () => {
+    mockRequest.mockResolvedValue("granted");
+    const { result } = renderHook(() => useHealthConnectionStore());
+
+    act(() => {
+      result.current.setWriteWorkoutsToHub(false);
+    });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.writeWorkoutsToHub).toBe(true);
+    expect(result.current.shouldOfferFinishPrompt()).toBe(false);
+
+    act(() => {
+      result.current.disconnect();
+    });
+
+    expect(result.current.hasRequestedAuthorization).toBe(false);
+    expect(result.current.writeWorkoutsToHub).toBe(false);
+    expect(result.current.shouldOfferFinishPrompt()).toBe(true);
+  });
+
+  it("stops offering finish prompt after dismiss", () => {
+    const { result } = renderHook(() => useHealthConnectionStore());
+    expect(result.current.shouldOfferFinishPrompt()).toBe(true);
+
+    act(() => {
+      result.current.dismissFinishPrompt();
+    });
+
+    expect(result.current.shouldOfferFinishPrompt()).toBe(false);
   });
 });

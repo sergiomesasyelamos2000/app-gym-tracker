@@ -1,6 +1,12 @@
+import {
+  openHealthConnectManage,
+  openHealthConnectPlayStore,
+  probeHealthConnectAvailability,
+} from "./androidHealthConnectActions";
 import type {
   HealthAuthorizationStatus,
   HealthClient,
+  HealthProviderAvailability,
   RestSummary,
   WriteWorkoutInput,
 } from "./types";
@@ -78,6 +84,10 @@ export function createAndroidHealthClient(): HealthClient {
   return {
     async isAvailable() {
       return ensureInit();
+    },
+
+    async getProviderAvailability(): Promise<HealthProviderAvailability> {
+      return probeHealthConnectAvailability(loadHC());
     },
 
     async getAuthorizationStatus(): Promise<HealthAuthorizationStatus> {
@@ -285,6 +295,14 @@ export function createAndroidHealthClient(): HealthClient {
       } catch {
         return empty;
       }
+    },
+
+    async openManagePermissions() {
+      return openHealthConnectManage(loadHC());
+    },
+
+    async openInstallProvider() {
+      return openHealthConnectPlayStore();
     },
   };
 }

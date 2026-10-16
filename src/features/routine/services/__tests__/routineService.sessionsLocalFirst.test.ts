@@ -111,6 +111,59 @@ describe("findRoutineSessions local-first merge", () => {
     expect(result[0].id).toBe("local_s1");
   });
 
+  it("calls onNetworkUpdate when background refresh succeeds with local cache", async () => {
+    memory.set(
+      "@sessions_routine_r1",
+      JSON.stringify([
+        {
+          id: "cached",
+          routineId: "r1",
+          exercises: [
+            {
+              exerciseId: "e1",
+              name: "Squat",
+              sets: [{ weight: 90, reps: 5, completed: true }],
+            },
+          ],
+          totalTime: 60,
+          totalWeight: 450,
+          completedSets: 1,
+          createdAt: "2026-10-01T10:00:00.000Z",
+        },
+      ])
+    );
+    const networkSessions = [
+      {
+        id: "fresh",
+        routineId: "r1",
+        exercises: [
+          {
+            exerciseId: "e1",
+            name: "Squat",
+            sets: [{ weight: 100, reps: 5, completed: true }],
+          },
+        ],
+        totalTime: 60,
+        totalWeight: 500,
+        completedSets: 1,
+        createdAt: "2026-10-14T10:00:00.000Z",
+      },
+    ];
+    mockedApiFetch.mockResolvedValue(networkSessions as never);
+
+    const updates: string[][] = [];
+    const result = await findRoutineSessions("r1", {
+      onNetworkUpdate: (sessions) => {
+        updates.push(sessions.map((s) => s.id));
+      },
+    });
+
+    expect(result.map((s) => s.id)).toEqual(["cached"]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(updates.some((ids) => ids.includes("fresh"))).toBe(true);
+  });
+
   it("upsertRoutineSessionCaches writes local, per-routine, and global keys", async () => {
     await upsertRoutineSessionCaches({
       id: "s_new",

@@ -314,6 +314,20 @@ function ensureWorkoutLiveActivityTarget(project, options) {
     appFolderName
   );
 
+  // LiveActivityIntent types must also live in the app target for system registration.
+  const intentsRef = findFileRefByPath(
+    project,
+    `${EXTENSION_NAME}/WorkoutLiveIntents.swift`
+  );
+  if (intentsRef) {
+    ensureBuildFileForTargetSources(
+      project,
+      intentsRef,
+      "WorkoutLiveIntents.swift",
+      appTarget.uuid
+    );
+  }
+
   const existing = findNativeTargetByName(project, EXTENSION_NAME);
   if (existing) {
     updateExtensionBuildSettings(project, existing.uuid, {
@@ -371,6 +385,16 @@ function ensureWorkoutLiveActivityTarget(project, options) {
   project.addFile(entitlementsPath, groupKey);
   project.addSourceFile(widgetPath, { target: extensionTarget.uuid }, groupKey);
   project.addSourceFile(intentsPath, { target: extensionTarget.uuid }, groupKey);
+
+  const newIntentsRef = findFileRefByPath(project, intentsPath);
+  if (newIntentsRef) {
+    ensureBuildFileForTargetSources(
+      project,
+      newIntentsRef,
+      "WorkoutLiveIntents.swift",
+      appTarget.uuid
+    );
+  }
 
   if (attributesRef) {
     ensureBuildFileForTargetSources(
