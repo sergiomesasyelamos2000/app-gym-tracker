@@ -30,7 +30,40 @@ internal object WorkoutLiveNotificationUi {
     val restEndAtMs: Long,
     val restSecondsDefault: Int,
     val exerciseBitmap: Bitmap?,
+    val isPaused: Boolean = false,
+    val pausedElapsedSeconds: Int = 0,
   )
+
+  private fun bindFrozenOrRunningElapsed(
+    views: RemoteViews,
+    chronometerId: Int,
+    model: Model,
+    now: Long,
+  ) {
+    if (model.isPaused) {
+      val frozenMs = max(0, model.pausedElapsedSeconds).toLong() * 1000L
+      views.setChronometer(
+        chronometerId,
+        SystemClock.elapsedRealtime() - frozenMs,
+        null,
+        false
+      )
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        views.setChronometerCountDown(chronometerId, false)
+      }
+      return
+    }
+    val base = if (model.workoutStartedAtMs > 0) model.workoutStartedAtMs else now
+    views.setChronometer(
+      chronometerId,
+      SystemClock.elapsedRealtime() - (now - base),
+      null,
+      true
+    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      views.setChronometerCountDown(chronometerId, false)
+    }
+  }
 
   data class SetSummaryParts(
     val setLabel: String,
@@ -115,7 +148,7 @@ internal object WorkoutLiveNotificationUi {
     bindSharedExercise(views, model, parts, compact = true)
 
     val now = System.currentTimeMillis()
-    if (model.isResting && model.restEndAtMs > now) {
+    if (!model.isPaused && model.isResting && model.restEndAtMs > now) {
       views.setChronometer(
         R.id.workout_live_primary_time,
         SystemClock.elapsedRealtime() + (model.restEndAtMs - now),
@@ -127,17 +160,11 @@ internal object WorkoutLiveNotificationUi {
       }
       views.setTextColor(R.id.workout_live_primary_time, ContextCompat.getColor(context, R.color.workout_live_brand))
     } else {
-      val base = if (model.workoutStartedAtMs > 0) model.workoutStartedAtMs else now
-      views.setChronometer(
+      bindFrozenOrRunningElapsed(views, R.id.workout_live_primary_time, model, now)
+      views.setTextColor(
         R.id.workout_live_primary_time,
-        SystemClock.elapsedRealtime() - (now - base),
-        null,
-        true
+        ContextCompat.getColor(context, R.color.workout_live_text_tertiary)
       )
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        views.setChronometerCountDown(R.id.workout_live_primary_time, false)
-      }
-      views.setTextColor(R.id.workout_live_primary_time, ContextCompat.getColor(context, R.color.workout_live_text_tertiary))
     }
     return views
   }
@@ -152,18 +179,14 @@ internal object WorkoutLiveNotificationUi {
     bindSharedExercise(views, model, parts, compact = false)
 
     val now = System.currentTimeMillis()
-    val started = if (model.workoutStartedAtMs > 0) model.workoutStartedAtMs else now
-    views.setChronometer(
-      R.id.workout_live_duration,
-      SystemClock.elapsedRealtime() - (now - started),
-      null,
-      true
-    )
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      views.setChronometerCountDown(R.id.workout_live_duration, false)
-    }
+    bindFrozenOrRunningElapsed(views, R.id.workout_live_duration, model, now)
 
-    if (model.isResting && model.restEndAtMs > now) {
+    if (model.isPaused) {
+      views.setTextViewText(R.id.workout_live_header_label, "En pausa")
+      views.setViewVisibility(R.id.workout_live_rest_block, View.GONE)
+      views.setViewVisibility(R.id.workout_live_active_row, View.VISIBLE)
+      views.setTextViewText(R.id.workout_live_prescription, "Tiempo congelado")
+    } else if (model.isResting && model.restEndAtMs > now) {
       views.setTextViewText(R.id.workout_live_header_label, "Descanso")
       views.setViewVisibility(R.id.workout_live_rest_block, View.VISIBLE)
       views.setViewVisibility(R.id.workout_live_active_row, View.GONE)

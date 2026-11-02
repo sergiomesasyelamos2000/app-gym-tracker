@@ -69,7 +69,9 @@ class RestTimerNotificationModule(
     nextSetSummary: String?,
     isResting: Boolean,
     restEndAtMs: Double?,
-    restSecondsDefault: Double?
+    restSecondsDefault: Double?,
+    isPaused: Boolean?,
+    pausedElapsedSeconds: Double?
   ) {
     startOrUpdateService(
       WorkoutLiveForegroundService.ACTION_START,
@@ -79,7 +81,9 @@ class RestTimerNotificationModule(
       nextSetSummary,
       isResting,
       restEndAtMs,
-      restSecondsDefault
+      restSecondsDefault,
+      isPaused == true,
+      pausedElapsedSeconds
     )
   }
 
@@ -91,7 +95,9 @@ class RestTimerNotificationModule(
     nextSetSummary: String?,
     isResting: Boolean,
     restEndAtMs: Double?,
-    restSecondsDefault: Double?
+    restSecondsDefault: Double?,
+    isPaused: Boolean?,
+    pausedElapsedSeconds: Double?
   ) {
     startOrUpdateService(
       WorkoutLiveForegroundService.ACTION_UPDATE,
@@ -101,7 +107,9 @@ class RestTimerNotificationModule(
       nextSetSummary,
       isResting,
       restEndAtMs,
-      restSecondsDefault
+      restSecondsDefault,
+      isPaused == true,
+      pausedElapsedSeconds
     )
   }
 
@@ -137,6 +145,8 @@ class RestTimerNotificationModule(
       nextSetSummary,
       true,
       endTimestampMs,
+      null,
+      false,
       null
     )
   }
@@ -155,6 +165,8 @@ class RestTimerNotificationModule(
       nextSetSummary,
       true,
       endTimestampMs,
+      null,
+      false,
       null
     )
   }
@@ -172,7 +184,9 @@ class RestTimerNotificationModule(
     nextSetSummary: String?,
     isResting: Boolean,
     restEndAtMs: Double?,
-    restSecondsDefault: Double?
+    restSecondsDefault: Double?,
+    isPaused: Boolean,
+    pausedElapsedSeconds: Double?
   ) {
     val intent = Intent(reactContext, WorkoutLiveForegroundService::class.java).apply {
       this.action = action
@@ -185,8 +199,15 @@ class RestTimerNotificationModule(
         putExtra(WorkoutLiveForegroundService.EXTRA_IMAGE_URL, imageUrl)
       }
       putExtra(WorkoutLiveForegroundService.EXTRA_NEXT_SUMMARY, nextSetSummary)
-      putExtra(WorkoutLiveForegroundService.EXTRA_IS_RESTING, isResting)
-      if (restEndAtMs != null) {
+      putExtra(WorkoutLiveForegroundService.EXTRA_IS_RESTING, isResting && !isPaused)
+      putExtra(WorkoutLiveForegroundService.EXTRA_IS_PAUSED, isPaused)
+      if (pausedElapsedSeconds != null) {
+        putExtra(
+          WorkoutLiveForegroundService.EXTRA_PAUSED_ELAPSED,
+          pausedElapsedSeconds.toInt().coerceAtLeast(0)
+        )
+      }
+      if (restEndAtMs != null && !isPaused) {
         putExtra(WorkoutLiveForegroundService.EXTRA_REST_END_AT, restEndAtMs.toLong())
       }
       if (restSecondsDefault != null) {

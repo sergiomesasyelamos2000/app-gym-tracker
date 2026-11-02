@@ -1,5 +1,7 @@
 import {
+  buildPausedLiveFields,
   buildPausedWorkoutPatch,
+  formatElapsedClock,
   shouldPauseWorkoutOnLeave,
 } from "../pauseWorkoutOnLeave";
 
@@ -47,5 +49,30 @@ describe("buildPausedWorkoutPatch", () => {
     expect(
       buildPausedWorkoutPatch({ durationSeconds: -3, pausedAtMs: 50 })
     ).toEqual({ duration: 0, pausedAt: 50 });
+  });
+});
+
+describe("buildPausedLiveFields", () => {
+  it("freezes elapsed seconds and clears rest mode for Live Activity", () => {
+    expect(buildPausedLiveFields(125.9)).toEqual({
+      isPaused: true,
+      pausedElapsedSeconds: 125,
+      isResting: false,
+      restEndAtMs: null,
+    });
+    expect(buildPausedLiveFields(-2)).toEqual({
+      isPaused: true,
+      pausedElapsedSeconds: 0,
+      isResting: false,
+      restEndAtMs: null,
+    });
+  });
+});
+
+describe("formatElapsedClock", () => {
+  it("formats under and over one hour like the Live Activity clock", () => {
+    expect(formatElapsedClock(65)).toBe("1:05");
+    expect(formatElapsedClock(3661)).toBe("1:01:01");
+    expect(formatElapsedClock(-5)).toBe("0:00");
   });
 });

@@ -4,13 +4,15 @@ import ImageIO
 import React
 import UIKit
 
-/// Routine/exercise position sent by JS (`toNativeProgress`) as an NSDictionary.
+/// Routine/exercise position + pause fields sent by JS (`toNativeProgress`) as an NSDictionary.
 struct LiveProgress {
   var routineName: String?
   var exerciseIndex: Int?
   var exerciseCount: Int?
   var completedSets: Int?
   var totalSets: Int?
+  var isPaused: Bool?
+  var pausedElapsedSeconds: Int?
 
   init() {}
 
@@ -24,6 +26,14 @@ struct LiveProgress {
     exerciseCount = (dictionary["exerciseCount"] as? NSNumber)?.intValue
     completedSets = (dictionary["completedSets"] as? NSNumber)?.intValue
     totalSets = (dictionary["totalSets"] as? NSNumber)?.intValue
+    if let paused = dictionary["isPaused"] as? NSNumber {
+      isPaused = paused.boolValue
+    } else if let paused = dictionary["isPaused"] as? Bool {
+      isPaused = paused
+    }
+    if let frozen = dictionary["pausedElapsedSeconds"] as? NSNumber {
+      pausedElapsedSeconds = max(0, frozen.intValue)
+    }
   }
 
   @available(iOS 16.2, *)
@@ -33,6 +43,8 @@ struct LiveProgress {
     exerciseCount = state.exerciseCount
     completedSets = state.completedSets
     totalSets = state.totalSets
+    isPaused = state.isPaused
+    pausedElapsedSeconds = state.pausedElapsedSeconds
   }
 }
 
@@ -85,7 +97,8 @@ class RestTimerLiveActivity: NSObject {
         restEndAtMs: restEndAtMs,
         imageFileName: imageFileName,
         restSecondsDefault: restSecondsDefault,
-        progress: LiveProgress(dictionary: progress) ?? LiveProgress()
+        progress: LiveProgress(dictionary: progress) ?? LiveProgress(),
+        timerStartedAt: startedAt
       )
       do {
         let activity = try Activity.request(
@@ -134,6 +147,7 @@ class RestTimerLiveActivity: NSObject {
         ?? existing.map { LiveProgress(state: $0.content.state) }
         ?? LiveProgress()
 
+      let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
       let state = makeState(
         exerciseName: exerciseName,
         nextSetSummary: nextSetSummary,
@@ -141,9 +155,9 @@ class RestTimerLiveActivity: NSObject {
         restEndAtMs: restEndAtMs,
         imageFileName: imageFileName,
         restSecondsDefault: restSecondsDefault,
-        progress: resolvedProgress
+        progress: resolvedProgress,
+        timerStartedAt: startedAt
       )
-      let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
 
       if let activity = existing {
         await activity.update(ActivityContent(state: state, staleDate: nil))
@@ -311,16 +325,18 @@ class RestTimerLiveActivity: NSObject {
     restEndAtMs: NSNumber?,
     imageFileName: String?,
     restSecondsDefault: NSNumber?,
-    progress: LiveProgress
+    progress: LiveProgress,
+    timerStartedAt: Date
   ) -> WorkoutLiveAttributes.ContentState {
+    let paused = progress.isPaused == true
     let restEnd: Date? = {
-      guard isResting, let ms = restEndAtMs?.doubleValue, ms > 0 else { return nil }
+      guard !paused, isResting, let ms = restEndAtMs?.doubleValue, ms > 0 else { return nil }
       return Date(timeIntervalSince1970: ms / 1000)
     }()
     return WorkoutLiveAttributes.ContentState(
       exerciseName: exerciseName?.isEmpty == false ? exerciseName! : "Entrenamiento",
       nextSetSummary: nextSetSummary ?? "",
-      isResting: isResting,
+      isResting: paused ? false : isResting,
       restEndAt: restEnd,
       imageFileName: imageFileName,
       restSecondsDefault: restSecondsDefault?.intValue ?? 90,
@@ -328,7 +344,10 @@ class RestTimerLiveActivity: NSObject {
       exerciseIndex: progress.exerciseIndex,
       exerciseCount: progress.exerciseCount,
       completedSets: progress.completedSets,
-      totalSets: progress.totalSets
+      totalSets: progress.totalSets,
+      isPaused: paused,
+      pausedElapsedSeconds: paused ? max(0, progress.pausedElapsedSeconds ?? 0) : nil,
+      timerStartedAt: timerStartedAt
     )
   }
 

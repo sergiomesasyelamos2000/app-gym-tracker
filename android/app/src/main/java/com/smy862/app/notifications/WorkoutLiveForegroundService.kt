@@ -49,6 +49,8 @@ class WorkoutLiveForegroundService : Service() {
     const val EXTRA_IS_RESTING = "isResting"
     const val EXTRA_REST_END_AT = "restEndAtMs"
     const val EXTRA_REST_DEFAULT = "restSecondsDefault"
+    const val EXTRA_IS_PAUSED = "isPaused"
+    const val EXTRA_PAUSED_ELAPSED = "pausedElapsedSeconds"
 
     @Volatile
     private var instance: WorkoutLiveForegroundService? = null
@@ -69,10 +71,12 @@ class WorkoutLiveForegroundService : Service() {
       when (action) {
         ACTION_ADD -> svc.applyRestDelta(15)
         ACTION_SUBTRACT -> svc.applyRestDelta(-15)
-        ACTION_SKIP -> svc.clearRest(emitSkip = true)
+        ACTION_SKIP -> if (!svc.isPaused) svc.clearRest(emitSkip = true)
         ACTION_CLEAR_REST -> svc.clearRest(emitSkip = false)
         ACTION_COMPLETE_SET -> {
-          RestTimerNotificationModule.emitFromService("completeSet", 0, 0)
+          if (!svc.isPaused) {
+            RestTimerNotificationModule.emitFromService("completeSet", 0, 0)
+          }
         }
       }
     }
@@ -96,6 +100,10 @@ class WorkoutLiveForegroundService : Service() {
   private var isResting: Boolean = false
   private var restEndAtMs: Long = 0
   private var restSecondsDefault: Int = 90
+  @Volatile
+  var isPaused: Boolean = false
+    private set
+  private var pausedElapsedSeconds: Int = 0
   private var exerciseBitmap: Bitmap? = null
   private var lastImageUrl: String? = null
   private var restTimer: CountDownTimer? = null
@@ -151,6 +159,16 @@ class WorkoutLiveForegroundService : Service() {
     if (intent.hasExtra(EXTRA_REST_DEFAULT)) {
       restSecondsDefault = intent.getIntExtra(EXTRA_REST_DEFAULT, restSecondsDefault)
     }
+    if (intent.hasExtra(EXTRA_IS_PAUSED)) {
+      isPaused = intent.getBooleanExtra(EXTRA_IS_PAUSED, false)
+    }
+    if (intent.hasExtra(EXTRA_PAUSED_ELAPSED)) {
+      pausedElapsedSeconds = max(0, intent.getIntExtra(EXTRA_PAUSED_ELAPSED, 0))
+    }
+    if (isPaused) {
+      isResting = false
+      restEndAtMs = 0
+    }
     val imageUrl = intent.getStringExtra(EXTRA_IMAGE_URL)
     if (!imageUrl.isNullOrBlank() && imageUrl != lastImageUrl) {
       lastImageUrl = imageUrl
@@ -165,7 +183,7 @@ class WorkoutLiveForegroundService : Service() {
   }
 
   private fun applyRestDelta(deltaSeconds: Int) {
-    if (!isResting) return
+    if (isPaused || !isResting) return
     val remainingSeconds = max(0, ((restEndAtMs - System.currentTimeMillis()) / 1000L).toInt())
     val newRemaining = max(0, remainingSeconds + deltaSeconds)
     restEndAtMs = System.currentTimeMillis() + newRemaining * 1000L
@@ -229,13 +247,15 @@ class WorkoutLiveForegroundService : Service() {
       restEndAtMs = restEndAtMs,
       restSecondsDefault = restSecondsDefault,
       exerciseBitmap = exerciseBitmap,
+      isPaused = isPaused,
+      pausedElapsedSeconds = pausedElapsedSeconds,
     )
 
   private fun publishForeground(force: Boolean = false) {
     ensureChannel()
     val key =
-      "$workoutStartedAtMs|$exerciseName|$nextSetSummary|$isResting|$restEndAtMs|$restSecondsDefault"
-    if (!force && key == lastPublishedKey && !isResting) {
+      "$workoutStartedAtMs|$exerciseName|$nextSetSummary|$isResting|$restEndAtMs|$restSecondsDefault|$isPaused|$pausedElapsedSeconds"
+    if (!force && key == lastPublishedKey && !isResting && !isPaused) {
       return
     }
     lastPublishedKey = key
@@ -289,6 +309,7 @@ class WorkoutLiveForegroundService : Service() {
   }
 
   private fun bindActions(views: RemoteViews) {
+    if (isPaused) return
     if (isResting && restEndAtMs > System.currentTimeMillis()) {
       views.setOnClickPendingIntent(R.id.workout_live_minus, actionIntent(ACTION_SUBTRACT, 3101))
       views.setOnClickPendingIntent(R.id.workout_live_plus, actionIntent(ACTION_ADD, 3102))

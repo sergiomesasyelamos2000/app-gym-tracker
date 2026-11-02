@@ -41,6 +41,9 @@ export interface WorkoutLiveSnapshot {
   restSecondsDefault?: number | null;
   /** iOS Live Activity only: routine name, exercise position and set counts. */
   progress?: WorkoutLiveProgress | null;
+  /** When true, Live Activity / notification keep showing a frozen elapsed clock. */
+  isPaused?: boolean;
+  pausedElapsedSeconds?: number | null;
 }
 
 export interface RestTimerLiveState {
@@ -89,6 +92,13 @@ const parseWorkoutLiveActionURL = (
   };
 };
 
+function pauseBridge(snapshot: WorkoutLiveSnapshot) {
+  return {
+    isPaused: Boolean(snapshot.isPaused),
+    pausedElapsedSeconds: snapshot.pausedElapsedSeconds ?? null,
+  };
+}
+
 function snapshotToArgs(snapshot: WorkoutLiveSnapshot) {
   const args: unknown[] = [
     snapshot.workoutStartedAtMs,
@@ -99,15 +109,23 @@ function snapshotToArgs(snapshot: WorkoutLiveSnapshot) {
     snapshot.restEndAtMs ?? null,
     snapshot.restSecondsDefault ?? null,
   ];
-  // Android's RestTimerNotification signature has no progress argument.
   if (Platform.OS === "ios") {
-    args.push(toNativeProgress(snapshot.progress ?? {}));
+    // Pause fields travel inside progress so the ObjC bridge stays stable.
+    args.push(toNativeProgress(snapshot.progress ?? {}, pauseBridge(snapshot)));
+  } else if (Platform.OS === "android") {
+    args.push(
+      Boolean(snapshot.isPaused),
+      snapshot.isPaused ? snapshot.pausedElapsedSeconds ?? 0 : null
+    );
   }
   return args;
 }
 
-function progressKey(progress?: WorkoutLiveProgress | null): string {
-  return JSON.stringify(toNativeProgress(progress ?? {}));
+function progressKey(
+  progress?: WorkoutLiveProgress | null,
+  pause?: { isPaused?: boolean; pausedElapsedSeconds?: number | null }
+): string {
+  return JSON.stringify(toNativeProgress(progress ?? {}, pause));
 }
 
 function normalizeRestEnd(ms?: number | null): number | null {
@@ -129,7 +147,12 @@ function snapshotsEqual(
     a.isResting === b.isResting &&
     normalizeRestEnd(a.restEndAtMs) === normalizeRestEnd(b.restEndAtMs) &&
     (a.restSecondsDefault ?? null) === (b.restSecondsDefault ?? null) &&
-    progressKey(a.progress) === progressKey(b.progress)
+    Boolean(a.isPaused) === Boolean(b.isPaused) &&
+    (a.isPaused
+      ? (a.pausedElapsedSeconds ?? 0) === (b.pausedElapsedSeconds ?? 0)
+      : true) &&
+    progressKey(a.progress, pauseBridge(a)) ===
+      progressKey(b.progress, pauseBridge(b))
   );
 }
 
@@ -160,6 +183,10 @@ export const startWorkoutLive = async (
   const normalized: WorkoutLiveSnapshot = {
     ...snapshot,
     restEndAtMs: normalizeRestEnd(snapshot.restEndAtMs),
+    isPaused: Boolean(snapshot.isPaused),
+    pausedElapsedSeconds: snapshot.isPaused
+      ? snapshot.pausedElapsedSeconds ?? 0
+      : null,
   };
   try {
     if (typeof module.startWorkoutLive === "function") {
@@ -205,6 +232,15 @@ export const updateWorkoutLive = async (
       )
     : null;
 
+  // Pause is opt-in per call. Omitting isPaused clears a frozen clock so
+  // in-workout rest/set updates never keep a stale paused state.
+  const isPaused = Boolean(snapshot.isPaused);
+  const pausedElapsedSeconds = isPaused
+    ? snapshot.pausedElapsedSeconds !== undefined
+      ? snapshot.pausedElapsedSeconds
+      : lastSentSnapshot?.pausedElapsedSeconds ?? 0
+    : null;
+
   const full: WorkoutLiveSnapshot = {
     workoutStartedAtMs: snapshot.workoutStartedAtMs,
     exerciseName: snapshot.exerciseName,
@@ -213,8 +249,8 @@ export const updateWorkoutLive = async (
       snapshot.nextSetSummary !== undefined
         ? snapshot.nextSetSummary
         : lastSentSnapshot?.nextSetSummary ?? null,
-    isResting,
-    restEndAtMs,
+    isResting: isPaused ? false : isResting,
+    restEndAtMs: isPaused ? null : restEndAtMs,
     restSecondsDefault:
       snapshot.restSecondsDefault !== undefined
         ? snapshot.restSecondsDefault
@@ -223,6 +259,8 @@ export const updateWorkoutLive = async (
       snapshot.progress !== undefined
         ? snapshot.progress
         : lastSentSnapshot?.progress ?? null,
+    isPaused,
+    pausedElapsedSeconds,
   };
 
   if (snapshotsEqual(lastSentSnapshot, full)) {

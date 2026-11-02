@@ -17,6 +17,11 @@ public struct WorkoutLiveAttributes: ActivityAttributes {
     public var exerciseCount: Int?
     public var completedSets: Int?
     public var totalSets: Int?
+    /// When true, show a frozen elapsed clock instead of a live timerInterval.
+    public var isPaused: Bool?
+    public var pausedElapsedSeconds: Int?
+    /// Effective wall-clock start for the elapsed timer (survives pause/resume).
+    public var timerStartedAt: Date?
 
     public init(
       exerciseName: String,
@@ -29,7 +34,10 @@ public struct WorkoutLiveAttributes: ActivityAttributes {
       exerciseIndex: Int? = nil,
       exerciseCount: Int? = nil,
       completedSets: Int? = nil,
-      totalSets: Int? = nil
+      totalSets: Int? = nil,
+      isPaused: Bool? = nil,
+      pausedElapsedSeconds: Int? = nil,
+      timerStartedAt: Date? = nil
     ) {
       self.exerciseName = exerciseName
       self.nextSetSummary = nextSetSummary
@@ -42,7 +50,12 @@ public struct WorkoutLiveAttributes: ActivityAttributes {
       self.exerciseCount = exerciseCount
       self.completedSets = completedSets
       self.totalSets = totalSets
+      self.isPaused = isPaused
+      self.pausedElapsedSeconds = pausedElapsedSeconds
+      self.timerStartedAt = timerStartedAt
     }
+
+    public var pausedClock: Bool { isPaused == true }
   }
 
   public var workoutStartedAt: Date
@@ -106,12 +119,19 @@ enum WorkoutLiveStore {
       "isResting": state.isResting,
       "workoutStartedAtMs": startedAt.timeIntervalSince1970 * 1000,
       "restSecondsDefault": state.restSecondsDefault,
+      "isPaused": state.pausedClock,
     ]
     if let restEnd = state.restEndAt {
       payload["restEndAtMs"] = restEnd.timeIntervalSince1970 * 1000
     }
     if let imageFileName = state.imageFileName, !imageFileName.isEmpty {
       payload["imageFileName"] = imageFileName
+    }
+    if let frozen = state.pausedElapsedSeconds {
+      payload["pausedElapsedSeconds"] = frozen
+    }
+    if let timerStartedAt = state.timerStartedAt {
+      payload["timerStartedAtMs"] = timerStartedAt.timeIntervalSince1970 * 1000
     }
     setPlistDictionary(payload, forKey: stateKey)
   }

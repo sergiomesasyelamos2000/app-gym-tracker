@@ -115,6 +115,7 @@ import {
   type LeaveRestReason,
 } from "../utils/leaveRestPlan";
 import {
+  buildPausedLiveFields,
   buildPausedWorkoutPatch,
   shouldPauseWorkoutOnLeave,
 } from "../utils/pauseWorkoutOnLeave";
@@ -786,6 +787,8 @@ export default function RoutineDetailScreen() {
           exerciseId: exercise?.id,
           routineName: routineTitle,
         }),
+        isPaused: false,
+        pausedElapsedSeconds: null,
       };
       liveSnapshotRef.current = snapshot;
       void updateWorkoutLive(snapshot);
@@ -837,6 +840,8 @@ export default function RoutineDetailScreen() {
         exerciseId: exercise?.id,
         routineName: routineTitle,
       }),
+      isPaused: false,
+      pausedElapsedSeconds: null,
     };
     liveSnapshotRef.current = snapshot;
     void startWorkoutLive(snapshot);
@@ -1554,7 +1559,22 @@ export default function RoutineDetailScreen() {
         })
       );
       await flushWorkoutInProgressPersist();
-      void endWorkoutLive();
+
+      // Keep Live Activity / notification visible with a frozen elapsed clock.
+      const last = liveSnapshotRef.current;
+      const pauseFields = buildPausedLiveFields(durationRef.current);
+      await updateWorkoutLive({
+        workoutStartedAtMs: getWorkoutStartTime(),
+        exerciseName:
+          last?.exerciseName ??
+          currentExerciseNameRef.current ??
+          "Entrenamiento",
+        imageUrl: last?.imageUrl,
+        nextSetSummary: last?.nextSetSummary ?? null,
+        restSecondsDefault: last?.restSecondsDefault ?? null,
+        progress: last?.progress ?? null,
+        ...pauseFields,
+      });
 
       allowLeaveAfterPauseRef.current = true;
       navigation.goBack();
@@ -1563,6 +1583,7 @@ export default function RoutineDetailScreen() {
     }
   }, [
     endRestForWorkoutExit,
+    getWorkoutStartTime,
     isSaving,
     navigation,
     patchWorkoutInProgress,

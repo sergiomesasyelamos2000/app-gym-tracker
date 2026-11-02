@@ -54,6 +54,7 @@ enum WorkoutLiveIntentHandler {
   static func applyRestDelta(_ delta: Int) async {
     guard let activity = Activity<WorkoutLiveAttributes>.activities.first else { return }
     var state = activity.content.state
+    guard !state.pausedClock else { return }
     guard state.isResting, let end = state.restEndAt else { return }
     let remaining = max(0, end.timeIntervalSinceNow + Double(delta))
     // Clear rest flags before update so the widget never mounts an expired timerInterval.
@@ -84,6 +85,7 @@ enum WorkoutLiveIntentHandler {
   static func skipRest() async {
     guard let activity = Activity<WorkoutLiveAttributes>.activities.first else { return }
     var state = activity.content.state
+    guard !state.pausedClock else { return }
     state.isResting = false
     state.restEndAt = nil
     WorkoutLiveStore.enqueueIntent("skip")
@@ -98,6 +100,7 @@ enum WorkoutLiveIntentHandler {
   static func completeSet() async {
     guard let activity = Activity<WorkoutLiveAttributes>.activities.first else { return }
     var state = activity.content.state
+    guard !state.pausedClock else { return }
     let restSeconds = max(1, state.restSecondsDefault)
     state.isResting = true
     state.restEndAt = Date().addingTimeInterval(Double(restSeconds))

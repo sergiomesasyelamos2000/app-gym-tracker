@@ -9,6 +9,12 @@ export interface WorkoutLiveProgress {
   totalSets?: number | null;
 }
 
+/** Pause clock fields folded into the iOS progress NSDictionary. */
+export interface WorkoutLivePauseBridge {
+  isPaused?: boolean;
+  pausedElapsedSeconds?: number | null;
+}
+
 const PROGRESS_NUMBER_KEYS = [
   "exerciseIndex",
   "exerciseCount",
@@ -21,7 +27,8 @@ const PROGRESS_NUMBER_KEYS = [
  * side reads an NSDictionary and must never see NSNull values.
  */
 export function toNativeProgress(
-  progress: WorkoutLiveProgress
+  progress: WorkoutLiveProgress,
+  pause?: WorkoutLivePauseBridge | null
 ): Record<string, string | number> {
   const payload: Record<string, string | number> = {};
   const name = progress.routineName?.trim();
@@ -31,6 +38,15 @@ export function toNativeProgress(
     if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
       payload[key] = Math.floor(value);
     }
+  }
+  // Always send isPaused (0/1) so resume clears a previously frozen clock.
+  payload.isPaused = pause?.isPaused ? 1 : 0;
+  if (pause?.isPaused) {
+    const frozen = pause.pausedElapsedSeconds;
+    payload.pausedElapsedSeconds =
+      typeof frozen === "number" && Number.isFinite(frozen)
+        ? Math.max(0, Math.floor(frozen))
+        : 0;
   }
   return payload;
 }

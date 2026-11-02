@@ -122,6 +122,45 @@ private struct SafeWorkoutElapsedText: View {
   }
 }
 
+private func formatFrozenElapsed(_ totalSeconds: Int) -> String {
+  let s = max(0, totalSeconds)
+  let hours = s / 3600
+  let minutes = (s % 3600) / 60
+  let seconds = s % 60
+  if hours > 0 {
+    return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+  }
+  return String(format: "%d:%02d", minutes, seconds)
+}
+
+@available(iOS 17.0, *)
+private struct WorkoutElapsedClock: View {
+  let context: ActivityViewContext<WorkoutLiveAttributes>
+  var font: Font = .caption.bold()
+  var color: Color = .primary
+  var width: CGFloat? = nil
+  var multilineTrailing: Bool = false
+
+  var body: some View {
+    if context.state.pausedClock {
+      Text(formatFrozenElapsed(context.state.pausedElapsedSeconds ?? 0))
+        .monospacedDigit()
+        .font(font)
+        .foregroundStyle(color)
+        .frame(width: width)
+        .multilineTextAlignment(multilineTrailing ? .trailing : .leading)
+    } else {
+      SafeWorkoutElapsedText(
+        startedAt: context.state.timerStartedAt ?? context.attributes.workoutStartedAt,
+        font: font,
+        color: color,
+        width: width,
+        multilineTrailing: multilineTrailing
+      )
+    }
+  }
+}
+
 @available(iOS 17.0, *)
 private struct SafeRestProgressBar: View {
   let end: Date
@@ -179,7 +218,9 @@ struct WorkoutLiveActivityWidget: Widget {
           }
         }
         DynamicIslandExpandedRegion(.trailing) {
-          if context.state.isResting, let end = context.state.restEndAt {
+          if context.state.pausedClock {
+            WorkoutElapsedClock(context: context, font: .caption.bold())
+          } else if context.state.isResting, let end = context.state.restEndAt {
             SafeRestCountdownText(
               end: end,
               restSecondsDefault: context.state.restSecondsDefault,
@@ -187,14 +228,16 @@ struct WorkoutLiveActivityWidget: Widget {
               color: LiveTheme.brand
             )
           } else {
-            SafeWorkoutElapsedText(
-              startedAt: context.attributes.workoutStartedAt,
-              font: .caption.bold()
-            )
+            WorkoutElapsedClock(context: context, font: .caption.bold())
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          if context.state.isResting {
+          if context.state.pausedClock {
+            Text("En pausa")
+              .font(.caption.bold())
+              .foregroundStyle(.secondary)
+              .frame(maxWidth: .infinity)
+          } else if context.state.isResting {
             HStack(spacing: 8) {
               Button(intent: WorkoutLiveSubtractRestIntent()) {
                 Text("-15s")
@@ -226,7 +269,13 @@ struct WorkoutLiveActivityWidget: Widget {
           size: 24
         )
       } compactTrailing: {
-        if context.state.isResting, let end = context.state.restEndAt {
+        if context.state.pausedClock {
+          WorkoutElapsedClock(
+            context: context,
+            font: .body.monospacedDigit(),
+            width: 48
+          )
+        } else if context.state.isResting, let end = context.state.restEndAt {
           SafeRestCountdownText(
             end: end,
             restSecondsDefault: context.state.restSecondsDefault,
@@ -235,8 +284,8 @@ struct WorkoutLiveActivityWidget: Widget {
             width: 48
           )
         } else {
-          SafeWorkoutElapsedText(
-            startedAt: context.attributes.workoutStartedAt,
+          WorkoutElapsedClock(
+            context: context,
             font: .body.monospacedDigit(),
             width: 48
           )
@@ -265,7 +314,9 @@ struct WorkoutLiveLockScreenView: View {
     VStack(alignment: .leading, spacing: LiveLayout.rowSpacing) {
       headerRow
       exerciseRow
-      if context.state.isResting {
+      if context.state.pausedClock {
+        pausedSection
+      } else if context.state.isResting {
         restSection
       } else {
         activeSetSection
@@ -287,12 +338,24 @@ struct WorkoutLiveLockScreenView: View {
         .foregroundStyle(LiveTheme.textTertiary)
         .lineLimit(1)
       Spacer(minLength: 8)
-      SafeWorkoutElapsedText(
-        startedAt: context.attributes.workoutStartedAt,
+      WorkoutElapsedClock(
+        context: context,
         font: .caption.monospacedDigit().weight(.medium),
         color: LiveTheme.textSecondary,
         multilineTrailing: true
       )
+    }
+  }
+
+  private var pausedSection: some View {
+    HStack {
+      Text("En pausa")
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(LiveTheme.textSecondary)
+      Spacer(minLength: 8)
+      Text(formatFrozenElapsed(context.state.pausedElapsedSeconds ?? 0))
+        .font(.title3.weight(.bold).monospacedDigit())
+        .foregroundStyle(LiveTheme.textPrimary)
     }
   }
 

@@ -47,6 +47,7 @@ describe("toNativeProgress", () => {
       exerciseIndex: 2,
       exerciseCount: 5,
       totalSets: 4,
+      isPaused: 0,
     });
   });
 
@@ -57,10 +58,23 @@ describe("toNativeProgress", () => {
         totalSets: -1,
         completedSets: 0,
       })
-    ).toEqual({ completedSets: 0 });
+    ).toEqual({ completedSets: 0, isPaused: 0 });
   });
 
-  it("returns an empty object when there is no progress", () => {
-    expect(toNativeProgress({})).toEqual({});
+  it("returns only the pause flag when there is no progress", () => {
+    expect(toNativeProgress({})).toEqual({ isPaused: 0 });
+  });
+
+  it("folds frozen elapsed seconds when paused", () => {
+    expect(
+      toNativeProgress(
+        { routineName: "Push" },
+        { isPaused: true, pausedElapsedSeconds: 125.8 }
+      )
+    ).toEqual({
+      routineName: "Push",
+      isPaused: 1,
+      pausedElapsedSeconds: 125,
+    });
   });
 });
