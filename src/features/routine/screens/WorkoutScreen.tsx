@@ -379,7 +379,14 @@ export default function WorkoutScreen() {
 
   useEffect(() => {
     const terminatedAt = pendingTerminationAt;
-    if (!terminatedAt || !workoutInProgress || workoutInProgress.pausedAt) {
+    if (!terminatedAt || !workoutInProgress) {
+      return;
+    }
+
+    // Leave-to-pause already froze duration; still end Live Activity on kill.
+    if (workoutInProgress.pausedAt) {
+      void endWorkoutLive();
+      setPendingTerminationAt(null);
       return;
     }
 

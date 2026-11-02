@@ -1,3 +1,4 @@
+import ActivityKit
 import Expo
 import React
 import ReactAppDependencyProvider
@@ -35,6 +36,18 @@ public class AppDelegate: ExpoAppDelegate {
   public override func applicationWillTerminate(_ application: UIApplication) {
     let defaults = UserDefaults(suiteName: "group.com.smy862.app") ?? .standard
     defaults.set(Date().timeIntervalSince1970 * 1000, forKey: "workoutLive.appTerminatedAt")
+    // Leave-to-pause keeps Live Activity visible; kill must still dismiss it.
+    // Block briefly so ActivityKit can finish before process exit.
+    if #available(iOS 16.2, *) {
+      let semaphore = DispatchSemaphore(value: 0)
+      Task { @MainActor in
+        for activity in Activity<WorkoutLiveAttributes>.activities {
+          await activity.end(nil, dismissalPolicy: .immediate)
+        }
+        semaphore.signal()
+      }
+      _ = semaphore.wait(timeout: .now() + 1.5)
+    }
     super.applicationWillTerminate(application)
   }
 

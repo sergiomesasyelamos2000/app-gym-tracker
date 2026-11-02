@@ -60,10 +60,12 @@ import {
   consumePendingCompleteSet,
   endWorkoutLive,
   getCurrentRestTimerLiveState,
+  lockWorkoutLiveForPause,
   noteWorkoutLiveRestEnd,
   pollNativeIntent,
   startWorkoutLive,
   subscribeToWorkoutLiveIntents,
+  unlockWorkoutLiveWrites,
   updateWorkoutLive,
   type WorkoutLiveSnapshot,
 } from "../../../services/workoutLiveService";
@@ -577,7 +579,15 @@ export default function RoutineDetailScreen() {
   }, []);
 
   useEffect(() => {
-    if (!pendingTerminationAt || !workoutInProgress || workoutInProgress.pausedAt) {
+    if (!pendingTerminationAt || !workoutInProgress) {
+      return;
+    }
+
+    // Already paused (Reanudar banner): still tear down Live Activity on kill,
+    // but do not rewrite the frozen duration.
+    if (workoutInProgress.pausedAt) {
+      void endWorkoutLive();
+      setPendingTerminationAt(null);
       return;
     }
 
@@ -745,7 +755,7 @@ export default function RoutineDetailScreen() {
 
   const pushWorkoutLive = useCallback(
     (partial?: Partial<WorkoutLiveSnapshot>) => {
-      if (sessionView || !started) return;
+      if (sessionView || !started || pauseLeaveInFlightRef.current) return;
       const startedAt = getWorkoutStartTime();
       const exerciseId = liveExerciseIdRef.current || exercisesState[0]?.id;
       const exercise =
@@ -1536,6 +1546,13 @@ export default function RoutineDetailScreen() {
     if (pauseLeaveInFlightRef.current) return;
     pauseLeaveInFlightRef.current = true;
 
+    // Stop debounced set syncs and reject any non-pause Live writes immediately.
+    if (livePushTimerRef.current) {
+      clearTimeout(livePushTimerRef.current);
+      livePushTimerRef.current = null;
+    }
+    lockWorkoutLiveForPause();
+
     try {
       if (
         !shouldPauseWorkoutOnLeave({
@@ -1544,6 +1561,8 @@ export default function RoutineDetailScreen() {
           isSaving,
         })
       ) {
+        pauseLeaveInFlightRef.current = false;
+        unlockWorkoutLiveWrites();
         allowLeaveAfterPauseRef.current = true;
         navigation.goBack();
         return;
@@ -1578,8 +1597,11 @@ export default function RoutineDetailScreen() {
 
       allowLeaveAfterPauseRef.current = true;
       navigation.goBack();
-    } finally {
+      // Keep pauseLeaveInFlightRef + write gate locked until resume startWorkoutLive.
+    } catch (error) {
       pauseLeaveInFlightRef.current = false;
+      unlockWorkoutLiveWrites();
+      throw error;
     }
   }, [
     endRestForWorkoutExit,

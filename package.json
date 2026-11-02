@@ -25,7 +25,7 @@
     "@react-navigation/native": "^7.1.19",
     "@react-navigation/native-stack": "^7.3.14",
     "@reduxjs/toolkit": "^2.8.2",
-    "@sergiomesasyelamos2000/shared": "^1.4.0",
+    "@sergiomesasyelamos2000/shared": "^1.5.0",
     "@types/react": "~19.1.0",
     "apple-health": "^0.0.5",
     "expo": "~54.0.33",

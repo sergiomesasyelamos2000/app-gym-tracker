@@ -134,13 +134,24 @@ class WorkoutLiveForegroundService : Service() {
         handleAction(this, intent.action!!)
         return START_STICKY
       }
-      ACTION_START, ACTION_UPDATE, null -> {
+      ACTION_START, ACTION_UPDATE -> {
         applyExtras(intent)
         publishForeground()
         if (isResting) restartRestTimer() else cancelRestTimer()
       }
+      null -> {
+        // Sticky restart with no payload — do not republish a fake running clock.
+        stopSelfSafely()
+        return START_NOT_STICKY
+      }
     }
     return START_STICKY
+  }
+
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    // App swipe-away while paused must drop the ongoing notification.
+    stopSelfSafely()
+    super.onTaskRemoved(rootIntent)
   }
 
   private fun applyExtras(intent: Intent?) {

@@ -11,6 +11,22 @@ import {
   toNativeProgress,
   type WorkoutLiveProgress,
 } from "./workoutLiveImage";
+import {
+  shouldAcceptWorkoutLiveClearRest,
+  shouldAcceptWorkoutLiveWrite,
+  type WorkoutLiveWriteGate,
+} from "./workoutLiveWriteGate";
+
+/** Blocks non-pause Live writes after leave-to-pause until resume/start/end. */
+let writeGate: WorkoutLiveWriteGate = "open";
+
+export const lockWorkoutLiveForPause = (): void => {
+  writeGate = "paused";
+};
+
+export const unlockWorkoutLiveWrites = (): void => {
+  writeGate = "open";
+};
 
 const IOSLiveActivity = NativeModules.RestTimerLiveActivity;
 const IOSIntentModule = NativeModules.RestTimerLiveActivityModule;
@@ -180,6 +196,8 @@ export const startWorkoutLive = async (
 ): Promise<void> => {
   const module = getModule();
   if (!module) return;
+  // Resume / fresh start always re-opens writers after a leave-to-pause lock.
+  unlockWorkoutLiveWrites();
   const normalized: WorkoutLiveSnapshot = {
     ...snapshot,
     restEndAtMs: normalizeRestEnd(snapshot.restEndAtMs),
@@ -215,6 +233,14 @@ export const updateWorkoutLive = async (
 ): Promise<void> => {
   const module = getModule();
   if (!module) return;
+
+  if (
+    !shouldAcceptWorkoutLiveWrite(writeGate, {
+      isPaused: snapshot.isPaused,
+    })
+  ) {
+    return;
+  }
 
   // Reuse last image when caller omits it (undefined) to avoid native re-decode.
   const resolvedImage =
@@ -302,6 +328,7 @@ export const updateWorkoutLive = async (
 
 export const endWorkoutLive = async (): Promise<void> => {
   const module = getModule();
+  unlockWorkoutLiveWrites();
   if (!module) return;
   try {
     if (typeof module.endWorkoutLive === "function") {
@@ -360,6 +387,9 @@ export const updateRestTimerLive = async (
 export const clearWorkoutRestLive = async (): Promise<void> => {
   const module = getModule();
   if (!module) return;
+  if (!shouldAcceptWorkoutLiveClearRest(writeGate)) {
+    return;
+  }
   try {
     if (typeof module.clearRestLive === "function") {
       await module.clearRestLive();

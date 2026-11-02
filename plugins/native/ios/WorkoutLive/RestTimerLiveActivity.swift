@@ -53,6 +53,9 @@ class RestTimerLiveActivity: NSObject {
 
   /// Boxed so the class can link against iOS 15.1; ActivityContent APIs need 16.2+.
   private var currentActivityBox: Any?
+  /// Drop stale start/update/clearRest tasks that lose the race to a newer write
+  /// (e.g. image download finishing after leave-to-pause).
+  private var updateSerial: Int = 0
 
   @available(iOS 16.2, *)
   private var currentActivity: Activity<WorkoutLiveAttributes>? {
@@ -62,6 +65,11 @@ class RestTimerLiveActivity: NSObject {
 
   @objc
   static func requiresMainQueueSetup() -> Bool { true }
+
+  private func nextUpdateSerial() -> Int {
+    updateSerial += 1
+    return updateSerial
+  }
 
   @objc
   func startWorkoutLive(
@@ -86,10 +94,15 @@ class RestTimerLiveActivity: NSObject {
     }
 
     Task { @MainActor in
+      let serial = nextUpdateSerial()
       await endAll()
       let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
       let attributes = WorkoutLiveAttributes(workoutStartedAt: startedAt)
       let imageFileName = await Self.resolveImageFileName(imageUrl)
+      guard serial == self.updateSerial else {
+        resolver(false)
+        return
+      }
       let state = makeState(
         exerciseName: exerciseName,
         nextSetSummary: nextSetSummary,
@@ -134,6 +147,7 @@ class RestTimerLiveActivity: NSObject {
     }
 
     Task { @MainActor in
+      let serial = nextUpdateSerial()
       let existing = currentActivity ?? Activity<WorkoutLiveAttributes>.activities.first
       // JS may pass null imageUrl to skip re-decode — keep prior App Group file.
       let imageFileName: String?
@@ -141,6 +155,10 @@ class RestTimerLiveActivity: NSObject {
         imageFileName = await Self.resolveImageFileName(imageUrl)
       } else {
         imageFileName = existing?.content.state.imageFileName
+      }
+      guard serial == self.updateSerial else {
+        resolver(false)
+        return
       }
       // Legacy callers pass nil progress — keep what the activity already shows.
       let resolvedProgress = LiveProgress(dictionary: progress)
@@ -260,13 +278,23 @@ class RestTimerLiveActivity: NSObject {
       return
     }
     Task { @MainActor in
+      let serial = nextUpdateSerial()
       guard let activity = currentActivity ?? Activity<WorkoutLiveAttributes>.activities.first else {
+        resolver(false)
+        return
+      }
+      // Never clear rest over a frozen pause clock.
+      if activity.content.state.pausedClock {
         resolver(false)
         return
       }
       var state = activity.content.state
       state.isResting = false
       state.restEndAt = nil
+      guard serial == self.updateSerial else {
+        resolver(false)
+        return
+      }
       await activity.update(ActivityContent(state: state, staleDate: nil))
       // Same plist-safe persist as start/update — Omitir / clear rest must not
       // write Optional.none into App Group UserDefaults.
