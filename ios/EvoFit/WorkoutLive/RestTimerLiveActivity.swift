@@ -1,7 +1,40 @@
 import Foundation
 import ActivityKit
+import ImageIO
 import React
 import UIKit
+
+/// Routine/exercise position sent by JS (`toNativeProgress`) as an NSDictionary.
+struct LiveProgress {
+  var routineName: String?
+  var exerciseIndex: Int?
+  var exerciseCount: Int?
+  var completedSets: Int?
+  var totalSets: Int?
+
+  init() {}
+
+  /// Nil when JS did not send a dictionary (legacy callers).
+  init?(dictionary: NSDictionary?) {
+    guard let dictionary else { return nil }
+    let name = (dictionary["routineName"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    routineName = name?.isEmpty == false ? name : nil
+    exerciseIndex = (dictionary["exerciseIndex"] as? NSNumber)?.intValue
+    exerciseCount = (dictionary["exerciseCount"] as? NSNumber)?.intValue
+    completedSets = (dictionary["completedSets"] as? NSNumber)?.intValue
+    totalSets = (dictionary["totalSets"] as? NSNumber)?.intValue
+  }
+
+  @available(iOS 16.2, *)
+  init(state: WorkoutLiveAttributes.ContentState) {
+    routineName = state.routineName
+    exerciseIndex = state.exerciseIndex
+    exerciseCount = state.exerciseCount
+    completedSets = state.completedSets
+    totalSets = state.totalSets
+  }
+}
 
 @objc(RestTimerLiveActivity)
 class RestTimerLiveActivity: NSObject {
@@ -27,6 +60,7 @@ class RestTimerLiveActivity: NSObject {
     isResting: Bool,
     restEndAtMs: NSNumber?,
     restSecondsDefault: NSNumber?,
+    progress: NSDictionary?,
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
@@ -50,7 +84,8 @@ class RestTimerLiveActivity: NSObject {
         isResting: isResting,
         restEndAtMs: restEndAtMs,
         imageFileName: imageFileName,
-        restSecondsDefault: restSecondsDefault
+        restSecondsDefault: restSecondsDefault,
+        progress: LiveProgress(dictionary: progress) ?? LiveProgress()
       )
       do {
         let activity = try Activity.request(
@@ -76,6 +111,7 @@ class RestTimerLiveActivity: NSObject {
     isResting: Bool,
     restEndAtMs: NSNumber?,
     restSecondsDefault: NSNumber?,
+    progress: NSDictionary?,
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
@@ -93,6 +129,10 @@ class RestTimerLiveActivity: NSObject {
       } else {
         imageFileName = existing?.content.state.imageFileName
       }
+      // Legacy callers pass nil progress — keep what the activity already shows.
+      let resolvedProgress = LiveProgress(dictionary: progress)
+        ?? existing.map { LiveProgress(state: $0.content.state) }
+        ?? LiveProgress()
 
       let state = makeState(
         exerciseName: exerciseName,
@@ -100,7 +140,8 @@ class RestTimerLiveActivity: NSObject {
         isResting: isResting,
         restEndAtMs: restEndAtMs,
         imageFileName: imageFileName,
-        restSecondsDefault: restSecondsDefault
+        restSecondsDefault: restSecondsDefault,
+        progress: resolvedProgress
       )
       let startedAt = Date(timeIntervalSince1970: workoutStartedAtMs.doubleValue / 1000)
 
@@ -118,6 +159,7 @@ class RestTimerLiveActivity: NSObject {
           isResting: isResting,
           restEndAtMs: restEndAtMs,
           restSecondsDefault: restSecondsDefault,
+          progress: progress,
           resolver: resolver,
           rejecter: rejecter
         )
@@ -157,6 +199,7 @@ class RestTimerLiveActivity: NSObject {
       isResting: true,
       restEndAtMs: endTimestampMs,
       restSecondsDefault: nil,
+      progress: nil,
       resolver: resolver,
       rejecter: rejecter
     )
@@ -179,6 +222,7 @@ class RestTimerLiveActivity: NSObject {
       isResting: true,
       restEndAtMs: endTimestampMs,
       restSecondsDefault: nil,
+      progress: nil,
       resolver: resolver,
       rejecter: rejecter
     )
@@ -210,6 +254,12 @@ class RestTimerLiveActivity: NSObject {
       state.isResting = false
       state.restEndAt = nil
       await activity.update(ActivityContent(state: state, staleDate: nil))
+      // Same plist-safe persist as start/update — Omitir / clear rest must not
+      // write Optional.none into App Group UserDefaults.
+      WorkoutLiveStore.persistActivityState(
+        state,
+        startedAt: activity.attributes.workoutStartedAt
+      )
       resolver(true)
     }
   }
@@ -225,14 +275,19 @@ class RestTimerLiveActivity: NSObject {
     }
     if let activity = currentActivity ?? Activity<WorkoutLiveAttributes>.activities.first {
       let state = activity.content.state
-      resolver([
+      var payload: [String: Any] = [
         "isActive": true,
-        "endTimestampMs": state.restEndAt.map { $0.timeIntervalSince1970 * 1000 } as Any,
         "exerciseName": state.exerciseName,
         "nextSetSummary": state.nextSetSummary,
         "isResting": state.isResting,
         "workoutStartedAtMs": activity.attributes.workoutStartedAt.timeIntervalSince1970 * 1000,
-      ])
+      ]
+      if let restEnd = state.restEndAt {
+        payload["endTimestampMs"] = restEnd.timeIntervalSince1970 * 1000
+      } else {
+        payload["endTimestampMs"] = NSNull()
+      }
+      resolver(payload)
       return
     }
     resolver([
@@ -255,7 +310,8 @@ class RestTimerLiveActivity: NSObject {
     isResting: Bool,
     restEndAtMs: NSNumber?,
     imageFileName: String?,
-    restSecondsDefault: NSNumber?
+    restSecondsDefault: NSNumber?,
+    progress: LiveProgress
   ) -> WorkoutLiveAttributes.ContentState {
     let restEnd: Date? = {
       guard isResting, let ms = restEndAtMs?.doubleValue, ms > 0 else { return nil }
@@ -267,18 +323,28 @@ class RestTimerLiveActivity: NSObject {
       isResting: isResting,
       restEndAt: restEnd,
       imageFileName: imageFileName,
-      restSecondsDefault: restSecondsDefault?.intValue ?? 90
+      restSecondsDefault: restSecondsDefault?.intValue ?? 90,
+      routineName: progress.routineName,
+      exerciseIndex: progress.exerciseIndex,
+      exerciseCount: progress.exerciseCount,
+      completedSets: progress.completedSets,
+      totalSets: progress.totalSets
     )
   }
 
-  /// Download remote static thumbs into the App Group so the widget can read them.
-  /// Returns a relative path under the group container (e.g. `live-thumbs/thumb_….jpg`).
+  /// Max edge (px) of stored thumbs. Live Activities fail to render images larger
+  /// than their presentation size, and the widget extension has a tiny memory budget.
+  private static let liveThumbMaxPixelSize: CGFloat = 120
+
+  /// Store a small static thumb (remote `http(s)` or `data:image` URI) in the App Group
+  /// so the widget can read it. Returns a relative path (e.g. `live-thumbs/thumb_v2_….jpg`)
+  /// or nil when the image cannot be resolved — never a raw URL.
   private static func resolveImageFileName(_ imageUrl: String?) async -> String? {
     guard let imageUrl, !imageUrl.isEmpty else { return nil }
 
-    if !imageUrl.hasPrefix("http://"), !imageUrl.hasPrefix("https://") {
-      return imageUrl
-    }
+    let isRemote = imageUrl.hasPrefix("http://") || imageUrl.hasPrefix("https://")
+    let isDataUri = imageUrl.hasPrefix("data:image")
+    guard isRemote || isDataUri else { return nil }
 
     guard let container = FileManager.default.containerURL(
       forSecurityApplicationGroupIdentifier: WorkoutLiveStore.appGroupId
@@ -296,8 +362,24 @@ class RestTimerLiveActivity: NSObject {
       return fileName
     }
 
-    guard let remote = URL(string: imageUrl) else { return nil }
+    let data: Data?
+    if isDataUri {
+      data = decodeDataUri(imageUrl)
+    } else {
+      data = await downloadImageData(imageUrl)
+    }
 
+    guard let data, let jpeg = makeThumbnailJpeg(from: data) else { return nil }
+    do {
+      try jpeg.write(to: dest, options: .atomic)
+      return fileName
+    } catch {
+      return nil
+    }
+  }
+
+  private static func downloadImageData(_ urlString: String) async -> Data? {
+    guard let remote = URL(string: urlString) else { return nil }
     do {
       let config = URLSessionConfiguration.ephemeral
       config.timeoutIntervalForRequest = 4
@@ -307,27 +389,45 @@ class RestTimerLiveActivity: NSObject {
       if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
         return nil
       }
-      // Prefer JPEG for widget decode size; fall back to original bytes.
-      if let uiImage = UIImage(data: data),
-         let jpeg = uiImage.jpegData(compressionQuality: 0.82) {
-        try jpeg.write(to: dest, options: .atomic)
-      } else {
-        try data.write(to: dest, options: .atomic)
-      }
-      return fileName
+      return data
     } catch {
       return nil
     }
   }
 
+  private static func decodeDataUri(_ uri: String) -> Data? {
+    guard let comma = uri.firstIndex(of: ",") else { return nil }
+    let base64 = String(uri[uri.index(after: comma)...])
+    return Data(base64Encoded: base64, options: .ignoreUnknownCharacters)
+  }
+
+  /// Downsample with ImageIO (no full-size decode) and re-encode as small JPEG.
+  private static func makeThumbnailJpeg(from data: Data) -> Data? {
+    let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+      return nil
+    }
+    let thumbOptions = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceThumbnailMaxPixelSize: liveThumbMaxPixelSize,
+    ] as CFDictionary
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions) else {
+      return nil
+    }
+    return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.85)
+  }
+
   /// Stable FNV-1a filename (Swift `Hasher` / `hashValue` are not stable across launches).
+  /// `v2` prefix invalidates full-size thumbs cached by earlier builds.
   private static func stableThumbName(for urlString: String) -> String {
     var hash: UInt64 = 14695981039346656037
     for byte in urlString.utf8 {
       hash ^= UInt64(byte)
       hash = hash &* 1099511628211
     }
-    return String(format: "thumb_%016llx.jpg", hash)
+    return String(format: "thumb_v2_%016llx.jpg", hash)
   }
 
   @available(iOS 16.2, *)
@@ -341,15 +441,6 @@ class RestTimerLiveActivity: NSObject {
 
   @available(iOS 16.2, *)
   private func persistState(_ state: WorkoutLiveAttributes.ContentState, startedAt: Date) {
-    let payload: [String: Any] = [
-      "exerciseName": state.exerciseName,
-      "nextSetSummary": state.nextSetSummary,
-      "isResting": state.isResting,
-      "restEndAtMs": state.restEndAt.map { $0.timeIntervalSince1970 * 1000 } as Any,
-      "workoutStartedAtMs": startedAt.timeIntervalSince1970 * 1000,
-      "restSecondsDefault": state.restSecondsDefault,
-      "imageFileName": state.imageFileName as Any,
-    ]
-    WorkoutLiveStore.defaults.set(payload, forKey: WorkoutLiveStore.stateKey)
+    WorkoutLiveStore.persistActivityState(state, startedAt: startedAt)
   }
 }

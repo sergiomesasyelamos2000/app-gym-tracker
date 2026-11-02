@@ -20,6 +20,7 @@
 		DD6BF2E6B12D47B5AACD2B2F /* WorkoutLiveIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */; };
 		A10000000000000000000015 /* WorkoutLiveIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */; };
 		35942C9D9F3F4BBA86E1A4AB /* WorkoutLiveAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* WorkoutLiveAttributes.swift */; };
+		B509778E42684EF4A378204A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3558541F9DAB42C494B2353C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		7DB9F1EF9D88417093634C31 /* WorkoutLiveActivity.entitlements */ = {isa = PBXFileReference; name = "WorkoutLiveActivity.entitlements"; path = "WorkoutLiveActivity/WorkoutLiveActivity.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */ = {isa = PBXFileReference; name = "WorkoutLiveActivityWidget.swift"; path = "WorkoutLiveActivity/WorkoutLiveActivityWidget.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */ = {isa = PBXFileReference; name = "WorkoutLiveIntents.swift"; path = "WorkoutLiveActivity/WorkoutLiveIntents.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		3558541F9DAB42C494B2353C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = "Assets.xcassets"; path = "WorkoutLiveActivity/Assets.xcassets"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +141,7 @@
 				7DB9F1EF9D88417093634C31 /* WorkoutLiveActivity.entitlements */,
 				FD4B13A89BC242C291EF19A2 /* WorkoutLiveActivityWidget.swift */,
 				A4AB5837762E4704B4040AC3 /* WorkoutLiveIntents.swift */,
+				3558541F9DAB42C494B2353C /* Assets.xcassets */,
 			);
 			name = WorkoutLiveActivity;
 			sourceTree = "<group>";
@@ -178,6 +181,7 @@
 			buildPhases = (
 				B96E62EF64654E5EAEB1CB5D /* Sources */,
 				A007EE5EC6E94D64871B2A96 /* Frameworks */,
+				18C7F2C3BB0E4C939099A1AA /* Resources */,
 			);
 			buildRules = (
 			);
@@ -224,6 +228,14 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18C7F2C3BB0E4C939099A1AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B509778E42684EF4A378204A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -112,6 +112,7 @@
       "./plugins/withHealthUsageStrings",
       "./plugins/withWorkoutLiveActivity",
       "./plugins/withIosPodFixes",
+      "./plugins/withGradleJvmArgs",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

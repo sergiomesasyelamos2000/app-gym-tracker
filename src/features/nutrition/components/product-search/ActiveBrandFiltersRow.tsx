@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { createProductSearchStyles } from "./createProductSearchStyles";
 
@@ -26,12 +26,7 @@ export function ActiveBrandFiltersRow({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.activeFiltersScroll}
-      contentContainerStyle={styles.activeFiltersContent}
-    >
+    <View style={styles.activeFiltersRow}>
       <TouchableOpacity
         style={[
           styles.activeFilterChip,
@@ -55,6 +50,6 @@ export function ActiveBrandFiltersRow({
           </TouchableOpacity>
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 }

@@ -5,6 +5,7 @@ export {
   startRestTimerLive,
   updateRestTimerLive,
   endRestTimerLive,
+  clearWorkoutRestLive,
   getCurrentRestTimerLiveState,
   consumeAppTerminatedAt,
   pollNativeIntent,
@@ -14,6 +15,7 @@ export {
   updateWorkoutLive,
   endWorkoutLive,
   consumePendingCompleteSet,
+  noteWorkoutLiveRestEnd,
 } from "./workoutLiveService";
 
 export type {

@@ -6,6 +6,11 @@ import {
   NativeModules,
   Platform,
 } from "react-native";
+import {
+  toLiveActivityImageUrl,
+  toNativeProgress,
+  type WorkoutLiveProgress,
+} from "./workoutLiveImage";
 
 const IOSLiveActivity = NativeModules.RestTimerLiveActivity;
 const IOSIntentModule = NativeModules.RestTimerLiveActivityModule;
@@ -34,6 +39,8 @@ export interface WorkoutLiveSnapshot {
   restEndAtMs?: number | null;
   /** Default rest length used when completing a set from the widget (seconds). */
   restSecondsDefault?: number | null;
+  /** iOS Live Activity only: routine name, exercise position and set counts. */
+  progress?: WorkoutLiveProgress | null;
 }
 
 export interface RestTimerLiveState {
@@ -83,15 +90,24 @@ const parseWorkoutLiveActionURL = (
 };
 
 function snapshotToArgs(snapshot: WorkoutLiveSnapshot) {
-  return [
+  const args: unknown[] = [
     snapshot.workoutStartedAtMs,
     snapshot.exerciseName ?? null,
-    snapshot.imageUrl ?? null,
+    toLiveActivityImageUrl(snapshot.imageUrl),
     snapshot.nextSetSummary ?? null,
     snapshot.isResting,
     snapshot.restEndAtMs ?? null,
     snapshot.restSecondsDefault ?? null,
-  ] as const;
+  ];
+  // Android's RestTimerNotification signature has no progress argument.
+  if (Platform.OS === "ios") {
+    args.push(toNativeProgress(snapshot.progress ?? {}));
+  }
+  return args;
+}
+
+function progressKey(progress?: WorkoutLiveProgress | null): string {
+  return JSON.stringify(toNativeProgress(progress ?? {}));
 }
 
 function normalizeRestEnd(ms?: number | null): number | null {
@@ -112,7 +128,8 @@ function snapshotsEqual(
     (a.nextSetSummary ?? null) === (b.nextSetSummary ?? null) &&
     a.isResting === b.isResting &&
     normalizeRestEnd(a.restEndAtMs) === normalizeRestEnd(b.restEndAtMs) &&
-    (a.restSecondsDefault ?? null) === (b.restSecondsDefault ?? null)
+    (a.restSecondsDefault ?? null) === (b.restSecondsDefault ?? null) &&
+    progressKey(a.progress) === progressKey(b.progress)
   );
 }
 
@@ -155,7 +172,7 @@ export const startWorkoutLive = async (
       await module.startRestTimer(
         normalized.restEndAtMs,
         normalized.exerciseName,
-        normalized.imageUrl,
+        toLiveActivityImageUrl(normalized.imageUrl),
         normalized.nextSetSummary
       );
       lastSentSnapshot = normalized;
@@ -178,6 +195,16 @@ export const updateWorkoutLive = async (
       ? snapshot.imageUrl
       : lastSentSnapshot?.imageUrl ?? null;
 
+  const isResting = Boolean(snapshot.isResting);
+  // When leaving rest, never reuse a stale end timestamp from the cache.
+  const restEndAtMs = isResting
+    ? normalizeRestEnd(
+        snapshot.restEndAtMs !== undefined
+          ? snapshot.restEndAtMs
+          : lastSentSnapshot?.restEndAtMs
+      )
+    : null;
+
   const full: WorkoutLiveSnapshot = {
     workoutStartedAtMs: snapshot.workoutStartedAtMs,
     exerciseName: snapshot.exerciseName,
@@ -186,16 +213,16 @@ export const updateWorkoutLive = async (
       snapshot.nextSetSummary !== undefined
         ? snapshot.nextSetSummary
         : lastSentSnapshot?.nextSetSummary ?? null,
-    isResting: Boolean(snapshot.isResting),
-    restEndAtMs: normalizeRestEnd(
-      snapshot.restEndAtMs !== undefined
-        ? snapshot.restEndAtMs
-        : lastSentSnapshot?.restEndAtMs
-    ),
+    isResting,
+    restEndAtMs,
     restSecondsDefault:
       snapshot.restSecondsDefault !== undefined
         ? snapshot.restSecondsDefault
         : lastSentSnapshot?.restSecondsDefault ?? null,
+    progress:
+      snapshot.progress !== undefined
+        ? snapshot.progress
+        : lastSentSnapshot?.progress ?? null,
   };
 
   if (snapshotsEqual(lastSentSnapshot, full)) {
@@ -225,7 +252,7 @@ export const updateWorkoutLive = async (
       await module.updateRestTimer(
         full.restEndAtMs,
         full.exerciseName,
-        imageForNative,
+        toLiveActivityImageUrl(imageForNative),
         full.nextSetSummary
       );
       lastSentSnapshot = full;
@@ -287,25 +314,44 @@ export const updateRestTimerLive = async (
   });
 };
 
-/** @deprecated Prefer endWorkoutLive when finishing workout; for rest-only clear use updateWorkoutLive */
-export const endRestTimerLive = async (): Promise<void> => {
+/**
+ * Clear rest mode on the Live Activity / notification but keep the workout
+ * session active. Prefer this over updateWorkoutLive({ restEndAtMs: null })
+ * when skipping rest (Omitir) so native can use the dedicated clearRest path.
+ */
+export const clearWorkoutRestLive = async (): Promise<void> => {
   const module = getModule();
   if (!module) return;
   try {
-    // Clear rest mode but keep workout live if supported.
     if (typeof module.clearRestLive === "function") {
       await module.clearRestLive();
+      noteWorkoutLiveRestEnd(null);
+      return;
+    }
+    if (lastSentSnapshot) {
+      await updateWorkoutLive({
+        workoutStartedAtMs: lastSentSnapshot.workoutStartedAtMs,
+        exerciseName: lastSentSnapshot.exerciseName,
+        imageUrl: lastSentSnapshot.imageUrl,
+        nextSetSummary: lastSentSnapshot.nextSetSummary,
+        isResting: false,
+        restEndAtMs: null,
+        restSecondsDefault: lastSentSnapshot.restSecondsDefault,
+      });
       return;
     }
     if (typeof module.endRestTimer === "function") {
-      // On legacy Android this cancels the whole notification — callers
-      // that still need workout live should use updateWorkoutLive instead.
+      // Legacy Android: may cancel the whole notification.
       await module.endRestTimer();
+      lastSentSnapshot = null;
     }
   } catch (e) {
-    console.warn("[WorkoutLive] endRestTimerLive failed", e);
+    console.warn("[WorkoutLive] clearWorkoutRestLive failed", e);
   }
 };
+
+/** @deprecated Prefer clearWorkoutRestLive for skip-rest; endWorkoutLive when finishing workout */
+export const endRestTimerLive = clearWorkoutRestLive;
 
 export const getCurrentRestTimerLiveState =
   async (): Promise<RestTimerLiveState | null> => {

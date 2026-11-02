@@ -123,15 +123,16 @@ export const createProductSearchStyles = (theme: Theme, isDark: boolean) => {
     quickActionTextPrimary: {
       color: theme.onPrimary,
     },
-    activeFiltersScroll: {
+    activeFiltersRow: {
+      flexGrow: 0,
+      flexShrink: 0,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: 8,
       paddingHorizontal: 20,
       paddingBottom: 10,
       backgroundColor: theme.backgroundSecondary,
-    },
-    activeFiltersContent: {
-      flexDirection: "row",
-      gap: 8,
-      alignItems: "center",
     },
     activeFilterChip: {
       flexDirection: "row",

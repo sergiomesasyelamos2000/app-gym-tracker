@@ -55,6 +55,7 @@ import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { notificationService } from "../../../services/notificationService";
 import { playRestCompleteFeedback } from "../../../services/restTimerFeedback";
 import {
+  clearWorkoutRestLive,
   consumeAppTerminatedAt,
   consumePendingCompleteSet,
   endWorkoutLive,
@@ -120,6 +121,7 @@ import {
 import {
   buildNextSetSummary,
   buildLiveCompletionFingerprint,
+  buildWorkoutLiveProgress,
   findNextIncompleteSet,
   nextRestSecondsDefault,
 } from "../utils/workoutLiveHelpers";
@@ -778,6 +780,12 @@ export default function RoutineDetailScreen() {
             ? partial.restEndAtMs
             : restTimerEndTimeRef.current,
         restSecondsDefault,
+        progress: buildWorkoutLiveProgress({
+          exercises: exercisesState,
+          sets,
+          exerciseId: exercise?.id,
+          routineName: routineTitle,
+        }),
       };
       liveSnapshotRef.current = snapshot;
       void updateWorkoutLive(snapshot);
@@ -787,6 +795,7 @@ export default function RoutineDetailScreen() {
       currentExerciseImageUrl,
       exercisesState,
       getWorkoutStartTime,
+      routineTitle,
       sessionView,
       sets,
       started,
@@ -822,6 +831,12 @@ export default function RoutineDetailScreen() {
       restSecondsDefault: exercise?.restSeconds
         ? parseInt(String(exercise.restSeconds), 10) || 90
         : 90,
+      progress: buildWorkoutLiveProgress({
+        exercises: exercisesState,
+        sets,
+        exerciseId: exercise?.id,
+        routineName: routineTitle,
+      }),
     };
     liveSnapshotRef.current = snapshot;
     void startWorkoutLive(snapshot);
@@ -1444,6 +1459,7 @@ export default function RoutineDetailScreen() {
   // Keep Live Activity in sync, but:
   // - skip when the completion/next-set fingerprint is unchanged (typing on other sets)
   // - debounce 400ms so rapid weight/reps edits coalesce into one native update
+  // - re-run when rest ends (showRestToast) so set progress skipped mid-rest syncs
   useEffect(() => {
     if (!started || sessionView) return;
     if (restTimerEndTimeRef.current) return;
@@ -1466,7 +1482,7 @@ export default function RoutineDetailScreen() {
         livePushTimerRef.current = null;
       }
     };
-  }, [sets, exercisesState, started, sessionView, pushWorkoutLive]);
+  }, [sets, exercisesState, started, sessionView, pushWorkoutLive, showRestToast]);
 
   // Poll Live Activity intents only while resting (not the whole workout).
   useEffect(() => {
@@ -1875,16 +1891,14 @@ export default function RoutineDetailScreen() {
 
       // Clear Live Activity rest ASAP (before awaiting notification cancel) so
       // iOS never keeps an expired timerInterval mounted on the widget.
-      if (
-        plan.syncLiveActivity &&
-        !shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)
-      ) {
-        void updateWorkoutLive({
-          workoutStartedAtMs: getWorkoutStartTime(),
-          exerciseName: currentExerciseNameRef.current ?? "Entrenamiento",
-          isResting: false,
-          restEndAtMs: null,
-        });
+      // Use clearWorkoutRestLive — never endWorkoutLive / clearWorkoutInProgress
+      // on Omitir; the workout session must keep running.
+      if (!shouldAbortLeaveSideEffects(epochAtLeave, restEpochRef.current)) {
+        if (plan.syncLiveActivity) {
+          void clearWorkoutRestLive();
+        } else {
+          noteWorkoutLiveRestEnd(null);
+        }
       }
 
       try {
@@ -1907,7 +1921,11 @@ export default function RoutineDetailScreen() {
         leaveRestInFlightRef.current = false;
       }
     },
-    [assignRestNotificationId, clearRestCountdownInterval, getWorkoutStartTime]
+    [
+      assignRestNotificationId,
+      clearRestCountdownInterval,
+      getWorkoutStartTime,
+    ]
   );
 
   leaveRestRef.current = leaveRest;
@@ -1969,6 +1987,12 @@ export default function RoutineDetailScreen() {
       isResting: true,
       restEndAtMs: endTime,
       restSecondsDefault: restSeconds,
+      progress: buildWorkoutLiveProgress({
+        exercises: exercisesState,
+        sets,
+        exerciseId,
+        routineName: routineTitle,
+      }),
     });
     startRestCountdownInterval();
 

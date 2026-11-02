@@ -74,6 +74,10 @@ enum WorkoutLiveIntentHandler {
       )
     }
     await activity.update(ActivityContent(state: state, staleDate: nil))
+    WorkoutLiveStore.persistActivityState(
+      state,
+      startedAt: activity.attributes.workoutStartedAt
+    )
   }
 
   @MainActor
@@ -84,6 +88,10 @@ enum WorkoutLiveIntentHandler {
     state.restEndAt = nil
     WorkoutLiveStore.enqueueIntent("skip")
     await activity.update(ActivityContent(state: state, staleDate: nil))
+    WorkoutLiveStore.persistActivityState(
+      state,
+      startedAt: activity.attributes.workoutStartedAt
+    )
   }
 
   @MainActor
@@ -93,7 +101,15 @@ enum WorkoutLiveIntentHandler {
     let restSeconds = max(1, state.restSecondsDefault)
     state.isResting = true
     state.restEndAt = Date().addingTimeInterval(Double(restSeconds))
+    // Optimistic: the app re-syncs the real counts once it handles the intent.
+    if let completed = state.completedSets, let total = state.totalSets {
+      state.completedSets = min(completed + 1, total)
+    }
     WorkoutLiveStore.enqueueIntent("completeSet")
     await activity.update(ActivityContent(state: state, staleDate: nil))
+    WorkoutLiveStore.persistActivityState(
+      state,
+      startedAt: activity.attributes.workoutStartedAt
+    )
   }
 }

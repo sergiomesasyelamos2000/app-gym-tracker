@@ -3,7 +3,6 @@ import { MappedProduct as Product } from "@sergiomesasyelamos2000/shared";
 import React, { useMemo } from "react";
 import {
   GestureResponderEvent,
-  Image,
   Text,
   TouchableOpacity,
   View,
@@ -13,9 +12,8 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "../../../../contexts/ThemeContext";
 import { MACRO_COLORS, MACRO_LABELS } from "../../utils/macroColors";
 import { getNutritionGradeColor } from "../../utils/nutritionGradeColor";
+import { ProductRemoteImage } from "../ProductRemoteImage";
 import { createProductSearchStyles } from "./createProductSearchStyles";
-
-const FALLBACK_PRODUCT_IMAGE = require("../../../../../assets/not-image.png");
 
 type TrailingAction = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -81,13 +79,8 @@ export function ProductListItem({
           { width: imageSize, height: imageSize },
         ]}
       >
-        <Image
-          source={
-            item.image?.trim()
-              ? { uri: item.image.trim(), cache: "force-cache" }
-              : FALLBACK_PRODUCT_IMAGE
-          }
-          defaultSource={FALLBACK_PRODUCT_IMAGE}
+        <ProductRemoteImage
+          uri={item.image}
           style={[
             styles.productImage,
             {
@@ -95,7 +88,8 @@ export function ProductListItem({
               height: imageSize * 0.85,
             },
           ]}
-          fadeDuration={80}
+          borderRadius={12}
+          accessibilityLabel={`Imagen de ${item.name}`}
         />
         {grade ? (
           <View

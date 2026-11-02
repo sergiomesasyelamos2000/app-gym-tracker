@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -23,7 +22,13 @@ import type {
   FoodUnit,
   MappedProduct,
   MealType,
+  ProductServingMeasure,
   UpdateFoodEntryDto,
+} from "@sergiomesasyelamos2000/shared";
+import {
+  calculateMacrosForServing,
+  parseUsdaCode,
+  resolveInitialQuantity,
 } from "@sergiomesasyelamos2000/shared";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
@@ -34,6 +39,7 @@ import {
   NutritionHeaderIconButton,
   NutritionScreenHeader,
 } from "../components/NutritionScreenHeader";
+import { ProductRemoteImage } from "../components/ProductRemoteImage";
 import { useNutritionStore } from "../../../store/useNutritionStore";
 import * as nutritionService from "../services/nutritionService";
 import {
@@ -44,11 +50,14 @@ import {
   updateFoodEntryOffline,
 } from "../../../services/offlineNutritionService";
 import { MACRO_COLORS, MACRO_LABELS } from "../utils/macroColors";
+import {
+  ensureProductServings,
+  measureToFoodUnit,
+  resolveServingSelection,
+} from "../utils/servingMeasureHelpers";
 
 const { width } = Dimensions.get("window");
 
-// Local unit type for component state (converts to FoodUnit for API calls)
-type LocalFoodUnit = "g" | "ml" | "portion";
 type FoodEntry = FoodEntryResponseDto;
 
 // Extended Product type with servingUnit (CustomProduct has it, MappedProduct doesn't)
@@ -82,32 +91,6 @@ type Props = NativeStackScreenProps<
   NutritionStackParamList,
   "ProductDetailScreen"
 >;
-
-const UNITS_CONFIG: {
-  label: string;
-  value: LocalFoodUnit;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-}[] = [
-  {
-    label: "Gramos",
-    value: "g",
-    icon: "scale-outline",
-    color: "#10B981",
-  },
-  {
-    label: "Mililitros",
-    value: "ml",
-    icon: "water-outline",
-    color: "#3B82F6",
-  },
-  {
-    label: "Porción",
-    value: "portion",
-    icon: "restaurant-outline",
-    color: "#F59E0B",
-  },
-];
 
 const MEALS_CONFIG: {
   label: string;
@@ -156,7 +139,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   } = route.params;
 
   // Cast to extended type with servingUnit
-  const producto = rawProducto as ProductWithServingUnit;
+  const [producto, setProducto] = useState<ProductWithServingUnit>(
+    () => rawProducto as ProductWithServingUnit
+  );
 
   const userProfile = useNutritionStore((state) => state.userProfile);
   const addFoodEntryToStore = useNutritionStore((state) => state.addFoodEntry);
@@ -167,31 +152,27 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     (state) => state.triggerFavoritesUpdate
   );
 
-  const [quantity, setQuantity] = useState(() => {
-    if (initialQty) return initialQty.toString();
-    if (producto.servingSize) return producto.servingSize.toString();
-    if (producto.grams) return producto.grams.toString();
-    return "100";
-  });
-  const [unit, setUnit] = useState<LocalFoodUnit>(() => {
-    // Si viene de una edición (initialUnit), usarlo. Si no, usar la unidad por defecto del producto.
-    if (initialUnit) {
-      // Convert FoodUnit to LocalFoodUnit
-      if (initialUnit === "gram") return "g";
-      if (initialUnit === "ml") return "ml";
-      if (initialUnit === "portion") return "portion";
-      return "g";
-    }
+  const initialServings = useMemo(
+    () => ensureProductServings(rawProducto as ProductWithServingUnit),
+    [rawProducto]
+  );
+  const initialSelection = useMemo(
+    () =>
+      resolveServingSelection({
+        servings: initialServings,
+        categories: (rawProducto as ProductWithServingUnit).categories,
+        initialUnit: initialUnit ?? (rawProducto as ProductWithServingUnit).servingUnit,
+        initialQty: initialQty ?? null,
+      }),
+    [initialServings, rawProducto, initialUnit, initialQty]
+  );
 
-    // Mapeo seguro de la unidad del producto (si existe)
-    const productUnit = producto.servingUnit;
-    if (productUnit === "gram" || productUnit === "g") return "g";
-    if (productUnit === "ml") return "ml";
-    if (productUnit === "portion" || productUnit === "unit") return "portion";
-
-    // Default fallback
-    return "g";
-  });
+  const [servings, setServings] =
+    useState<ProductServingMeasure[]>(initialServings);
+  const [selectedServingId, setSelectedServingId] = useState(
+    initialSelection.servingId
+  );
+  const [quantity, setQuantity] = useState(initialSelection.quantity);
   const [meal, setMeal] = useState<MealType>(initialMeal || "dinner");
   const [showMore, setShowMore] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -202,18 +183,36 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const calculateNutrients = useMemo(() => {
-    const qty = parseFloat(quantity) || 0;
-    const baseGrams = producto.grams || 100;
-    const multiplier = qty / baseGrams;
+  const selectedMeasure = useMemo(() => {
+    return (
+      servings.find((s) => s.id === selectedServingId) ??
+      servings[0] ?? {
+        id: "gram",
+        label: "Gramos",
+        grams: 1,
+        kind: "gram" as const,
+      }
+    );
+  }, [servings, selectedServingId]);
 
+  const calculateNutrients = useMemo(() => {
+    const macros = calculateMacrosForServing(
+      {
+        calories: producto.calories,
+        protein: producto.protein,
+        carbohydrates: producto.carbohydrates,
+        fat: producto.fat,
+      },
+      parseFloat(quantity) || 0,
+      selectedMeasure
+    );
     return {
-      calories: Math.round(producto.calories * multiplier),
-      protein: Math.round(producto.protein * multiplier * 10) / 10,
-      carbs: Math.round(producto.carbohydrates * multiplier * 10) / 10,
-      fat: Math.round(producto.fat * multiplier * 10) / 10,
+      calories: macros.calories,
+      protein: macros.protein,
+      carbs: macros.carbohydrates,
+      fat: macros.fat,
     };
-  }, [quantity, producto]);
+  }, [quantity, producto, selectedMeasure]);
 
   useEffect(() => {
     if (quickAdd) {
@@ -224,30 +223,61 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     checkIfFavorite();
-
-    // Sincronizar estado si el producto cambia (ej. al editar)
-    if (!initialQty && !initialUnit) {
-      if (producto.servingSize) {
-        setQuantity(producto.servingSize.toString());
-      }
-      const productUnit = producto.servingUnit;
-      if (productUnit) {
-        if (productUnit === "gram" || productUnit === "g") {
-          setUnit("g");
-        } else if (productUnit === "ml") {
-          setUnit("ml");
-        } else if (productUnit === "portion" || productUnit === "unit") {
-          setUnit("portion");
-        } else {
-          setUnit("g");
-        }
-      }
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [producto]);
+  }, [producto.code]);
 
-  const getUnitLabel = (value: LocalFoodUnit): string => {
-    return UNITS_CONFIG.find((u) => u.value === value)?.label || "Gramos";
+  useEffect(() => {
+    let cancelled = false;
+    const shouldEnrich =
+      parseUsdaCode(producto.code) != null ||
+      (typeof producto.fdcId === "number" && producto.fdcId > 0);
+
+    if (!shouldEnrich) {
+      return;
+    }
+
+    const hasHousehold = (producto.servings ?? servings).some(
+      (s) => s.kind === "household"
+    );
+    if (hasHousehold) {
+      return;
+    }
+
+    const detailCode =
+      parseUsdaCode(producto.code) != null
+        ? producto.code
+        : `usda-${producto.fdcId}`;
+
+    void (async () => {
+      try {
+        const detail = await nutritionService.getProductDetail(detailCode);
+        if (cancelled) return;
+        const nextServings = ensureProductServings(detail);
+        setProducto((prev) => ({ ...prev, ...detail }));
+        setServings(nextServings);
+        if (!initialQty && !initialUnit) {
+          const next = resolveServingSelection({
+            servings: nextServings,
+            categories: detail.categories,
+          });
+          setSelectedServingId(next.servingId);
+          setQuantity(next.quantity);
+        }
+      } catch (error) {
+        console.warn("No se pudieron enriquecer porciones USDA:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [producto.code, producto.fdcId]);
+
+  const applyServingMeasure = (measure: ProductServingMeasure) => {
+    setSelectedServingId(measure.id);
+    setQuantity(resolveInitialQuantity(measure));
+    setIsModalVisible(false);
   };
 
   const getMealData = (value: MealType) => {
@@ -309,7 +339,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
 
     setAddingToCart(true);
     try {
-      const apiUnit: FoodUnit = unit === "g" ? "gram" : unit;
+      const apiUnit: FoodUnit = measureToFoodUnit(selectedMeasure);
       await nutritionService.addToShoppingList({
         userId: userProfile.userId,
         productCode: producto.code,
@@ -356,7 +386,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       const nutrients = calculateNutrients;
       const today = new Date().toISOString().split("T")[0];
       const finalMealType = mealType || meal;
-      const apiUnit: FoodUnit = unit === "g" ? "gram" : unit;
+      const apiUnit: FoodUnit = measureToFoodUnit(selectedMeasure);
 
       if (fromDiary && entryId) {
         const updatedEntry: UpdateFoodEntryDto = {
@@ -467,16 +497,14 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
-          <Image
-            source={
-              producto?.image
-                ? { uri: producto.image }
-                : require("./../../../../assets/not-image.png")
-            }
+          <ProductRemoteImage
+            uri={producto?.image}
             style={[
               styles.productImage,
               { width: width * 0.6, height: width * 0.6 },
             ]}
+            borderRadius={16}
+            accessibilityLabel={`Imagen de ${producto.name}`}
           />
         </View>
 
@@ -557,8 +585,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* Mostrar información de porción estándar si existe */}
-        {producto.servingSize && producto.servingUnit && (
+        {selectedMeasure.kind !== "gram" && selectedMeasure.kind !== "ml" ? (
           <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
             <Text
               style={{
@@ -567,15 +594,14 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                 fontStyle: "italic",
               }}
             >
-              * Porción estándar: {producto.servingSize}{" "}
-              {producto.servingUnit === "gram"
-                ? "g"
-                : producto.servingUnit === "portion"
-                ? "porción"
-                : producto.servingUnit}
+              * ≈{" "}
+              {Math.round(
+                (parseFloat(quantity) || 0) * selectedMeasure.grams
+              )}{" "}
+              g en total
             </Text>
           </View>
-        )}
+        ) : null}
 
         {!quickAdd && (
           <View style={styles.section}>
@@ -583,7 +609,12 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             <View style={styles.quantityInputContainer}>
               <TextInput
                 style={styles.quantityInput}
-                placeholder="100"
+                placeholder={
+                  selectedMeasure.kind === "gram" ||
+                  selectedMeasure.kind === "ml"
+                    ? "100"
+                    : "1"
+                }
                 value={quantity}
                 onChangeText={setQuantity}
                 keyboardType="decimal-pad"
@@ -595,7 +626,9 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
                   setIsModalVisible(true);
                 }}
               >
-                <Text style={styles.unitButtonText}>{getUnitLabel(unit)}</Text>
+                <Text style={styles.unitButtonText} numberOfLines={1}>
+                  {selectedMeasure.label}
+                </Text>
                 <Ionicons
                   name="chevron-down"
                   size={20}
@@ -729,44 +762,73 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Seleccionar Unidad</Text>
+            <Text style={styles.modalTitle}>Seleccionar medida</Text>
             <TouchableOpacity onPress={() => setIsModalVisible(false)}>
               <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
-          {UNITS_CONFIG.map((unitOption) => (
-            <TouchableOpacity
-              key={unitOption.value}
-              style={styles.modalOption}
-              onPress={() => {
-                setUnit(unitOption.value);
-                setIsModalVisible(false);
-              }}
-            >
-              <View style={styles.modalOptionLeft}>
-                <View
-                  style={[
-                    styles.unitIconContainer,
-                    { backgroundColor: `${unitOption.color}15` },
-                  ]}
+          <ScrollView
+            style={{ maxHeight: Dimensions.get("window").height * 0.55 }}
+            bounces={false}
+          >
+            {servings.map((measure) => {
+              const isActive = measure.id === selectedServingId;
+              const accent =
+                measure.kind === "gram"
+                  ? "#10B981"
+                  : measure.kind === "ml"
+                  ? "#3B82F6"
+                  : "#F59E0B";
+              const icon: keyof typeof Ionicons.glyphMap =
+                measure.kind === "gram"
+                  ? "scale-outline"
+                  : measure.kind === "ml"
+                  ? "water-outline"
+                  : "restaurant-outline";
+              return (
+                <TouchableOpacity
+                  key={measure.id}
+                  style={styles.modalOption}
+                  onPress={() => applyServingMeasure(measure)}
                 >
-                  <Ionicons
-                    name={unitOption.icon}
-                    size={24}
-                    color={unitOption.color}
-                  />
-                </View>
-                <Text style={styles.modalOptionText}>{unitOption.label}</Text>
-              </View>
-              {unit === unitOption.value && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={24}
-                  color={unitOption.color}
-                />
-              )}
-            </TouchableOpacity>
-          ))}
+                  <View style={styles.modalOptionLeft}>
+                    <View
+                      style={[
+                        styles.unitIconContainer,
+                        { backgroundColor: `${accent}15` },
+                      ]}
+                    >
+                      <Ionicons name={icon} size={24} color={accent} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.modalOptionText} numberOfLines={2}>
+                        {measure.label}
+                      </Text>
+                      {measure.kind === "household" ||
+                      measure.kind === "package" ? (
+                        <Text
+                          style={{
+                            color: theme.textTertiary,
+                            fontSize: RFValue(11),
+                            marginTop: 2,
+                          }}
+                        >
+                          {Math.round(measure.grams)} g por unidad
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  {isActive ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color={accent}
+                    />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -956,11 +1018,14 @@ const createStyles = (theme: Theme) =>
       paddingHorizontal: 16,
       gap: 8,
       minWidth: 120,
+      maxWidth: "58%",
+      flexShrink: 1,
     },
     unitButtonText: {
       fontSize: RFValue(14),
       fontWeight: "600",
       color: theme.text,
+      flexShrink: 1,
     },
     mealSelector: {
       flexDirection: "row",

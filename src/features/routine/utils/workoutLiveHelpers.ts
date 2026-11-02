@@ -1,4 +1,27 @@
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
+import type { WorkoutLiveProgress } from "../../../services/workoutLiveImage";
+
+/** Routine name, exercise position and set counts for the Live Activity. */
+export function buildWorkoutLiveProgress(params: {
+  exercises: Array<{ id: string }>;
+  sets: { [exerciseId: string]: SetRequestDto[] };
+  exerciseId?: string | null;
+  routineName?: string | null;
+}): Required<WorkoutLiveProgress> {
+  const { exercises, sets, exerciseId, routineName } = params;
+  const index = exerciseId
+    ? exercises.findIndex((exercise) => exercise.id === exerciseId)
+    : -1;
+  const setList = index >= 0 ? sets[exercises[index].id] || [] : null;
+
+  return {
+    routineName: routineName?.trim() || null,
+    exerciseIndex: index >= 0 ? index + 1 : null,
+    exerciseCount: exercises.length > 0 ? exercises.length : null,
+    completedSets: setList ? setList.filter((s) => s.completed).length : null,
+    totalSets: setList ? setList.length : null,
+  };
+}
 
 /**
  * Live Activity `restSecondsDefault` after a ±15 (or any) rest delta.

@@ -10,6 +10,7 @@ RCT_EXTERN_METHOD(startWorkoutLive:(nonnull NSNumber *)workoutStartedAtMs
                   isResting:(BOOL)isResting
                   restEndAtMs:(NSNumber *)restEndAtMs
                   restSecondsDefault:(NSNumber *)restSecondsDefault
+                  progress:(NSDictionary *)progress
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
 
@@ -20,6 +21,7 @@ RCT_EXTERN_METHOD(updateWorkoutLive:(nonnull NSNumber *)workoutStartedAtMs
                   isResting:(BOOL)isResting
                   restEndAtMs:(NSNumber *)restEndAtMs
                   restSecondsDefault:(NSNumber *)restSecondsDefault
+                  progress:(NSDictionary *)progress
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
 

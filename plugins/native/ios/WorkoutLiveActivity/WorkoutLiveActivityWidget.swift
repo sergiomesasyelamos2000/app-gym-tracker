@@ -1,18 +1,30 @@
 import ActivityKit
+import ImageIO
 import SwiftUI
 import UIKit
 import WidgetKit
 
+/// Dark, Hevy-style palette. The Lock Screen card is always black.
 private enum LiveTheme {
-  /// EvoFit primary (#6C3BAA)
-  static let brand = Color(red: 0.424, green: 0.231, blue: 0.667)
-  static let textPrimary = Color(red: 0.11, green: 0.11, blue: 0.12)
-  static let textSecondary = Color(red: 0.45, green: 0.45, blue: 0.48)
-  static let textTertiary = Color(red: 0.62, green: 0.62, blue: 0.65)
-  static let surface = Color.white
-  static let surfaceMuted = Color(red: 0.96, green: 0.96, blue: 0.97)
-  static let controlFill = Color(red: 0.91, green: 0.91, blue: 0.93)
+  /// EvoFit primary (#6C3BAA) lifted for contrast on black.
+  static let brand = Color(red: 0.55, green: 0.36, blue: 0.86)
+  static let textPrimary = Color.white
+  static let textSecondary = Color.white.opacity(0.62)
+  static let textTertiary = Color.white.opacity(0.45)
+  static let surface = Color(red: 0.05, green: 0.05, blue: 0.06)
+  static let controlFill = Color.white.opacity(0.14)
+  static let checkFill = Color.white.opacity(0.22)
+  static let dotInactive = Color.white.opacity(0.22)
   static let completeGreen = Color(red: 0.22, green: 0.78, blue: 0.35)
+}
+
+/// Lock Screen Live Activities are clipped at 160pt — keep sizes in budget.
+private enum LiveLayout {
+  static let horizontalPadding: CGFloat = 14
+  static let verticalPadding: CGFloat = 10
+  static let rowSpacing: CGFloat = 8
+  static let thumbSize: CGFloat = 40
+  static let maxSetDots = 10
 }
 
 /// Switch away from `timerInterval` before the clock hits `end`.
@@ -154,11 +166,17 @@ struct WorkoutLiveActivityWidget: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Text(context.state.exerciseName)
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(.primary)
-            .lineLimit(2)
+          HStack(spacing: 8) {
+            ExerciseThumbnailView(
+              imageFileName: context.state.imageFileName,
+              size: 36
+            )
+            Text(context.state.exerciseName)
+              .font(.caption)
+              .fontWeight(.semibold)
+              .foregroundStyle(.primary)
+              .lineLimit(2)
+          }
         }
         DynamicIslandExpandedRegion(.trailing) {
           if context.state.isResting, let end = context.state.restEndAt {
@@ -203,8 +221,10 @@ struct WorkoutLiveActivityWidget: Widget {
           }
         }
       } compactLeading: {
-        Image(systemName: "dumbbell.fill")
-          .foregroundStyle(LiveTheme.brand)
+        ExerciseThumbnailView(
+          imageFileName: context.state.imageFileName,
+          size: 24
+        )
       } compactTrailing: {
         if context.state.isResting, let end = context.state.restEndAt {
           SafeRestCountdownText(
@@ -222,8 +242,10 @@ struct WorkoutLiveActivityWidget: Widget {
           )
         }
       } minimal: {
-        Image(systemName: "dumbbell.fill")
-          .foregroundStyle(LiveTheme.brand)
+        ExerciseThumbnailView(
+          imageFileName: context.state.imageFileName,
+          size: 22
+        )
       }
     }
   }
@@ -240,33 +262,30 @@ struct WorkoutLiveLockScreenView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
+    VStack(alignment: .leading, spacing: LiveLayout.rowSpacing) {
       headerRow
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
-
       exerciseRow
-        .padding(.horizontal, 14)
-        .padding(.bottom, context.state.isResting ? 10 : 12)
-
       if context.state.isResting {
         restSection
       } else {
         activeSetSection
       }
     }
-    .background(LiveTheme.surface)
+    .padding(.horizontal, LiveLayout.horizontalPadding)
+    .padding(.vertical, LiveLayout.verticalPadding)
   }
 
   private var headerRow: some View {
     HStack(spacing: 6) {
-      Image(systemName: "link")
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(LiveTheme.textTertiary)
-      Text("Entreno")
+      Image("EvoFitLogo")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 16, height: 16)
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+      Text(routineTitle)
         .font(.caption.weight(.medium))
         .foregroundStyle(LiveTheme.textTertiary)
+        .lineLimit(1)
       Spacer(minLength: 8)
       SafeWorkoutElapsedText(
         startedAt: context.attributes.workoutStartedAt,
@@ -277,82 +296,112 @@ struct WorkoutLiveLockScreenView: View {
     }
   }
 
+  private var routineTitle: String {
+    let name = context.state.routineName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return name?.isEmpty == false ? name! : "Entrenamiento"
+  }
+
   private var exerciseRow: some View {
     HStack(alignment: .center, spacing: 12) {
-      exerciseThumbnail
+      ExerciseThumbnailView(
+        imageFileName: context.state.imageFileName,
+        size: LiveLayout.thumbSize
+      )
 
-      VStack(alignment: .leading, spacing: 3) {
-        Text(context.state.exerciseName)
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(LiveTheme.textPrimary)
-          .lineLimit(2)
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          Text(context.state.exerciseName)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(LiveTheme.textPrimary)
+            .lineLimit(1)
+          Spacer(minLength: 4)
+          if let position = exercisePositionLabel {
+            Text(position)
+              .font(.caption2.weight(.semibold))
+              .foregroundStyle(LiveTheme.textTertiary)
+              .fixedSize()
+          }
+        }
 
-        Text(exerciseSubtitle)
-          .font(.caption)
-          .foregroundStyle(LiveTheme.textSecondary)
-          .lineLimit(2)
+        if context.state.isResting {
+          Text(restSubtitle)
+            .font(.caption)
+            .foregroundStyle(LiveTheme.textSecondary)
+            .lineLimit(1)
+        } else {
+          HStack(spacing: 6) {
+            if let completed = context.state.completedSets,
+               let total = context.state.totalSets {
+              SetProgressDots(completed: completed, total: total)
+            }
+            Text(activeSetLabel)
+              .font(.caption)
+              .foregroundStyle(LiveTheme.textSecondary)
+              .lineLimit(1)
+          }
+        }
       }
-      Spacer(minLength: 0)
     }
   }
 
-  private var exerciseSubtitle: String {
-    if context.state.isResting {
-      if context.state.nextSetSummary.isEmpty {
-        return "Siguiente serie pendiente"
-      }
-      return context.state.nextSetSummary
-    }
-    return parsed.setLabel.isEmpty ? "Serie pendiente" : parsed.setLabel
+  private var exercisePositionLabel: String? {
+    guard let index = context.state.exerciseIndex,
+          let count = context.state.exerciseCount,
+          index > 0, count > 0
+    else { return nil }
+    return "Ej. \(index)/\(count)"
   }
 
-  @ViewBuilder
-  private var exerciseThumbnail: some View {
-    ZStack {
-      Circle()
-        .fill(LiveTheme.surfaceMuted)
-      if let image = loadExerciseImage() {
-        image
-          .resizable()
-          .scaledToFill()
-          .clipShape(Circle())
-      } else {
-        Image(systemName: "figure.strengthtraining.traditional")
-          .font(.system(size: 18, weight: .semibold))
-          .foregroundStyle(LiveTheme.brand)
-      }
+  private var activeSetLabel: String {
+    if !parsed.setLabel.isEmpty { return parsed.setLabel }
+    if let completed = context.state.completedSets,
+       let total = context.state.totalSets, total > 0 {
+      return "Serie \(min(completed + 1, total)) de \(total)"
     }
-    .frame(width: 44, height: 44)
+    return "Serie pendiente"
+  }
+
+  private var restSubtitle: String {
+    let raw = context.state.nextSetSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+    if raw.isEmpty { return "Siguiente serie pendiente" }
+    // "Próximo ejercicio: …" and other free text are already readable.
+    guard !parsed.setLabel.isEmpty, parsed.setLabel.hasPrefix("Serie") else { return raw }
+    let setText = "serie" + parsed.setLabel.dropFirst("Serie".count)
+    if parsed.prescription.isEmpty { return "Siguiente: \(setText)" }
+    return "Siguiente: \(setText) · \(parsed.prescription)"
   }
 
   private var activeSetSection: some View {
-    HStack(alignment: .center, spacing: 12) {
-      Text(parsed.prescription.isEmpty ? "—" : parsed.prescription)
-        .font(.title3.weight(.bold))
-        .foregroundStyle(LiveTheme.textPrimary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
+    HStack(alignment: .center, spacing: 16) {
+      let metrics = parsed.metrics
+      if metrics.isEmpty {
+        Text(parsed.prescription.isEmpty ? "—" : parsed.prescription)
+          .font(.title3.weight(.bold))
+          .foregroundStyle(LiveTheme.textPrimary)
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
+      } else {
+        ForEach(metrics.indices, id: \.self) { index in
+          LiveMetricBlock(value: metrics[index].value, unit: metrics[index].unit)
+        }
+      }
 
       Spacer(minLength: 8)
 
       Button(intent: WorkoutLiveCompleteSetIntent()) {
         Image(systemName: "checkmark")
-          .font(.system(size: 18, weight: .bold))
+          .font(.system(size: 17, weight: .bold))
           .foregroundStyle(.white)
-          .frame(width: 44, height: 44)
-          .background(LiveTheme.completeGreen)
-          .clipShape(Circle())
+          .frame(width: 40, height: 40)
+          .background(LiveTheme.checkFill)
+          .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 12)
-    .frame(maxWidth: .infinity)
-    .background(LiveTheme.surfaceMuted)
   }
 
   private var restSection: some View {
-    VStack(spacing: 10) {
+    VStack(spacing: LiveLayout.rowSpacing) {
       Group {
         if let end = context.state.restEndAt {
           SafeRestProgressBar(
@@ -365,7 +414,8 @@ struct WorkoutLiveLockScreenView: View {
             .labelsHidden()
         }
       }
-      .padding(.horizontal, 14)
+      // Edge-to-edge bar like Hevy.
+      .padding(.horizontal, -LiveLayout.horizontalPadding)
 
       HStack(spacing: 8) {
         Button(intent: WorkoutLiveSubtractRestIntent()) {
@@ -397,55 +447,135 @@ struct WorkoutLiveLockScreenView: View {
         }
         .buttonStyle(LivePillButtonStyle(fill: LiveTheme.brand, foreground: .white))
       }
-      .padding(.horizontal, 14)
-      .padding(.bottom, 12)
     }
   }
 
-  @ViewBuilder
   private var restTimerLabel: some View {
-    if let end = context.state.restEndAt {
-      // Time only (no "Rest:" prefix) — lock screen truncates "Rest: 2:50" to "R…2:50".
-      SafeRestCountdownText(
-        end: end,
-        restSecondsDefault: context.state.restSecondsDefault,
-        font: .title3.weight(.bold).monospacedDigit(),
-        color: LiveTheme.textPrimary,
-        width: 56
-      )
+    VStack(spacing: 0) {
+      Text("DESCANSO")
+        .font(.system(size: 9, weight: .bold))
+        .tracking(0.8)
+        .foregroundStyle(LiveTheme.textTertiary)
+      Group {
+        if let end = context.state.restEndAt {
+          // Time only (no "Rest:" prefix) — lock screen truncates "Rest: 2:50" to "R…2:50".
+          SafeRestCountdownText(
+            end: end,
+            restSecondsDefault: context.state.restSecondsDefault,
+            font: .system(size: 26, weight: .bold).monospacedDigit(),
+            color: LiveTheme.textPrimary,
+            width: 76
+          )
+        } else {
+          Text("0:00")
+            .font(.system(size: 26, weight: .bold).monospacedDigit())
+            .foregroundStyle(LiveTheme.textPrimary)
+            .frame(width: 76)
+        }
+      }
       .minimumScaleFactor(0.8)
-    } else {
-      Text("0:00")
-        .font(.title3.weight(.bold).monospacedDigit())
-        .foregroundStyle(LiveTheme.textPrimary)
-        .frame(width: 56)
     }
   }
+}
 
-  private func loadExerciseImage() -> Image? {
-    guard let raw = context.state.imageFileName, !raw.isEmpty else { return nil }
+// MARK: - Set progress / metrics
 
-    // Widget extensions should not fetch remote URLs synchronously.
-    if raw.hasPrefix("http://") || raw.hasPrefix("https://") {
-      return nil
-    }
+/// One dot per set; falls back to nothing when there are too many to fit.
+@available(iOS 17.0, *)
+struct SetProgressDots: View {
+  let completed: Int
+  let total: Int
 
-    if let container = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: WorkoutLiveStore.appGroupId
-    ) {
-      let fileURL = container.appendingPathComponent(raw)
-      if let data = try? Data(contentsOf: fileURL),
-         let uiImage = UIImage(data: data) {
-        return Image(uiImage: uiImage)
+  var body: some View {
+    if total > 0, total <= LiveLayout.maxSetDots {
+      HStack(spacing: 3) {
+        ForEach(0..<total, id: \.self) { index in
+          Circle()
+            .fill(index < completed ? LiveTheme.brand : LiveTheme.dotInactive)
+            .frame(width: 6, height: 6)
+        }
       }
     }
+  }
+}
 
-    if let uiImage = UIImage(contentsOfFile: raw) {
-      return Image(uiImage: uiImage)
+@available(iOS 17.0, *)
+struct LiveMetricBlock: View {
+  let value: String
+  let unit: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(value)
+        .font(.title2.weight(.bold).monospacedDigit())
+        .foregroundStyle(LiveTheme.textPrimary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+      if !unit.isEmpty {
+        Text(unit)
+          .font(.system(size: 10, weight: .semibold))
+          .tracking(0.6)
+          .foregroundStyle(LiveTheme.textTertiary)
+      }
     }
+  }
+}
 
+// MARK: - Exercise thumbnail
+
+/// Hevy-style exercise thumb: white circle, whole image (no crop),
+/// dumbbell symbol only when no thumb was stored in the App Group.
+@available(iOS 17.0, *)
+struct ExerciseThumbnailView: View {
+  let imageFileName: String?
+  let size: CGFloat
+
+  var body: some View {
+    ZStack {
+      Circle().fill(Color.white)
+      if let uiImage = loadLiveExerciseThumb(imageFileName, maxPixelSize: size * 3) {
+        Image(uiImage: uiImage)
+          .resizable()
+          .scaledToFit()
+          // Inset so square illustrations are not cut by the circle.
+          .padding(size * 0.12)
+      } else {
+        Image(systemName: "dumbbell.fill")
+          .font(.system(size: size * 0.42, weight: .semibold))
+          .foregroundStyle(LiveTheme.brand)
+      }
+    }
+    .frame(width: size, height: size)
+    .clipShape(Circle())
+  }
+}
+
+/// Reads a thumb written by the app into the App Group. Downsamples via ImageIO
+/// so a stale full-size file cannot blow the widget memory budget.
+private func loadLiveExerciseThumb(_ relativePath: String?, maxPixelSize: CGFloat) -> UIImage? {
+  guard let relativePath, !relativePath.isEmpty,
+        !relativePath.hasPrefix("http://"), !relativePath.hasPrefix("https://"),
+        !relativePath.hasPrefix("data:"),
+        let container = FileManager.default.containerURL(
+          forSecurityApplicationGroupIdentifier: WorkoutLiveStore.appGroupId
+        )
+  else { return nil }
+
+  let fileURL = container.appendingPathComponent(relativePath)
+  let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+  guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, sourceOptions) else {
     return nil
   }
+  let thumbOptions = [
+    kCGImageSourceCreateThumbnailFromImageAlways: true,
+    kCGImageSourceCreateThumbnailWithTransform: true,
+    kCGImageSourceShouldCacheImmediately: true,
+    kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+  ] as CFDictionary
+  guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions) else {
+    return nil
+  }
+  return UIImage(cgImage: cgImage)
 }
 
 // MARK: - Parsing helpers
@@ -453,6 +583,21 @@ struct WorkoutLiveLockScreenView: View {
 struct LiveSetSummaryParts {
   var setLabel: String
   var prescription: String
+
+  /// "32.5 kg x 4-6 reps" → [("32.5", "KG"), ("4-6", "REPS")]. Empty when unparseable.
+  var metrics: [(value: String, unit: String)] {
+    let pieces = prescription
+      .components(separatedBy: " x ")
+      .map { $0.trimmingCharacters(in: .whitespaces) }
+      .filter { !$0.isEmpty }
+    guard (1...2).contains(pieces.count) else { return [] }
+    return pieces.map { piece -> (value: String, unit: String) in
+      guard let space = piece.lastIndex(of: " ") else { return (value: piece, unit: "") }
+      let value = String(piece[..<space]).trimmingCharacters(in: .whitespaces)
+      let unit = String(piece[piece.index(after: space)...]).uppercased()
+      return (value: value, unit: unit)
+    }
+  }
 
   static func parse(_ raw: String) -> LiveSetSummaryParts {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)

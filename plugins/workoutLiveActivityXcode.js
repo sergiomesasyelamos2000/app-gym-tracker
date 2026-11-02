@@ -193,6 +193,89 @@ function ensureBuildFileForTargetSources(project, fileRefUuid, basename, targetU
   return buildFileUuid;
 }
 
+/**
+ * Phase of `isa` owned by this target. Unlike `project.buildPhaseObject`, never
+ * falls back to another target's phase when the target has none.
+ */
+function findTargetBuildPhase(project, targetUuid, isa) {
+  const target = project.pbxNativeTargetSection()[targetUuid];
+  const section = project.hash.project.objects[isa] || {};
+  for (const phase of target?.buildPhases || []) {
+    if (section[phase.value]) return section[phase.value];
+  }
+  return null;
+}
+
+/**
+ * Bundle `WorkoutLiveActivity/Assets.xcassets` (EvoFit logo) into the widget
+ * extension. Idempotent: reuses the file ref, build file and Resources phase.
+ */
+function ensureExtensionAssetCatalog(project, extensionTargetUuid) {
+  const catalogPath = `${EXTENSION_NAME}/Assets.xcassets`;
+  const basename = "Assets.xcassets";
+
+  let phase = findTargetBuildPhase(
+    project,
+    extensionTargetUuid,
+    "PBXResourcesBuildPhase"
+  );
+  if (!phase) {
+    project.addBuildPhase(
+      [],
+      "PBXResourcesBuildPhase",
+      "Resources",
+      extensionTargetUuid
+    );
+    phase = findTargetBuildPhase(
+      project,
+      extensionTargetUuid,
+      "PBXResourcesBuildPhase"
+    );
+  }
+
+  const fileRefs = project.pbxFileReferenceSection();
+  let fileRefUuid = Object.keys(fileRefs).find(
+    (key) =>
+      !key.endsWith("_comment") &&
+      (fileRefs[key].path || "").replace(/^"|"$/g, "") === catalogPath
+  );
+  if (!fileRefUuid) {
+    fileRefUuid = project.generateUuid();
+    fileRefs[fileRefUuid] = {
+      isa: "PBXFileReference",
+      lastKnownFileType: "folder.assetcatalog",
+      name: `"${basename}"`,
+      path: `"${catalogPath}"`,
+      sourceTree: '"<group>"',
+    };
+    fileRefs[`${fileRefUuid}_comment`] = basename;
+
+    const groupKey = findGroupByName(project, EXTENSION_NAME);
+    const group = groupKey && project.getPBXGroupByKey(groupKey);
+    if (group && !group.children.some((child) => child.value === fileRefUuid)) {
+      group.children.push({ value: fileRefUuid, comment: basename });
+    }
+  }
+
+  const buildFiles = project.pbxBuildFileSection();
+  const alreadyInPhase = phase.files.some(
+    (entry) => buildFiles[entry.value]?.fileRef === fileRefUuid
+  );
+  if (alreadyInPhase) return;
+
+  const buildFileUuid = project.generateUuid();
+  buildFiles[buildFileUuid] = {
+    isa: "PBXBuildFile",
+    fileRef: fileRefUuid,
+    fileRef_comment: basename,
+  };
+  buildFiles[`${buildFileUuid}_comment`] = `${basename} in Resources`;
+  phase.files.push({
+    value: buildFileUuid,
+    comment: `${basename} in Resources`,
+  });
+}
+
 function ensureDependencySections(project) {
   if (!project.hash.project.objects.PBXTargetDependency) {
     project.hash.project.objects.PBXTargetDependency = {};
@@ -337,6 +420,7 @@ function ensureWorkoutLiveActivityTarget(project, options) {
     });
     ensureAppDependsOnExtension(project, appTarget.uuid, existing.uuid);
     ensureEmbedPhaseSettings(project);
+    ensureExtensionAssetCatalog(project, existing.uuid);
     if (attributesRef) {
       ensureBuildFileForTargetSources(
         project,
@@ -418,6 +502,8 @@ function ensureWorkoutLiveActivityTarget(project, options) {
     });
   }
 
+  ensureExtensionAssetCatalog(project, extensionTarget.uuid);
+
   return true;
 }
 
@@ -462,6 +548,7 @@ module.exports = {
   EXTENSION_NAME,
   APP_GROUP,
   ensureWorkoutLiveActivityTarget,
+  ensureExtensionAssetCatalog,
   syncNativeSources,
   findNativeTargetByName,
   detectAppFolderName,
