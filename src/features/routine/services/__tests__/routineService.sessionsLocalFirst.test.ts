@@ -191,4 +191,55 @@ describe("findRoutineSessions local-first merge", () => {
       JSON.parse(memory.get("@sessions_cache_v2") ?? "[]")[0].id
     ).toBe("s_new");
   });
+
+  it("keeps later body and coalesces earlier routine.title on same id", async () => {
+    memory.set(
+      "@local_sessions",
+      JSON.stringify([
+        {
+          id: "s1",
+          routineId: "r1",
+          routine: { id: "r1", title: "Legs" },
+          exercises: [
+            {
+              exerciseId: "e1",
+              name: "Squat",
+              sets: [{ weight: 110, reps: 3, completed: true }],
+            },
+          ],
+          totalTime: 50,
+          totalWeight: 330,
+          completedSets: 1,
+          createdAt: "2026-10-14T10:00:00.000Z",
+        },
+      ])
+    );
+    memory.set(
+      "@sessions_cache_v2",
+      JSON.stringify([
+        {
+          id: "s1",
+          routineId: "r1",
+          exercises: [
+            {
+              exerciseId: "e1",
+              name: "Squat",
+              sets: [{ weight: 100, reps: 5, completed: true }],
+            },
+          ],
+          totalTime: 60,
+          totalWeight: 500,
+          completedSets: 1,
+          createdAt: "2026-10-14T10:00:00.000Z",
+        },
+      ])
+    );
+    mockedApiFetch.mockRejectedValue(new Error("offline"));
+
+    const result = await findRoutineSessions("r1");
+    expect(result).toHaveLength(1);
+    // global cache is merged last → body wins; prior local title is coalesced.
+    expect(result[0].exercises?.[0]?.sets?.[0]?.weight).toBe(100);
+    expect(result[0].routine).toEqual({ id: "r1", title: "Legs" });
+  });
 });

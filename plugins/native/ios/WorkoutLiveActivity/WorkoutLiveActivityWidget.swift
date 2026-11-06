@@ -71,6 +71,8 @@ private struct SafeRestCountdownText: View {
   var width: CGFloat? = nil
 
   var body: some View {
+    // Remount the whole timeline when end changes — an inner .id inside
+    // .periodic(by: 1) can wait up to ~1s before adopting a new range.
     TimelineView(.periodic(from: .now, by: 1)) { context in
       Group {
         if let range = stableRestCountdownRange(
@@ -83,13 +85,12 @@ private struct SafeRestCountdownText: View {
           Text("0:00")
         }
       }
-      // Remount when end changes — timerInterval does not always adopt a new range.
-      .id(Int(end.timeIntervalSince1970 * 1000))
       .monospacedDigit()
       .font(font)
       .foregroundStyle(color)
       .frame(width: width)
     }
+    .id(end)
   }
 }
 
@@ -179,11 +180,11 @@ private struct SafeRestProgressBar: View {
           ProgressView(value: 0)
         }
       }
-      .id(Int(end.timeIntervalSince1970 * 1000))
       .tint(LiveTheme.brand)
       .labelsHidden()
       .scaleEffect(x: 1, y: 0.55, anchor: .center)
     }
+    .id(end)
   }
 }
 

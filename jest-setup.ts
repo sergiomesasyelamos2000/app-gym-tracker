@@ -61,6 +61,7 @@ jest.mock("expo-constants", () => ({
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
   ImpactFeedbackStyle: {
     Light: "light",
     Medium: "medium",

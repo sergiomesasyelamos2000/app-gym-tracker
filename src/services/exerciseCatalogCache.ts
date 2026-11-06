@@ -338,6 +338,13 @@ export async function readExerciseCatalog(): Promise<ExerciseCatalogSnapshot | n
     if (storedApiUrl && normalizeApiUrl(storedApiUrl) !== currentApiUrl()) {
       invalidateExerciseCatalogMemory();
       await AsyncStorage.multiRemove(allCatalogStorageKeys());
+      // Dynamic import avoids a static cycle with exerciseMediaCache.
+      try {
+        const { clearExerciseMediaCache } = await import("./exerciseMediaCache");
+        await clearExerciseMediaCache();
+      } catch {
+        // best-effort
+      }
       return null;
     }
 

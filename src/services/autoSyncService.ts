@@ -30,6 +30,7 @@ import {
   createRoutineFolder,
   deleteRoutine,
   deleteRoutineFolder,
+  removeRoutineSessionFromCaches,
   renameRoutineFolder,
   saveRoutine,
   saveRoutineLayout,
@@ -37,6 +38,10 @@ import {
   updateRoutineById,
   upsertRoutineSessionCaches,
 } from "../features/routine/services/routineService";
+import {
+  preserveClientRoutineTitle,
+  stripRoutineForApi,
+} from "../features/routine/utils/resolveSessionRoutineTitle";
 import {
   folderKey,
   parseRootKey,
@@ -292,9 +297,10 @@ async function syncCreateSession(operation: PendingOperation): Promise<void> {
 
   const payload = operation.payload as {
     routineId: string;
+    localSessionId?: string;
     session: Partial<RoutineSessionEntity>;
   };
-  const { routineId, session } = payload;
+  const { routineId, localSessionId, session } = payload;
 
   // If routine has local ID, map to server ID
   const realRoutineId = await getServerIdForLocalId(routineId);
@@ -306,11 +312,82 @@ async function syncCreateSession(operation: PendingOperation): Promise<void> {
     throw new Error("Parent routine not synced");
   }
 
-  const saved = await saveRoutineSession(realRoutineId, session);
-  await upsertRoutineSessionCaches({
-    ...saved,
-    routineId: saved.routineId || realRoutineId,
-  });
+  const saved = await saveRoutineSession(
+    realRoutineId,
+    stripRoutineForApi(session)
+  );
+  const cached = preserveClientRoutineTitle(
+    {
+      ...saved,
+      routineId: saved.routineId || realRoutineId,
+    },
+    session,
+    realRoutineId
+  );
+
+  if (localSessionId) {
+    await removeRoutineSessionFromCaches(localSessionId);
+  } else {
+    await removeLegacyLocalSessionPlaceholder({
+      routineId,
+      realRoutineId,
+      session,
+    });
+  }
+
+  await upsertRoutineSessionCaches(cached);
+}
+
+async function removeLegacyLocalSessionPlaceholder(args: {
+  routineId: string;
+  realRoutineId: string;
+  session: Partial<RoutineSessionEntity>;
+}): Promise<void> {
+  try {
+    const localStr = await AsyncStorage.getItem("@local_sessions");
+    if (!localStr) return;
+    const parsed = JSON.parse(localStr);
+    if (!Array.isArray(parsed)) return;
+
+    const candidates = (parsed as RoutineSessionEntity[])
+      .filter((row) => {
+        if (!row?.id?.startsWith("local_session_")) return false;
+        const rowRoutineId = row.routineId || row.routine?.id;
+        if (
+          rowRoutineId !== args.routineId &&
+          rowRoutineId !== args.realRoutineId
+        ) {
+          return false;
+        }
+        return (
+          Number(row.totalTime) === Number(args.session.totalTime) &&
+          Number(row.totalWeight) === Number(args.session.totalWeight) &&
+          Number(row.completedSets) === Number(args.session.completedSets)
+        );
+      })
+      .sort((a, b) => {
+        const ta =
+          a.createdAt instanceof Date
+            ? a.createdAt.getTime()
+            : Date.parse(String(a.createdAt));
+        const tb =
+          b.createdAt instanceof Date
+            ? b.createdAt.getTime()
+            : Date.parse(String(b.createdAt));
+        return (Number.isFinite(ta) ? ta : 0) - (Number.isFinite(tb) ? tb : 0);
+      });
+
+    // Only remove when the match is unambiguous — identical totals across
+    // two offline sessions would otherwise delete the wrong placeholder.
+    if (candidates.length === 1 && candidates[0]?.id) {
+      await removeRoutineSessionFromCaches(candidates[0].id);
+    }
+  } catch (error) {
+    console.error(
+      "[AutoSync] Failed to remove legacy local session placeholder:",
+      error
+    );
+  }
 }
 
 async function syncDeleteRoutine(operation: PendingOperation): Promise<void> {
@@ -757,9 +834,24 @@ async function updateSessionRoutineIds(
         "routineId" in op.payload &&
         op.payload.routineId === oldId
       ) {
+        const session = op.payload.session;
+        const nextSession =
+          session?.routine != null
+            ? {
+                ...session,
+                routineId: newId,
+                routine: { ...session.routine, id: newId },
+              }
+            : session
+              ? { ...session, routineId: newId }
+              : session;
         return {
           ...op,
-          payload: { ...op.payload, routineId: newId },
+          payload: {
+            ...op.payload,
+            routineId: newId,
+            session: nextSession,
+          },
         };
       }
       return op;

@@ -443,9 +443,11 @@ const ExerciseSetRow = ({
                 accessibilityHint="Toca para copiar los valores de tu sesión anterior"
                 style={{
                   width: "100%",
+                  minWidth: 0,
                   minHeight: inputHeight,
                   justifyContent: "center",
-                  alignItems: "center",
+                  alignItems: "stretch",
+                  overflow: "hidden",
                 }}
               >
                 <View style={styles.previousMarkContainer}>
@@ -458,7 +460,9 @@ const ExerciseSetRow = ({
                         fontSize: isSmallScreen ? 11 : 12,
                       },
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
                   >
                     {previousMainMark}
                   </Text>
@@ -469,6 +473,8 @@ const ExerciseSetRow = ({
                         { color: theme.textTertiary },
                       ]}
                       numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.65}
                     >
                       A:{previousAssistedMark}
                     </Text>
@@ -915,15 +921,22 @@ const styles = StyleSheet.create({
   previousMark: {
     textAlign: "center",
     width: "100%",
+    minWidth: 0,
+    overflow: "hidden",
   },
   previousMarkContainer: {
-    alignItems: "center",
+    alignItems: "stretch",
     justifyContent: "center",
     width: "100%",
+    minWidth: 0,
     minHeight: 18,
+    overflow: "hidden",
   },
   previousAssistedMark: {
     textAlign: "center",
+    width: "100%",
+    minWidth: 0,
+    overflow: "hidden",
     fontSize: 10,
     marginTop: 1,
   },

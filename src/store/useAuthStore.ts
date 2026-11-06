@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { invalidateExerciseCatalogMemory } from "../services/exerciseCatalogCache";
+import { clearExerciseMediaCache } from "../services/exerciseMediaCache";
 import { clearNutritionOfflineData } from "../services/clearNutritionOfflineData";
 import { clearRoutineOfflineData } from "../services/clearRoutineOfflineData";
 import { useNavigationStore } from "./useNavigationStore";
@@ -77,6 +78,7 @@ export const useAuthStore = create<AuthState>()(
         void (async () => {
           await clearRoutineOfflineData();
           await clearNutritionOfflineData();
+          await clearExerciseMediaCache();
           useSyncStore.getState().resetSync();
         })();
         set({

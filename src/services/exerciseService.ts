@@ -16,6 +16,10 @@ import {
 import { clearExerciseImageLookupCache } from "../features/routine/utils/exerciseImageLookupCache";
 import { warmExerciseCatalogThumbs } from "../features/routine/utils/prefetchExerciseThumbs";
 import {
+  clearExerciseMediaCache,
+  warmExerciseMediaCache,
+} from "./exerciseMediaCache";
+import {
   EXERCISE_CACHE_KEY,
   EXERCISE_CATALOG_TTL_MS,
   applyNetworkExerciseCatalog,
@@ -146,6 +150,7 @@ async function persistCatalogFromNetwork(
   await applyNetworkExerciseCatalog(exercises, generationAtFetchStart);
   clearExerciseImageLookupCache();
   warmExerciseCatalogThumbs();
+  warmExerciseMediaCache(exercises);
 }
 
 async function refreshExercisesCacheInBackground(): Promise<void> {
@@ -230,6 +235,7 @@ async function runCatalogPrefetch(force: boolean): Promise<void> {
     const snapshot = peekExerciseCatalogSnapshot();
     if (snapshot && !isExerciseCatalogStale()) {
       warmExerciseCatalogThumbs();
+      warmExerciseMediaCache(snapshot.exercises);
       return;
     }
     // Ensure storage-backed freshness check when memory is empty.
@@ -237,6 +243,7 @@ async function runCatalogPrefetch(force: boolean): Promise<void> {
       const stored = await readExerciseCatalog();
       if (stored && !isExerciseCatalogStale()) {
         warmExerciseCatalogThumbs();
+        warmExerciseMediaCache(stored.exercises);
         return;
       }
     }
@@ -446,6 +453,7 @@ export const fetchMuscles = async (): Promise<MuscleDto[]> => {
 export async function resetExerciseCatalogCaches(): Promise<void> {
   await clearExerciseCatalogStorage();
   await AsyncStorage.multiRemove(AUX_CACHE_KEYS);
+  await clearExerciseMediaCache();
 }
 
 // Keep TTL constant exported for callers that need the same window.

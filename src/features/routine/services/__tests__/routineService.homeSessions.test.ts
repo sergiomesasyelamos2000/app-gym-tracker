@@ -16,6 +16,7 @@ jest.mock("../../utils/enrichSessionExerciseImages", () => ({
 import {
   findAllRoutineSessions,
   invalidateRoutineSessionsCacheWrites,
+  loadRoutineSessionsOutcome,
   persistEnrichedSessionsCache,
   readCachedRoutineSessions,
 } from "../routineService";
@@ -135,5 +136,103 @@ describe("routineService home sessions helpers", () => {
     expect(result).toEqual([{ id: "old-user", exercises: [] }]);
     expect(memory.has(SESSIONS_CACHE_KEY)).toBe(false);
     expect(mockEnrich).not.toHaveBeenCalled();
+  });
+
+  it("keeps local body and coalesces routine.title on same id", async () => {
+    memory.set(
+      "@local_sessions",
+      JSON.stringify([
+        {
+          id: "s1",
+          routineId: "r1",
+          exercises: [{ exerciseId: "e1", name: "Squat", sets: [] }],
+          totalTime: 50,
+          totalWeight: 330,
+          completedSets: 1,
+          createdAt: "2026-10-14T10:00:00.000Z",
+        },
+      ])
+    );
+    memory.set(
+      SESSIONS_CACHE_KEY,
+      JSON.stringify([
+        {
+          id: "s1",
+          routineId: "r1",
+          routine: { id: "r1", title: "Push Day" },
+          exercises: [{ exerciseId: "e1", name: "Squat", sets: [] }],
+          totalTime: 60,
+          totalWeight: 500,
+          completedSets: 1,
+          createdAt: "2026-10-14T10:00:00.000Z",
+        },
+      ])
+    );
+    mockApiFetch.mockRejectedValue(new Error("offline"));
+
+    const result = await findAllRoutineSessions();
+    expect(result).toHaveLength(1);
+    expect(result[0].totalWeight).toBe(330);
+    expect(result[0].routine).toEqual({ id: "r1", title: "Push Day" });
+  });
+
+  it("heals blank local title from routines cache", async () => {
+    memory.set(
+      "@local_sessions",
+      JSON.stringify([
+        {
+          id: "local_session_9",
+          routineId: "r9",
+          exercises: [],
+          totalTime: 40,
+          totalWeight: 100,
+          completedSets: 1,
+          createdAt: "2026-11-05T08:00:00.000Z",
+        },
+      ])
+    );
+    memory.set(SESSIONS_CACHE_KEY, JSON.stringify([]));
+    memory.set(
+      "@routines_cache",
+      JSON.stringify([{ id: "r9", title: "Full Body" }])
+    );
+    mockApiFetch.mockRejectedValue(new Error("offline"));
+
+    const result = await findAllRoutineSessions();
+    expect(result[0].routine).toEqual({ id: "r9", title: "Full Body" });
+
+    const local = JSON.parse(memory.get("@local_sessions") ?? "[]");
+    expect(local[0].routine).toEqual({ id: "r9", title: "Full Body" });
+  });
+
+  it("marks outcome unavailable when network fails and there is no cache", async () => {
+    mockApiFetch.mockRejectedValue(new Error("offline"));
+
+    const outcome = await loadRoutineSessionsOutcome();
+    expect(outcome).toEqual({ status: "unavailable", sessions: [] });
+    await expect(findAllRoutineSessions()).resolves.toEqual([]);
+  });
+
+  it("leaves title blank when routine is missing from cache", async () => {
+    memory.set(
+      "@local_sessions",
+      JSON.stringify([
+        {
+          id: "local_session_8",
+          routineId: "missing",
+          exercises: [],
+          totalTime: 10,
+          totalWeight: 0,
+          completedSets: 0,
+          createdAt: "2026-11-05T08:00:00.000Z",
+        },
+      ])
+    );
+    memory.set(SESSIONS_CACHE_KEY, JSON.stringify([]));
+    memory.set("@routines_cache", JSON.stringify([]));
+    mockApiFetch.mockRejectedValue(new Error("offline"));
+
+    const result = await findAllRoutineSessions();
+    expect(result[0].routine?.title).toBeUndefined();
   });
 });

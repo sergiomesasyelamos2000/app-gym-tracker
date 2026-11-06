@@ -11,6 +11,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../../../api/client";
 import type { CaughtError } from "../../../types";
 import { enrichSessionExercisesWithCatalogImages } from "../utils/enrichSessionExerciseImages";
+import {
+  coalesceSessionTitle,
+  healSessionRoutineTitle,
+  loadRoutineTitleMap,
+  readRoutineId,
+} from "../utils/resolveSessionRoutineTitle";
 
 const ROUTINES_CACHE_KEY = "@routines_cache";
 const FOLDERS_CACHE_KEY = "@routine_folders_cache";
@@ -504,20 +510,227 @@ function mergeSessions(
   localSessions: RoutineSessionListItem[],
   remoteOrCached: RoutineSessionListItem[]
 ): RoutineSessionListItem[] {
-  const allSessions = [...localSessions, ...remoteOrCached];
-  return allSessions.filter(
-    (session, index, self) =>
-      index === self.findIndex((s) => s.id === session.id)
-  );
+  const result: RoutineSessionListItem[] = [];
+  const indexById = new Map<string, number>();
+
+  for (const session of [...localSessions, ...remoteOrCached]) {
+    if (!session?.id) continue;
+    const existingIndex = indexById.get(session.id);
+    if (existingIndex === undefined) {
+      indexById.set(session.id, result.length);
+      result.push(session);
+      continue;
+    }
+    // Keep the first (local) body; copy routine.title only when local title is blank.
+    result[existingIndex] = coalesceSessionTitle(
+      result[existingIndex],
+      session
+    );
+  }
+
+  return result;
+}
+
+function healSessionsWithTitleMap<T extends RoutineSessionListItem>(
+  sessions: T[],
+  titleMap: ReadonlyMap<string, string>
+): T[] {
+  return sessions.map((session) => healSessionRoutineTitle(session, titleMap));
+}
+
+function collectSessionTitlePatches(
+  sessions: RoutineSessionListItem[]
+): Map<string, { id: string; title: string }> {
+  const patches = new Map<string, { id: string; title: string }>();
+  for (const session of sessions) {
+    if (!session?.id) continue;
+    const title = session.routine?.title?.trim();
+    const routineId = readRoutineId(session);
+    if (!title || !routineId) continue;
+    patches.set(session.id, { id: routineId, title });
+  }
+  return patches;
+}
+
+function applyTitlePatchesToList<T extends RoutineSessionListItem>(
+  list: T[],
+  patches: ReadonlyMap<string, { id: string; title: string }>
+): { sessions: T[]; changed: boolean } {
+  let changed = false;
+  const sessions = list.map((session) => {
+    if (!session?.id) return session;
+    const patch = patches.get(session.id);
+    if (!patch) return session;
+    if (session.routine?.title?.trim()) return session;
+    changed = true;
+    return {
+      ...session,
+      routineId: session.routineId || patch.id,
+      routine: { id: patch.id, title: patch.title },
+    };
+  });
+  return { sessions, changed };
 }
 
 /**
- * Offline-first session history: serve cache (+ pending local) immediately,
- * refresh from network in the background when a cache exists.
+ * Re-read cache keys and patch blank titles by session id.
+ * Never writes a stale in-memory snapshot captured before awaits.
  */
-export async function findAllRoutineSessions(): Promise<
-  RoutineSessionListItem[]
-> {
+async function persistHealedTitlePatches(args: {
+  writeEpochAtStart: number;
+  patches: ReadonlyMap<string, { id: string; title: string }>;
+  routineId?: string;
+}): Promise<void> {
+  if (args.patches.size === 0) return;
+  if (args.writeEpochAtStart !== sessionsCacheWriteEpoch) return;
+
+  try {
+    const local = await readLocalPendingSessions();
+    const patchedLocal = applyTitlePatchesToList(local, args.patches);
+    if (args.writeEpochAtStart !== sessionsCacheWriteEpoch) return;
+    if (patchedLocal.changed) {
+      await AsyncStorage.setItem(
+        LOCAL_SESSIONS_KEY,
+        JSON.stringify(patchedLocal.sessions)
+      );
+    }
+
+    const global = await readCachedRoutineSessions();
+    if (global) {
+      const patchedGlobal = applyTitlePatchesToList(global, args.patches);
+      if (args.writeEpochAtStart !== sessionsCacheWriteEpoch) return;
+      if (patchedGlobal.changed) {
+        await AsyncStorage.setItem(
+          SESSIONS_CACHE_KEY,
+          JSON.stringify(patchedGlobal.sessions)
+        );
+      }
+    }
+
+    if (args.routineId) {
+      const perRoutine = await readPerRoutineSessionsCache(args.routineId);
+      if (perRoutine) {
+        const patchedPerRoutine = applyTitlePatchesToList(
+          perRoutine as unknown as RoutineSessionListItem[],
+          args.patches
+        );
+        if (args.writeEpochAtStart !== sessionsCacheWriteEpoch) return;
+        if (patchedPerRoutine.changed) {
+          await AsyncStorage.setItem(
+            routineSessionCacheKey(args.routineId),
+            JSON.stringify(patchedPerRoutine.sessions)
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error(
+      "[RoutineService] Failed to write healed session titles:",
+      error
+    );
+  }
+}
+
+/**
+ * Drop a session id from `@local_sessions`, `@sessions_cache_v2`, and
+ * matching per-routine caches (including mapped local/server routine ids).
+ */
+export async function removeRoutineSessionFromCaches(
+  sessionId: string
+): Promise<void> {
+  if (!sessionId) return;
+
+  let routineIds = new Set<string>();
+
+  const dropFromList = <T extends { id?: string; routineId?: string; routine?: { id?: string } }>(
+    list: T[]
+  ): T[] => {
+    const next: T[] = [];
+    for (const row of list) {
+      if (row?.id === sessionId) {
+        const rid = readRoutineId(row);
+        if (rid) routineIds.add(rid);
+        continue;
+      }
+      next.push(row);
+    }
+    return next;
+  };
+
+  try {
+    const localStr = await AsyncStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (localStr) {
+      const parsed = JSON.parse(localStr);
+      if (Array.isArray(parsed)) {
+        await AsyncStorage.setItem(
+          LOCAL_SESSIONS_KEY,
+          JSON.stringify(dropFromList(parsed as RoutineSessionListItem[]))
+        );
+      }
+    }
+  } catch (error) {
+    console.error("[RoutineService] Failed to remove from @local_sessions:", error);
+  }
+
+  try {
+    const globalStr = await AsyncStorage.getItem(SESSIONS_CACHE_KEY);
+    if (globalStr) {
+      const parsed = JSON.parse(globalStr);
+      if (Array.isArray(parsed)) {
+        await AsyncStorage.setItem(
+          SESSIONS_CACHE_KEY,
+          JSON.stringify(dropFromList(parsed as RoutineSessionListItem[]))
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      "[RoutineService] Failed to remove from @sessions_cache_v2:",
+      error
+    );
+  }
+
+  try {
+    const mappingStr = await AsyncStorage.getItem("@routine_id_mapping");
+    if (mappingStr) {
+      const mapping = JSON.parse(mappingStr) as Record<string, string>;
+      for (const [localId, serverId] of Object.entries(mapping)) {
+        if (routineIds.has(localId)) routineIds.add(serverId);
+        if (routineIds.has(serverId)) routineIds.add(localId);
+      }
+    }
+  } catch {
+    // ignore corrupt mapping
+  }
+
+  for (const routineId of routineIds) {
+    try {
+      const existing = await readPerRoutineSessionsCache(routineId);
+      if (!existing) continue;
+      const next = existing.filter((s) => s.id !== sessionId);
+      if (next.length === existing.length) continue;
+      await AsyncStorage.setItem(
+        routineSessionCacheKey(routineId),
+        JSON.stringify(next)
+      );
+    } catch (error) {
+      console.error(
+        `[RoutineService] Failed to remove session from routine cache ${routineId}:`,
+        error
+      );
+    }
+  }
+}
+
+export type RoutineSessionsLoadOutcome =
+  | { status: "ok"; sessions: RoutineSessionListItem[] }
+  | { status: "unavailable"; sessions: [] };
+
+/**
+ * Same offline-first path as findAllRoutineSessions, but distinguishes a true
+ * empty history (`ok` + []) from network failure with nothing local (`unavailable`).
+ */
+export async function loadRoutineSessionsOutcome(): Promise<RoutineSessionsLoadOutcome> {
   // Capture before any await so logout during in-flight work can invalidate writes.
   const writeEpochAtStart = sessionsCacheWriteEpoch;
   const cached = await readCachedRoutineSessions();
@@ -528,28 +741,121 @@ export async function findAllRoutineSessions(): Promise<
     if (writeEpochAtStart !== sessionsCacheWriteEpoch) {
       return apiSessions;
     }
-    return persistEnrichedSessionsCache(apiSessions);
+    // Keep unsynced local workouts in the cache write, not only the API page.
+    const locals = await readLocalPendingSessions();
+    return persistEnrichedSessionsCache(mergeSessions(locals, apiSessions));
   })().catch((error: CaughtError) => {
     console.warn("[RoutineService] Background sessions refresh failed:", error);
     return null;
   });
 
+  const titleMap = await loadRoutineTitleMap();
+
   if (cached) {
     void networkPromise;
-    return enrichRoutineSessionsMedia(mergeSessions(localSessions, cached));
+    const merged = mergeSessions(localSessions, cached);
+    const healedMerged = healSessionsWithTitleMap(merged, titleMap);
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedMerged),
+    });
+    return {
+      status: "ok",
+      sessions: await enrichRoutineSessionsMedia(healedMerged),
+    };
   }
 
   const fromNetwork = await networkPromise;
   if (fromNetwork) {
-    return mergeSessions(localSessions, fromNetwork);
+    const merged = mergeSessions(localSessions, fromNetwork);
+    const healedMerged = healSessionsWithTitleMap(merged, titleMap);
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedMerged),
+    });
+    return { status: "ok", sessions: healedMerged };
   }
 
   if (localSessions.length > 0) {
-    return enrichRoutineSessionsMedia(localSessions);
+    const healedLocal = healSessionsWithTitleMap(localSessions, titleMap);
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedLocal),
+    });
+    return {
+      status: "ok",
+      sessions: await enrichRoutineSessionsMedia(healedLocal),
+    };
   }
 
   console.warn("[RoutineService] No cached sessions available");
-  return [];
+  return { status: "unavailable", sessions: [] };
+}
+
+/**
+ * Forced network refresh for pull-to-refresh. Always merges pending local
+ * sessions so offline workouts do not disappear from Progress / Detail.
+ */
+export async function refreshRoutineSessionsOutcome(): Promise<RoutineSessionsLoadOutcome> {
+  const writeEpochAtStart = sessionsCacheWriteEpoch;
+  const localSessions = await readLocalPendingSessions();
+  const titleMap = await loadRoutineTitleMap();
+
+  try {
+    const apiSessions = await fetchAllRoutineSessionsUncached();
+    if (writeEpochAtStart !== sessionsCacheWriteEpoch) {
+      return {
+        status: "ok",
+        sessions: await enrichRoutineSessionsMedia(
+          mergeSessions(localSessions, apiSessions)
+        ),
+      };
+    }
+    const merged = mergeSessions(localSessions, apiSessions);
+    const healedMerged = healSessionsWithTitleMap(merged, titleMap);
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedMerged),
+    });
+    return {
+      status: "ok",
+      sessions: await persistEnrichedSessionsCache(healedMerged),
+    };
+  } catch (error: CaughtError) {
+    console.warn("[RoutineService] Forced sessions refresh failed:", error);
+    if (localSessions.length > 0) {
+      return {
+        status: "ok",
+        sessions: await enrichRoutineSessionsMedia(
+          healSessionsWithTitleMap(localSessions, titleMap)
+        ),
+      };
+    }
+    const cached = await readCachedRoutineSessions();
+    if (cached && cached.length > 0) {
+      return {
+        status: "ok",
+        sessions: await enrichRoutineSessionsMedia(
+          healSessionsWithTitleMap(
+            mergeSessions(localSessions, cached),
+            titleMap
+          )
+        ),
+      };
+    }
+    return { status: "unavailable", sessions: [] };
+  }
+}
+
+/**
+ * Offline-first session history: serve cache (+ pending local) immediately,
+ * refresh from network in the background when a cache exists.
+ */
+export async function findAllRoutineSessions(): Promise<
+  RoutineSessionListItem[]
+> {
+  const outcome = await loadRoutineSessionsOutcome();
+  return outcome.sessions;
 }
 
 async function enrichRoutineSessionsMedia(
@@ -605,7 +911,13 @@ function mergeSessionEntities(
     if (!list) continue;
     for (const session of list) {
       if (!session?.id) continue;
-      byId.set(session.id, session);
+      const existing = byId.get(session.id);
+      if (!existing) {
+        byId.set(session.id, session);
+        continue;
+      }
+      // Last list wins body; keep prior title when the newer row has none.
+      byId.set(session.id, coalesceSessionTitle(session, existing));
     }
   }
   return Array.from(byId.values()).sort((a, b) => {
@@ -723,6 +1035,8 @@ export async function findRoutineSessions(
     localForRoutine.length > 0 ||
     globalForRoutine.length > 0;
 
+  const writeEpochAtStart = sessionsCacheWriteEpoch;
+
   const networkPromise = apiFetch<RoutineSessionEntity[]>(
     `routines/${id}/sessions`,
     { method: "GET" }
@@ -744,18 +1058,48 @@ export async function findRoutineSessions(
       return null;
     });
 
+  const titleMap = await loadRoutineTitleMap();
+
   if (hasLocalSnapshot) {
     void networkPromise;
-    return localMerged;
+    const healedMerged = healSessionsWithTitleMap(
+      localMerged as unknown as RoutineSessionListItem[],
+      titleMap
+    );
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedMerged),
+      routineId: id,
+    });
+    return healedMerged as unknown as RoutineSessionEntity[];
   }
 
   const fromNetwork = await networkPromise;
   if (fromNetwork) {
-    return mergeSessionEntities(fromNetwork, localForRoutine);
+    const merged = mergeSessionEntities(fromNetwork, localForRoutine);
+    const healedMerged = healSessionsWithTitleMap(
+      merged as unknown as RoutineSessionListItem[],
+      titleMap
+    );
+    await persistHealedTitlePatches({
+      writeEpochAtStart,
+      patches: collectSessionTitlePatches(healedMerged),
+      routineId: id,
+    });
+    return healedMerged as unknown as RoutineSessionEntity[];
   }
 
   console.warn(`[RoutineService] No cached sessions for routine ${id}`);
-  return localForRoutine;
+  const healedLocal = healSessionsWithTitleMap(
+    localForRoutine as unknown as RoutineSessionListItem[],
+    titleMap
+  );
+  await persistHealedTitlePatches({
+    writeEpochAtStart,
+    patches: collectSessionTitlePatches(healedLocal),
+    routineId: id,
+  });
+  return healedLocal as unknown as RoutineSessionEntity[];
 }
 
 export interface GlobalStats {

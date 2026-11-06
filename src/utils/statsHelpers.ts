@@ -263,3 +263,129 @@ export function calculateProgressStats(
     trend,
   };
 }
+
+/** Period windows used by exercise progress / detail teaser. */
+export type ExerciseAnalysisPeriod = 7 | 30 | 90 | 0;
+
+export const EXERCISE_ANALYSIS_PERIODS: ExerciseAnalysisPeriod[] = [
+  7, 30, 90, 0,
+];
+
+export const EXERCISE_ANALYSIS_PERIOD_LABELS: Record<
+  ExerciseAnalysisPeriod,
+  string
+> = {
+  7: "7 días",
+  30: "30 días",
+  90: "90 días",
+  0: "Todo",
+};
+
+/** Fixed teaser window on exercise detail. */
+export const EXERCISE_PROGRESS_TEASER_PERIOD: ExerciseAnalysisPeriod = 30;
+
+export function normalizeExerciseAnalysisPeriod(
+  value: unknown
+): ExerciseAnalysisPeriod {
+  if (value === 7 || value === 30 || value === 90 || value === 0) {
+    return value;
+  }
+  return 30;
+}
+
+export function percentDelta(
+  current: number,
+  previous: number
+): number | null {
+  if (!(previous > 0) || !Number.isFinite(current) || !Number.isFinite(previous)) {
+    return null;
+  }
+  return ((current - previous) / previous) * 100;
+}
+
+export type ProgressMetric = "weight" | "oneRm" | "volume";
+
+export interface PeriodComparison {
+  /** Window length used for both current and previous (Todo → 30). */
+  windowDays: number;
+  currentStats: ProgressStats;
+  previousStats: ProgressStats;
+  weightDelta: number | null;
+  oneRmDelta: number | null;
+  volumeDelta: number | null;
+}
+
+function getDataForLocalWindow(
+  data: ExerciseProgressDataPoint[],
+  startDate: Date,
+  endDate: Date
+): ExerciseProgressDataPoint[] {
+  return data.filter((point) => {
+    const date = startOfLocalDay(
+      new Date(`${toLocalDateKey(point.date)}T00:00:00`)
+    );
+    return date >= startDate && date <= endDate;
+  });
+}
+
+/**
+ * Compare the selected period with the immediately previous window of equal length.
+ * Period `0` (Todo) uses the last 30 days vs the 30 days before that.
+ */
+export function compareWithPreviousPeriod(
+  data: ExerciseProgressDataPoint[],
+  period: ExerciseAnalysisPeriod,
+  now: Date = new Date()
+): PeriodComparison {
+  const windowDays = period === 0 ? 30 : period;
+  const today = startOfLocalDay(now);
+
+  const currentStart = new Date(today);
+  currentStart.setDate(currentStart.getDate() - (windowDays - 1));
+
+  const previousEnd = new Date(currentStart);
+  previousEnd.setDate(previousEnd.getDate() - 1);
+
+  const previousStart = new Date(previousEnd);
+  previousStart.setDate(previousStart.getDate() - (windowDays - 1));
+
+  const currentWindow = getDataForLocalWindow(data, currentStart, today);
+  const previousWindow = getDataForLocalWindow(
+    data,
+    previousStart,
+    previousEnd
+  );
+
+  const currentStats = calculateProgressStats(currentWindow);
+  const previousStats = calculateProgressStats(previousWindow);
+
+  return {
+    windowDays,
+    currentStats,
+    previousStats,
+    weightDelta: percentDelta(
+      currentStats.bestWeight,
+      previousStats.bestWeight
+    ),
+    oneRmDelta: percentDelta(currentStats.best1RM, previousStats.best1RM),
+    volumeDelta: percentDelta(
+      currentStats.totalVolume,
+      previousStats.totalVolume
+    ),
+  };
+}
+
+export function metricDeltaFromComparison(
+  comparison: PeriodComparison,
+  metric: ProgressMetric
+): number | null {
+  switch (metric) {
+    case "oneRm":
+      return comparison.oneRmDelta;
+    case "volume":
+      return comparison.volumeDelta;
+    case "weight":
+    default:
+      return comparison.weightDelta;
+  }
+}

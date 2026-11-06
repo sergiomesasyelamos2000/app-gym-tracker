@@ -18,6 +18,11 @@ import {
   upsertRoutineSessionCaches,
 } from "../features/routine/services/routineService";
 import {
+  attachRoutineSnapshot,
+  preserveClientRoutineTitle,
+  stripRoutineForApi,
+} from "../features/routine/utils/resolveSessionRoutineTitle";
+import {
   addToSyncQueue,
   filterSyncQueue,
   isOnline,
@@ -209,16 +214,28 @@ export async function saveSessionOffline(
   session: Partial<RoutineSessionEntity>
 ): Promise<RoutineSessionEntity> {
   const online = await isOnline();
+  const sessionWithRoutine = attachRoutineSnapshot(session, {
+    id: routineId,
+    title: session.routine?.title?.trim() || "",
+  });
 
   if (online && !routineId.startsWith("local_")) {
     try {
-      const result = await apiSaveSession(routineId, session);
-      await upsertRoutineSessionCaches({
-        ...result,
-        routineId: result.routineId || routineId,
-      });
+      const result = await apiSaveSession(
+        routineId,
+        stripRoutineForApi(sessionWithRoutine)
+      );
+      const cached = preserveClientRoutineTitle(
+        {
+          ...result,
+          routineId: result.routineId || routineId,
+        },
+        sessionWithRoutine,
+        routineId
+      );
+      await upsertRoutineSessionCaches(cached);
       kickSync();
-      return result;
+      return cached;
     } catch (error) {
       console.error("[OfflineRoutine] API failed with error:", error);
       if (error instanceof Error) {
@@ -234,16 +251,21 @@ export async function saveSessionOffline(
   }
 
   // Save locally
+  const localSessionId = `local_session_${Date.now()}`;
   const localSession: RoutineSessionEntity & { _isPending: boolean } = {
-    ...session,
-    id: `local_session_${Date.now()}`,
+    ...sessionWithRoutine,
+    id: localSessionId,
     routineId,
     createdAt: new Date(),
     _isPending: true,
   } as RoutineSessionEntity & { _isPending: boolean };
 
   await upsertRoutineSessionCaches(localSession);
-  await addToSyncQueue("CREATE_SESSION", { routineId, session });
+  await addToSyncQueue("CREATE_SESSION", {
+    routineId,
+    localSessionId,
+    session: sessionWithRoutine,
+  });
   kickSync();
 
   return localSession;

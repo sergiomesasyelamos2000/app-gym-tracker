@@ -67,7 +67,12 @@ export type OperationPayload =
   | { type: "DELETE_ROUTINE"; data: { id: string } }
   | {
       type: "CREATE_SESSION";
-      data: { routineId: string; session: Partial<RoutineSessionEntity> };
+      data: {
+        routineId: string;
+        /** Present for new offline saves; optional for legacy queued ops. */
+        localSessionId?: string;
+        session: Partial<RoutineSessionEntity>;
+      };
     }
   | { type: "CREATE_FOLDER"; data: { localId: string; title: string } }
   | { type: "RENAME_FOLDER"; data: { id: string; title: string } }

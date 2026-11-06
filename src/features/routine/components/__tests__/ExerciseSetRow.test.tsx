@@ -115,4 +115,35 @@ describe("ExerciseSetRow", () => {
     expect(check).toBeTruthy();
     fireEvent.press(check);
   });
+
+  it("renders a long previous mark in started mode without crashing", () => {
+    const { getByText, getByLabelText } = render(
+      <ExerciseSetRow
+        item={mockItem}
+        onUpdate={mockOnUpdate}
+        repsType="reps"
+        started={true}
+        previousMark="64kg x 10"
+      />
+    );
+
+    expect(getByText("1")).toBeTruthy();
+    expect(getByText("64kg x 10")).toBeTruthy();
+    expect(getByLabelText("Autocompletar con marca anterior")).toBeTruthy();
+  });
+
+  it("splits assisted previous mark into main line and A:n", () => {
+    const { getByText } = render(
+      <ExerciseSetRow
+        item={mockItem}
+        onUpdate={mockOnUpdate}
+        repsType="reps"
+        started={true}
+        previousMark="100kg x 12 (A:2)"
+      />
+    );
+
+    expect(getByText("100kg x 12")).toBeTruthy();
+    expect(getByText("A:2")).toBeTruthy();
+  });
 });

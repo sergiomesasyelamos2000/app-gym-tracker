@@ -66,6 +66,30 @@ describe("CustomToast", () => {
     expect(Haptics.impactAsync).toHaveBeenCalled();
   });
 
+  it("fires ±15 callbacks before a deferred haptic resolves", async () => {
+    let resolveHaptic!: () => void;
+    const hapticGate = new Promise<void>((resolve) => {
+      resolveHaptic = resolve;
+    });
+    (Haptics.impactAsync as jest.Mock).mockImplementation(
+      () => hapticGate
+    );
+
+    const { getByText } = render(
+      <CustomToast text1="Test" onAddTime={mockAddTime} progress={0.5} />
+    );
+
+    fireEvent.press(getByText("+15"));
+    fireEvent.press(getByText("+15"));
+
+    expect(mockAddTime).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      resolveHaptic();
+      await hapticGate;
+    });
+  });
+
   it("calls onSubtractTime when −15 button is pressed", async () => {
     const { getByText } = render(
       <CustomToast

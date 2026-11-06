@@ -130,8 +130,11 @@ export const getRepsColumnFlex = (
 export function getAnteriorColumnStyle(isSmallScreen: boolean) {
   return {
     flex: getColumnFlex(isSmallScreen, true).anterior,
-    alignItems: "center" as const,
+    // stretch + overflow so long marks ("64kg x 10") get a real max width
+    // and cannot paint over the serie badge (header keeps textAlign center).
+    alignItems: "stretch" as const,
     justifyContent: "center" as const,
     minWidth: 0,
+    overflow: "hidden" as const,
   };
 }

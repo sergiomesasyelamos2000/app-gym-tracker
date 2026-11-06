@@ -56,6 +56,9 @@ class RestTimerLiveActivity: NSObject {
   /// Drop stale start/update/clearRest tasks that lose the race to a newer write
   /// (e.g. image download finishing after leave-to-pause).
   private var updateSerial: Int = 0
+  /// Serialize ActivityKit content writes so an older in-flight update cannot
+  /// land after a newer one (toast ±15 bursts).
+  private var contentUpdateChain: Task<Bool, Never>?
 
   @available(iOS 16.2, *)
   private var currentActivity: Activity<WorkoutLiveAttributes>? {
@@ -69,6 +72,28 @@ class RestTimerLiveActivity: NSObject {
   private func nextUpdateSerial() -> Int {
     updateSerial += 1
     return updateSerial
+  }
+
+  @available(iOS 16.2, *)
+  @MainActor
+  private func commitContentUpdate(
+    serial: Int,
+    activity: Activity<WorkoutLiveAttributes>,
+    state: WorkoutLiveAttributes.ContentState,
+    startedAt: Date
+  ) async -> Bool {
+    let previous = contentUpdateChain
+    let task = Task { @MainActor in
+      _ = await previous?.value
+      guard serial == self.updateSerial else { return false }
+      await activity.update(ActivityContent(state: state, staleDate: nil))
+      guard serial == self.updateSerial else { return false }
+      self.currentActivity = activity
+      self.persistState(state, startedAt: startedAt)
+      return true
+    }
+    contentUpdateChain = task
+    return await task.value
   }
 
   @objc
@@ -119,6 +144,11 @@ class RestTimerLiveActivity: NSObject {
           content: ActivityContent(state: state, staleDate: nil),
           pushType: nil
         )
+        guard serial == self.updateSerial else {
+          await activity.end(nil, dismissalPolicy: .immediate)
+          resolver(false)
+          return
+        }
         self.currentActivity = activity
         self.persistState(state, startedAt: startedAt)
         resolver(true)
@@ -178,10 +208,13 @@ class RestTimerLiveActivity: NSObject {
       )
 
       if let activity = existing {
-        await activity.update(ActivityContent(state: state, staleDate: nil))
-        currentActivity = activity
-        persistState(state, startedAt: startedAt)
-        resolver(true)
+        let ok = await commitContentUpdate(
+          serial: serial,
+          activity: activity,
+          state: state,
+          startedAt: startedAt
+        )
+        resolver(ok)
       } else {
         startWorkoutLive(
           workoutStartedAtMs,
@@ -295,14 +328,13 @@ class RestTimerLiveActivity: NSObject {
         resolver(false)
         return
       }
-      await activity.update(ActivityContent(state: state, staleDate: nil))
-      // Same plist-safe persist as start/update — Omitir / clear rest must not
-      // write Optional.none into App Group UserDefaults.
-      WorkoutLiveStore.persistActivityState(
-        state,
+      let ok = await commitContentUpdate(
+        serial: serial,
+        activity: activity,
+        state: state,
         startedAt: activity.attributes.workoutStartedAt
       )
-      resolver(true)
+      resolver(ok)
     }
   }
 

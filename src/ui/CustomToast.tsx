@@ -66,8 +66,8 @@ const CustomToast = ({
     outputRange: ["0%", "100%"],
   });
 
-  const handleAddTime = async () => {
-    if (onAddTime) {
+  const fireImpact = () => {
+    void (async () => {
       try {
         if (Platform.OS === "ios") {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -77,27 +77,26 @@ const CustomToast = ({
       } catch (_) {
         // Haptics may fail silently; don't block action.
       }
-      onAddTime();
-    }
+    })();
   };
 
-  const handleSubtractTime = async () => {
-    if (onSubtractTime) {
-      try {
-        if (Platform.OS === "ios") {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        } else {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
-      } catch (_) {
-        // Haptics may fail silently; don't block action.
-      }
-      onSubtractTime();
-    }
+  const handleAddTime = () => {
+    if (!onAddTime) return;
+    // Call first so rapid ±15 keeps press order (do not await haptics).
+    onAddTime();
+    fireImpact();
   };
 
-  const handleCancel = async () => {
-    if (onCancel) {
+  const handleSubtractTime = () => {
+    if (!onSubtractTime) return;
+    onSubtractTime();
+    fireImpact();
+  };
+
+  const handleCancel = () => {
+    if (!onCancel) return;
+    onCancel();
+    void (async () => {
       try {
         if (Platform.OS === "ios") {
           await Haptics.notificationAsync(
@@ -109,8 +108,7 @@ const CustomToast = ({
       } catch (_) {
         // Haptics may fail silently; don't block cancel.
       }
-      onCancel();
-    }
+    })();
   };
 
   return (

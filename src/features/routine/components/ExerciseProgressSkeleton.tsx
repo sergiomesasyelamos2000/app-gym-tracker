@@ -19,30 +19,28 @@ export function ExerciseProgressSkeleton({
         {[0, 1, 2, 3].map((index) => (
           <Bone
             key={`pill-${index}`}
-            style={[
-              styles.pill,
-              index === 0 ? styles.pillActive : null,
-            ]}
+            style={[styles.pill, index === 1 ? styles.pillActive : null]}
           />
         ))}
       </View>
-      <Bone style={styles.rangeLine} />
 
-      <View style={styles.statsGrid}>
-        {[0, 1, 2, 3].map((index) => (
-          <View key={`stat-${index}`} style={styles.statTile}>
-            <Bone style={styles.statValue} />
-            <Bone style={styles.statLabel} />
+      <Bone style={styles.heroLine} />
+      <Bone style={styles.heroLineShort} />
+
+      <View style={styles.tilesRow}>
+        {[0, 1, 2].map((index) => (
+          <View key={`tile-${index}`} style={styles.tile}>
+            <Bone style={styles.tileLabel} />
+            <Bone style={styles.tileValue} />
           </View>
         ))}
       </View>
 
-      {[0, 1, 2].map((index) => (
-        <View key={`chart-${index}`} style={styles.chartCard}>
-          <Bone style={styles.chartTitle} />
-          <Bone style={styles.chartPlot} />
-        </View>
-      ))}
+      <View style={styles.chartCard}>
+        <Bone style={styles.segment} />
+        <Bone style={styles.chartPlot} />
+        <Bone style={styles.caption} />
+      </View>
     </SkeletonRoot>
   );
 }
@@ -53,15 +51,15 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       paddingHorizontal: 16,
       paddingTop: 8,
+      gap: 12,
     },
     pillsRow: {
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 8,
-      marginBottom: 12,
     },
     pill: {
-      minWidth: 84,
+      minWidth: 72,
       height: 32,
       borderRadius: 999,
       backgroundColor: theme.backgroundSecondary,
@@ -69,37 +67,41 @@ const createStyles = (theme: Theme) =>
     pillActive: {
       backgroundColor: theme.primary,
     },
-    rangeLine: {
-      width: "55%",
-      height: 12,
-      borderRadius: 6,
+    heroLine: {
+      width: "88%",
+      height: 18,
+      borderRadius: 8,
       backgroundColor: theme.backgroundSecondary,
-      marginBottom: 16,
     },
-    statsGrid: {
+    heroLineShort: {
+      width: "55%",
+      height: 18,
+      borderRadius: 8,
+      backgroundColor: theme.backgroundSecondary,
+      marginTop: -4,
+    },
+    tilesRow: {
       flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-      marginBottom: 16,
+      gap: 8,
     },
-    statTile: {
-      width: "47%",
+    tile: {
+      flex: 1,
       backgroundColor: theme.card,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
-      padding: 12,
+      padding: 10,
       gap: 8,
     },
-    statValue: {
-      width: "40%",
-      height: 18,
-      borderRadius: 6,
+    tileLabel: {
+      width: "70%",
+      height: 10,
+      borderRadius: 5,
       backgroundColor: theme.backgroundSecondary,
     },
-    statLabel: {
-      width: "60%",
-      height: 11,
+    tileValue: {
+      width: "55%",
+      height: 16,
       borderRadius: 6,
       backgroundColor: theme.backgroundSecondary,
     },
@@ -108,20 +110,26 @@ const createStyles = (theme: Theme) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.border,
-      padding: 14,
-      marginBottom: 12,
+      padding: 12,
+      gap: 12,
     },
-    chartTitle: {
-      width: "50%",
-      height: 14,
-      borderRadius: 6,
+    segment: {
+      width: "100%",
+      height: 36,
+      borderRadius: 10,
       backgroundColor: theme.backgroundSecondary,
-      marginBottom: 12,
     },
     chartPlot: {
       width: "100%",
-      height: 160,
+      height: 180,
       borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    caption: {
+      width: "45%",
+      height: 12,
+      borderRadius: 6,
+      alignSelf: "center",
       backgroundColor: theme.backgroundSecondary,
     },
   });

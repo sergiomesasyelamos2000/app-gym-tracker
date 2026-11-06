@@ -74,6 +74,7 @@ import {
   saveSessionOffline,
   updateRoutineOffline,
 } from "../../../services/offlineRoutineService";
+import { attachRoutineSnapshot } from "../utils/resolveSessionRoutineTitle";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useNotificationSettingsStore } from "../../../store/useNotificationSettingsStore";
 import { useRecordsStore } from "../../../store/useRecordsStore";
@@ -127,6 +128,7 @@ import {
   buildWorkoutLiveProgress,
   findNextIncompleteSet,
   nextRestSecondsDefault,
+  shiftRestEndAtMs,
 } from "../utils/workoutLiveHelpers";
 import {
   normalizeExerciseImage,
@@ -1694,7 +1696,11 @@ export default function RoutineDetailScreen() {
             ? await updateRoutineOffline(routineData.id, routineToSave)
             : await saveRoutineOffline(routineToSave);
 
-      const sessionToSave = buildSessionPayload();
+      const sessionToSave = attachRoutineSnapshot(buildSessionPayload(), {
+        id: updatedRoutine.id,
+        title:
+          routineTitle.trim() || updatedRoutine.title?.trim() || "",
+      });
       await saveSessionOffline(updatedRoutine.id, sessionToSave);
       invalidateSessionBurnCache();
 
@@ -2064,25 +2070,29 @@ export default function RoutineDetailScreen() {
         return;
       }
 
-      const currentRemaining = restTimerEndTimeRef.current
-        ? Math.max(
-            0,
-            Math.floor((restTimerEndTimeRef.current - Date.now()) / 1000)
-          )
-        : restTimeRemainingRef.current;
-      const newTime = Math.max(0, currentRemaining + deltaSeconds);
+      const previousEnd = restTimerEndTimeRef.current;
+      const endTime =
+        previousEnd != null
+          ? shiftRestEndAtMs(previousEnd, deltaSeconds)
+          : Date.now() +
+            Math.max(0, restTimeRemainingRef.current + deltaSeconds) * 1000;
 
-      if (newTime <= 0) {
+      if (endTime <= Date.now()) {
         await leaveRest({ reason: "expired", nativeAlreadyUpdated: false });
         return;
       }
+
+      const newTime = Math.max(
+        0,
+        Math.floor((endTime - Date.now()) / 1000)
+      );
 
       restActiveRef.current = true;
       restEpochRef.current += 1;
       const epochAtDelta = restEpochRef.current;
 
       const nextTotal = nextRestSecondsDefault(
-        totalRestTimeRef.current || currentRemaining,
+        totalRestTimeRef.current || newTime,
         newTime,
         deltaSeconds
       );
@@ -2091,7 +2101,6 @@ export default function RoutineDetailScreen() {
       setTotalRestTime(nextTotal);
       totalRestTimeRef.current = nextTotal;
 
-      const endTime = Date.now() + newTime * 1000;
       setRestTimerEndTime(endTime);
       restTimerEndTimeRef.current = endTime;
       startRestCountdownInterval();
@@ -2246,21 +2255,15 @@ export default function RoutineDetailScreen() {
 
   const syncRestTimerFromIntent = useCallback(
     async (deltaSeconds: number, endTimestampMs?: number | null) => {
-      // Android native already applied the delta; sync toast to its end time.
-      // If endTimestampMs is missing, apply the delta locally (iOS URL path).
+      // Android / Island already applied the delta; sync toast to its end time.
+      // If endTimestampMs is missing, shift the absolute end (iOS URL path).
       const resolvedEndMs =
         typeof endTimestampMs === "number" && Number.isFinite(endTimestampMs)
           ? endTimestampMs
-          : Date.now() +
-            Math.max(
-              0,
-              (restTimerEndTimeRef.current
-                ? Math.floor(
-                    (restTimerEndTimeRef.current - Date.now()) / 1000
-                  )
-                : restTimeRemainingRef.current) + deltaSeconds
-            ) *
-              1000;
+          : restTimerEndTimeRef.current != null
+            ? shiftRestEndAtMs(restTimerEndTimeRef.current, deltaSeconds)
+            : Date.now() +
+              Math.max(0, restTimeRemainingRef.current + deltaSeconds) * 1000;
 
       if (resolvedEndMs <= Date.now()) {
         await leaveRest({ reason: "skip", nativeAlreadyUpdated: true });

@@ -51,6 +51,7 @@ export type WorkoutStackParamList = {
   };
   ExerciseProgress: {
     exercise: ExerciseRequestDto;
+    period?: 7 | 30 | 90 | 0;
   };
 };
 

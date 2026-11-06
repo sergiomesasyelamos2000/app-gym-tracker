@@ -16,9 +16,13 @@ import {
   shouldAcceptWorkoutLiveWrite,
   type WorkoutLiveWriteGate,
 } from "./workoutLiveWriteGate";
+import { createLatestWinsQueue } from "./workoutLiveUpdateQueue";
 
 /** Blocks non-pause Live writes after leave-to-pause until resume/start/end. */
 let writeGate: WorkoutLiveWriteGate = "open";
+
+/** Latest-wins queue so rapid ±15 rest updates never apply out of order. */
+const updateQueue = createLatestWinsQueue<WorkoutLiveSnapshot>();
 
 export const lockWorkoutLiveForPause = (): void => {
   writeGate = "paused";
@@ -28,9 +32,9 @@ export const unlockWorkoutLiveWrites = (): void => {
   writeGate = "open";
 };
 
-const IOSLiveActivity = NativeModules.RestTimerLiveActivity;
-const IOSIntentModule = NativeModules.RestTimerLiveActivityModule;
-const AndroidModule = NativeModules.RestTimerNotification;
+const getIOSLiveActivity = () => NativeModules.RestTimerLiveActivity;
+const getIOSIntentModule = () => NativeModules.RestTimerLiveActivityModule;
+const getAndroidModule = () => NativeModules.RestTimerNotification;
 
 export type WorkoutLiveIntentAction =
   | "add"
@@ -75,21 +79,23 @@ export interface RestTimerLiveState {
 let _emitter: NativeEventEmitter | null = null;
 const getEmitter = (): NativeEventEmitter | null => {
   if (Platform.OS !== "ios") return null;
-  if (!_emitter && IOSIntentModule) {
-    _emitter = new NativeEventEmitter(IOSIntentModule);
+  const intentModule = getIOSIntentModule();
+  if (!_emitter && intentModule) {
+    _emitter = new NativeEventEmitter(intentModule);
   }
   return _emitter;
 };
 
 const getModule = () => {
-  if (Platform.OS === "android") return AndroidModule;
-  if (Platform.OS === "ios") return IOSLiveActivity;
+  if (Platform.OS === "android") return getAndroidModule();
+  if (Platform.OS === "ios") return getIOSLiveActivity();
   return null;
 };
 
 export const pollNativeIntent = () => {
-  if (Platform.OS !== "ios" || !IOSIntentModule?.pollPendingIntent) return;
-  IOSIntentModule.pollPendingIntent().catch(() => {});
+  const intentModule = getIOSIntentModule();
+  if (Platform.OS !== "ios" || !intentModule?.pollPendingIntent) return;
+  intentModule.pollPendingIntent().catch(() => {});
 };
 
 const parseWorkoutLiveActionURL = (
@@ -144,10 +150,16 @@ function progressKey(
   return JSON.stringify(toNativeProgress(progress ?? {}, pause));
 }
 
+/** Quantize only for dedupe — outbound / cache keep exact milliseconds. */
 function normalizeRestEnd(ms?: number | null): number | null {
   if (ms == null || !Number.isFinite(ms)) return null;
-  // Quantize to 1s so sub-second JS drift does not thrash native updates.
   return Math.round(ms / 1000) * 1000;
+}
+
+/** Pass through finite rest ends without rounding (toast ↔ Island share one instant). */
+function finiteRestEnd(ms?: number | null): number | null {
+  if (ms == null || !Number.isFinite(ms)) return null;
+  return ms;
 }
 
 function snapshotsEqual(
@@ -174,16 +186,25 @@ function snapshotsEqual(
 
 let lastSentSnapshot: WorkoutLiveSnapshot | null = null;
 
+/** Test-only: reset dedupe cache, write gate, and update queue. */
+export const resetWorkoutLiveStateForTests = (): void => {
+  lastSentSnapshot = null;
+  writeGate = "open";
+  updateQueue.invalidate();
+};
+
 /** Keep JS dedupe cache aligned after native Island ±15 already updated Activity. */
 export const noteWorkoutLiveRestEnd = (
   restEndAtMs: number | null,
   restSecondsDefault?: number | null
 ): void => {
+  // Drop any queued toast write so it cannot overwrite the Island end.
+  updateQueue.invalidate();
   if (!lastSentSnapshot) return;
   lastSentSnapshot = {
     ...lastSentSnapshot,
     isResting: restEndAtMs != null,
-    restEndAtMs: normalizeRestEnd(restEndAtMs),
+    restEndAtMs: finiteRestEnd(restEndAtMs),
     restSecondsDefault:
       restSecondsDefault !== undefined
         ? restSecondsDefault
@@ -198,9 +219,10 @@ export const startWorkoutLive = async (
   if (!module) return;
   // Resume / fresh start always re-opens writers after a leave-to-pause lock.
   unlockWorkoutLiveWrites();
+  updateQueue.invalidate();
   const normalized: WorkoutLiveSnapshot = {
     ...snapshot,
-    restEndAtMs: normalizeRestEnd(snapshot.restEndAtMs),
+    restEndAtMs: finiteRestEnd(snapshot.restEndAtMs),
     isPaused: Boolean(snapshot.isPaused),
     pausedElapsedSeconds: snapshot.isPaused
       ? snapshot.pausedElapsedSeconds ?? 0
@@ -208,8 +230,12 @@ export const startWorkoutLive = async (
   };
   try {
     if (typeof module.startWorkoutLive === "function") {
-      await module.startWorkoutLive(...snapshotToArgs(normalized));
-      lastSentSnapshot = normalized;
+      const result = await module.startWorkoutLive(
+        ...snapshotToArgs(normalized)
+      );
+      if (result !== false) {
+        lastSentSnapshot = normalized;
+      }
       return;
     }
     // Legacy rest-only native module fallback.
@@ -251,7 +277,7 @@ export const updateWorkoutLive = async (
   const isResting = Boolean(snapshot.isResting);
   // When leaving rest, never reuse a stale end timestamp from the cache.
   const restEndAtMs = isResting
-    ? normalizeRestEnd(
+    ? finiteRestEnd(
         snapshot.restEndAtMs !== undefined
           ? snapshot.restEndAtMs
           : lastSentSnapshot?.restEndAtMs
@@ -293,34 +319,69 @@ export const updateWorkoutLive = async (
     return;
   }
 
-  // If only non-image fields changed, do not resend the same image URL (Android
-  // would otherwise spawn another decode thread on every update).
-  const imageForNative =
-    lastSentSnapshot &&
-    (lastSentSnapshot.imageUrl ?? null) === (full.imageUrl ?? null)
-      ? null
-      : full.imageUrl;
-
-  const nativeSnapshot: WorkoutLiveSnapshot = {
-    ...full,
-    imageUrl: imageForNative,
-  };
-
   try {
-    if (typeof module.updateWorkoutLive === "function") {
-      await module.updateWorkoutLive(...snapshotToArgs(nativeSnapshot));
-      lastSentSnapshot = full;
-      return;
-    }
-    if (full.isResting && full.restEndAtMs) {
-      await module.updateRestTimer(
-        full.restEndAtMs,
-        full.exerciseName,
-        toLiveActivityImageUrl(imageForNative),
-        full.nextSetSummary
-      );
-      lastSentSnapshot = full;
-    }
+    await updateQueue.enqueue(full, async (toSend, stillCurrent) => {
+      // Resolve image at send time so coalesced jobs still skip re-decode.
+      const imageForNative =
+        lastSentSnapshot &&
+        (lastSentSnapshot.imageUrl ?? null) === (toSend.imageUrl ?? null)
+          ? null
+          : toSend.imageUrl;
+
+      let result: boolean | void | undefined = false;
+      if (typeof module.updateWorkoutLive === "function") {
+        result = await module.updateWorkoutLive(
+          ...snapshotToArgs({
+            ...toSend,
+            imageUrl: imageForNative,
+          })
+        );
+      } else if (toSend.isResting && toSend.restEndAtMs) {
+        await module.updateRestTimer(
+          toSend.restEndAtMs,
+          toSend.exerciseName,
+          toLiveActivityImageUrl(imageForNative),
+          toSend.nextSetSummary
+        );
+        result = true;
+      } else {
+        return false;
+      }
+
+      if (result === false) {
+        return false;
+      }
+
+      if (!stillCurrent()) {
+        // Island note (or invalidate) won while this RPC was in flight. The stale
+        // activity.update may already have landed — re-assert the authoritative
+        // cache when nothing newer is queued. Bypass snapshotsEqual via a direct
+        // queued native write (cache already holds the Island end).
+        const authoritative = lastSentSnapshot;
+        if (
+          authoritative &&
+          !updateQueue.hasPending() &&
+          !snapshotsEqual(authoritative, toSend) &&
+          typeof module.updateWorkoutLive === "function"
+        ) {
+          void updateQueue.enqueue(authoritative, async (snap, still) => {
+            if (!still()) return false;
+            const nativeResult = await module.updateWorkoutLive(
+              ...snapshotToArgs({
+                ...snap,
+                imageUrl: null,
+              })
+            );
+            return nativeResult !== false;
+          });
+        }
+        return false;
+      }
+
+      // Commit only while this job is still latest (Island note may have won).
+      lastSentSnapshot = toSend;
+      return true;
+    });
   } catch (e) {
     console.warn("[WorkoutLive] updateWorkoutLive failed", e);
   }
@@ -329,6 +390,7 @@ export const updateWorkoutLive = async (
 export const endWorkoutLive = async (): Promise<void> => {
   const module = getModule();
   unlockWorkoutLiveWrites();
+  updateQueue.invalidate();
   if (!module) return;
   try {
     if (typeof module.endWorkoutLive === "function") {
@@ -390,6 +452,7 @@ export const clearWorkoutRestLive = async (): Promise<void> => {
   if (!shouldAcceptWorkoutLiveClearRest(writeGate)) {
     return;
   }
+  updateQueue.invalidate();
   try {
     if (typeof module.clearRestLive === "function") {
       await module.clearRestLive();
@@ -424,12 +487,13 @@ export const endRestTimerLive = clearWorkoutRestLive;
 export const getCurrentRestTimerLiveState =
   async (): Promise<RestTimerLiveState | null> => {
     if (Platform.OS !== "ios") return null;
+    const liveActivity = getIOSLiveActivity();
     try {
-      if (typeof IOSLiveActivity?.getCurrentWorkoutLiveState === "function") {
-        return (await IOSLiveActivity.getCurrentWorkoutLiveState()) as RestTimerLiveState;
+      if (typeof liveActivity?.getCurrentWorkoutLiveState === "function") {
+        return (await liveActivity.getCurrentWorkoutLiveState()) as RestTimerLiveState;
       }
-      if (typeof IOSLiveActivity?.getCurrentRestTimerState === "function") {
-        return (await IOSLiveActivity.getCurrentRestTimerState()) as RestTimerLiveState;
+      if (typeof liveActivity?.getCurrentRestTimerState === "function") {
+        return (await liveActivity.getCurrentRestTimerState()) as RestTimerLiveState;
       }
       return null;
     } catch (e) {
@@ -439,11 +503,12 @@ export const getCurrentRestTimerLiveState =
   };
 
 export const consumeAppTerminatedAt = async (): Promise<number | null> => {
-  if (Platform.OS !== "ios" || !IOSIntentModule?.consumeAppTerminatedAt) {
+  const intentModule = getIOSIntentModule();
+  if (Platform.OS !== "ios" || !intentModule?.consumeAppTerminatedAt) {
     return null;
   }
   try {
-    const value = await IOSIntentModule.consumeAppTerminatedAt();
+    const value = await intentModule.consumeAppTerminatedAt();
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   } catch (e) {
     console.warn("[WorkoutLive] consumeAppTerminatedAt failed", e);
@@ -452,11 +517,12 @@ export const consumeAppTerminatedAt = async (): Promise<number | null> => {
 };
 
 export const consumePendingCompleteSet = async (): Promise<boolean> => {
-  if (Platform.OS !== "ios" || !IOSIntentModule?.consumePendingCompleteSet) {
+  const intentModule = getIOSIntentModule();
+  if (Platform.OS !== "ios" || !intentModule?.consumePendingCompleteSet) {
     return false;
   }
   try {
-    return Boolean(await IOSIntentModule.consumePendingCompleteSet());
+    return Boolean(await intentModule.consumePendingCompleteSet());
   } catch {
     return false;
   }

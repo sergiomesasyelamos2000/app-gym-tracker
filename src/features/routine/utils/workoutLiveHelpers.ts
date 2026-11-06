@@ -43,6 +43,17 @@ export function nextRestSecondsDefault(
   return Math.max(next, remaining, 1);
 }
 
+/**
+ * Shift an absolute rest end by ±N seconds without rebasing on Date.now().
+ * Preserves sub-second fractions so toast and Live Activity share one instant.
+ */
+export function shiftRestEndAtMs(
+  previousEndAtMs: number,
+  deltaSeconds: number
+): number {
+  return previousEndAtMs + deltaSeconds * 1000;
+}
+
 /** Human-readable next-set line for Live Activity / FGS notification. */
 export function buildNextSetSummary(
   setList: SetRequestDto[],
