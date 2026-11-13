@@ -24,7 +24,17 @@ export function nativeStackStatusBarStyle(
   return isDark ? "light" : "dark";
 }
 
+const supportsStatusBarStack =
+  Platform.OS !== "web" &&
+  typeof (StatusBar as { pushStackEntry?: unknown }).pushStackEntry ===
+    "function";
+
 function pushEdgeBar(barStyle: StatusBarStyle) {
+  if (!supportsStatusBarStack) {
+    // react-native-web StatusBar is a stub without push/pop stack APIs.
+    StatusBar.setBarStyle?.(barStyle, true);
+    return null;
+  }
   return StatusBar.pushStackEntry({
     ...EDGE_STATUS_BAR,
     barStyle,
@@ -32,6 +42,10 @@ function pushEdgeBar(barStyle: StatusBarStyle) {
 }
 
 function reassertAndroidBarStyle(entry: object, barStyle: StatusBarStyle) {
+  if (!supportsStatusBarStack) {
+    StatusBar.setBarStyle?.(barStyle, false);
+    return entry;
+  }
   const next = StatusBar.replaceStackEntry(entry, {
     ...EDGE_STATUS_BAR,
     animated: false,
@@ -60,11 +74,11 @@ export function useFocusedStatusBar(barStyle: StatusBarStyle): void {
       const timers: ReturnType<typeof setTimeout>[] = [];
       let interactionTask: { cancel: () => void } | undefined;
 
-      if (Platform.OS === "android") {
+      if (Platform.OS === "android" && entry) {
         const scheduleReassert = (delayMs: number) => {
           timers.push(
             setTimeout(() => {
-              if (cancelled) return;
+              if (cancelled || !entry) return;
               entry = reassertAndroidBarStyle(entry, barStyle);
             }, delayMs)
           );
@@ -73,7 +87,7 @@ export function useFocusedStatusBar(barStyle: StatusBarStyle): void {
         ANDROID_REASSERT_MS.forEach(scheduleReassert);
 
         interactionTask = InteractionManager.runAfterInteractions(() => {
-          if (cancelled) return;
+          if (cancelled || !entry) return;
           entry = reassertAndroidBarStyle(entry, barStyle);
           scheduleReassert(400);
         });
@@ -83,7 +97,9 @@ export function useFocusedStatusBar(barStyle: StatusBarStyle): void {
         cancelled = true;
         timers.forEach(clearTimeout);
         interactionTask?.cancel();
-        StatusBar.popStackEntry(entry);
+        if (entry && supportsStatusBarStack) {
+          StatusBar.popStackEntry(entry);
+        }
       };
     }, [barStyle])
   );
@@ -101,7 +117,9 @@ export function useOverlayStatusBar(
     if (!active) return;
     const entry = pushEdgeBar(barStyle);
     return () => {
-      StatusBar.popStackEntry(entry);
+      if (entry && supportsStatusBarStack) {
+        StatusBar.popStackEntry(entry);
+      }
     };
   }, [barStyle, active]);
 }
