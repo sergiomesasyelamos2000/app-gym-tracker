@@ -28,6 +28,7 @@ import {
   getAnteriorColumnStyle,
   getColumnFlex,
   getRepsColumnFlex,
+  getSerieColumnStyle,
 } from "./columnConstants";
 import { useSetRowLogic } from "./useSetRowLogic";
 
@@ -375,14 +376,7 @@ const ExerciseSetRow = ({
         ]}
       >
         {/* Serie badge */}
-        <View
-          style={{
-            flex: columnFlex.serie,
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 0,
-          }}
-        >
+        <View style={getSerieColumnStyle(isSmallScreen, started)}>
           <TouchableOpacity
             onPress={() => !readonly && setIsSetTypeModalVisible(true)}
             disabled={readonly}

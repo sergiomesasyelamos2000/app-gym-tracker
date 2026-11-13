@@ -41,6 +41,7 @@ import {
   getAnteriorColumnStyle,
   getColumnFlex,
   getRepsColumnFlex,
+  getSerieColumnStyle,
 } from "./columnConstants";
 
 interface Props {
@@ -791,12 +792,7 @@ const ExerciseSetList = ({
         ]}
       >
         <TouchableOpacity
-          style={{
-            flex: columnFlex.serie,
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 0,
-          }}
+          style={getSerieColumnStyle(isSmallScreen, started)}
           onPress={() => openColumnInfo("serie")}
           disabled={!started}
           hitSlop={6}
