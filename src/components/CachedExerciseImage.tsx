@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Image, ImageStyle, StyleProp } from "react-native";
 import { isAnimatedExerciseImage } from "../utils/exerciseImage";
 import { toCloudinaryListThumbUrl } from "../utils/cloudinaryThumbUrl";
-import { peekCachedStaticUri } from "../services/exerciseMediaCache";
+import {
+  ensureExerciseMediaIndex,
+  peekCachedStaticUri,
+  subscribeExerciseMedia,
+} from "../services/exerciseMediaCache";
 
 interface CachedExerciseImageProps {
   imageUrl: string | null | undefined;
@@ -82,11 +86,27 @@ export default function CachedExerciseImage({
   onError,
 }: CachedExerciseImageProps) {
   const [hasError, setHasError] = useState(false);
+  const [mediaRevision, setMediaRevision] = useState(0);
   const onErrorRef = React.useRef(onError);
   onErrorRef.current = onError;
+
+  useEffect(() => {
+    let active = true;
+    void ensureExerciseMediaIndex().then(() => {
+      if (active) setMediaRevision((n) => n + 1);
+    });
+    const unsub = subscribeExerciseMedia(() => {
+      if (active) setMediaRevision((n) => n + 1);
+    });
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, []);
+
   const resolvedUri = useMemo(
     () => resolveImageUri(imageUrl, allowAnimated, variant),
-    [imageUrl, allowAnimated, variant]
+    [imageUrl, allowAnimated, variant, mediaRevision]
   );
   useEffect(() => {
     setHasError(false);

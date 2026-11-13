@@ -15,6 +15,7 @@ import {
 } from "../features/routine/utils/exerciseSearch";
 import { clearExerciseImageLookupCache } from "../features/routine/utils/exerciseImageLookupCache";
 import { warmExerciseCatalogThumbs } from "../features/routine/utils/prefetchExerciseThumbs";
+import { collectRoutinePriorityExerciseIds } from "./collectRoutinePriorityExerciseIds";
 import {
   clearExerciseMediaCache,
   warmExerciseMediaCache,
@@ -143,6 +144,28 @@ async function getCachedJson<T>(key: string): Promise<T | null> {
   }
 }
 
+/** Monotonic id so only the latest catalog warm enqueues after async priority collect. */
+let exerciseMediaWarmRequestId = 0;
+
+/** Fire-and-forget media warm; routine exercise IDs download first. */
+function warmExerciseMediaWithRoutinePriority(
+  exercises: ExerciseRequestDto[]
+): void {
+  const requestId = ++exerciseMediaWarmRequestId;
+  void (async () => {
+    let priorityIds: string[] = [];
+    try {
+      priorityIds = await collectRoutinePriorityExerciseIds();
+    } catch {
+      // best-effort; warm full catalog without priority
+    }
+    if (requestId !== exerciseMediaWarmRequestId) {
+      return;
+    }
+    warmExerciseMediaCache(exercises, { priorityIds });
+  })();
+}
+
 async function persistCatalogFromNetwork(
   exercises: ExerciseRequestDto[],
   generationAtFetchStart: number
@@ -150,7 +173,7 @@ async function persistCatalogFromNetwork(
   await applyNetworkExerciseCatalog(exercises, generationAtFetchStart);
   clearExerciseImageLookupCache();
   warmExerciseCatalogThumbs();
-  warmExerciseMediaCache(exercises);
+  warmExerciseMediaWithRoutinePriority(exercises);
 }
 
 async function refreshExercisesCacheInBackground(): Promise<void> {
@@ -235,7 +258,7 @@ async function runCatalogPrefetch(force: boolean): Promise<void> {
     const snapshot = peekExerciseCatalogSnapshot();
     if (snapshot && !isExerciseCatalogStale()) {
       warmExerciseCatalogThumbs();
-      warmExerciseMediaCache(snapshot.exercises);
+      warmExerciseMediaWithRoutinePriority(snapshot.exercises);
       return;
     }
     // Ensure storage-backed freshness check when memory is empty.
@@ -243,7 +266,7 @@ async function runCatalogPrefetch(force: boolean): Promise<void> {
       const stored = await readExerciseCatalog();
       if (stored && !isExerciseCatalogStale()) {
         warmExerciseCatalogThumbs();
-        warmExerciseMediaCache(stored.exercises);
+        warmExerciseMediaWithRoutinePriority(stored.exercises);
         return;
       }
     }

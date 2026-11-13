@@ -5,7 +5,6 @@ import * as FileSystem from "expo-file-system/legacy";
 import {
   EXERCISE_MEDIA_FAIL_RETRY_MS,
   EXERCISE_MEDIA_INDEX_KEY,
-  EXERCISE_MEDIA_MAX_BYTES,
   __resetExerciseMediaCacheForTests,
   clearExerciseMediaCache,
   collectExerciseMediaJobs,
@@ -107,6 +106,37 @@ describe("collectExerciseMediaJobs", () => {
       } as never),
     ]);
     expect(jobs).toEqual([]);
+  });
+
+  it("orders priority exercise ids before the rest within each kind", () => {
+    const catalog = [
+      exercise({
+        id: "e1",
+        imageUrl: "https://cdn.example.com/e1.jpg",
+        giftUrl: "https://cdn.example.com/e1.gif",
+      } as never),
+      exercise({
+        id: "e2",
+        imageUrl: "https://cdn.example.com/e2.jpg",
+        giftUrl: "https://cdn.example.com/e2.gif",
+      } as never),
+      exercise({
+        id: "e3",
+        imageUrl: "https://cdn.example.com/e3.jpg",
+        giftUrl: "https://cdn.example.com/e3.gif",
+      } as never),
+    ];
+    const jobs = collectExerciseMediaJobs(catalog, { priorityIds: ["e2"] });
+    expect(jobs.filter((j) => j.kind === "static").map((j) => j.exerciseId)).toEqual([
+      "e2",
+      "e1",
+      "e3",
+    ]);
+    expect(jobs.filter((j) => j.kind === "gif").map((j) => j.exerciseId)).toEqual([
+      "e2",
+      "e1",
+      "e3",
+    ]);
   });
 });
 
@@ -258,8 +288,9 @@ describe("warmExerciseMediaCache", () => {
     expect(fs.createDownloadResumable).not.toHaveBeenCalled();
   });
 
-  it("still downloads static after motion cap is reached", async () => {
-    // Seed motion bytes at the cap (static bytes must not block new static downloads).
+  it("downloads motion without a byte cap", async () => {
+    // Seed a large existing motion entry; new gifs must still download.
+    const huge = 600 * 1024 * 1024;
     memory.set(
       EXERCISE_MEDIA_INDEX_KEY,
       JSON.stringify({
@@ -267,13 +298,13 @@ describe("warmExerciseMediaCache", () => {
           static: {
             sourceUrl: "https://cdn.example.com/seed.jpg",
             relativePath: "exercise-media/seeded/static.jpg",
-            bytes: EXERCISE_MEDIA_MAX_BYTES,
+            bytes: huge,
             savedAt: Date.now(),
           },
           gif: {
             sourceUrl: "https://cdn.example.com/seed.gif",
             relativePath: "exercise-media/seeded/gif.gif",
-            bytes: EXERCISE_MEDIA_MAX_BYTES,
+            bytes: huge,
             savedAt: Date.now(),
           },
         },
@@ -309,8 +340,45 @@ describe("warmExerciseMediaCache", () => {
       downloadedKinds.some((p) => p.includes("e-new/static.jpg"))
     ).toBe(true);
     expect(downloadedKinds.some((p) => p.includes("e-new/gif.gif"))).toBe(
-      false
+      true
     );
+  });
+
+  it("downloads priority static before rest gif when both are missing", async () => {
+    const downloadOrder: string[] = [];
+    fs.createDownloadResumable.mockImplementation((url: string, path: string) => {
+      downloadOrder.push(path);
+      return {
+        url,
+        path,
+        downloadAsync: jest.fn().mockResolvedValue({ status: 200, uri: path }),
+        cancelAsync: jest.fn(),
+      };
+    });
+
+    await warmExerciseMediaCacheAsync(
+      [
+        exercise({
+          id: "e1",
+          imageUrl: "https://cdn.example.com/e1.jpg",
+          giftUrl: "https://cdn.example.com/e1.gif",
+        } as never),
+        exercise({
+          id: "e2",
+          imageUrl: "https://cdn.example.com/e2.jpg",
+          giftUrl: "https://cdn.example.com/e2.gif",
+        } as never),
+      ],
+      { priorityIds: ["e2"] }
+    );
+
+    const e2Static = downloadOrder.findIndex((p) =>
+      p.includes("e2/static.jpg")
+    );
+    const e1Gif = downloadOrder.findIndex((p) => p.includes("e1/gif.gif"));
+    expect(e2Static).toBeGreaterThanOrEqual(0);
+    expect(e1Gif).toBeGreaterThanOrEqual(0);
+    expect(e2Static).toBeLessThan(e1Gif);
   });
 
   it("clears media files and index", async () => {

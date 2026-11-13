@@ -30,9 +30,18 @@ export type MediaJob = {
 
 export const EXERCISE_MEDIA_INDEX_KEY = "@exercise_media_index_v1";
 export const EXERCISE_MEDIA_CONCURRENCY = 3;
-export const EXERCISE_MEDIA_MAX_BYTES = 600 * 1024 * 1024;
 export const EXERCISE_MEDIA_FAIL_RETRY_MS = 6 * 60 * 60 * 1000;
 export const EXERCISE_MEDIA_DOWNLOAD_TIMEOUT_MS = 20_000;
+
+export type WarmExerciseMediaOptions = {
+  /** Exercise IDs to download first (e.g. from saved routines). */
+  priorityIds?: ReadonlySet<string> | readonly string[];
+};
+
+type PendingWarm = {
+  exercises: ExerciseRequestDto[];
+  options?: WarmExerciseMediaOptions;
+};
 
 type MediaIndex = Record<string, ExerciseMediaRecord>;
 
@@ -41,7 +50,7 @@ const MEDIA_ROOT = "exercise-media";
 let memoryIndex: MediaIndex | null = null;
 let indexLoadPromise: Promise<void> | null = null;
 let warmPromise: Promise<void> | null = null;
-let pendingWarmExercises: ExerciseRequestDto[] | null = null;
+let pendingWarm: PendingWarm | null = null;
 let cacheGeneration = 0;
 let writeChain: Promise<void> = Promise.resolve();
 const listeners = new Set<() => void>();
@@ -125,14 +134,36 @@ function getVideoUrl(exercise: ExerciseRequestDto): string | null {
   return isHttpUrl(video) ? video.trim() : null;
 }
 
+function toPrioritySet(
+  priorityIds?: ReadonlySet<string> | readonly string[]
+): Set<string> {
+  if (!priorityIds) return new Set();
+  if (priorityIds instanceof Set) return priorityIds;
+  return new Set(priorityIds);
+}
+
+/**
+ * Build download jobs. Within each kind (static → gif → video), priority
+ * exercise IDs are queued before the rest of the catalog.
+ */
 export function collectExerciseMediaJobs(
-  exercises: ExerciseRequestDto[]
+  exercises: ExerciseRequestDto[],
+  options?: { priorityIds?: ReadonlySet<string> | readonly string[] }
 ): MediaJob[] {
+  const priority = toPrioritySet(options?.priorityIds);
+  const ordered =
+    priority.size === 0
+      ? exercises
+      : [
+          ...exercises.filter((e) => e?.id && priority.has(e.id)),
+          ...exercises.filter((e) => e?.id && !priority.has(e.id)),
+        ];
+
   const staticJobs: MediaJob[] = [];
   const gifJobs: MediaJob[] = [];
   const videoJobs: MediaJob[] = [];
 
-  for (const exercise of exercises) {
+  for (const exercise of ordered) {
     if (!exercise?.id) continue;
     const staticUrl = getStaticExerciseImageUrl(exercise);
     if (isHttpUrl(staticUrl)) {
@@ -223,16 +254,6 @@ export async function ensureExerciseMediaIndex(): Promise<void> {
 
 function getIndexSync(): MediaIndex {
   return memoryIndex ?? {};
-}
-
-/** Cap applies to motion files only — static images are always downloaded. */
-function motionBytes(index: MediaIndex): number {
-  let sum = 0;
-  for (const record of Object.values(index)) {
-    if (record.gif) sum += record.gif.bytes;
-    if (record.video) sum += record.video.bytes;
-  }
-  return sum;
 }
 
 function entryUri(entry: ExerciseMediaEntry | undefined): string | null {
@@ -500,7 +521,8 @@ async function isDeviceOnline(): Promise<boolean> {
 
 async function runWarm(
   exercises: ExerciseRequestDto[],
-  generation: number
+  generation: number,
+  options?: WarmExerciseMediaOptions
 ): Promise<void> {
   if (generation !== cacheGeneration) return;
   await ensureExerciseMediaIndex();
@@ -513,7 +535,9 @@ async function runWarm(
     return;
   }
 
-  const jobs = collectExerciseMediaJobs(exercises);
+  const jobs = collectExerciseMediaJobs(exercises, {
+    priorityIds: options?.priorityIds,
+  });
   const now = Date.now();
   const queue: MediaJob[] = [];
   for (const job of jobs) {
@@ -538,7 +562,6 @@ async function runWarm(
   }
 
   let cursor = 0;
-  let motionCapReached = false;
   const workers = Array.from(
     { length: Math.min(EXERCISE_MEDIA_CONCURRENCY, queue.length) },
     async () => {
@@ -548,17 +571,6 @@ async function runWarm(
         cursor += 1;
         const job = queue[index];
         if (!job) break;
-
-        if (job.kind !== "static") {
-          if (
-            motionCapReached ||
-            motionBytes(getIndexSync()) >= EXERCISE_MEDIA_MAX_BYTES
-          ) {
-            motionCapReached = true;
-            continue;
-          }
-        }
-
         await downloadJob(job, generation);
       }
     }
@@ -572,18 +584,19 @@ async function runWarm(
  * Concurrent calls coalesce onto a single worker that always runs the latest list.
  */
 export function warmExerciseMediaCache(
-  exercises: ExerciseRequestDto[]
+  exercises: ExerciseRequestDto[],
+  options?: WarmExerciseMediaOptions
 ): void {
   if (!exercises?.length) return;
-  pendingWarmExercises = exercises;
+  pendingWarm = { exercises, options };
   if (warmPromise) return;
 
   warmPromise = (async () => {
-    while (pendingWarmExercises) {
-      const batch = pendingWarmExercises;
-      pendingWarmExercises = null;
+    while (pendingWarm) {
+      const batch = pendingWarm;
+      pendingWarm = null;
       const generation = cacheGeneration;
-      await runWarm(batch, generation);
+      await runWarm(batch.exercises, generation, batch.options);
     }
   })().finally(() => {
     warmPromise = null;
@@ -592,15 +605,16 @@ export function warmExerciseMediaCache(
 
 /** Exposed for tests that need to await the warm cycle. */
 export async function warmExerciseMediaCacheAsync(
-  exercises: ExerciseRequestDto[]
+  exercises: ExerciseRequestDto[],
+  options?: WarmExerciseMediaOptions
 ): Promise<void> {
   await ensureExerciseMediaIndex();
-  await runWarm(exercises, cacheGeneration);
+  await runWarm(exercises, cacheGeneration, options);
 }
 
 export async function clearExerciseMediaCache(): Promise<void> {
   cacheGeneration += 1;
-  pendingWarmExercises = null;
+  pendingWarm = null;
   memoryIndex = null;
   staticUrlToFile.clear();
   try {
@@ -621,7 +635,7 @@ export function __resetExerciseMediaCacheForTests(): void {
   memoryIndex = null;
   indexLoadPromise = null;
   warmPromise = null;
-  pendingWarmExercises = null;
+  pendingWarm = null;
   cacheGeneration = 0;
   writeChain = Promise.resolve();
   staticUrlToFile.clear();
