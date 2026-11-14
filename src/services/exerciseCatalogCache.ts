@@ -3,8 +3,9 @@ import type { ExerciseRequestDto } from "@sergiomesasyelamos2000/shared";
 import { ENV } from "../environments/environment";
 
 export const EXERCISE_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
-export const EXERCISE_CACHE_KEY = "@exercises_cache_v4";
+export const EXERCISE_CACHE_KEY = "@exercises_cache_v5";
 export const LEGACY_EXERCISE_CACHE_KEYS = [
+  "@exercises_cache_v4",
   "@exercises_cache_v3",
   "@exercises_cache_v2",
 ] as const;

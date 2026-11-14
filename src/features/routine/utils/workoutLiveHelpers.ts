@@ -1,6 +1,26 @@
 import type { SetRequestDto } from "@sergiomesasyelamos2000/shared";
 import type { WorkoutLiveProgress } from "../../../services/workoutLiveImage";
 
+/** Planned prescription from the routine template (before workout zeros weight/reps). */
+export type TemplateSetPrescription = {
+  weight?: number | null;
+  reps?: number | null;
+  repsMin?: number | null;
+  repsMax?: number | null;
+};
+
+export type NextSetSummaryOptions = {
+  /**
+   * Routine-template prescription for the next set (0-based index in sorted list).
+   * Used when the live set still has workout-start placeholders (0/0).
+   */
+  getTemplatePrescription?: (
+    set: SetRequestDto,
+    sortedIndex: number
+  ) => TemplateSetPrescription | null | undefined;
+  weightUnit?: string;
+};
+
 /** Routine name, exercise position and set counts for the Live Activity. */
 export function buildWorkoutLiveProgress(params: {
   exercises: Array<{ id: string }>;
@@ -57,7 +77,8 @@ export function shiftRestEndAtMs(
 /** Human-readable next-set line for Live Activity / FGS notification. */
 export function buildNextSetSummary(
   setList: SetRequestDto[],
-  afterSetId?: string | null
+  afterSetId?: string | null,
+  options?: NextSetSummaryOptions
 ): string | null {
   const sorted = [...setList].sort(
     (a, b) =>
@@ -73,46 +94,98 @@ export function buildNextSetSummary(
 
   const nextSet = sorted.slice(startIndex).find((set) => !set.completed);
   if (!nextSet) {
-    const firstIncomplete = sorted.find((set) => !set.completed);
-    if (!firstIncomplete) return null;
-    return formatSetLine(firstIncomplete, sorted);
+    // No incomplete set after the one just completed → caller shows "Próximo ejercicio".
+    return null;
   }
-  return formatSetLine(nextSet, sorted);
+  return formatSetLine(nextSet, sorted, options);
 }
 
-function formatSetLine(nextSet: SetRequestDto, sorted: SetRequestDto[]): string {
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatRepsRange(
+  source: {
+    repsMin?: number | null;
+    repsMax?: number | null;
+  } | null | undefined
+): string | null {
+  if (!source) return null;
+  const min = finiteNumber(source.repsMin);
+  const max = finiteNumber(source.repsMax);
+  if (min != null && max != null) return `${min}-${max}`;
+  if (min != null) return `${min}+`;
+  if (max != null) return `≤${max}`;
+  return null;
+}
+
+/**
+ * Resolve display weight/reps for the upcoming set.
+ * Workout start zeros weight/reps → prefer typed values, else routine template.
+ */
+export function resolveNextSetPrescription(
+  nextSet: SetRequestDto,
+  template?: TemplateSetPrescription | null,
+  weightUnit = "kg"
+): string | null {
+  const typedWeight = finiteNumber(nextSet.weight);
+  const typedReps = finiteNumber(nextSet.reps);
+  const hasTypedReps = typedReps != null && typedReps > 0;
+  const hasTypedWeight = typedWeight != null && typedWeight > 0;
+
+  const templateWeight = finiteNumber(template?.weight);
+  const templateReps = finiteNumber(template?.reps);
+  const hasTemplateReps = templateReps != null && templateReps > 0;
+  const hasTemplateWeight = templateWeight != null && templateWeight > 0;
+
+  let weightValue: number | null = null;
+  if (hasTypedWeight) {
+    weightValue = typedWeight;
+  } else if (hasTypedReps && typedWeight != null) {
+    // Explicit bodyweight entry: 0 kg x N
+    weightValue = typedWeight;
+  } else if (hasTemplateWeight) {
+    weightValue = templateWeight;
+  } else if (hasTemplateReps && templateWeight != null) {
+    weightValue = templateWeight;
+  }
+
+  // Reps: typed → template exact → range on live set or template (plantilla).
+  const rangedReps =
+    formatRepsRange(nextSet) ?? formatRepsRange(template ?? undefined);
+
+  let repsLabel: string | null = null;
+  if (hasTypedReps) {
+    repsLabel = `${typedReps}`;
+  } else if (hasTemplateReps) {
+    repsLabel = `${templateReps}`;
+  } else if (rangedReps) {
+    repsLabel = rangedReps;
+  }
+
+  const weightLabel =
+    weightValue != null ? `${weightValue} ${weightUnit}` : null;
+
+  if (weightLabel && repsLabel) return `${weightLabel} x ${repsLabel}`;
+  if (weightLabel) return weightLabel;
+  if (repsLabel) return `${repsLabel} reps`;
+  return null;
+}
+
+function formatSetLine(
+  nextSet: SetRequestDto,
+  sorted: SetRequestDto[],
+  options?: NextSetSummaryOptions
+): string {
   const setNumber =
     typeof nextSet.order === "number"
       ? nextSet.order
       : sorted.indexOf(nextSet) + 1;
   const total = sorted.length;
-
-  const weight =
-    typeof nextSet.weight === "number" && Number.isFinite(nextSet.weight)
-      ? `${nextSet.weight} kg`
-      : null;
-  const exactReps =
-    typeof nextSet.reps === "number" && Number.isFinite(nextSet.reps)
-      ? `${nextSet.reps}`
-      : null;
-  const rangedReps =
-    typeof nextSet.repsMin === "number" && typeof nextSet.repsMax === "number"
-      ? `${nextSet.repsMin}-${nextSet.repsMax}`
-      : typeof nextSet.repsMin === "number"
-        ? `${nextSet.repsMin}+`
-        : typeof nextSet.repsMax === "number"
-          ? `≤${nextSet.repsMax}`
-          : null;
-  const repsLabel = exactReps ?? rangedReps;
-
-  const prescription =
-    weight && repsLabel
-      ? `${weight} x ${repsLabel}`
-      : weight
-        ? weight
-        : repsLabel
-          ? `${repsLabel} reps`
-          : null;
+  const sortedIndex = sorted.indexOf(nextSet);
+  const template = options?.getTemplatePrescription?.(nextSet, sortedIndex);
+  const unit = options?.weightUnit?.trim() || "kg";
+  const prescription = resolveNextSetPrescription(nextSet, template, unit);
 
   const base = `Serie ${setNumber} de ${total}`;
   if (!prescription) return base;

@@ -18,6 +18,7 @@ export type SearchableExercise = {
   bodyParts?: string[];
   keywords?: string[];
   muscularGroup?: string;
+  popularity?: number;
 };
 
 /** Stable empty selection — avoids invalidating filtered list memos. */

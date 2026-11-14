@@ -1862,17 +1862,20 @@ export default function WorkoutScreen() {
           <View
             style={[
               styles.workoutBanner,
-              { backgroundColor: theme.primaryDark, borderColor: theme.border },
+              { backgroundColor: theme.primaryDark },
             ]}
           >
-            <View style={styles.bannerContent}>
-              <View style={styles.bannerIcon}>
-                <MaterialIcons name="fitness-center" size={20} color="#fff" />
-              </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.bannerContent,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={handleResumeWorkout}
+              accessibilityRole="button"
+              accessibilityLabel={`Continuar entrenamiento ${workoutInProgress.routineTitle}`}
+            >
               <View style={styles.bannerTextContainer}>
-                <Text style={styles.bannerTitle}>
-                  Entrenamiento en progreso
-                </Text>
+                <Text style={styles.bannerTitle}>Continuar entrenamiento</Text>
                 <Text
                   style={styles.bannerRoutineName}
                   numberOfLines={1}
@@ -1881,40 +1884,44 @@ export default function WorkoutScreen() {
                   {workoutInProgress.routineTitle}
                 </Text>
               </View>
-            </View>
+            </Pressable>
 
             <View style={styles.bannerActions}>
               <Pressable
                 style={({ pressed }) => [
-                  styles.bannerButton,
-                  styles.discardButton,
+                  styles.bannerContinueButton,
+                  { backgroundColor: theme.primary },
                   pressed && styles.buttonPressed,
                 ]}
-                onPress={handleDiscardWorkout}
+                onPress={handleResumeWorkout}
+                accessibilityRole="button"
+                accessibilityLabel="Continuar"
               >
-                <MaterialIcons name="close" size={16} color={theme.error} />
                 <Text
-                  style={[styles.discardButtonText, { color: theme.error }]}
+                  style={[
+                    styles.bannerContinueText,
+                    { color: theme.onPrimary },
+                  ]}
                 >
-                  Descartar
+                  Continuar
                 </Text>
               </Pressable>
 
               <Pressable
                 style={({ pressed }) => [
-                  styles.bannerButton,
-                  styles.resumeButton,
-                  { backgroundColor: theme.primary },
+                  styles.bannerDiscardIcon,
                   pressed && styles.buttonPressed,
                 ]}
-                onPress={handleResumeWorkout}
+                onPress={handleDiscardWorkout}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Descartar entrenamiento"
               >
-                <MaterialIcons name="play-arrow" size={18} color="#fff" />
-                <Text
-                  style={[styles.resumeButtonText, { color: theme.onPrimary }]}
-                >
-                  Reanudar
-                </Text>
+                <MaterialIcons
+                  name="close"
+                  size={20}
+                  color="rgba(255,255,255,0.85)"
+                />
               </Pressable>
             </View>
           </View>
@@ -2010,7 +2017,7 @@ const createStyles = (theme: Theme) =>
       flexGrow: 1,
     },
     listContentWithBanner: {
-      paddingBottom: 110,
+      paddingBottom: 88,
     },
     dragItemActive: {
       transform: [{ scale: 1.02 }],
@@ -2272,46 +2279,38 @@ const createStyles = (theme: Theme) =>
       bottom: 0,
       left: 0,
       right: 0,
-      padding: 16,
+      paddingHorizontal: 12,
+      paddingBottom: 10,
       backgroundColor: "transparent",
       zIndex: 1000,
     },
     workoutBanner: {
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
+      gap: 10,
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
-      borderWidth: 1,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.22,
+      shadowRadius: 8,
+      elevation: 6,
     },
     bannerContent: {
-      flexDirection: "row",
-      alignItems: "center",
       flex: 1,
-      marginRight: 12,
-    },
-    bannerIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      minWidth: 0,
       justifyContent: "center",
-      alignItems: "center",
-      marginRight: 12,
+      paddingVertical: 2,
     },
     bannerTextContainer: {
-      flex: 1,
+      flexShrink: 1,
     },
     bannerTitle: {
       fontSize: RFValue(12),
       fontWeight: "600",
       color: theme.onPrimary,
-      opacity: 0.8,
+      opacity: 0.75,
       marginBottom: 2,
     },
     bannerRoutineName: {
@@ -2323,37 +2322,33 @@ const createStyles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
+      flexShrink: 0,
     },
-    bannerButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
+    bannerContinueButton: {
       borderRadius: 10,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
       minHeight: 40,
+      justifyContent: "center",
+      alignItems: "center",
     },
-    discardButton: {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
-      borderWidth: 1,
-      borderColor: "rgba(255, 107, 107, 0.3)",
-    },
-    discardButtonText: {
-      fontSize: RFValue(13),
-      fontWeight: "600",
-    },
-    resumeButton: {
-      paddingHorizontal: 16,
-    },
-    resumeButtonText: {
+    bannerContinueText: {
       fontSize: RFValue(13),
       fontWeight: "700",
+    },
+    bannerDiscardIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255, 255, 255, 0.12)",
     },
     buttonPressed: {
       opacity: 0.8,
       transform: [{ scale: 0.96 }],
     },
+
     processingOverlay: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.25)",

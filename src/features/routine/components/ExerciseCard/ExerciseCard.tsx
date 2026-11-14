@@ -29,6 +29,7 @@ import ExerciseRestPicker from "./ExerciseRestPicker";
 import ExerciseSetList from "./ExerciseSetList";
 import { formatTime, parseTime } from "./helpers";
 import { getStaticExerciseImageUrl } from "../../utils/normalizeExerciseImage";
+import { buildNextSetSummary } from "../../utils/workoutLiveHelpers";
 
 const normalizeSetIds = (
   inputSets: SetRequestDto[],
@@ -196,6 +197,8 @@ interface Props {
   supersetExerciseName?: string;
   showOptions?: boolean;
   previousSessions?: RoutineSessionEntity[];
+  /** Original routine sets for Live Activity next-set prescription (plantilla). */
+  templateSets?: SetRequestDto[];
 }
 
 const ExerciseCard = ({
@@ -221,6 +224,7 @@ const ExerciseCard = ({
   supersetExerciseName,
   showOptions = false,
   previousSessions = [],
+  templateSets = [],
 }: Props) => {
   const [sets, setSets] = useState<SetRequestDto[]>(() =>
     normalizeSetIds(initialSets, exercise.id)
@@ -275,44 +279,6 @@ const ExerciseCard = ({
    * against the best already achieved today — not just the historical baseline.
    */
   const sessionBestMetricsRef = useRef({ best1RM: 0, bestWeight: 0, bestVolume: 0 });
-
-  const buildNextSetSummary = (
-    setList: SetRequestDto[],
-    completedSetId: string
-  ): string | null => {
-    const sortedSetList = [...setList].sort(
-      (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
-    );
-    const completedIndex = sortedSetList.findIndex((set) => set.id === completedSetId);
-    const nextSet = sortedSetList
-      .slice(completedIndex + 1)
-      .find((set) => !set.completed);
-
-    if (!nextSet) return null;
-
-    const weight =
-      typeof nextSet.weight === "number" && Number.isFinite(nextSet.weight)
-        ? `${nextSet.weight}kg`
-        : null;
-    const exactReps =
-      typeof nextSet.reps === "number" && Number.isFinite(nextSet.reps)
-        ? `${nextSet.reps} reps`
-        : null;
-    const rangedReps =
-      typeof nextSet.repsMin === "number" && typeof nextSet.repsMax === "number"
-        ? `${nextSet.repsMin}-${nextSet.repsMax} reps`
-        : typeof nextSet.repsMin === "number"
-          ? `${nextSet.repsMin}+ reps`
-          : typeof nextSet.repsMax === "number"
-            ? `hasta ${nextSet.repsMax} reps`
-            : null;
-    const repsLabel = exactReps ?? rangedReps;
-
-    if (weight && repsLabel) return `${weight} x ${repsLabel}`;
-    if (weight) return weight;
-    if (repsLabel) return repsLabel;
-    return `Serie ${nextSet.order}`;
-  };
 
   // Historical best — always computed (returns {0,0,0} when there is no history,
   // which is exactly what we want: any first-ever set beats the baseline).
@@ -578,8 +544,24 @@ const ExerciseCard = ({
               set.id === updatedSetRef.current?.id ? updatedSetRef.current : set
             )
           : sets;
+        const sortedTemplate = [...templateSets].sort(
+          (a, b) =>
+            (a.order ?? Number.MAX_SAFE_INTEGER) -
+            (b.order ?? Number.MAX_SAFE_INTEGER)
+        );
         const nextSetSummary = updatedSetRef.current
-          ? buildNextSetSummary(nextSets, updatedSetRef.current.id)
+          ? buildNextSetSummary(nextSets, updatedSetRef.current.id, {
+              getTemplatePrescription: (_set, sortedIndex) => {
+                const planned = sortedTemplate[sortedIndex];
+                if (!planned) return null;
+                return {
+                  weight: planned.weight,
+                  reps: planned.reps,
+                  repsMin: planned.repsMin,
+                  repsMax: planned.repsMax,
+                };
+              },
+            })
           : null;
         onStartRestTimer?.(
           totalSeconds,
@@ -886,6 +868,7 @@ const areExerciseCardPropsEqual = (
   if (prev.supersetWith !== next.supersetWith) return false;
   if (prev.supersetExerciseName !== next.supersetExerciseName) return false;
   if (prev.previousSessions !== next.previousSessions) return false;
+  if (prev.templateSets !== next.templateSets) return false;
   if (prev.availableExercises !== next.availableExercises) return false;
 
   if (prev.exercise !== next.exercise) {

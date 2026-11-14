@@ -326,7 +326,11 @@ export const searchExercises = async (
   filters: ExerciseSearchFilters
 ): Promise<ExerciseRequestDto[]> => {
   const name = filters.name?.trim() || "";
-  const equipment = filters.equipment?.trim() || "";
+  const equipmentRaw = filters.equipment?.trim() || "";
+  const equipmentNames = equipmentRaw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
   const musclesInput =
     typeof filters.muscles === "string"
       ? filters.muscles
@@ -334,15 +338,30 @@ export const searchExercises = async (
         ? filters.muscles.join(",")
         : "";
   const muscle = filters.muscle?.trim() || "";
-  const muscles = (musclesInput || muscle)
+  const muscles = [musclesInput, muscle]
+    .filter(Boolean)
+    .join(",")
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
 
   const params = new URLSearchParams();
   if (name) params.append("name", name);
-  if (equipment) params.append("equipment", equipment);
-  if (muscles.length > 0) params.append("muscles", muscles.join(","));
+  if (equipmentNames.length > 0) {
+    params.append("equipment", equipmentNames.join(","));
+  }
+  if (muscles.length === 1) {
+    params.append("muscle", muscles[0]);
+  } else if (muscles.length > 1) {
+    params.append("muscles", muscles.join(","));
+  }
+
+  const applyLocal = (catalog: SearchableExercise[]) =>
+    filterAndSortExercises(catalog, {
+      searchQuery: name,
+      selectedEquipmentNames: equipmentNames,
+      selectedMuscleNames: muscles,
+    }) as ExerciseRequestDto[];
 
   try {
     const endpoint = params.toString()
@@ -350,26 +369,19 @@ export const searchExercises = async (
       : "exercises/search";
 
     const data = await apiFetch<ExerciseRequestDto[]>(endpoint);
-    return data;
+    // Re-rank locally so popularity + text score stay consistent with the list UI.
+    return applyLocal(data as SearchableExercise[]);
   } catch (error) {
     const memoryHit = peekExerciseCatalog();
     if (memoryHit?.length) {
       await markExerciseCatalogOffline(true);
-      return filterAndSortExercises(memoryHit as SearchableExercise[], {
-        searchQuery: name,
-        selectedEquipmentNames: equipment ? [equipment] : [],
-        selectedMuscleNames: muscles,
-      });
+      return applyLocal(memoryHit as SearchableExercise[]);
     }
 
     const stored = await readExerciseCatalog();
     if (stored?.exercises.length) {
       await markExerciseCatalogOffline(true);
-      return filterAndSortExercises(stored.exercises as SearchableExercise[], {
-        searchQuery: name,
-        selectedEquipmentNames: equipment ? [equipment] : [],
-        selectedMuscleNames: muscles,
-      });
+      return applyLocal(stored.exercises as SearchableExercise[]);
     }
     throw error;
   }

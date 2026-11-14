@@ -88,7 +88,8 @@ private struct SafeRestCountdownText: View {
       .monospacedDigit()
       .font(font)
       .foregroundStyle(color)
-      .frame(width: width)
+      .frame(width: width, alignment: .center)
+      .multilineTextAlignment(.center)
     }
     .id(end)
   }
@@ -515,11 +516,15 @@ struct WorkoutLiveLockScreenView: View {
   }
 
   private var restTimerLabel: some View {
-    VStack(spacing: 0) {
+    // Same width for label + countdown so "DESCANSO" centers over "2:55".
+    let timerWidth: CGFloat = 76
+    return VStack(alignment: .center, spacing: 0) {
       Text("DESCANSO")
         .font(.system(size: 9, weight: .bold))
         .tracking(0.8)
         .foregroundStyle(LiveTheme.textTertiary)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
       Group {
         if let end = context.state.restEndAt {
           // Time only (no "Rest:" prefix) — lock screen truncates "Rest: 2:50" to "R…2:50".
@@ -528,17 +533,19 @@ struct WorkoutLiveLockScreenView: View {
             restSecondsDefault: context.state.restSecondsDefault,
             font: .system(size: 26, weight: .bold).monospacedDigit(),
             color: LiveTheme.textPrimary,
-            width: 76
+            width: timerWidth
           )
         } else {
           Text("0:00")
             .font(.system(size: 26, weight: .bold).monospacedDigit())
             .foregroundStyle(LiveTheme.textPrimary)
-            .frame(width: 76)
+            .frame(width: timerWidth, alignment: .center)
         }
       }
+      .frame(maxWidth: .infinity, alignment: .center)
       .minimumScaleFactor(0.8)
     }
+    .frame(width: timerWidth, alignment: .center)
   }
 }
 

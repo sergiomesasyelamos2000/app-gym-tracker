@@ -11,6 +11,7 @@ import {
   indexedExerciseMatchesMuscle,
   prepareNameFilter,
 } from "./exerciseFilterIndex";
+import { effectiveExercisePopularity } from "./exercisePopularity";
 import {
   normalizeSearchText,
   normalizedKeysMatch,
@@ -202,6 +203,28 @@ export const scoreExerciseSearch = (
   );
 };
 
+type ScoredExerciseRow<T extends SearchableExercise> = {
+  exercise: T;
+  searchScore: number;
+  originalIndex: number;
+};
+
+/** searchScore (when querying) → popularity → original catalog order. */
+const compareScoredExercises = <T extends SearchableExercise>(
+  a: ScoredExerciseRow<T>,
+  b: ScoredExerciseRow<T>,
+  hasQuery: boolean
+): number => {
+  if (hasQuery && b.searchScore !== a.searchScore) {
+    return b.searchScore - a.searchScore;
+  }
+  const popularityDelta =
+    effectiveExercisePopularity(b.exercise) -
+    effectiveExercisePopularity(a.exercise);
+  if (popularityDelta !== 0) return popularityDelta;
+  return a.originalIndex - b.originalIndex;
+};
+
 export const filterAndSortExercises = <T extends SearchableExercise>(
   exercises: T[],
   options: {
@@ -249,14 +272,7 @@ export const filterAndSortExercises = <T extends SearchableExercise>(
       })
       .filter((item) => item.visible);
 
-    if (normalizedQuery) {
-      scored.sort((a, b) => {
-        if (b.searchScore !== a.searchScore) {
-          return b.searchScore - a.searchScore;
-        }
-        return a.originalIndex - b.originalIndex;
-      });
-    }
+    scored.sort((a, b) => compareScoredExercises(a, b, Boolean(normalizedQuery)));
 
     return scored.map((item) => item.exercise);
   }
@@ -290,14 +306,7 @@ export const filterAndSortExercises = <T extends SearchableExercise>(
     })
     .filter((item) => item.visible);
 
-  if (normalizedQuery) {
-    scored.sort((a, b) => {
-      if (b.searchScore !== a.searchScore) {
-        return b.searchScore - a.searchScore;
-      }
-      return a.originalIndex - b.originalIndex;
-    });
-  }
+  scored.sort((a, b) => compareScoredExercises(a, b, Boolean(normalizedQuery)));
 
   return scored.map((item) => item.exercise);
 };

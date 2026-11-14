@@ -6,7 +6,7 @@ interface UseSetRowLogicProps {
   onUpdate: (
     id: string,
     field: keyof SetRequestDto,
-    value: SetRequestDto[keyof SetRequestDto],
+    value: SetRequestDto[keyof SetRequestDto]
   ) => void;
   repsType: "reps" | "range";
   started: boolean;
@@ -26,35 +26,35 @@ export const useSetRowLogic = ({
       ? ""
       : item.weight && item.weight > 0
         ? item.weight.toString()
-        : "",
+        : ""
   );
   const [localReps, setLocalReps] = useState<string>(
     started
       ? ""
       : item.reps && item.reps > 0
         ? item.reps.toString()
-        : "",
+        : ""
   );
   const [localAssistedReps, setLocalAssistedReps] = useState<string>(
     started
       ? ""
       : item.assistedReps && item.assistedReps > 0
         ? item.assistedReps.toString()
-        : "",
+        : ""
   );
   const [localRepsMin, setLocalRepsMin] = useState<string>(
     started
       ? ""
       : item.repsMin && item.repsMin > 0
         ? item.repsMin.toString()
-        : "",
+        : ""
   );
   const [localRepsMax, setLocalRepsMax] = useState<string>(
     started
       ? ""
       : item.repsMax && item.repsMax > 0
         ? item.repsMax.toString()
-        : "",
+        : ""
   );
 
   // Función para extraer valores del previousMark
@@ -62,23 +62,25 @@ export const useSetRowLogic = ({
     if (!previousMark || previousMark === "-") return null;
 
     try {
-      // Acepta: "10 kg x 8", "22 lbs x 12", "80 kg x 10 (A:2)"
+      // Acepta: "10 kg x 8", "22 lbs x 12", "0kg x 12", "80 kg x 10 (A:2)"
       const match = previousMark.match(
-        /^\s*([\d.,]+)\s*(?:kg|lbs)?\s*x\s*(\d+)/i
+        /^\s*([\d.,]+)\s*(?:kg|lbs)?\s*x\s*(\d+)(?:\s*\(A:(\d+)\))?/i
       );
       if (!match) return null;
 
       const weightValue = match[1].replace(",", ".");
       const repsValue = match[2];
+      const assistedValue = match[3];
 
       return {
         weight: weightValue,
         reps: repsValue,
+        assistedReps: assistedValue as string | undefined,
       };
     } catch (error) {
       console.error("Error parsing previous mark:", error);
-      return null;
     }
+    return null;
   }, [previousMark]);
 
   // Función para autocompletar con valores anteriores
@@ -86,14 +88,33 @@ export const useSetRowLogic = ({
     const values = extractValuesFromPreviousMark();
     if (!values) return;
 
-    // Autocompletar peso
     setLocalWeight(values.weight);
     onUpdate(item.id, "weight", Number(values.weight));
 
-    // En modo started, siempre usar un solo valor de reps (no rango)
     setLocalReps(values.reps);
     onUpdate(item.id, "reps", Number(values.reps));
+
+    if (values.assistedReps) {
+      setLocalAssistedReps(values.assistedReps);
+      onUpdate(item.id, "assistedReps", Number(values.assistedReps));
+    }
   }, [extractValuesFromPreviousMark, item.id, onUpdate]);
+
+  /** Empty workout placeholders: nothing typed and stored value still 0/absent. */
+  const isWeightUntyped = useCallback(() => {
+    if (localWeight.trim() !== "") return false;
+    return !(typeof item.weight === "number" && item.weight > 0);
+  }, [item.weight, localWeight]);
+
+  const isRepsUntyped = useCallback(() => {
+    if (localReps.trim() !== "") return false;
+    return !(typeof item.reps === "number" && item.reps > 0);
+  }, [item.reps, localReps]);
+
+  const isAssistedUntyped = useCallback(() => {
+    if (localAssistedReps.trim() !== "") return false;
+    return !(typeof item.assistedReps === "number" && item.assistedReps > 0);
+  }, [item.assistedReps, localAssistedReps]);
 
   // Efecto para limpiar inputs al entrar en modo started
   useEffect(() => {
@@ -114,7 +135,7 @@ export const useSetRowLogic = ({
       setLocalAssistedReps(
         item.assistedReps && item.assistedReps > 0
           ? item.assistedReps.toString()
-          : "",
+          : ""
       );
       setLocalRepsMin(
         item.repsMin && item.repsMin > 0 ? item.repsMin.toString() : ""
@@ -141,7 +162,7 @@ export const useSetRowLogic = ({
     setLocalAssistedReps(
       item.assistedReps && item.assistedReps > 0
         ? item.assistedReps.toString()
-        : "",
+        : ""
     );
     setLocalRepsMin(
       item.repsMin && item.repsMin > 0 ? item.repsMin.toString() : ""
@@ -174,7 +195,7 @@ export const useSetRowLogic = ({
       const numValue = Number.parseInt(value, 10);
       return Number.isNaN(numValue) ? 0 : numValue;
     },
-    [],
+    []
   );
 
   // Handlers memoizados
@@ -184,7 +205,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "weight");
       onUpdate(item.id, "weight", value);
     },
-    [item.id, onUpdate, sanitizeValue],
+    [item.id, onUpdate, sanitizeValue]
   );
 
   const handleRepsChange = useCallback(
@@ -193,7 +214,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "reps");
       onUpdate(item.id, "reps", value);
     },
-    [item.id, onUpdate, sanitizeValue],
+    [item.id, onUpdate, sanitizeValue]
   );
 
   const handleRepsMinChange = useCallback(
@@ -202,7 +223,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "repsMin");
       onUpdate(item.id, "repsMin", value);
     },
-    [item.id, onUpdate, sanitizeValue],
+    [item.id, onUpdate, sanitizeValue]
   );
 
   const handleAssistedRepsChange = useCallback(
@@ -211,7 +232,7 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "assistedReps");
       onUpdate(item.id, "assistedReps", value);
     },
-    [item.id, onUpdate, sanitizeValue],
+    [item.id, onUpdate, sanitizeValue]
   );
 
   const handleRepsMaxChange = useCallback(
@@ -220,13 +241,40 @@ export const useSetRowLogic = ({
       const value = sanitizeValue(text, "repsMax");
       onUpdate(item.id, "repsMax", value);
     },
-    [item.id, onUpdate, sanitizeValue],
+    [item.id, onUpdate, sanitizeValue]
   );
 
   const handleToggleCompleted = useCallback(() => {
     const isMarkingCompleted = !item.completed;
+    if (isMarkingCompleted && started) {
+      const values = extractValuesFromPreviousMark();
+      if (values) {
+        // Fill only fields the user left empty (placeholders / 0).
+        if (isWeightUntyped()) {
+          setLocalWeight(values.weight);
+          onUpdate(item.id, "weight", Number(values.weight));
+        }
+        if (isRepsUntyped()) {
+          setLocalReps(values.reps);
+          onUpdate(item.id, "reps", Number(values.reps));
+        }
+        if (values.assistedReps && isAssistedUntyped()) {
+          setLocalAssistedReps(values.assistedReps);
+          onUpdate(item.id, "assistedReps", Number(values.assistedReps));
+        }
+      }
+    }
     onUpdate(item.id, "completed", isMarkingCompleted);
-  }, [item.id, item.completed, onUpdate]);
+  }, [
+    extractValuesFromPreviousMark,
+    isAssistedUntyped,
+    isRepsUntyped,
+    isWeightUntyped,
+    item.completed,
+    item.id,
+    onUpdate,
+    started,
+  ]);
 
   return {
     localWeight,

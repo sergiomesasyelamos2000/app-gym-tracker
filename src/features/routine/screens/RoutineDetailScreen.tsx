@@ -122,6 +122,7 @@ import {
   buildPausedWorkoutPatch,
   shouldPauseWorkoutOnLeave,
 } from "../utils/pauseWorkoutOnLeave";
+import { getPreviousSetPerformance } from "../utils/previousSetHelpers";
 import {
   buildNextSetSummary,
   buildLiveCompletionFingerprint,
@@ -129,6 +130,7 @@ import {
   findNextIncompleteSet,
   nextRestSecondsDefault,
   shiftRestEndAtMs,
+  type NextSetSummaryOptions,
 } from "../utils/workoutLiveHelpers";
 import {
   normalizeExerciseImage,
@@ -269,6 +271,35 @@ export default function RoutineDetailScreen() {
   const [previousSessions, setPreviousSessions] = useState<
     RoutineSessionEntity[]
   >([]);
+  /** Original routine sets (plantilla) before workout zeros weight/reps. */
+  const templateSetsByExerciseId = useMemo(() => {
+    const map = new Map<string, SetRequestDto[]>();
+    for (const re of routineData?.routineExercises ?? []) {
+      const exerciseId = re.exercise?.id;
+      if (!exerciseId) continue;
+      map.set(
+        exerciseId,
+        sortSetsByOrder(re.sets || []).map((set) => ({ ...set }))
+      );
+    }
+    return map;
+  }, [routineData]);
+
+  const nextSetSummaryOptions = useCallback(
+    (exerciseId: string): NextSetSummaryOptions => ({
+      getTemplatePrescription: (_set, sortedIndex) => {
+        const planned = templateSetsByExerciseId.get(exerciseId)?.[sortedIndex];
+        if (!planned) return null;
+        return {
+          weight: planned.weight,
+          reps: planned.reps,
+          repsMin: planned.repsMin,
+          repsMax: planned.repsMax,
+        };
+      },
+    }),
+    [templateSetsByExerciseId]
+  );
 
   // Undo deletion state
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
@@ -766,7 +797,11 @@ export default function RoutineDetailScreen() {
       const nextSummary =
         partial?.nextSetSummary !== undefined
           ? partial.nextSetSummary
-          : buildNextSetSummary(setList);
+          : buildNextSetSummary(
+              setList,
+              null,
+              exercise ? nextSetSummaryOptions(exercise.id) : undefined
+            );
       const restDefaultRaw = exercise?.restSeconds;
       const restSecondsDefault =
         typeof restDefaultRaw === "number"
@@ -811,6 +846,7 @@ export default function RoutineDetailScreen() {
       exercisesState,
       getWorkoutStartTime,
       routineTitle,
+      nextSetSummaryOptions,
       sessionView,
       sets,
       started,
@@ -832,14 +868,24 @@ export default function RoutineDetailScreen() {
       setCurrentExerciseName(exercise.name);
       currentExerciseNameRef.current = exercise.name;
       setCurrentExerciseImageUrl(getStaticExerciseImageUrl(exercise));
-      setCurrentNextSetSummary(buildNextSetSummary(sets[exercise.id] || []));
+      setCurrentNextSetSummary(
+        buildNextSetSummary(
+          sets[exercise.id] || [],
+          null,
+          nextSetSummaryOptions(exercise.id)
+        )
+      );
     }
     const snapshot: WorkoutLiveSnapshot = {
       workoutStartedAtMs: startedAt,
       exerciseName: exercise?.name || routineTitle || "Entrenamiento",
       imageUrl: exercise ? getStaticExerciseImageUrl(exercise) : null,
       nextSetSummary: exercise
-        ? buildNextSetSummary(sets[exercise.id] || [])
+        ? buildNextSetSummary(
+            sets[exercise.id] || [],
+            null,
+            nextSetSummaryOptions(exercise.id)
+          )
         : null,
       isResting: false,
       restEndAtMs: null,
@@ -860,6 +906,7 @@ export default function RoutineDetailScreen() {
   }, [
     exercisesState,
     getWorkoutStartTime,
+    nextSetSummaryOptions,
     routineTitle,
     sessionView,
     sets,
@@ -2211,20 +2258,57 @@ export default function RoutineDetailScreen() {
     const imageUrl = exercise ? getStaticExerciseImageUrl(exercise) : null;
     setCurrentExerciseImageUrl(imageUrl);
 
+    const listForIndex = sets[next.exerciseId] || [];
+    const sortedForIndex = [...listForIndex].sort(
+      (a, b) =>
+        (a.order ?? Number.MAX_SAFE_INTEGER) -
+        (b.order ?? Number.MAX_SAFE_INTEGER)
+    );
+    const setIndex = sortedForIndex.findIndex((s) => s.id === next.set.id);
+    const previousPerf = getPreviousSetPerformance(
+      next.exerciseId,
+      setIndex,
+      previousSessions
+    );
+
+    const withAutofill = (s: SetRequestDto): SetRequestDto => {
+      if (s.id !== next.set.id) return s;
+      const nextSet = { ...s, completed: true };
+      if (
+        previousPerf &&
+        !(typeof nextSet.weight === "number" && nextSet.weight > 0)
+      ) {
+        nextSet.weight = previousPerf.weight;
+      }
+      if (
+        previousPerf &&
+        !(typeof nextSet.reps === "number" && nextSet.reps > 0)
+      ) {
+        nextSet.reps = previousPerf.reps;
+      }
+      if (
+        previousPerf?.assistedReps &&
+        !(typeof nextSet.assistedReps === "number" && nextSet.assistedReps > 0)
+      ) {
+        nextSet.assistedReps = previousPerf.assistedReps;
+      }
+      return nextSet;
+    };
+
     setSets((prev) => {
       const list = prev[next.exerciseId] || [];
       return {
         ...prev,
-        [next.exerciseId]: list.map((s) =>
-          s.id === next.set.id ? { ...s, completed: true } : s
-        ),
+        [next.exerciseId]: list.map(withAutofill),
       };
     });
 
-    const updatedList = (sets[next.exerciseId] || []).map((s) =>
-      s.id === next.set.id ? { ...s, completed: true } : s
+    const updatedList = (sets[next.exerciseId] || []).map(withAutofill);
+    const summary = buildNextSetSummary(
+      updatedList,
+      next.set.id,
+      nextSetSummaryOptions(next.exerciseId)
     );
-    const summary = buildNextSetSummary(updatedList, next.set.id);
     setCurrentNextSetSummary(summary);
 
     if (next.restSeconds > 0) {
@@ -2248,6 +2332,8 @@ export default function RoutineDetailScreen() {
     exercisesState,
     handleStartRestTimer,
     isSaving,
+    nextSetSummaryOptions,
+    previousSessions,
     pushWorkoutLive,
     sets,
     started,
@@ -2548,12 +2634,14 @@ export default function RoutineDetailScreen() {
           supersetWith={item.supersetWith}
           supersetExerciseName={supersetExercise?.name}
           previousSessions={previousSessions}
+          templateSets={templateSetsByExerciseId.get(item.id) ?? []}
         />
       );
     },
     [
       exercisesState,
       previousSessions,
+      templateSetsByExerciseId,
       readonly,
       started,
       sessionView,

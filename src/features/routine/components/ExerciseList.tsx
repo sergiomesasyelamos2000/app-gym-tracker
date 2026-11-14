@@ -42,6 +42,7 @@ import {
   fetchExercises,
   isUsingCache,
   peekExerciseCatalog,
+  searchExercises,
 } from "../../../services/exerciseService";
 import ExerciseItem from "../components/ExerciseItem";
 import { ExerciseFilterModal } from "../components/ExerciseFilterModal";
@@ -81,7 +82,10 @@ type ExerciseListItem = ExerciseRequestDto & {
   secondaryMuscles?: string[];
   bodyParts?: string[];
   keywords?: string[];
+  popularity?: number;
 };
+
+const REMOTE_SEARCH_DEBOUNCE_MS = 280;
 
 const MAX_EQUIPMENT_FILTER_OPTIONS = 24;
 const MAX_MUSCLE_FILTER_OPTIONS = 24;
@@ -143,6 +147,10 @@ export default function ExerciseList() {
     const peeked = seededCatalogRef.current;
     return peeked?.length ? (peeked as ExerciseListItem[]) : [];
   });
+  const [remoteSearch, setRemoteSearch] = useState<{
+    signature: string;
+    exercises: ExerciseListItem[];
+  } | null>(null);
   const [loading, setLoading] = useState(() => seededCatalogRef.current == null);
   const [listPaintReady, setListPaintReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -407,8 +415,61 @@ export default function ExerciseList() {
     }, [consumePendingCreatedExercise])
   );
 
+  // Online search/filters: prefer API `/exercises/search` (debounced). Local filter is
+  // instant fallback while the request is in flight or when offline.
+  useEffect(() => {
+    if (isOfflineMode || !hasActiveFilters) {
+      setRemoteSearch(null);
+      return;
+    }
+
+    let cancelled = false;
+    const signature = appliedFilterSignature;
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const results = await searchExercises({
+            name: searchQuery,
+            equipment: selectedEquipmentNames.join(","),
+            muscles: selectedMuscleNames,
+          });
+          if (cancelled) return;
+          setRemoteSearch({
+            signature,
+            exercises: normalizeExercisesImage(results as ExerciseListItem[]),
+          });
+        } catch {
+          if (!cancelled) {
+            setRemoteSearch(null);
+          }
+        }
+      })();
+    }, REMOTE_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    isOfflineMode,
+    hasActiveFilters,
+    appliedFilterSignature,
+    searchQuery,
+    selectedEquipmentNames,
+    selectedMuscleNames,
+  ]);
+
   const filteredExercises = useMemo(() => {
     if (!listPaintReady || !allExercises.length) return [];
+
+    if (
+      !isOfflineMode &&
+      hasActiveFilters &&
+      remoteSearch &&
+      remoteSearch.signature === appliedFilterSignature
+    ) {
+      return remoteSearch.exercises;
+    }
 
     return filterAndSortExercises(allExercises, {
       searchQuery,
@@ -423,6 +484,10 @@ export default function ExerciseList() {
     selectedEquipmentNames,
     selectedMuscleNames,
     filterIndex,
+    isOfflineMode,
+    hasActiveFilters,
+    remoteSearch,
+    appliedFilterSignature,
   ]);
 
   const filteredExercisesRef = useRef(filteredExercises);

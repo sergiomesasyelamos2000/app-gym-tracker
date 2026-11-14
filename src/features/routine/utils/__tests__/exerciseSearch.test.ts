@@ -108,4 +108,83 @@ describe("exerciseSearch", () => {
 
     expect(results.map((item) => item.id)).toEqual(["2"]);
   });
+
+  it("orders by popularity when there is no text query", () => {
+    const obscure = {
+      ...cableFly,
+      id: "2",
+      name: "Band chest fly obscure",
+      popularity: 0,
+    };
+    const staple = {
+      ...chestPress,
+      id: "1",
+      name: "Press de banca con barra",
+      popularity: 0,
+    };
+    const mid = {
+      ...curl,
+      id: "3",
+      name: "Curl de bíceps con mancuernas",
+      popularity: 0,
+    };
+
+    const results = filterAndSortExercises([obscure, mid, staple], {
+      searchQuery: "",
+      selectedEquipmentNames: [],
+      selectedMuscleNames: [],
+    });
+
+    expect(results.map((item) => item.id)).toEqual(["1", "3", "2"]);
+  });
+
+  it("keeps search score first, then popularity as tiebreaker", () => {
+    const weakerName = {
+      ...chestPress,
+      id: "a",
+      name: "Apertura de pecho en máquina",
+      popularity: 100,
+    };
+    const strongerName = {
+      ...chestPress,
+      id: "b",
+      name: "Press de banca",
+      popularity: 10,
+    };
+
+    const results = filterAndSortExercises([weakerName, strongerName], {
+      searchQuery: "press banca",
+      selectedEquipmentNames: [],
+      selectedMuscleNames: [],
+    });
+
+    expect(results[0].id).toBe("b");
+  });
+
+  it("puts classic lifts above assisted/band variants with zero stored popularity", () => {
+    const assisted = {
+      id: "x",
+      name: "Assisted chest dip (kneeling)",
+      equipments: [],
+      targetMuscles: [],
+      bodyParts: [],
+      popularity: 0,
+    };
+    const bench = {
+      id: "y",
+      name: "Barbell bench press",
+      equipments: [],
+      targetMuscles: [],
+      bodyParts: [],
+      popularity: 0,
+    };
+
+    const results = filterAndSortExercises([assisted, bench], {
+      searchQuery: "",
+      selectedEquipmentNames: [],
+      selectedMuscleNames: [],
+    });
+
+    expect(results.map((item) => item.id)).toEqual(["y", "x"]);
+  });
 });
