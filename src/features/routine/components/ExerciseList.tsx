@@ -293,7 +293,10 @@ export default function ExerciseList() {
       }
       setError(null);
       setIsOfflineMode(false);
-      const data = await fetchExercises();
+      // Web: always revalidate so Network tab shows GET /exercises (cache hid it).
+      const data = await fetchExercises({
+        forceNetwork: Platform.OS === "web",
+      });
 
       // Same in-memory catalog already seeded — skip a second full normalize/render pass.
       if (data !== seededCatalogRef.current) {
@@ -323,7 +326,8 @@ export default function ExerciseList() {
 
   const revealListAfterThumbWarmup = useCallback(async () => {
     const catalog = seededCatalogRef.current;
-    if (catalog?.length) {
+    // Web: skip thumb gate — InteractionManager / image decode often stalls the reveal.
+    if (catalog?.length && Platform.OS !== "web") {
       prefetchExerciseThumbBatch(catalog, {
         startIndex: 0,
         count: THUMB_PREFETCH_INITIAL,
@@ -348,13 +352,23 @@ export default function ExerciseList() {
     if (!seededCatalogRef.current?.length) return;
 
     let cancelled = false;
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const run = () => {
       void (async () => {
         if (cancelled) return;
         await revealListAfterThumbWarmup();
       })();
-    });
+    };
 
+    // InteractionManager.runAfterInteractions is unreliable on web (never fires).
+    if (Platform.OS === "web") {
+      const t = setTimeout(run, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(t);
+      };
+    }
+
+    const handle = InteractionManager.runAfterInteractions(run);
     return () => {
       cancelled = true;
       handle.cancel?.();
@@ -369,17 +383,19 @@ export default function ExerciseList() {
 
     let cancelled = false;
     void (async () => {
-      prefetchExerciseThumbBatch(allExercises, {
-        startIndex: 0,
-        count: THUMB_PREFETCH_INITIAL,
-        limit: THUMB_PREFETCH_LIMIT,
-      });
-      await waitForExerciseThumbBatch(allExercises, {
-        startIndex: 0,
-        count: THUMB_REVEAL_WAIT_COUNT,
-        limit: THUMB_REVEAL_WAIT_COUNT,
-        timeoutMs: THUMB_REVEAL_TIMEOUT_MS,
-      });
+      if (Platform.OS !== "web") {
+        prefetchExerciseThumbBatch(allExercises, {
+          startIndex: 0,
+          count: THUMB_PREFETCH_INITIAL,
+          limit: THUMB_PREFETCH_LIMIT,
+        });
+        await waitForExerciseThumbBatch(allExercises, {
+          startIndex: 0,
+          count: THUMB_REVEAL_WAIT_COUNT,
+          limit: THUMB_REVEAL_WAIT_COUNT,
+          timeoutMs: THUMB_REVEAL_TIMEOUT_MS,
+        });
+      }
       if (cancelled) return;
       setAllExercises((prev) => normalizeExercisesImage(prev));
       setListPaintReady(true);

@@ -197,20 +197,27 @@ function revalidateExercisesIfStale(): void {
  * 2. Fall back to AsyncStorage (v4 / migrated v3)
  * 3. Refresh in background when stale
  * 4. If no cache, fetch from backend
+ *
+ * Pass `{ forceNetwork: true }` to always hit GET /exercises (web debugging /
+ * pull-to-refresh style refresh).
  */
-export const fetchExercises = async (): Promise<ExerciseRequestDto[]> => {
-  const memoryHit = peekExerciseCatalog();
-  if (memoryHit?.length) {
-    await markExerciseCatalogOffline(false);
-    revalidateExercisesIfStale();
-    return memoryHit;
-  }
+export const fetchExercises = async (options?: {
+  forceNetwork?: boolean;
+}): Promise<ExerciseRequestDto[]> => {
+  if (!options?.forceNetwork) {
+    const memoryHit = peekExerciseCatalog();
+    if (memoryHit?.length) {
+      await markExerciseCatalogOffline(false);
+      revalidateExercisesIfStale();
+      return memoryHit;
+    }
 
-  const stored = await readExerciseCatalog();
-  if (stored?.exercises.length) {
-    await markExerciseCatalogOffline(false);
-    revalidateExercisesIfStale();
-    return stored.exercises;
+    const stored = await readExerciseCatalog();
+    if (stored?.exercises.length) {
+      await markExerciseCatalogOffline(false);
+      revalidateExercisesIfStale();
+      return stored.exercises;
+    }
   }
 
   try {

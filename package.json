@@ -11,6 +11,7 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
+    "postinstall": "node scripts/patch-rngh-web-ref.js",
     "eas-build-post-install": "node scripts/eas-android-post-install.js"
   },
   "dependencies": {

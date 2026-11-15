@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +17,10 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
+
+/** Drag-reorder needs RNGH; on web use FlatList to avoid React 19 element.ref spam. */
+const USE_WEB_FLAT_LIST = Platform.OS === "web";
+const ExerciseReorderList = USE_WEB_FLAT_LIST ? FlatList : DraggableFlatList;
 import { RFValue } from "react-native-responsive-fontsize";
 import {
   SafeAreaView,
@@ -722,18 +727,24 @@ export default function RoutineEditScreen() {
         </View>
 
         <View style={styles.listContainer}>
-          <DraggableFlatList
+          <ExerciseReorderList
             ref={listRef}
             data={reorderFromButton ? tempExercisesOrder : exercisesState}
             keyExtractor={(item) => item.id}
             renderItem={renderExerciseCard}
-            onDragBegin={() => {
-              setIsDragging(true);
-            }}
-            onDragEnd={({ data }) => {
-              handleReorderComplete(data);
-              setIsDragging(false);
-            }}
+            {...(USE_WEB_FLAT_LIST
+              ? {}
+              : {
+                  onDragBegin: () => {
+                    setIsDragging(true);
+                  },
+                  onDragEnd: ({ data }: { data: ExerciseRequestDto[] }) => {
+                    handleReorderComplete(data);
+                    setIsDragging(false);
+                  },
+                  activationDistance: 16,
+                  dragHitSlop: { left: 20, right: 20, top: 15, bottom: 15 },
+                })}
             onScrollToIndexFailed={(info) => {
               // Cards have variable height; approximate then fall back to the end
               // where newly added exercises are appended.
@@ -746,8 +757,6 @@ export default function RoutineEditScreen() {
               }, 120);
             }}
             contentContainerStyle={styles.listContent}
-            activationDistance={16}
-            dragHitSlop={{ left: 20, right: 20, top: 15, bottom: 15 }}
             showsVerticalScrollIndicator={true}
             ListFooterComponent={<View style={styles.listFooter} />}
           />

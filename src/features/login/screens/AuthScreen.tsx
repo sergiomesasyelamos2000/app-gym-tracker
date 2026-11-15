@@ -23,6 +23,7 @@ import {
   TextInput,
   TouchableOpacity,
   UIManager,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -45,6 +46,11 @@ import {
 import CompleteAppleProfileModal, {
   needsAppleProfileCompletion,
 } from "../components/CompleteAppleProfileModal";
+import { PasswordRequirementsHint } from "../components/PasswordRequirementsHint";
+import {
+  isPasswordFormReady,
+  isStrongPassword,
+} from "../utils/passwordValidation";
 import { CaughtError, getErrorMessage } from "../../../types";
 import type { UserResponseDto } from "@sergiomesasyelamos2000/shared";
 
@@ -86,6 +92,9 @@ export default function AuthScreen() {
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] =
+    useState(false);
+  const [showPasswordMatch, setShowPasswordMatch] = useState(false);
   const [showAppleProfileModal, setShowAppleProfileModal] = useState(false);
   const [appleProfileUser, setAppleProfileUser] =
     useState<UserResponseDto | null>(null);
@@ -218,13 +227,12 @@ export default function AuthScreen() {
   const isValidEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-  const isStrongPassword = (value: string) =>
-    value.length >= 8 &&
-    value.length <= 72 &&
-    /[A-Z]/.test(value) &&
-    /[a-z]/.test(value) &&
-    /\d/.test(value) &&
-    /[^A-Za-z0-9]/.test(value);
+  const isRegisterPasswordReady = isPasswordFormReady(
+    password,
+    confirmPassword
+  );
+  const isPrimaryDisabled =
+    isLoading || (mode === "register" && !isRegisterPasswordReady);
 
   const handleGoogleAuthSuccess = async (
     authentication: GoogleAuthentication
@@ -461,14 +469,20 @@ export default function AuthScreen() {
   const toggleMode = () => {
     const nextMode = mode === "login" ? "register" : "login";
 
-    if (Platform.OS === "android") {
-      Keyboard.dismiss();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setMode(nextMode);
+    const resetFields = () => {
       setEmail("");
       setPassword("");
       setConfirmPassword("");
       setName("");
+      setShowPasswordRequirements(false);
+      setShowPasswordMatch(false);
+    };
+
+    if (Platform.OS === "android") {
+      Keyboard.dismiss();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setMode(nextMode);
+      resetFields();
       return;
     }
 
@@ -486,10 +500,7 @@ export default function AuthScreen() {
     ]).start();
 
     setMode(nextMode);
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setName("");
+    resetFields();
   };
 
   const handleNavigateForgotPassword = () => {
@@ -504,6 +515,19 @@ export default function AuthScreen() {
   const showAppleLogin = Platform.OS === "ios" && appleSigninReady;
   const showSocialLogin = showGoogleLogin || showAppleLogin;
 
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isCompactHeight = windowHeight < 700;
+  const formMaxWidth = windowWidth >= 480 ? 400 : undefined;
+  const showRegisterRequirements =
+    mode === "register" &&
+    (passwordFocused || showPasswordRequirements || password.length > 0);
+  const showRegisterMatch =
+    mode === "register" &&
+    (showPasswordMatch || confirmPassword.length >= 2);
+
+  const fieldBackground = isDark ? "rgba(255,255,255,0.06)" : "#F9FAFB";
+  const cardBackground = isDark ? "rgba(255,255,255,0.04)" : "#FFFFFF";
+
   return (
     <View style={[styles.mainContainer, { backgroundColor: theme.background }]}>
       <View style={styles.decorativeBackground}>
@@ -515,26 +539,37 @@ export default function AuthScreen() {
         />
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.flex}
         >
-          <SafeAreaView style={styles.safeArea}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              isCompactHeight && styles.scrollContentCompact,
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <Animated.View
               style={[
                 styles.contentContainer,
+                isCompactHeight && styles.contentContainerCompact,
+                formMaxWidth != null && {
+                  maxWidth: formMaxWidth,
+                  alignSelf: "center",
+                  width: "100%",
+                },
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
                 },
               ]}
             >
-              <View style={styles.header}>
+              <View
+                style={[styles.header, isCompactHeight && styles.headerCompact]}
+              >
                 <View style={styles.brandContainer}>
                   <View
                     style={[
@@ -542,13 +577,25 @@ export default function AuthScreen() {
                       { backgroundColor: theme.primary },
                     ]}
                   />
-                  <Text style={[styles.brandName, { color: theme.text }]}>
+                  <Text
+                    style={[
+                      styles.brandName,
+                      isCompactHeight && styles.brandNameCompact,
+                      { color: theme.text },
+                    ]}
+                  >
                     EvoFit
                   </Text>
                 </View>
 
                 <View style={styles.headerTextContainer}>
-                  <Text style={[styles.welcomeText, { color: theme.text }]}>
+                  <Text
+                    style={[
+                      styles.welcomeText,
+                      isCompactHeight && styles.welcomeTextCompact,
+                      { color: theme.text },
+                    ]}
+                  >
                     {mode === "login"
                       ? "Bienvenido de vuelta"
                       : "Crea tu cuenta"}
@@ -569,254 +616,12 @@ export default function AuthScreen() {
               <View
                 style={[
                   styles.formContainer,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(255,255,255,0.04)"
-                      : "#FFFFFF",
-                  },
+                  isCompactHeight && styles.formContainerCompact,
+                  { backgroundColor: cardBackground },
                 ]}
               >
-                {mode === "register" && (
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.text }]}>
-                      Nombre completo
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isDark
-                            ? "rgba(255,255,255,0.06)"
-                            : "#F9FAFB",
-                          color: theme.text,
-                          borderColor: nameFocused
-                            ? theme.primary
-                            : "transparent",
-                        },
-                      ]}
-                      placeholder="Tu nombre"
-                      placeholderTextColor={theme.textTertiary}
-                      value={name}
-                      onChangeText={handleNameChange}
-                      autoComplete="name"
-                      textContentType="name"
-                      importantForAutofill="yes"
-                      onFocus={() => setNameFocused(true)}
-                      onBlur={() => setNameFocused(false)}
-                    />
-                  </View>
-                )}
-
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: theme.text }]}>
-                    Email
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: isDark
-                          ? "rgba(255,255,255,0.06)"
-                          : "#F9FAFB",
-                        color: theme.text,
-                        borderColor: emailFocused
-                          ? theme.primary
-                          : "transparent",
-                      },
-                    ]}
-                    placeholder="email@ejemplo.com"
-                    placeholderTextColor={theme.textTertiary}
-                    value={email}
-                    onChangeText={handleEmailChange}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    textContentType="username"
-                    importantForAutofill="yes"
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: theme.text }]}>
-                    Contraseña
-                  </Text>
-                  <View
-                    style={[
-                      styles.passwordInputContainer,
-                      {
-                        backgroundColor: isDark
-                          ? "rgba(255,255,255,0.06)"
-                          : "#F9FAFB",
-                        borderColor: passwordFocused
-                          ? theme.primary
-                          : "transparent",
-                      },
-                    ]}
-                  >
-                    <TextInput
-                      style={[styles.input, styles.passwordInput]}
-                      placeholder="••••••••"
-                      placeholderTextColor={theme.textTertiary}
-                      value={password}
-                      onChangeText={handlePasswordChange}
-                      secureTextEntry={!showPassword}
-                      autoComplete={
-                        mode === "login" ? "current-password" : "new-password"
-                      }
-                      textContentType={
-                        mode === "login" ? "password" : "newPassword"
-                      }
-                      importantForAutofill="yes"
-                      onFocus={() => setPasswordFocused(true)}
-                      onBlur={() => setPasswordFocused(false)}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowPassword((prev) => !prev)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={showPassword ? "eye-off-outline" : "eye-outline"}
-                        size={20}
-                        color={theme.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {mode === "login" && (
-                    <TouchableOpacity
-                      onPress={handleNavigateForgotPassword}
-                      activeOpacity={0.7}
-                      style={styles.forgotPasswordContainer}
-                    >
-                      <Text
-                        style={[
-                          styles.forgotPassword,
-                          { color: theme.primary },
-                        ]}
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {mode === "register" && (
-                  <>
-                    <View style={styles.inputGroup}>
-                      <Text style={[styles.inputLabel, { color: theme.text }]}>
-                        Confirmar contraseña
-                      </Text>
-                      <View
-                        style={[
-                          styles.passwordInputContainer,
-                          {
-                            backgroundColor: isDark
-                              ? "rgba(255,255,255,0.06)"
-                              : "#F9FAFB",
-                            borderColor: confirmPasswordFocused
-                              ? theme.primary
-                              : "transparent",
-                          },
-                        ]}
-                      >
-                        <TextInput
-                          style={[styles.input, styles.passwordInput]}
-                          placeholder="••••••••"
-                          placeholderTextColor={theme.textTertiary}
-                          value={confirmPassword}
-                          onChangeText={handleConfirmPasswordChange}
-                          secureTextEntry={!showConfirmPassword}
-                          autoComplete="new-password"
-                          textContentType="newPassword"
-                          importantForAutofill="yes"
-                          onFocus={() => setConfirmPasswordFocused(true)}
-                          onBlur={() => setConfirmPasswordFocused(false)}
-                        />
-                        <TouchableOpacity
-                          style={styles.eyeButton}
-                          onPress={() =>
-                            setShowConfirmPassword((prev) => !prev)
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons
-                            name={
-                              showConfirmPassword
-                                ? "eye-off-outline"
-                                : "eye-outline"
-                            }
-                            size={20}
-                            color={theme.textSecondary}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.passwordRequirements,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      Mínimo 8 caracteres con mayúscula, minúscula, número y
-                      símbolo
-                    </Text>
-                  </>
-                )}
-
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    {
-                      backgroundColor: theme.primary,
-                      opacity: isLoading ? 0.7 : 1,
-                    },
-                  ]}
-                  onPress={handleEmailAuth}
-                  disabled={isLoading}
-                  activeOpacity={0.85}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color={theme.onPrimary} size="small" />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.primaryButtonText,
-                        { color: theme.onPrimary },
-                      ]}
-                    >
-                      {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-
                 {showSocialLogin && (
                   <>
-                    <View style={styles.divider}>
-                      <View
-                        style={[
-                          styles.dividerLine,
-                          { backgroundColor: theme.border },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.dividerText,
-                          { color: theme.textSecondary },
-                        ]}
-                      >
-                        O continúa con
-                      </Text>
-                      <View
-                        style={[
-                          styles.dividerLine,
-                          { backgroundColor: theme.border },
-                        ]}
-                      />
-                    </View>
-
                     {showAppleLogin && (
                       <View
                         style={[
@@ -849,9 +654,7 @@ export default function AuthScreen() {
                         style={[
                           styles.googleButton,
                           {
-                            backgroundColor: isDark
-                              ? "rgba(255,255,255,0.06)"
-                              : "#FFFFFF",
+                            backgroundColor: fieldBackground,
                             borderColor: isDark
                               ? "rgba(255,255,255,0.1)"
                               : "#E5E7EB",
@@ -879,8 +682,256 @@ export default function AuthScreen() {
                         </Text>
                       </TouchableOpacity>
                     )}
+
+                    <View style={styles.divider}>
+                      <View
+                        style={[
+                          styles.dividerLine,
+                          { backgroundColor: theme.border },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.dividerText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        O continúa con email
+                      </Text>
+                      <View
+                        style={[
+                          styles.dividerLine,
+                          { backgroundColor: theme.border },
+                        ]}
+                      />
+                    </View>
                   </>
                 )}
+
+                {mode === "register" && (
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.text }]}>
+                      Nombre completo
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: fieldBackground,
+                          color: theme.text,
+                          borderColor: nameFocused
+                            ? theme.primary
+                            : "transparent",
+                        },
+                      ]}
+                      placeholder="Tu nombre"
+                      placeholderTextColor={theme.textTertiary}
+                      value={name}
+                      onChangeText={handleNameChange}
+                      autoComplete="name"
+                      textContentType="name"
+                      importantForAutofill="yes"
+                      onFocus={() => setNameFocused(true)}
+                      onBlur={() => setNameFocused(false)}
+                    />
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Email
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: fieldBackground,
+                        color: theme.text,
+                        borderColor: emailFocused
+                          ? theme.primary
+                          : "transparent",
+                      },
+                    ]}
+                    placeholder="email@ejemplo.com"
+                    placeholderTextColor={theme.textTertiary}
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="username"
+                    importantForAutofill="yes"
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    Contraseña
+                  </Text>
+                  <View
+                    style={[
+                      styles.passwordInputContainer,
+                      {
+                        backgroundColor: fieldBackground,
+                        borderColor: passwordFocused
+                          ? theme.primary
+                          : "transparent",
+                      },
+                    ]}
+                  >
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      placeholder="••••••••"
+                      placeholderTextColor={theme.textTertiary}
+                      value={password}
+                      onChangeText={handlePasswordChange}
+                      secureTextEntry={!showPassword}
+                      autoComplete={
+                        mode === "login" ? "current-password" : "new-password"
+                      }
+                      textContentType={
+                        mode === "login" ? "password" : "newPassword"
+                      }
+                      importantForAutofill="yes"
+                      onFocus={() => {
+                        setPasswordFocused(true);
+                        if (mode === "register") {
+                          setShowPasswordRequirements(true);
+                        }
+                      }}
+                      onBlur={() => {
+                        setPasswordFocused(false);
+                        if (mode === "register") {
+                          setShowPasswordRequirements(true);
+                        }
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword((prev) => !prev)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={theme.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {mode === "register" && (
+                    <PasswordRequirementsHint
+                      password={password}
+                      confirmPassword={confirmPassword}
+                      showRequirements={showRegisterRequirements}
+                      showMatch={false}
+                    />
+                  )}
+                  {mode === "login" && (
+                    <TouchableOpacity
+                      onPress={handleNavigateForgotPassword}
+                      activeOpacity={0.7}
+                      style={styles.forgotPasswordContainer}
+                    >
+                      <Text
+                        style={[
+                          styles.forgotPassword,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {mode === "register" && (
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.text }]}>
+                      Confirmar contraseña
+                    </Text>
+                    <View
+                      style={[
+                        styles.passwordInputContainer,
+                        {
+                          backgroundColor: fieldBackground,
+                          borderColor: confirmPasswordFocused
+                            ? theme.primary
+                            : "transparent",
+                        },
+                      ]}
+                    >
+                      <TextInput
+                        style={[styles.input, styles.passwordInput]}
+                        placeholder="••••••••"
+                        placeholderTextColor={theme.textTertiary}
+                        value={confirmPassword}
+                        onChangeText={handleConfirmPasswordChange}
+                        secureTextEntry={!showConfirmPassword}
+                        autoComplete="new-password"
+                        textContentType="newPassword"
+                        importantForAutofill="yes"
+                        onFocus={() => setConfirmPasswordFocused(true)}
+                        onBlur={() => {
+                          setConfirmPasswordFocused(false);
+                          setShowPasswordMatch(true);
+                        }}
+                      />
+                      <TouchableOpacity
+                        style={styles.eyeButton}
+                        onPress={() =>
+                          setShowConfirmPassword((prev) => !prev)
+                        }
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={
+                            showConfirmPassword
+                              ? "eye-off-outline"
+                              : "eye-outline"
+                          }
+                          size={20}
+                          color={theme.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <PasswordRequirementsHint
+                      password={password}
+                      confirmPassword={confirmPassword}
+                      showRequirements={false}
+                      showMatch={showRegisterMatch}
+                    />
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    {
+                      backgroundColor: theme.primary,
+                      opacity: isPrimaryDisabled ? 0.5 : 1,
+                    },
+                    isPrimaryDisabled && styles.disabledButton,
+                  ]}
+                  onPress={handleEmailAuth}
+                  disabled={isPrimaryDisabled}
+                  activeOpacity={0.85}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color={theme.onPrimary} size="small" />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        { color: theme.onPrimary },
+                      ]}
+                    >
+                      {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
 
               <View style={styles.footer}>
@@ -898,9 +949,9 @@ export default function AuthScreen() {
                 </TouchableOpacity>
               </View>
             </Animated.View>
-          </SafeAreaView>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       <CompleteAppleProfileModal
         visible={showAppleProfileModal}
@@ -919,6 +970,7 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1 },
+  flex: { flex: 1 },
   decorativeBackground: {
     position: "absolute",
     width: "100%",
@@ -945,25 +997,38 @@ const styles = StyleSheet.create({
     left: -80,
     transform: [{ rotate: "-30deg" }],
   },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 20 },
   safeArea: { flex: 1 },
-  contentContainer: {
-    flex: 1,
-    justifyContent: "center",
-    paddingVertical: 40,
-    gap: 40,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 28,
   },
-  header: { gap: 24 },
+  scrollContentCompact: {
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  contentContainer: {
+    gap: 24,
+    paddingBottom: 8,
+  },
+  contentContainerCompact: {
+    gap: 16,
+  },
+  header: { gap: 16 },
+  headerCompact: { gap: 10 },
   brandContainer: { flexDirection: "row", alignItems: "center", gap: 12 },
-  brandAccent: { width: 4, height: 32, borderRadius: 2 },
-  brandName: { fontSize: 32, fontWeight: "800", letterSpacing: -1 },
-  headerTextContainer: { gap: 8 },
-  welcomeText: { fontSize: 28, fontWeight: "700", letterSpacing: -0.5 },
-  subtitleText: { fontSize: 16, fontWeight: "400", lineHeight: 22 },
+  brandAccent: { width: 4, height: 28, borderRadius: 2 },
+  brandName: { fontSize: 28, fontWeight: "800", letterSpacing: -1 },
+  brandNameCompact: { fontSize: 24 },
+  headerTextContainer: { gap: 6 },
+  welcomeText: { fontSize: 24, fontWeight: "700", letterSpacing: -0.5 },
+  welcomeTextCompact: { fontSize: 22 },
+  subtitleText: { fontSize: 15, fontWeight: "400", lineHeight: 20 },
   formContainer: {
     borderRadius: 20,
-    padding: 24,
-    gap: 20,
+    padding: 20,
+    gap: 16,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -972,7 +1037,14 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: { elevation: 3 },
+      web: {
+        boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+      },
     }),
+  },
+  formContainerCompact: {
+    padding: 16,
+    gap: 14,
   },
   inputGroup: { gap: 8 },
   inputLabel: { fontSize: 14, fontWeight: "600", marginLeft: 4 },
@@ -985,6 +1057,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 2,
     fontWeight: "500",
+    // RN Web draws a native focus outline on <input>; we style focus via borderColor.
+    ...Platform.select({
+      web: { outlineStyle: "none" as const, outlineWidth: 0 },
+    }),
   },
   passwordInputContainer: {
     borderRadius: 12,
@@ -992,19 +1068,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  passwordInput: { flex: 1, borderWidth: 0, paddingRight: 8 },
+  passwordInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingRight: 8,
+    // Keep outline off the inner field so only the outer purple border shows on focus.
+    ...Platform.select({
+      web: { outlineStyle: "none" as const, outlineWidth: 0 },
+    }),
+  },
   eyeButton: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 4,
-  },
-  passwordRequirements: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: -8,
-    marginLeft: 4,
   },
   primaryButton: {
     borderRadius: 12,
@@ -1031,14 +1109,12 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    marginVertical: 4,
+    gap: 12,
   },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: "500" },
   appleButtonContainer: {
     width: "100%",
-    marginBottom: 12,
   },
   appleNativeButton: {
     width: "100%",
@@ -1076,7 +1152,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    paddingTop: 8,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   footerText: { fontSize: 15, fontWeight: "500" },
   footerLink: { fontSize: 15, fontWeight: "700" },

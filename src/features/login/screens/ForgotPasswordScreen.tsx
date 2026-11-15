@@ -22,6 +22,11 @@ import {
 } from "../../../hooks/useFocusedStatusBar";
 import { ScreenHeader } from "../../common/components/ScreenHeader";
 import { CaughtError, getErrorMessage } from "../../../types";
+import { PasswordRequirementsHint } from "../components/PasswordRequirementsHint";
+import {
+  isPasswordFormReady,
+  isStrongPassword,
+} from "../utils/passwordValidation";
 import { forgotPassword, resetPassword } from "../services/authService";
 
 type ForgotStep = "request" | "verify";
@@ -43,6 +48,9 @@ export default function ForgotPasswordScreen() {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswordRequirements, setShowPasswordRequirements] =
+    useState(false);
+  const [showPasswordMatch, setShowPasswordMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const [activeOtpIndex, setActiveOtpIndex] = useState(0);
@@ -116,13 +124,11 @@ export default function ForgotPasswordScreen() {
   const isValidEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-  const isStrongPassword = (value: string) =>
-    value.length >= 8 &&
-    value.length <= 72 &&
-    /[A-Z]/.test(value) &&
-    /[a-z]/.test(value) &&
-    /\d/.test(value) &&
-    /[^A-Za-z0-9]/.test(value);
+  const isResetPasswordReady = isPasswordFormReady(
+    newPassword,
+    confirmPassword
+  );
+  const isResetDisabled = isLoading || !isResetPasswordReady;
 
   const canResend = resendSecondsLeft === 0 && !isLoading;
   const otpDigits = useMemo(
@@ -429,6 +435,7 @@ export default function ForgotPasswordScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   editable={!isLoading}
+                  onBlur={() => setShowPasswordRequirements(true)}
                 />
 
                 <TextInput
@@ -446,16 +453,26 @@ export default function ForgotPasswordScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   editable={!isLoading}
+                  onBlur={() => setShowPasswordMatch(true)}
                 />
 
-                <Text style={[styles.hint, { color: theme.textSecondary }]}>
-                  8-72 caracteres, con mayúscula, minúscula, número y símbolo.
-                </Text>
+                <PasswordRequirementsHint
+                  password={newPassword}
+                  confirmPassword={confirmPassword}
+                  showRequirements={showPasswordRequirements}
+                  showMatch={showPasswordMatch || confirmPassword.length > 0}
+                />
 
                 <TouchableOpacity
-                  style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+                  style={[
+                    styles.primaryButton,
+                    {
+                      backgroundColor: theme.primary,
+                      opacity: isResetDisabled ? 0.5 : 1,
+                    },
+                  ]}
                   onPress={handleResetPassword}
-                  disabled={isLoading}
+                  disabled={isResetDisabled}
                 >
                   {isLoading ? (
                     <ActivityIndicator color="#FFF" />
@@ -488,6 +505,8 @@ export default function ForgotPasswordScreen() {
                     setCode("");
                     setNewPassword("");
                     setConfirmPassword("");
+                    setShowPasswordRequirements(false);
+                    setShowPasswordMatch(false);
                   }}
                   disabled={isLoading}
                 >

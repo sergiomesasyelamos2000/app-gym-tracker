@@ -48,9 +48,11 @@ export function AppRefreshControl({
   const { theme } = useTheme();
   const spinnerColor = tintColor ?? theme.primary;
   const iosTintColor = useIosDeferredTint(spinnerColor);
-  const Control = gestureHandler
-    ? GestureHandlerRefreshControl ?? NativeRefreshControl
-    : NativeRefreshControl;
+  // RNGH RefreshControl on web still trips React 19 element.ref warnings.
+  const Control =
+    gestureHandler && Platform.OS !== "web"
+      ? GestureHandlerRefreshControl ?? NativeRefreshControl
+      : NativeRefreshControl;
 
   return (
     <Control

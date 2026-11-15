@@ -14,6 +14,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal as RNModal,
   Platform,
   Pressable,
@@ -31,14 +32,16 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { AppRefreshControl } from "../../common/components/AppRefreshControl";
-import DraggableFlatList, {
-  RenderItemParams,
-} from "react-native-draggable-flatlist";
+import DraggableFlatList from "react-native-draggable-flatlist";
 import {
   applyRoutineListDrag,
   isOrphanedNested,
   type DragListItem,
 } from "../utils/applyRoutineListDrag";
+
+/** Drag-reorder needs RNGH; on web use FlatList to avoid React 19 element.ref spam. */
+const USE_WEB_FLAT_LIST = Platform.OS === "web";
+const RoutineList = USE_WEB_FLAT_LIST ? FlatList : DraggableFlatList;
 import {
   beginLocalEdit,
   currentLayoutEpoch,
@@ -1324,7 +1327,7 @@ export default function WorkoutScreen() {
       ]}
     >
       <View style={styles.listWrapper}>
-        <DraggableFlatList
+        <RoutineList
           ref={listRef as any}
           key={`routine-list-${listRemountKey}`}
           data={loading || listData.length === 0 ? [] : listData}
@@ -1339,53 +1342,68 @@ export default function WorkoutScreen() {
             listScrollYRef.current = event.nativeEvent.contentOffset.y;
           }}
           scrollEventThrottle={16}
-          activationDistance={8}
-          dragHitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-          animationConfig={{
-            damping: 22,
-            stiffness: 280,
-            mass: 0.35,
-            overshootClamping: true,
-          }}
-          onDragBegin={(index) => {
-            const key = listDataRef.current[index]?.key ?? null;
-            draggingKeyRef.current = key;
-            setDraggingKey(key);
-            clearFolderHover();
-          }}
-          onPlaceholderIndexChange={(index) => {
-            if (folderHoverTimerRef.current) {
-              clearTimeout(folderHoverTimerRef.current);
-              folderHoverTimerRef.current = null;
-            }
-            folderDropTargetIdRef.current = null;
-            armedFolderId.value = null;
+          {...(USE_WEB_FLAT_LIST
+            ? {}
+            : {
+                activationDistance: 8,
+                dragHitSlop: { top: 4, bottom: 4, left: 4, right: 4 },
+                animationConfig: {
+                  damping: 22,
+                  stiffness: 280,
+                  mass: 0.35,
+                  overshootClamping: true,
+                },
+                onDragBegin: (index: number) => {
+                  const key = listDataRef.current[index]?.key ?? null;
+                  draggingKeyRef.current = key;
+                  setDraggingKey(key);
+                  clearFolderHover();
+                },
+                onPlaceholderIndexChange: (index: number) => {
+                  if (folderHoverTimerRef.current) {
+                    clearTimeout(folderHoverTimerRef.current);
+                    folderHoverTimerRef.current = null;
+                  }
+                  folderDropTargetIdRef.current = null;
+                  armedFolderId.value = null;
 
-            const item = listDataRef.current[index];
-            const dragged = listDataRef.current.find(
-              (row) => row.key === draggingKeyRef.current
-            );
-            const canHoverFolder =
-              item?.type === "folder" &&
-              (dragged?.type === "routine" || dragged?.type === "nested") &&
-              item.key !== draggingKeyRef.current;
+                  const item = listDataRef.current[index];
+                  const dragged = listDataRef.current.find(
+                    (row) => row.key === draggingKeyRef.current
+                  );
+                  const canHoverFolder =
+                    item?.type === "folder" &&
+                    (dragged?.type === "routine" ||
+                      dragged?.type === "nested") &&
+                    item.key !== draggingKeyRef.current;
 
-            if (!canHoverFolder || !item || item.type !== "folder") return;
+                  if (!canHoverFolder || !item || item.type !== "folder") {
+                    return;
+                  }
 
-            // Shared value + ref only — no React setState mid-drag (avoids overlap).
-            folderHoverTimerRef.current = setTimeout(() => {
-              folderDropTargetIdRef.current = item.folder.id;
-              armedFolderId.value = item.folder.id;
-            }, FOLDER_HOVER_MS);
-          }}
-          onDragEnd={({ data, from, to }) => {
-            handleRootDragEnd({ data, from, to });
-          }}
+                  // Shared value + ref only — no React setState mid-drag.
+                  folderHoverTimerRef.current = setTimeout(() => {
+                    folderDropTargetIdRef.current = item.folder.id;
+                    armedFolderId.value = item.folder.id;
+                  }, FOLDER_HOVER_MS);
+                },
+                onDragEnd: ({
+                  data,
+                  from,
+                  to,
+                }: {
+                  data: ListItem[];
+                  from: number;
+                  to: number;
+                }) => {
+                  handleRootDragEnd({ data, from, to });
+                },
+              })}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={renderEmpty}
           refreshControl={
             <AppRefreshControl
-              gestureHandler
+              gestureHandler={!USE_WEB_FLAT_LIST}
               refreshing={refreshing}
               onRefresh={onRefresh}
             />
@@ -1395,11 +1413,11 @@ export default function WorkoutScreen() {
             showWorkoutBanner && styles.listContentWithBanner,
             (loading || listData.length === 0) && styles.listContentEmpty,
           ]}
-          renderItem={({
-            item,
-            drag,
-            isActive,
-          }: RenderItemParams<ListItem>) => {
+          renderItem={(params: any) => {
+            const item = params.item as ListItem;
+            const drag =
+              typeof params.drag === "function" ? params.drag : () => {};
+            const isActive = Boolean(params.isActive);
             const isDimmed = Boolean(draggingKey) && !isActive;
 
             if (item.type === "folder") {

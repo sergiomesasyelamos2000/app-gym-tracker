@@ -3,6 +3,7 @@ import NetInfo from "@react-native-community/netinfo";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ImageStyle,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -302,10 +303,17 @@ export default function ExerciseMedia({
   }
 
   const safeUri = escapeMediaUrl(active.uri);
-  const mediaRoot = exerciseMediaDirectoryUri();
+  // documentDirectory is unavailable on web — never throw while picking media.
+  let mediaRoot = "";
+  try {
+    mediaRoot = exerciseMediaDirectoryUri();
+  } catch {
+    mediaRoot = "";
+  }
   const isTrustedLocal =
     active.local &&
     Boolean(safeUri) &&
+    Boolean(mediaRoot) &&
     safeUri!.startsWith("file://") &&
     safeUri!.startsWith(mediaRoot);
 
@@ -318,6 +326,24 @@ export default function ExerciseMedia({
         style={style}
         onLoadEnd={() => onLoadEndRef.current?.()}
         testID="exercise-media-fallback"
+      />
+    );
+  }
+
+  // react-native-webview has no web implementation; use image (gif URL or static).
+  if (Platform.OS === "web") {
+    const webImageUri =
+      active.type === "gif" ? safeUri : remote.static ?? safeUri;
+    const hasLaterCandidate = candidateIndex + 1 < candidates.length;
+    return (
+      <CachedExerciseImage
+        imageUrl={webImageUri}
+        style={style}
+        onLoadEnd={() => onLoadEndRef.current?.()}
+        onError={hasLaterCandidate ? () => advance() : undefined}
+        testID={
+          active.type === "video" ? "exercise-media-video" : "exercise-media-gif"
+        }
       />
     );
   }

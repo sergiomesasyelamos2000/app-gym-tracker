@@ -2825,7 +2825,7 @@ export default function RoutineDetailScreen() {
         </View>
       )}
 
-      {canReorderExercises || reorderMode ? (
+      {(canReorderExercises || reorderMode) && Platform.OS !== "web" ? (
         <DraggableFlatList
           ref={exerciseListRef as any}
           containerStyle={styles.exerciseList}
